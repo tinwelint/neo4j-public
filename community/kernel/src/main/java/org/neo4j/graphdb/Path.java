@@ -130,4 +130,30 @@ public interface Path extends Iterable<PropertyContainer>
      * @see Iterable#iterator()
      */
     Iterator<PropertyContainer> iterator();
+    
+    /**
+     * Gets a {@link Relationship} in this path by the supplied index.
+     * @param index the {@link Relationship} to get. A non-negative index means
+     * to get a relationship from the beginning, starting from 0. For example
+     * 0 means the first relationship, 1 means the second relationship.
+     * A negative index means to get a relationship from the end, starting
+     * from -1 and going backwards. For example -1 means the last relationship,
+     * -2 the next-to-last relationship.
+     * @return the {@link Relationship} in this path at the supplied index.
+     * @throws IndexOutOfBoundsException if the supplied index cannot be found.
+     */
+    Relationship relationship( int index );
+    
+    /**
+     * Gets a {@link Node} in this path by the supplied index.
+     * @param index the {@link Node} to get. A non-negative index means
+     * to get a node from the beginning, starting from 0. For example
+     * 0 means the first node, 1 means the second node.
+     * A negative index means to get a node from the end, starting
+     * from -1 and going backwards. For example -1 means the
+     * {@link #endNode() last node}, -2 the next-to-last node.
+     * @return the {@link Node} in this path at the supplied index.
+     * @throws IndexOutOfBoundsException if the supplied index cannot be found.
+     */
+    Node node( int index );
 }

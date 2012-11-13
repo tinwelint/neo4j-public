@@ -39,16 +39,29 @@ import org.neo4j.kernel.Uniqueness;
 public class TestPath extends AbstractTestBase
 {
     private static Node a,b,c,d,e;
+    private static Node[] nodes;
+    private static Relationship aToB, bToC, cToD, dToE;
+    private static Relationship[] relationships;
     
     @Before
     public void setup()
     {
+        /*
+         * (A)--->(B)--->(C)--->(D)--->(E)
+         */
+        
         createGraph( "A TO B", "B TO C", "C TO D", "D TO E" );
         a = getNodeWithName( "A" );
         b = getNodeWithName( "B" );
         c = getNodeWithName( "C" );
         d = getNodeWithName( "D" );
         e = getNodeWithName( "E" );
+        nodes = new Node[] { a, b, c, d, e };
+        aToB = a.getRelationships( Direction.OUTGOING ).iterator().next();
+        bToC = b.getRelationships( Direction.OUTGOING ).iterator().next();
+        cToD = c.getRelationships( Direction.OUTGOING ).iterator().next();
+        dToE = d.getRelationships( Direction.OUTGOING ).iterator().next();
+        relationships = new Relationship[] { aToB, bToC, cToD, dToE };
     }
     
     @Test
@@ -137,5 +150,49 @@ public class TestPath extends AbstractTestBase
         bidirectionalPath = first( bidirectional.traverse( a, e ) );
         bidirectionalPath.iterator();
         assertEquals( a, bidirectionalPath.startNode() );
+    }
+    
+    @Test
+    public void getEntityByIndex() throws Exception
+    {
+        Path path = first( traversal().evaluator( atDepth( 4 ) ).traverse( a ) );
+        assertNodesByIndex( path );
+        assertRelationshipsByIndex( path );
+        
+        TraversalDescription side = traversal().uniqueness( Uniqueness.NODE_PATH );
+        BidirectionalTraversalDescription bidirectional = bidirectionalTraversal().mirroredSides( side );
+        Path bidirectionalPath = first( bidirectional.traverse( a, e ) );
+        assertNodesByIndex( bidirectionalPath );
+        assertRelationshipsByIndex( bidirectionalPath );
+    }
+
+    private void assertRelationshipsByIndex( Path path )
+    {
+        for ( int i = 0; i < relationships.length; i++ )
+        {
+            assertEquals( "Wrong relationship " + relationships[i] + " at index " + i + ", got " +
+                    path.relationship( i ) + " in " + path + ".", relationships[i], path.relationship( i ) );
+            
+            int negativeIndex = -1 - i;
+            Relationship expected = relationships[relationships.length+negativeIndex];
+            Relationship found = path.relationship( negativeIndex );
+            assertEquals( "Wrong relationship " + expected + " at index " + negativeIndex + ", got " +
+                    found + " in " + path + ".", expected, found );
+        }
+    }
+
+    private void assertNodesByIndex( Path path )
+    {
+        for ( int i = 0; i < nodes.length; i++ )
+        {
+            assertEquals( "Wrong node " + nodes[i].getProperty( "name" ) + " at index " + i + ", got " +
+                    path.node( i ).getProperty( "name" ) + " in " + path + ".", nodes[i], path.node( i ) );
+            
+            int negativeIndex = -1 - i;
+            Node expected = nodes[nodes.length+negativeIndex];
+            Node found = path.node( negativeIndex );
+            assertEquals( "Wrong node " + expected.getProperty( "name" ) + " at index " + negativeIndex + ", got " +
+                    found.getProperty( "name" ) + " in " + path + ".", expected, found );
+        }
     }
 }

@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.util;
 
+import static org.neo4j.kernel.Traversal.absoluteNodeIndexInPath;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -89,5 +91,18 @@ public class SingleNodePath implements Path
     public Iterator<PropertyContainer> iterator()
     {
         return Arrays.<PropertyContainer>asList( node ).iterator();
+    }
+    
+    @Override
+    public Node node( int index )
+    {
+        absoluteNodeIndexInPath( index, this ); // Includes index out of bounds check
+        return node;
+    }
+    
+    @Override
+    public Relationship relationship( int index )
+    {
+        throw new IndexOutOfBoundsException( index + " in " + this );
     }
 }

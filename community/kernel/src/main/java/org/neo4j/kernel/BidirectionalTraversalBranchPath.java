@@ -19,6 +19,9 @@
  */
 package org.neo4j.kernel;
 
+import static org.neo4j.kernel.Traversal.absoluteNodeIndexInPath;
+import static org.neo4j.kernel.Traversal.absoluteRelationshipIndexInPath;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -189,6 +192,29 @@ public class BidirectionalTraversalBranchPath implements Path
         return entities.iterator();
     }
     
+    @Override
+    public Relationship relationship( int index )
+    {
+        if ( cachedRelationships != null )
+            cachedRelationships.get( index < 0 ? cachedRelationships.size() + index : index );
+        
+        index = absoluteRelationshipIndexInPath( index, this );
+        if ( index < start.length() )
+            return start.relationship( index );
+        else
+            return end.relationship( ((index+1-start.length())*-1) );
+    }
+
+    @Override
+    public Node node( int index )
+    {
+        index = absoluteNodeIndexInPath( index, this );
+        if ( index <= start.length() )
+            return start.node( index );
+        else
+            return end.node( ((index+1-start.length())*-1) );
+    }
+
     @Override
     public int hashCode()
     {

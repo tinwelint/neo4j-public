@@ -576,4 +576,22 @@ public class Traversal
     {
         return new PathDescription();
     }
+    
+    public static int absoluteRelationshipIndexInPath( int positiveOrNegativeIndex, Path path )
+    {
+        int pathLength = path.length();
+        int result = positiveOrNegativeIndex < 0 ? pathLength + positiveOrNegativeIndex : positiveOrNegativeIndex;
+        if ( result < 0 || result >= pathLength )
+            throw new IndexOutOfBoundsException( positiveOrNegativeIndex + " in " + path );
+        return result;
+    }
+
+    public static int absoluteNodeIndexInPath( int positiveOrNegativeIndex, Path path )
+    {
+        int pathLength = path.length();
+        int result = positiveOrNegativeIndex < 0 ? pathLength + 1 + positiveOrNegativeIndex : positiveOrNegativeIndex;
+        if ( result < 0 || result > pathLength )
+            throw new IndexOutOfBoundsException( positiveOrNegativeIndex + " in " + path );
+        return result;
+    }
 }

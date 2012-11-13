@@ -19,6 +19,9 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
+import static org.neo4j.kernel.Traversal.absoluteNodeIndexInPath;
+import static org.neo4j.kernel.Traversal.absoluteRelationshipIndexInPath;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -257,6 +260,16 @@ class TraversalBranchImpl implements TraversalBranch
     }
     
     @Override
+    public Relationship relationship( int index )
+    {
+        int stepsBack = length() - absoluteRelationshipIndexInPath( index, this ) - 1;
+        TraversalBranch branch = this;
+        while ( stepsBack-- > 0 )
+            branch = branch.parent();
+        return branch.lastRelationship();
+    }
+    
+    @Override
     public Iterable<Relationship> reverseRelationships()
     {
         return new Iterable<Relationship>()
@@ -325,6 +338,16 @@ class TraversalBranchImpl implements TraversalBranch
                 };
             }
         };
+    }
+    
+    @Override
+    public Node node( int index )
+    {
+        int stepsBack = length() - absoluteNodeIndexInPath( index, this );
+        TraversalBranch branch = this;
+        while ( stepsBack-- > 0 )
+            branch = branch.parent();
+        return branch.endNode();
     }
 
     public Iterator<PropertyContainer> iterator()

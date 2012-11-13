@@ -172,9 +172,21 @@ class AsOneStartBranch implements TraversalBranch
     {
         branches = Collections.<TraversalBranch>emptyList().iterator();
     }
-    
+
     @Override
     public Object state()
+    {
+        throw new UnsupportedOperationException();
+    }
+	
+    @Override
+    public Relationship relationship( int index )
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Node node( int index )
     {
         throw new UnsupportedOperationException();
     }

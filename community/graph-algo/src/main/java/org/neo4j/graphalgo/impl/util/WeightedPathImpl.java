@@ -97,6 +97,18 @@ public class WeightedPathImpl implements WeightedPath
     {
         return path.reverseRelationships();
     }
+    
+    @Override
+    public Node node( int index )
+    {
+        return path.node( index );
+    }
+    
+    @Override
+    public Relationship relationship( int index )
+    {
+        return path.relationship( index );
+    }
 
     @Override
     public String toString()

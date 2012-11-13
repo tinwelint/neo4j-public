@@ -19,6 +19,9 @@
  */
 package org.neo4j.kernel;
 
+import static org.neo4j.kernel.Traversal.absoluteNodeIndexInPath;
+import static org.neo4j.kernel.Traversal.absoluteRelationshipIndexInPath;
+
 import java.util.Iterator;
 
 import org.neo4j.graphdb.Node;
@@ -203,5 +206,17 @@ public class ExtendedPath implements Path
     public static Path extend( Path path, Relationship withRelationship )
     {
         return new ExtendedPath( path, withRelationship );
+    }
+
+    @Override
+    public Relationship relationship( int index )
+    {
+        return absoluteRelationshipIndexInPath( index, this ) == length() ? lastRelationship : start.relationship( index );
+    }
+
+    @Override
+    public Node node( int index )
+    {
+        return absoluteNodeIndexInPath( index, this ) == length() ? endNode : start.node( index );
     }
 }

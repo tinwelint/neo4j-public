@@ -19,6 +19,8 @@
  */
 package org.neo4j.graphalgo.impl.util;
 
+import static org.neo4j.kernel.Traversal.absoluteRelationshipIndexInPath;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -283,6 +285,22 @@ public final class PathImpl implements Path
     public int length()
     {
         return path.length;
+    }
+    
+    @Override
+    public Relationship relationship( int index )
+    {
+        return path[absoluteRelationshipIndexInPath( index, this )];
+    }
+    
+    @Override
+    public Node node( int index )
+    {
+        index = absoluteRelationshipIndexInPath( index, this ); // Yes absolute relationship index
+        Node node = start;
+        for ( int i = 0; i < index-1; i++ )
+            node = path[i].getOtherNode( node );
+        return node;
     }
 
     @Override

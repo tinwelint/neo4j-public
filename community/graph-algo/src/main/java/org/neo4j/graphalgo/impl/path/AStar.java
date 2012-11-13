@@ -266,6 +266,18 @@ public class AStar implements PathFinder<WeightedPath>
         {
             return lastNode;
         }
+        
+        @Override
+        public Node node( int index )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public Relationship relationship( int index )
+        {
+            throw new UnsupportedOperationException();
+        }
 
         @Override
         public Relationship lastRelationship()

@@ -406,6 +406,18 @@ public class ShortestPath implements PathFinder<Path>
         {
             return lastParentTraverserNode;
         }
+        
+        @Override
+        public Node node( int index )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public Relationship relationship( int index )
+        {
+            throw new UnsupportedOperationException();
+        }
 
         @Override
         public Relationship lastRelationship()
