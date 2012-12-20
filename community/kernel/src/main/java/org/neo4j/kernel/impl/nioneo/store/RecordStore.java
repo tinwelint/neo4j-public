@@ -61,7 +61,7 @@ public interface RecordStore<R extends AbstractBaseRecord>
         @Override
         public boolean accept( AbstractBaseRecord item )
         {
-            return item.inUse();
+            return item.isInUse();
         }
     };
 

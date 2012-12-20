@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.nioneo.store;
 
 import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -207,5 +208,50 @@ public class PropertyBlock
         }
         result.append( ']' );
         return result.toString();
+    }
+    
+    @Override
+    public PropertyBlock clone()
+    {
+        PropertyBlock clone = new PropertyBlock();
+        clone.valueBlocks = valueBlocks.clone();
+        for ( DynamicRecord record : valueRecords )
+            clone.valueRecords.add( record.clone() );
+        return clone;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (isCreated ? 1231 : 1237);
+        result = prime * result + Arrays.hashCode( valueBlocks );
+        result = prime * result + ((valueRecords == null) ? 0 : valueRecords.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        if ( this == obj )
+            return true;
+        if ( obj == null )
+            return false;
+        if ( getClass() != obj.getClass() )
+            return false;
+        PropertyBlock other = (PropertyBlock) obj;
+        if ( isCreated != other.isCreated )
+            return false;
+        if ( !Arrays.equals( valueBlocks, other.valueBlocks ) )
+            return false;
+        if ( valueRecords == null )
+        {
+            if ( other.valueRecords != null )
+                return false;
+        }
+        else if ( !valueRecords.equals( other.valueRecords ) )
+            return false;
+        return true;
     }
 }

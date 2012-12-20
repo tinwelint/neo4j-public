@@ -181,7 +181,7 @@ public abstract class AbstractDynamicStore extends CommonAbstractStore implement
         try
         {
             Buffer buffer = window.getOffsettedBuffer( blockId );
-            if ( record.inUse() )
+            if ( record.isInUse() )
             {
                 long nextProp = record.getNextBlock();
                 int nextModifier = nextProp == Record.NO_NEXT_BLOCK.intValue() ? 0

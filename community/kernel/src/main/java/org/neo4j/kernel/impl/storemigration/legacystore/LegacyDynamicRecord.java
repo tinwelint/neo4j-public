@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
 import org.neo4j.kernel.impl.nioneo.store.Abstract64BitRecord;
+import org.neo4j.kernel.impl.nioneo.store.AbstractBaseRecord;
 import org.neo4j.kernel.impl.nioneo.store.Record;
 
 public class LegacyDynamicRecord extends Abstract64BitRecord
@@ -125,8 +126,8 @@ public class LegacyDynamicRecord extends Abstract64BitRecord
     {
         StringBuffer buf = new StringBuffer();
         buf.append( "DynamicRecord[" ).append( getId() ).append( "," ).append(
-            inUse() );
-        if ( inUse() )
+            isInUse() );
+        if ( isInUse() )
         {
             buf.append( "," ).append( prevBlock ).append( "," ).append(
                 data.length ).append( "," ).append( nextBlock )
@@ -135,4 +136,9 @@ public class LegacyDynamicRecord extends Abstract64BitRecord
         return buf.toString();
     }
 
+    @Override
+    public AbstractBaseRecord clone()
+    {
+        throw new UnsupportedOperationException();
+    }
 }

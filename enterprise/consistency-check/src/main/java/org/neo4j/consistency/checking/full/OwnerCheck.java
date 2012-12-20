@@ -191,7 +191,7 @@ class OwnerCheck implements CheckDecorator
             public void check( PropertyRecord record, ConsistencyReport.PropertyConsistencyReport report,
                                RecordAccess records )
             {
-                if ( record.inUse() )
+                if ( record.isInUse() )
                 {
                     if ( owners != null && Record.NO_PREVIOUS_PROPERTY.is( record.getPrevProp() ) )
                     { // this record is first in a chain
@@ -306,7 +306,7 @@ class OwnerCheck implements CheckDecorator
             public void check( DynamicRecord record, ConsistencyReport.DynamicConsistencyReport report,
                                RecordAccess records )
             {
-                if ( record.inUse() )
+                if ( record.isInUse() )
                 {
                     DynamicOwner.Unknown owner = new DynamicOwner.Unknown();
                     report.forReference( owner, DynamicOwner.ORPHAN_CHECK );
@@ -356,7 +356,7 @@ class OwnerCheck implements CheckDecorator
         @SuppressWarnings("unchecked")
         public void check( RECORD record, REPORT report, RecordAccess records )
         {
-            if ( record.inUse() )
+            if ( record.isInUse() )
             {
                 long prop = record.getNextProp();
                 if ( !Record.NO_NEXT_PROPERTY.is( prop ) )
@@ -396,7 +396,7 @@ class OwnerCheck implements CheckDecorator
         @Override
         public void check( RECORD record, REPORT report, RecordAccess records )
         {
-            if ( record.inUse() )
+            if ( record.isInUse() )
             {
                 DynamicOwner.NameOwner owner = owner( record );
                 DynamicOwner prev = owners.put( (long)record.getNameId(), owner );

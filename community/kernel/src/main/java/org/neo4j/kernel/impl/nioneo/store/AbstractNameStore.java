@@ -335,7 +335,7 @@ public abstract class AbstractNameStore<T extends AbstractNameRecord> extends Ab
     {
         int id = record.getId();
         Buffer buffer = window.getOffsettedBuffer( id );
-        if ( record.inUse() )
+        if ( record.isInUse() )
         {
             buffer.put( Record.IN_USE.byteValue() );
             writeRecord( record, buffer );
@@ -373,7 +373,7 @@ public abstract class AbstractNameStore<T extends AbstractNameRecord> extends Ab
         while ( recordToFind != Record.NO_NEXT_BLOCK.intValue() &&  records.hasNext() )
         {
             DynamicRecord record = records.next();
-            if ( record.inUse() && record.getId() == recordToFind )
+            if ( record.isInUse() && record.getId() == recordToFind )
             {
                 recordToFind = (int) record.getNextBlock();
 //                // TODO: optimize here, high chance next is right one

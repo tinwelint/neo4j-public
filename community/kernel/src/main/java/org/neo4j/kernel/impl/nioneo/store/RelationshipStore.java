@@ -204,7 +204,7 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
     {
         long id = record.getId();
         Buffer buffer = window.getOffsettedBuffer( id );
-        if ( record.inUse() || force )
+        if ( record.isInUse() || force )
         {
             long firstNode = record.getFirstNode();
             short firstNodeMod = (short)((firstNode & 0x700000000L) >> 31);
@@ -230,7 +230,7 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
             // [    ,   x] in use flag
             // [    ,xxx ] first node high order bits
             // [xxxx,    ] next prop high order bits
-            short inUseUnsignedByte = (short)((record.inUse() ? Record.IN_USE : Record.NOT_IN_USE).byteValue() | firstNodeMod | nextPropMod);
+            short inUseUnsignedByte = (short)((record.isInUse() ? Record.IN_USE : Record.NOT_IN_USE).byteValue() | firstNodeMod | nextPropMod);
 
             // [ xxx,    ][    ,    ][    ,    ][    ,    ] second node high order bits,     0x70000000
             // [    ,xxx ][    ,    ][    ,    ][    ,    ] first prev rel high order bits,  0xE000000

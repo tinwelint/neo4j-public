@@ -73,7 +73,7 @@ class RelationshipRecordCheck
         public void checkReference( RelationshipRecord record, RelationshipTypeRecord referred,
                                     ConsistencyReport.RelationshipConsistencyReport report, RecordAccess records )
         {
-            if ( !referred.inUse() )
+            if ( !referred.isInUse() )
             {
                 report.labelNotInUse( referred );
             }
@@ -257,7 +257,7 @@ class RelationshipRecordCheck
         public void checkChange( RelationshipRecord oldRecord, RelationshipRecord newRecord,
                                  ConsistencyReport.RelationshipConsistencyReport report, DiffRecordAccess records )
         {
-            if ( !newRecord.inUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
+            if ( !newRecord.isInUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
             {
                 if ( !NONE.is( valueFrom( oldRecord ) )
                      && records.changedRelationship( valueFrom( oldRecord ) ) == null )

@@ -106,7 +106,7 @@ public class DynamicRecord extends Abstract64BitRecord
     {
         StringBuilder buf = new StringBuilder();
         buf.append( "DynamicRecord[" ).append( getId() ).append( ",used=" ).append(
-                inUse() ).append( "," ).append( "light=" ).append( isLight ).append(
+                isInUse() ).append( "," ).append( "light=" ).append( isLight ).append(
                 "(" ).append( length ).append( "),type=" );
         PropertyType type = PropertyType.getPropertyType( this.type << 24, true );
         if ( type == null ) buf.append( this.type ); else buf.append( type.name() );
@@ -143,5 +143,17 @@ public class DynamicRecord extends Abstract64BitRecord
         }
         buf.append( "next=" ).append( nextBlock ).append( "]" );
         return buf.toString();
+    }
+    
+    @Override
+    public DynamicRecord clone()
+    {
+        DynamicRecord clone = new DynamicRecord( getLongId() );
+        clone.setInUse( isInUse(), type );
+        clone.data = data.clone();
+        clone.isLight = isLight;
+        clone.length = length;
+        clone.nextBlock = nextBlock;
+        return clone;
     }
 }

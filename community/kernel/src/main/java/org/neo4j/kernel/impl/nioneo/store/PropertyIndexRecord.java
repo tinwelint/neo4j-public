@@ -43,4 +43,16 @@ public class PropertyIndexRecord extends AbstractNameRecord
     {
         buf.append( ",propCount=" ).append( propCount );
     }
+    
+    @Override
+    public PropertyIndexRecord clone()
+    {
+        PropertyIndexRecord clone = new PropertyIndexRecord( getId() );
+        clone.setNameId( getNameId() );
+        clone.setIsLight( isLight() );
+        for ( DynamicRecord record : getNameRecords() )
+            clone.addNameRecord( record.clone() );
+        clone.propCount = propCount;
+        return clone;
+    }
 }

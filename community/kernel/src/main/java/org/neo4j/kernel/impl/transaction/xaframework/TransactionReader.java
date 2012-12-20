@@ -141,7 +141,7 @@ public class TransactionReader
         @Override
         public void visitNode( NodeRecord record )
         {
-            if ( !record.inUse() )
+            if ( !record.isInUse() )
             {
                 visitor.visitDeleteNode( localId, record.getId() );
             }
@@ -154,7 +154,7 @@ public class TransactionReader
         @Override
         public void visitRelationship( RelationshipRecord record )
         {
-            if ( !record.inUse() )
+            if ( !record.isInUse() )
             {
                 visitor.visitDeleteRelationship( localId, record.getId() );
             }
@@ -167,7 +167,7 @@ public class TransactionReader
         @Override
         public void visitProperty( PropertyRecord record )
         {
-            if ( !record.inUse() )
+            if ( !record.isInUse() )
             {
                 visitor.visitDeleteProperty( localId, record.getId() );
             }
@@ -180,7 +180,7 @@ public class TransactionReader
         @Override
         public void visitRelationshipType( RelationshipTypeRecord record )
         {
-            if ( !record.inUse() )
+            if ( !record.isInUse() )
             {
                 visitor.visitDeleteRelationshipType( localId, record.getId() );
             }
@@ -193,7 +193,7 @@ public class TransactionReader
         @Override
         public void visitPropertyIndex( PropertyIndexRecord record )
         {
-            if ( !record.inUse() )
+            if ( !record.isInUse() )
             {
                 visitor.visitDeletePropertyIndex( localId, record.getId() );
             }
@@ -206,7 +206,7 @@ public class TransactionReader
         @Override
         public void visitNeoStore( NeoStoreRecord record )
         {
-            if ( !record.inUse() )
+            if ( !record.isInUse() )
             {
                 visitor.visitDeleteNeoStore( localId, record.getId() );
             }

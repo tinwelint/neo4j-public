@@ -114,7 +114,7 @@ public class StoreMigrator
             {
                 reportProgress(nodeRecord.getId());
                 nodeStore.setHighId( nodeRecord.getId() + 1 );
-                if ( nodeRecord.inUse() )
+                if ( nodeRecord.isInUse() )
                 {
                     long startOfPropertyChain = nodeRecord.getNextProp();
                     if ( startOfPropertyChain != Record.NO_NEXT_RELATIONSHIP.intValue() )
@@ -140,7 +140,7 @@ public class StoreMigrator
             {
                 reportProgress( nodeMaxId + relationshipRecord.getId() );
                 relationshipStore.setHighId( relationshipRecord.getId() + 1 );
-                if ( relationshipRecord.inUse() )
+                if ( relationshipRecord.isInUse() )
                 {
                     long startOfPropertyChain = relationshipRecord.getNextProp();
                     if ( startOfPropertyChain != Record.NO_NEXT_RELATIONSHIP.intValue() )

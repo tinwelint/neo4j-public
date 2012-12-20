@@ -40,7 +40,7 @@ class PropertyRecordCheck
                              ConsistencyReport.PropertyConsistencyReport report, DiffRecordAccess records )
     {
         check( newRecord, report, records );
-        if ( oldRecord.inUse() )
+        if ( oldRecord.isInUse() )
         {
             for ( PropertyField field : PropertyField.values() )
             {
@@ -48,11 +48,11 @@ class PropertyRecordCheck
             }
         }
         // Did this record belong to the marked owner before it changed? - does it belong to it now?
-        if ( oldRecord.inUse() )
+        if ( oldRecord.isInUse() )
         {
             OwnerChain.OLD.check( newRecord, report, records );
         }
-        if ( newRecord.inUse() )
+        if ( newRecord.isInUse() )
         {
             OwnerChain.NEW.check( newRecord, report, records );
         }
@@ -111,7 +111,7 @@ class PropertyRecordCheck
     public void check( PropertyRecord record, ConsistencyReport.PropertyConsistencyReport report,
                        RecordAccess records )
     {
-        if ( !record.inUse() )
+        if ( !record.isInUse() )
         {
             return;
         }
@@ -256,7 +256,7 @@ class PropertyRecordCheck
         public void checkReference( PropertyRecord record, PropertyRecord referred,
                                     ConsistencyReport.PropertyConsistencyReport report, RecordAccess records )
         {
-            if ( !referred.inUse() )
+            if ( !referred.isInUse() )
             {
                 notInUse( report, referred );
             }
@@ -272,7 +272,7 @@ class PropertyRecordCheck
         public void checkChange( PropertyRecord oldRecord, PropertyRecord newRecord,
                                  ConsistencyReport.PropertyConsistencyReport report, DiffRecordAccess records )
         {
-            if ( !newRecord.inUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
+            if ( !newRecord.isInUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
             {
                 if ( !NONE.is( valueFrom( oldRecord ) )
                      && records.changedProperty( valueFrom( oldRecord ) ) == null )
@@ -298,7 +298,7 @@ class PropertyRecordCheck
             public void checkReference( PropertyRecord record, PropertyIndexRecord referred,
                                         ConsistencyReport.PropertyConsistencyReport report, RecordAccess records )
             {
-                if ( !referred.inUse() )
+                if ( !referred.isInUse() )
                 {
                     report.keyNotInUse( block, referred );
                 }
@@ -362,7 +362,7 @@ class PropertyRecordCheck
         public void checkReference( PropertyRecord record, DynamicRecord referred,
                                     ConsistencyReport.PropertyConsistencyReport report, RecordAccess records )
         {
-            if ( !referred.inUse() )
+            if ( !referred.isInUse() )
             {
                 notUsed( report, referred );
             }

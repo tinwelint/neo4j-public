@@ -163,7 +163,7 @@ public class PropertyRecord extends Abstract64BitRecord
     public String toString()
     {
         StringBuilder buf = new StringBuilder();
-        buf.append( "Property[" ).append( getId() ).append( ",used=" ).append( inUse() ).append( ",prev=" ).append(
+        buf.append( "Property[" ).append( getId() ).append( ",used=" ).append( isInUse() ).append( ",prev=" ).append(
                 prevProp ).append( ",next=" ).append( nextProp );
         if ( entityId != -1 ) buf.append( nodeIdSet ? ",node=" : ",rel=" ).append( entityId );
         for ( PropertyBlock block : blockRecords )
@@ -197,5 +197,20 @@ public class PropertyRecord extends Abstract64BitRecord
     public void setPrevProp( long prev )
     {
         prevProp = prev;
+    }
+    
+    @Override
+    public PropertyRecord clone()
+    {
+        PropertyRecord clone = new PropertyRecord( getId() );
+        clone.setInUse( isInUse() );
+        clone.setPrevProp( getPrevProp() );
+        clone.setNextProp( getNextProp() );
+        
+        List<PropertyBlock> clonedBlocks = new ArrayList<PropertyBlock>();
+        for ( PropertyBlock block : blockRecords )
+            clone.blockRecords.add( block.clone() );
+        
+        return clone;
     }
 }

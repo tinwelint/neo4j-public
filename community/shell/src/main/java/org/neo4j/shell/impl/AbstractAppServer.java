@@ -66,8 +66,13 @@ public abstract class AbstractAppServer extends AbstractServer
             addApp( app );
         }
 	}
+	
+	protected void clearApps()
+	{
+	    apps.clear();
+	}
 
-    private void addApp( App app )
+    protected void addApp( App app )
     {
         apps.put( app.getName(), app );
         try

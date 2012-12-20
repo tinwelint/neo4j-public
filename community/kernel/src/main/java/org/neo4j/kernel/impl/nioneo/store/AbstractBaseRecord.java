@@ -24,7 +24,7 @@ public abstract class AbstractBaseRecord
     private boolean inUse;
     private boolean created = false;
 
-    AbstractBaseRecord(boolean inUse)
+    protected AbstractBaseRecord( boolean inUse )
     {
         // limit subclasses to this package only
         this.inUse = inUse;
@@ -32,7 +32,7 @@ public abstract class AbstractBaseRecord
     
     public abstract long getLongId();
 
-    public final boolean inUse()
+    public final boolean isInUse()
     {
         return inUse;
     }
@@ -51,4 +51,6 @@ public abstract class AbstractBaseRecord
     {
         return created;
     }
+    
+    public abstract AbstractBaseRecord clone();
 }

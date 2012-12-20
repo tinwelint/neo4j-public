@@ -76,7 +76,7 @@ public class RelationshipChainExplorer
         chain.add( record );
         RelationshipRecord currentRecord = record;
         long nextRelId;
-        while ( currentRecord.inUse() &&
+        while ( currentRecord.isInUse() &&
                 (nextRelId = direction.fieldFor( nodeId, currentRecord ).relOf( currentRecord )) != none ) {
             currentRecord = recordStore.forceGetRecord( nextRelId );
             chain.add( currentRecord );

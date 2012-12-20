@@ -108,7 +108,7 @@ enum OwnerChain
                 public void checkReference( PropertyRecord record, PrimitiveRecord owner,
                                             ConsistencyReport.PropertyConsistencyReport report, RecordAccess records )
                 {
-                    if ( !owner.inUse() || Record.NO_NEXT_PROPERTY.is( owner.getNextProp() ) )
+                    if ( !owner.isInUse() || Record.NO_NEXT_PROPERTY.is( owner.getNextProp() ) )
                     {
                         wrongOwner( report );
                     }
@@ -126,7 +126,7 @@ enum OwnerChain
     {
         if ( record.getId() != property.getId() )
         {
-            if ( !property.inUse() || Record.NO_NEXT_PROPERTY.is( property.getNextProp() ) )
+            if ( !property.isInUse() || Record.NO_NEXT_PROPERTY.is( property.getNextProp() ) )
             {
                 wrongOwner( report );
             }

@@ -190,7 +190,7 @@ enum RelationshipNodeField implements
     public void checkReference( RelationshipRecord relationship, NodeRecord node,
                                 ConsistencyReport.RelationshipConsistencyReport report, RecordAccess records )
     {
-        if ( !node.inUse() )
+        if ( !node.isInUse() )
         {
             nodeNotInUse( report, node );
         }
@@ -219,7 +219,7 @@ enum RelationshipNodeField implements
     {
         if ( Record.NO_PREV_RELATIONSHIP.is( prev( oldRecord ) ) )
         {
-            if ( !newRecord.inUse()
+            if ( !newRecord.isInUse()
                  || valueFrom( oldRecord ) != valueFrom( newRecord )
                  || prev( oldRecord ) != prev( newRecord ) )
             {

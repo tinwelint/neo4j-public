@@ -84,7 +84,7 @@ public abstract class PrimitiveRecordCheck
         @Override
         public void checkChange( RECORD oldRecord, RECORD newRecord, REPORT report, DiffRecordAccess records )
         {
-            if ( !newRecord.inUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
+            if ( !newRecord.isInUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
             {
                 if ( !Record.NO_NEXT_PROPERTY.is( valueFrom( oldRecord ) )
                      && records.changedProperty( valueFrom( oldRecord ) ) == null )
@@ -97,7 +97,7 @@ public abstract class PrimitiveRecordCheck
         @Override
         public void checkReference( RECORD record, PropertyRecord property, REPORT report, RecordAccess records )
         {
-            if ( !property.inUse() )
+            if ( !property.isInUse() )
             {
                 report.propertyNotInUse( property );
             }
@@ -114,7 +114,7 @@ public abstract class PrimitiveRecordCheck
     @Override
     public void check( RECORD record, REPORT report, RecordAccess records )
     {
-        if ( !record.inUse() )
+        if ( !record.isInUse() )
         {
             return;
         }
@@ -128,7 +128,7 @@ public abstract class PrimitiveRecordCheck
     public void checkChange( RECORD oldRecord, RECORD newRecord, REPORT report, DiffRecordAccess records )
     {
         check( newRecord, report, records );
-        if ( oldRecord.inUse() )
+        if ( oldRecord.isInUse() )
         {
             for ( RecordField<RECORD, REPORT> field : fields )
             {

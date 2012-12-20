@@ -442,7 +442,6 @@ public abstract class IteratorUtil
         return count( iterable.iterator() );
     }
 
-
     /**
      * Creates a collection from an iterable.
      *
@@ -458,18 +457,6 @@ public abstract class IteratorUtil
     }
     
     /**
-     * Creates a {@link Set} from an {@link Iterable}.
-     *
-     * @param iterable The items to create the set from.
-     * @param <T> The generic type of items.
-     * @return a set containing all items from the {@link Iterable}.
-     */
-    public static <T> Set<T> asSet( Iterable<T> iterable )
-    {
-        return addToCollection( iterable, new HashSet<T>() );
-    }
-
-    /**
      * Creates a {@link Set} from an array of items.
      *
      * @param items the items to add to the set.
@@ -478,6 +465,20 @@ public abstract class IteratorUtil
     public static <T> Set<T> asSet( T... items )
     {
         return new HashSet<T>( asList( items ) );
+    }
+
+    /**
+     * Creates a set from an iterable.
+     *
+     * @param iterable The iterable to create the set from.
+     * @param <T> The generic type of both the iterable and the set.
+     * @return a set containing all unique items from the iterable.
+     */
+    public static <T> Set<T> asSet( Iterable<T> iterable )
+    {
+        Set<T> set = new HashSet<T>();
+        addToCollection( iterable, set );
+        return set;
     }
     
     /**

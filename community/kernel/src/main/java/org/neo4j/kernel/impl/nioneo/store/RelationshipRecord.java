@@ -96,7 +96,7 @@ public class RelationshipRecord extends PrimitiveRecord
     @Override
     public String toString()
     {
-        return new StringBuilder( "Relationship[" ).append( getId() ).append( ",used=" ).append( inUse() ).append(
+        return new StringBuilder( "Relationship[" ).append( getId() ).append( ",used=" ).append( isInUse() ).append(
                 ",source=" ).append( firstNode ).append( ",target=" ).append( secondNode ).append( ",type=" ).append(
                 type ).append( ",sPrev=" ).append( firstPrevRel ).append( ",sNext=" ).append( firstNextRel ).append(
                 ",tPrev=" ).append( secondPrevRel ).append( ",tNext=" ).append( secondNextRel ).append( ",prop=" ).append(
@@ -107,5 +107,17 @@ public class RelationshipRecord extends PrimitiveRecord
     void setIdTo( PropertyRecord property )
     {
         property.setRelId( getId() );
+    }
+    
+    @Override
+    public RelationshipRecord clone()
+    {
+        RelationshipRecord clone = new RelationshipRecord( getId(), getFirstNode(), getSecondNode(), getType() );
+        clone.setInUse( isInUse() );
+        clone.setFirstPrevRel( getFirstPrevRel() );
+        clone.setFirstNextRel( getFirstNextRel() );
+        clone.setSecondPrevRel( getSecondPrevRel() );
+        clone.setSecondNextRel( getSecondNextRel() );
+        return clone;
     }
 }

@@ -271,7 +271,7 @@ public class BatchInserterImpl implements BatchInserter
         {
             PropertyRecord prevPropRecord = getPropertyStore().getRecord(
                     prevProp );
-            assert prevPropRecord.inUse() : prevPropRecord + "->" + propRecord
+            assert prevPropRecord.isInUse() : prevPropRecord + "->" + propRecord
                     + " for " + primitive;
             prevPropRecord.setNextProp( nextProp );
             getPropertyStore().updateRecord( prevPropRecord );
@@ -280,7 +280,7 @@ public class BatchInserterImpl implements BatchInserter
         {
             PropertyRecord nextPropRecord = getPropertyStore().getRecord(
                     nextProp );
-            assert nextPropRecord.inUse() : propRecord + "->" + nextPropRecord
+            assert nextPropRecord.isInUse() : propRecord + "->" + nextPropRecord
                     + " for " + primitive;
             nextPropRecord.setPrevProp( prevProp );
             getPropertyStore().updateRecord( nextPropRecord );

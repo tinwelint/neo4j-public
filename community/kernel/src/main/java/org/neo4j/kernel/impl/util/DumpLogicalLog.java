@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.transaction.xaframework.LogEntry;
 import org.neo4j.kernel.impl.transaction.xaframework.LogIoUtils;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommand;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommandFactory;
+import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog;
 
 public class DumpLogicalLog
 {
@@ -138,6 +139,21 @@ public class DumpLogicalLog
 
     protected static String[] filenamesOf( String filenameOrDirectory, final String prefix )
     {
+        Long lowerLimitLong = null, upperLimitLong = null;
+        if ( filenameOrDirectory.contains( "{" ) && filenameOrDirectory.endsWith( "}" ) )
+        {
+            int limitIndex = filenameOrDirectory.indexOf( '{' );
+            String limitString = filenameOrDirectory.substring( limitIndex + 1, filenameOrDirectory.length() - 1 );
+            String[] limits = limitString.split( "-" );
+            if ( limits[0].length() > 0 )
+                lowerLimitLong = Long.parseLong( limits[0] );
+            if ( !limitString.endsWith( "-" ) && limits[1].length() > 0 )
+                upperLimitLong = Long.parseLong( limits[1] );
+            filenameOrDirectory = filenameOrDirectory.substring( 0, limitIndex );
+        }
+        
+        final long lowerLimit = lowerLimitLong != null ? lowerLimitLong.longValue() : -1L;
+        final long upperLimit = upperLimitLong != null ? upperLimitLong.longValue() : -1L;
         File file = new File( filenameOrDirectory );
         if ( file.isDirectory() )
         {
@@ -146,7 +162,15 @@ public class DumpLogicalLog
                 @Override
                 public boolean accept( File dir, String name )
                 {
-                    return name.contains( prefix ) && !name.contains( "active" );
+                    if ( !name.contains( prefix ) || name.contains( "active" ) )
+                        return false;
+                    
+                    long version = XaLogicalLog.getHistoryLogVersion( new File( dir, name ) );
+                    if ( lowerLimit != -1 && version < lowerLimit )
+                        return false;
+                    if ( upperLimit != -1 && version > upperLimit )
+                        return false;
+                    return true;
                 }
             } );
             Collection<String> result = new TreeSet<String>( sequentialComparator() );

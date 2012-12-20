@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class AbstractNameRecord extends AbstractRecord
+public abstract class AbstractNameRecord extends AbstractRecord
 {
     private int nameId = Record.NO_NEXT_BLOCK.intValue();
     private final List<DynamicRecord> nameRecords = new ArrayList<DynamicRecord>();
@@ -68,7 +68,7 @@ public class AbstractNameRecord extends AbstractRecord
     public String toString()
     {
         StringBuilder buf = new StringBuilder( getClass().getSimpleName() + "[" );
-        buf.append( getId() ).append( "," ).append( inUse() ? "in" : "no" ).append( " use" );
+        buf.append( getId() ).append( "," ).append( isInUse() ? "in" : "no" ).append( " use" );
         buf.append( ",nameId=" ).append( nameId );
         additionalToString( buf );
         if ( !isLight )

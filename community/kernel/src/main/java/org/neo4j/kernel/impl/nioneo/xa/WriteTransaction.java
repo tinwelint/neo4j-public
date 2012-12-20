@@ -165,7 +165,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         for ( NodeRecord record : nodeRecords.values() )
         {
-            if ( !record.inUse() && record.getNextRel() !=
+            if ( !record.isInUse() && record.getNextRel() !=
                 Record.NO_NEXT_RELATIONSHIP.intValue() )
             {
                 throw Exceptions.withCause( new XAException( XAException.XA_RBINTEGRITY ),
@@ -644,7 +644,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             nodeRecord = getNodeStore().getRecord( nodeId );
             addNodeRecord( nodeRecord );
         }
-        if ( !nodeRecord.inUse() )
+        if ( !nodeRecord.isInUse() )
         {
             throw new IllegalStateException( "Unable to delete Node[" + nodeId +
             "] since it has already been deleted." );
@@ -663,7 +663,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             record = getRelationshipStore().getRecord( id );
             addRelationshipRecord( record );
         }
-        if ( !record.inUse() )
+        if ( !record.isInUse() )
         {
             throw new IllegalStateException( "Unable to delete relationship[" +
                 id + "] since it is already deleted." );
@@ -706,7 +706,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 // TODO: update count on property index record
                 for ( DynamicRecord valueRecord : block.getValueRecords() )
                 {
-                    assert valueRecord.inUse();
+                    assert valueRecord.isInUse();
                     valueRecord.setInUse( false );
                     propRecord.addDeletedRecord( valueRecord );
                 }
@@ -903,7 +903,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             relRecord = getRelationshipStore().getRecord( relId );
         }
-        if ( !relRecord.inUse() )
+        if ( !relRecord.isInUse() )
         {
             throw new IllegalStateException( "Property remove on relationship[" +
                 relId + "] illegal since it has been deleted." );
@@ -920,14 +920,14 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         if ( relRecord != null && relRecord.isCreated() ) return null;
         if ( relRecord != null )
         {
-            if ( !relRecord.inUse() && !light )
+            if ( !relRecord.isInUse() && !light )
             {
                 throw new IllegalStateException( "Relationship[" + relId +
                         "] has been deleted in this tx" );
             }
         }
         relRecord = getRelationshipStore().getRecord( relId );
-        if ( !relRecord.inUse() )
+        if ( !relRecord.isInUse() )
         {
             throw new InvalidRecordException( "Relationship[" + relId +
                 "] not in use" );
@@ -945,14 +945,14 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         if ( nodeRecord != null )
         {
-            if ( !nodeRecord.inUse() && !light )
+            if ( !nodeRecord.isInUse() && !light )
             {
                 throw new IllegalStateException( "Node[" + nodeId +
                         "] has been deleted in this tx" );
             }
         }
         nodeRecord = getNodeStore().getRecord( nodeId );
-        if ( !nodeRecord.inUse() )
+        if ( !nodeRecord.isInUse() )
         {
             throw new InvalidRecordException( "Node[" + nodeId +
                 "] not in use" );
@@ -998,7 +998,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             nodeRecord = getNodeStore().getRecord( nodeId );
             addNodeRecord( nodeRecord );
         }
-        if ( !nodeRecord.inUse() )
+        if ( !nodeRecord.isInUse() )
         {
             throw new IllegalStateException( "Property remove on node[" +
                 nodeId + "] illegal since it has been deleted." );
@@ -1013,7 +1013,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     {
         long propertyId = propertyData.getId();
         PropertyRecord propRecord = getPropertyRecord( propertyId, false, true );
-        if ( !propRecord.inUse() )
+        if ( !propRecord.isInUse() )
         {
             throw new IllegalStateException( "Unable to delete property[" +
                 propertyId + "] since it is already deleted." );
@@ -1034,7 +1034,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         for ( DynamicRecord valueRecord : block.getValueRecords() )
         {
-            assert valueRecord.inUse();
+            assert valueRecord.isInUse();
             valueRecord.setInUse( false, block.getType().intValue() );
             propRecord.addDeletedRecord( valueRecord );
         }
@@ -1075,7 +1075,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             PropertyRecord prevPropRecord = getPropertyRecord( prevProp, true,
                     true );
-            assert prevPropRecord.inUse() : prevPropRecord + "->" + propRecord
+            assert prevPropRecord.isInUse() : prevPropRecord + "->" + propRecord
                                             + " for " + primitive;
             prevPropRecord.setNextProp( nextProp );
             prevPropRecord.setChanged( primitive );
@@ -1084,7 +1084,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             PropertyRecord nextPropRecord = getPropertyRecord( nextProp, true,
                     true );
-            assert nextPropRecord.inUse() : propRecord + "->" + nextPropRecord
+            assert nextPropRecord.isInUse() : propRecord + "->" + nextPropRecord
                                             + " for " + primitive;
             nextPropRecord.setPrevProp( prevProp );
             nextPropRecord.setChanged( primitive );
@@ -1111,7 +1111,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             relRecord = getRelationshipStore().getRecord( relId );
         }
-        if ( !relRecord.inUse() )
+        if ( !relRecord.isInUse() )
         {
             throw new IllegalStateException( "Property change on relationship[" +
                 relId + "] illegal since it has been deleted." );
@@ -1128,7 +1128,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             nodeRecord = getNodeStore().getRecord( nodeId );
         }
-        if ( !nodeRecord.inUse() )
+        if ( !nodeRecord.isInUse() )
         {
             throw new IllegalStateException( "Property change on node[" +
                 nodeId + "] illegal since it has been deleted." );
@@ -1143,7 +1143,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         long propertyId = propertyData.getId();
         PropertyRecord propertyRecord = getPropertyRecord( propertyId, true,
                 true );
-        if ( !propertyRecord.inUse() )
+        if ( !propertyRecord.isInUse() )
         {
             throw new IllegalStateException( "Unable to change property["
                                              + propertyId
@@ -1164,7 +1164,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         propertyRecord.setChanged( primitive );
         for ( DynamicRecord record : block.getValueRecords() )
         {
-            assert record.inUse();
+            assert record.isInUse();
             record.setInUse( false, block.getType().intValue() );
             propertyRecord.addDeletedRecord( record );
         }
@@ -1199,7 +1199,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             relRecord = getRelationshipStore().getRecord( relId );
             addRelationshipRecord( relRecord );
         }
-        if ( !relRecord.inUse() )
+        if ( !relRecord.isInUse() )
         {
             throw new IllegalStateException( "Property add on relationship[" +
                 relId + "] illegal since it has been deleted." );
@@ -1223,7 +1223,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             nodeRecord = getNodeStore().getRecord( nodeId );
             addNodeRecord( nodeRecord );
         }
-        if ( !nodeRecord.inUse() )
+        if ( !nodeRecord.isInUse() )
         {
             throw new IllegalStateException( "Property add on node[" +
                 nodeId + "] illegal since it has been deleted." );
@@ -1263,7 +1263,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             assert propRecord.getPrevProp() == Record.NO_PREVIOUS_PROPERTY.intValue() : propRecord
                                                                                         + " for "
                                                                                         + primitive;
-            assert propRecord.inUse() : propRecord;
+            assert propRecord.isInUse() : propRecord;
             int propSize = propRecord.size();
             assert propSize > 0 : propRecord;
             if ( propSize + newBlockSizeInBytes <= PropertyType.getPayloadSize() )
@@ -1306,7 +1306,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             firstNode = getNodeStore().getRecord( firstNodeId );
             addNodeRecord( firstNode );
         }
-        if ( !firstNode.inUse() )
+        if ( !firstNode.isInUse() )
         {
             throw new IllegalStateException( "First node[" + firstNodeId +
                 "] is deleted and cannot be used to create a relationship" );
@@ -1317,7 +1317,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             secondNode = getNodeStore().getRecord( secondNodeId );
             addNodeRecord( secondNode );
         }
-        if ( !secondNode.inUse() )
+        if ( !secondNode.isInUse() )
         {
             throw new IllegalStateException( "Second node[" + secondNodeId +
                 "] is deleted and cannot be used to create a relationship" );
@@ -1766,7 +1766,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             PropertyRecord toAdd = getPropertyRecord( nextIdToFetch, true,
                     false );
             toCheck.add( toAdd );
-            assert toAdd.inUse() : primitive + "->"
+            assert toAdd.isInUse() : primitive + "->"
                                    + Arrays.toString( toCheck.toArray() );
             nextIdToFetch = toAdd.getNextProp();
         }

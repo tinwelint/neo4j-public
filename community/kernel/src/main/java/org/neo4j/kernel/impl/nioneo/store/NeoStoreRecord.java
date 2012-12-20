@@ -31,7 +31,7 @@ public class NeoStoreRecord extends PrimitiveRecord
     public String toString()
     {
         return getClass().getSimpleName() + "[" +
-                "used=" + inUse() +
+                "used=" + isInUse() +
                 ",nextProp=" + getNextProp() +
                 "]";
     }
@@ -40,5 +40,14 @@ public class NeoStoreRecord extends PrimitiveRecord
     void setIdTo( PropertyRecord property )
     {
         property.setNodeId( -1 );
+    }
+    
+    @Override
+    public NeoStoreRecord clone()
+    {
+        NeoStoreRecord clone = new NeoStoreRecord();
+        clone.setInUse( isInUse() );
+        clone.setNextProp( getNextProp() );
+        return clone;
     }
 }

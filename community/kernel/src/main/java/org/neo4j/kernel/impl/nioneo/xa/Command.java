@@ -118,7 +118,7 @@ public abstract class Command extends XaCommand
         throws IOException
     {
         // id+type+in_use(byte)+nr_of_bytes(int)+next_block(long)
-        if ( record.inUse() )
+        if ( record.isInUse() )
         {
             byte inUse = Record.IN_USE.byteValue();
             buffer.putLong( record.getId() ).putInt( record.getType() ).put(
@@ -320,7 +320,7 @@ public abstract class Command extends XaCommand
         @Override
         boolean isDeleted()
         {
-            return !record.inUse();
+            return !record.isInUse();
         }
 
         @Override
@@ -345,12 +345,12 @@ public abstract class Command extends XaCommand
         @Override
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
+            byte inUse = record.isInUse() ? Record.IN_USE.byteValue()
                 : Record.NOT_IN_USE.byteValue();
             buffer.put( NODE_COMMAND );
             buffer.putLong( record.getId() );
             buffer.put( inUse );
-            if ( record.inUse() )
+            if ( record.isInUse() )
             {
                 buffer.putLong( record.getNextRel() ).putLong(
                     record.getNextProp() );
@@ -463,13 +463,28 @@ public abstract class Command extends XaCommand
         @Override
         boolean isDeleted()
         {
-            return !record.inUse();
+            return !record.isInUse();
+        }
+
+        long getFirstNode()
+        {
+            return record.getFirstNode();
+        }
+
+        long getSecondNode()
+        {
+            return record.getSecondNode();
+        }
+
+        boolean isRemove()
+        {
+            return !record.isInUse();
         }
 
         @Override
         public void execute()
         {
-            if ( isRecovered() && !record.inUse() )
+            if ( isRecovered() && !record.isInUse() )
             {
                 /*
                  * If read from a log (either on recovery or HA) then all the fields but for the Id are -1. If the
@@ -498,12 +513,12 @@ public abstract class Command extends XaCommand
         @Override
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
+            byte inUse = record.isInUse() ? Record.IN_USE.byteValue()
                 : Record.NOT_IN_USE.byteValue();
             buffer.put( REL_COMMAND );
             buffer.putLong( record.getId() );
             buffer.put( inUse );
-            if ( record.inUse() )
+            if ( record.isInUse() )
             {
                 buffer.putLong( record.getFirstNode() )
                         .putLong( record.getSecondNode() )
@@ -601,7 +616,7 @@ public abstract class Command extends XaCommand
         @Override
         boolean isDeleted()
         {
-            return !record.inUse();
+            return !record.isInUse();
         }
 
         @Override
@@ -683,7 +698,7 @@ public abstract class Command extends XaCommand
         @Override
         boolean isDeleted()
         {
-            return !record.inUse();
+            return !record.isInUse();
         }
 
         @Override
@@ -709,7 +724,7 @@ public abstract class Command extends XaCommand
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
             // id+in_use(byte)+count(int)+key_blockId(int)+nr_key_records(int)
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
+            byte inUse = record.isInUse() ? Record.IN_USE.byteValue()
                 : Record.NOT_IN_USE.byteValue();
             buffer.put( PROP_INDEX_COMMAND );
             buffer.putInt( record.getId() );
@@ -824,7 +839,7 @@ public abstract class Command extends XaCommand
         @Override
         boolean isDeleted()
         {
-            return !record.inUse();
+            return !record.isInUse();
         }
 
         @Override
@@ -859,7 +874,7 @@ public abstract class Command extends XaCommand
         @Override
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
+            byte inUse = record.isInUse() ? Record.IN_USE.byteValue()
                 : Record.NOT_IN_USE.byteValue();
             if ( record.getRelId() != -1 )
             {
@@ -980,11 +995,11 @@ public abstract class Command extends XaCommand
                 {
                     return null;
                 }
-                assert !read.inUse() : read + " is kinda weird";
+                assert !read.isInUse() : read + " is kinda weird";
                 record.addDeletedRecord( read );
             }
 
-            if ( ( inUse && !record.inUse() ) || ( !inUse && record.inUse() ) )
+            if ( ( inUse && !record.isInUse() ) || ( !inUse && record.isInUse() ) )
             {
                 throw new IllegalStateException( "Weird, inUse was read in as "
                                                  + inUse
@@ -1040,7 +1055,7 @@ public abstract class Command extends XaCommand
         @Override
         boolean isDeleted()
         {
-            return !record.inUse();
+            return !record.isInUse();
         }
 
         @Override
@@ -1066,7 +1081,7 @@ public abstract class Command extends XaCommand
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
             // id+in_use(byte)+type_blockId(int)+nr_type_records(int)
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
+            byte inUse = record.isInUse() ? Record.IN_USE.byteValue()
                 : Record.NOT_IN_USE.byteValue();
             buffer.put( REL_TYPE_COMMAND );
             buffer.putInt( record.getId() ).put( inUse ).putInt( record.getNameId() );

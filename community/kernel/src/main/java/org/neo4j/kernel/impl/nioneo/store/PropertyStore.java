@@ -83,12 +83,12 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
         processor.processProperty( this, record );
     }
 
-    DynamicStringStore getStringStore()
+    public DynamicStringStore getStringStore()
     {
         return stringPropertyStore;
     }
 
-    DynamicArrayStore getArrayStore()
+    public DynamicArrayStore getArrayStore()
     {
         return arrayPropertyStore;
     }
@@ -222,7 +222,7 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
     {
         long id = record.getId();
         Buffer buffer = window.getOffsettedBuffer( id );
-        if ( record.inUse() )
+        if ( record.isInUse() )
         {
             // Set up the record header
             short prevModifier = record.getPrevProp() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0
@@ -448,7 +448,7 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
     {
         Buffer buffer = window.getOffsettedBuffer( id );
         PropertyRecord toReturn = getRecordFromBuffer( id, buffer );
-        if ( !toReturn.inUse() && load != RecordLoad.FORCE )
+        if ( !toReturn.isInUse() && load != RecordLoad.FORCE )
         {
             throw new InvalidRecordException( "PropertyRecord[" + id + "] not in use" );
         }
@@ -709,7 +709,7 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
         // TODO: The next line is an ugly hack, but works.
         Buffer fromByteBuffer = new Buffer( null, buffer );
         return buffer.limit() >= RECORD_SIZE
-               && getRecordFromBuffer( 0, fromByteBuffer ).inUse();
+               && getRecordFromBuffer( 0, fromByteBuffer ).isInUse();
     }
 
     @Override

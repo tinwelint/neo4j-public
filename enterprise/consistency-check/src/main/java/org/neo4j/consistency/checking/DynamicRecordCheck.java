@@ -44,9 +44,9 @@ class DynamicRecordCheck
                              ConsistencyReport.DynamicConsistencyReport report, DiffRecordAccess records )
     {
         check( newRecord, report, records );
-        if ( oldRecord.inUse() && !Record.NO_NEXT_BLOCK.is( oldRecord.getNextBlock() ) )
+        if ( oldRecord.isInUse() && !Record.NO_NEXT_BLOCK.is( oldRecord.getNextBlock() ) )
         {
-            if ( !newRecord.inUse() || oldRecord.getNextBlock() != newRecord.getNextBlock() )
+            if ( !newRecord.isInUse() || oldRecord.getNextBlock() != newRecord.getNextBlock() )
             {
                 DynamicRecord next = dereference.changed( records, oldRecord.getNextBlock() );
                 if ( next == null )
@@ -62,7 +62,7 @@ class DynamicRecordCheck
     @Override
     public void check( DynamicRecord record, ConsistencyReport.DynamicConsistencyReport report, RecordAccess records )
     {
-        if ( !record.inUse() )
+        if ( !record.isInUse() )
         {
             return;
         }
@@ -95,7 +95,7 @@ class DynamicRecordCheck
     public void checkReference( DynamicRecord record, DynamicRecord next,
                                 ConsistencyReport.DynamicConsistencyReport report, RecordAccess records )
     {
-        if ( !next.inUse() )
+        if ( !next.isInUse() )
         {
             report.nextNotInUse( next );
         }

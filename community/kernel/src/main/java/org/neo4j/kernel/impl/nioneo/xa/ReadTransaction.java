@@ -127,7 +127,7 @@ class ReadTransaction implements NeoStoreTransaction
             }
             long firstNode = relRecord.getFirstNode();
             long secondNode = relRecord.getSecondNode();
-            if ( relRecord.inUse() )
+            if ( relRecord.isInUse() )
             {
                 if ( firstNode == secondNode )
                 {
@@ -225,7 +225,7 @@ class ReadTransaction implements NeoStoreTransaction
     public ArrayMap<Integer,PropertyData> relLoadProperties( long relId, boolean light )
     {
         RelationshipRecord relRecord = getRelationshipStore().getRecord( relId );
-        if ( !relRecord.inUse() )
+        if ( !relRecord.isInUse() )
         {
             throw new InvalidRecordException( "Relationship[" + relId +
                 "] not in use" );

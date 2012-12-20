@@ -52,7 +52,7 @@ class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, ConsistencyReport
         public void checkReference( NodeRecord node, RelationshipRecord relationship,
                                     ConsistencyReport.NodeConsistencyReport report, RecordAccess records )
         {
-            if ( !relationship.inUse() )
+            if ( !relationship.isInUse() )
             {
                 report.relationshipNotInUse( relationship );
             }
@@ -90,7 +90,7 @@ class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, ConsistencyReport
                                  ConsistencyReport.NodeConsistencyReport report,
                                  DiffRecordAccess records )
         {
-            if ( !newRecord.inUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
+            if ( !newRecord.isInUse() || valueFrom( oldRecord ) != valueFrom( newRecord ) )
             {
                 if ( !Record.NO_NEXT_RELATIONSHIP.is( valueFrom( oldRecord ) )
                      && records.changedRelationship( valueFrom( oldRecord ) ) == null )

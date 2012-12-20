@@ -48,7 +48,7 @@ public class NodeRecord extends PrimitiveRecord
     @Override
     public String toString()
     {
-        return new StringBuilder( "Node[" ).append( getId() ).append( ",used=" ).append( inUse() ).append( ",rel=" ).append(
+        return new StringBuilder( "Node[" ).append( getId() ).append( ",used=" ).append( isInUse() ).append( ",rel=" ).append(
                 nextRel ).append( ",prop=" ).append( getNextProp() ).append( "]" ).toString();
     }
 
@@ -56,5 +56,13 @@ public class NodeRecord extends PrimitiveRecord
     void setIdTo( PropertyRecord property )
     {
         property.setNodeId( getId() );
+    }
+    
+    @Override
+    public NodeRecord clone()
+    {
+        NodeRecord clone = new NodeRecord( getId(), getNextRel(), getNextProp() );
+        clone.setInUse( isInUse() );
+        return clone;
     }
 }

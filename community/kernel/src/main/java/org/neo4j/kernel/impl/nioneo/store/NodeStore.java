@@ -231,7 +231,7 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
     {
         long id = record.getId();
         Buffer buffer = window.getOffsettedBuffer( id );
-        if ( record.inUse() || force )
+        if ( record.isInUse() || force )
         {
             long nextRel = record.getNextRel();
             long nextProp = record.getNextProp();
@@ -242,7 +242,7 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
             // [    ,   x] in use bit
             // [    ,xxx ] higher bits for rel id
             // [xxxx,    ] higher bits for prop id
-            short inUseUnsignedByte = ( record.inUse() ? Record.IN_USE : Record.NOT_IN_USE ).byteValue();
+            short inUseUnsignedByte = ( record.isInUse() ? Record.IN_USE : Record.NOT_IN_USE ).byteValue();
             inUseUnsignedByte = (short) ( inUseUnsignedByte | relModifier | propModifier );
             buffer.put( (byte) inUseUnsignedByte ).putInt( (int) nextRel ).putInt( (int) nextProp );
         }

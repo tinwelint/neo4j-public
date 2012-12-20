@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
 import org.neo4j.kernel.impl.nioneo.store.Abstract64BitRecord;
+import org.neo4j.kernel.impl.nioneo.store.AbstractBaseRecord;
 import org.neo4j.kernel.impl.nioneo.store.Record;
 
 public class LegacyPropertyRecord extends Abstract64BitRecord
@@ -90,11 +91,16 @@ public class LegacyPropertyRecord extends Abstract64BitRecord
     {
         StringBuffer buf = new StringBuffer();
         buf.append( "LegacyPropertyRecord[" ).append( getId() ).append( "," ).append(
-                inUse() ).append( "," ).append( type ).append( "," ).append(
+                isInUse() ).append( "," ).append( type ).append( "," ).append(
                 keyIndexId ).append( "," ).append( propBlock ).append( "," )
                 .append( prevProp ).append( "," ).append( nextProp );
         buf.append( "]" );
         return buf.toString();
     }
 
+    @Override
+    public AbstractBaseRecord clone()
+    {
+        throw new UnsupportedOperationException();
+    }
 }

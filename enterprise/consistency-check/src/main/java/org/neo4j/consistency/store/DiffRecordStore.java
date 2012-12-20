@@ -136,7 +136,7 @@ public class DiffRecordStore<R extends AbstractBaseRecord> implements RecordStor
     {
         R record = diff.get( id );
         if ( record == null ) return force ? actual.forceGetRecord( id ) : actual.getRecord( id );
-        if ( !force && !record.inUse() ) throw new InvalidRecordException( record.getClass().getSimpleName() + "[" + id + "] not in use" );
+        if ( !force && !record.isInUse() ) throw new InvalidRecordException( record.getClass().getSimpleName() + "[" + id + "] not in use" );
         return record;
     }
 

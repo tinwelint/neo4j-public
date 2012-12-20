@@ -25,4 +25,14 @@ public class RelationshipTypeRecord extends AbstractNameRecord
     {
         super( id );
     }
+    
+    @Override
+    public RelationshipTypeRecord clone()
+    {
+        RelationshipTypeRecord clone = new RelationshipTypeRecord( getId() );
+        clone.setNameId( getNameId() );
+        for ( DynamicRecord record : getNameRecords() )
+            clone.addNameRecord( record.clone() );
+        return clone;
+    }
 }

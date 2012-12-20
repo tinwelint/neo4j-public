@@ -78,7 +78,7 @@ public class DiffStore extends StoreAccess implements CommandRecordVisitor
     {
         getNodeStore().forceUpdateRecord( record );
         record = getNodeStore().forceGetRaw( record );
-        if ( record.inUse() )
+        if ( record.isInUse() )
         {
             markProperty( record.getNextProp(), record.getId(), -1 );
             markRelationship( record.getNextRel() );
@@ -90,7 +90,7 @@ public class DiffStore extends StoreAccess implements CommandRecordVisitor
     {
         getRelationshipStore().forceUpdateRecord( record );
         record = getRelationshipStore().forceGetRaw( record );
-        if ( record.inUse() )
+        if ( record.isInUse() )
         {
             getNodeStore().markDirty( record.getFirstNode() );
             getNodeStore().markDirty( record.getSecondNode() );
@@ -132,7 +132,7 @@ public class DiffStore extends StoreAccess implements CommandRecordVisitor
         updateDynamic( record );
         record = getPropertyStore().forceGetRaw( record );
         updateDynamic( record );
-        if ( record.inUse() )
+        if ( record.isInUse() )
         {
             markProperty( record.getNextProp(), record.getNodeId(), record.getRelId() );
             markProperty( record.getPrevProp(), record.getNodeId(), record.getRelId() );
