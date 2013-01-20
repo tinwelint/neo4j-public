@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -187,6 +188,18 @@ class AsOneStartBranch implements TraversalBranch
 
     @Override
     public Node node( int index )
+    {
+        throw new UnsupportedOperationException();
+    }
+    
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        throw new UnsupportedOperationException();
+    }
+    
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
     {
         throw new UnsupportedOperationException();
     }

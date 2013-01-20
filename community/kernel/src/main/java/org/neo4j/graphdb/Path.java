@@ -129,6 +129,7 @@ public interface Path extends Iterable<PropertyContainer>
      *
      * @see Iterable#iterator()
      */
+    @Override
     Iterator<PropertyContainer> iterator();
     
     /**
@@ -140,7 +141,7 @@ public interface Path extends Iterable<PropertyContainer>
      * from -1 and going backwards. For example -1 means the last relationship,
      * -2 the next-to-last relationship.
      * @return the {@link Relationship} in this path at the supplied index.
-     * @throws IndexOutOfBoundsException if the supplied index cannot be found.
+     * @throws IndexOutOfBoundsException if the supplied index cannot be satisfied.
      */
     Relationship relationship( int index );
     
@@ -153,7 +154,47 @@ public interface Path extends Iterable<PropertyContainer>
      * from -1 and going backwards. For example -1 means the
      * {@link #endNode() last node}, -2 the next-to-last node.
      * @return the {@link Node} in this path at the supplied index.
-     * @throws IndexOutOfBoundsException if the supplied index cannot be found.
+     * @throws IndexOutOfBoundsException if the supplied index cannot be satisfied.
      */
     Node node( int index );
+    
+    /**
+     * Returns a sub path of this path, starting from {@code beginIndex} (inclusive)
+     * all the way to the end of the path. The returned path will at least have the same
+     * {@link #lastRelationship()} and {@link #endNode()}.
+     * 
+     * @param beginIndex the {@link Node} that will be the {@link #startNode()} of the
+     * sub path.
+     * A non-negative index means to get a node from the beginning, starting from 0.
+     * For example 0 means the first node, 1 means the second node.
+     * A negative index means to get a node from the end, starting
+     * from -1 and going backwards. For example -1 means the
+     * {@link #endNode() last node}, -2 the next-to-last node.
+     * @return a sub path of this path from an index and to the end of the path.
+     * @throws IndexOutOfBoundsException if the supplied index cannot be satisfied.
+     */
+    Path subPath( int beginIndex );
+    
+    /**
+     * Returns a sub path of this path, starting from {@code beginIndex} (inclusive) and
+     * ending in {@code endIndex} (exclusive).
+     * 
+     * @param beginIndex the {@link Node} that will be the {@link #startNode()} of the
+     * sub path.
+     * A non-negative index means to get a node from the beginning, starting from 0.
+     * For example 0 means the first node, 1 means the second node.
+     * A negative index means to get a node from the end, starting
+     * from -1 and going backwards. For example -1 means the
+     * {@link #endNode() last node}, -2 the next-to-last node.
+     * @param endIndex the {@link Node} after the node that will be the {@link #endNode()}
+     * of the sub path (since endIndex is exclusive).
+     * A non-negative index means to get a node from the beginning, starting from 0.
+     * For example 0 means the first node, 1 means the second node.
+     * A negative index means to get a node from the end, starting
+     * from -1 and going backwards. For example -1 means the
+     * {@link #endNode() last node}, -2 the next-to-last node.
+     * @return a sub path of this path between two indexes.
+     * @throws IndexOutOfBoundsException if any of the supplied indexes cannot be satisfied.
+     */
+    Path subPath( int beginIndex, int endIndex );
 }

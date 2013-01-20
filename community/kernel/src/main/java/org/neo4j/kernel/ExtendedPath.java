@@ -29,6 +29,7 @@ import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.helpers.collection.PrefetchingIterator;
+import org.neo4j.kernel.impl.util.PathImpl;
 
 public class ExtendedPath implements Path
 {
@@ -218,5 +219,24 @@ public class ExtendedPath implements Path
     public Node node( int index )
     {
         return absoluteNodeIndexInPath( index, this ) == length() ? endNode : start.node( index );
+    }
+    
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        beginIndex = absoluteNodeIndexInPath( beginIndex, this );
+        if ( beginIndex == length() )
+            return new PathImpl.Builder( endNode ).build();
+        return extend( start.subPath( beginIndex ), lastRelationship );
+    }
+    
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
+    {
+        beginIndex = absoluteNodeIndexInPath( beginIndex, this );
+        endIndex = absoluteNodeIndexInPath( endIndex, this );
+        if ( endIndex <= length() )
+            return start.subPath( beginIndex, endIndex );
+        return extend( start.subPath( beginIndex ), lastRelationship );
     }
 }

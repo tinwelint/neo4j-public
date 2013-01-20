@@ -105,4 +105,26 @@ public class SingleNodePath implements Path
     {
         throw new IndexOutOfBoundsException( index + " in " + this );
     }
+    
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        assertValidBeginIndex( beginIndex );
+        return this;
+    }
+
+    private void assertValidBeginIndex( int beginIndex )
+    {
+        if ( beginIndex < -1 || beginIndex > 0 )
+            throw new IndexOutOfBoundsException( "Invalid beginIndex for " + this );
+    }
+    
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
+    {
+        assertValidBeginIndex( beginIndex );
+        if ( endIndex != 1 )
+            throw new IndexOutOfBoundsException( "Invalid endIndex for " + this );
+        return this;
+    }
 }

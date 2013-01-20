@@ -51,31 +51,37 @@ public class WeightedPathImpl implements WeightedPath
         this.weight = weight;
     }
 
+    @Override
     public double weight()
     {
         return weight;
     }
 
+    @Override
     public Node startNode()
     {
         return path.startNode();
     }
 
+    @Override
     public Node endNode()
     {
         return path.endNode();
     }
 
+    @Override
     public Relationship lastRelationship()
     {
         return path.lastRelationship();
     }
 
+    @Override
     public int length()
     {
         return path.length();
     }
 
+    @Override
     public Iterable<Node> nodes()
     {
         return path.nodes();
@@ -87,6 +93,7 @@ public class WeightedPathImpl implements WeightedPath
         return path.reverseNodes();
     }
 
+    @Override
     public Iterable<Relationship> relationships()
     {
         return path.relationships();
@@ -116,8 +123,21 @@ public class WeightedPathImpl implements WeightedPath
         return path.toString() + " weight:" + this.weight;
     }
 
+    @Override
     public Iterator<PropertyContainer> iterator()
     {
         return path.iterator();
+    }
+    
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        return path.subPath( beginIndex );
+    }
+    
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
+    {
+        return path.subPath( beginIndex, endIndex );
     }
 }

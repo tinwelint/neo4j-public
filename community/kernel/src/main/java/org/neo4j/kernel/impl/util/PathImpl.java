@@ -17,9 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.graphalgo.impl.util;
+package org.neo4j.kernel.impl.util;
 
+import static java.lang.System.arraycopy;
+import static org.neo4j.kernel.Traversal.absoluteNodeIndexInPath;
 import static org.neo4j.kernel.Traversal.absoluteRelationshipIndexInPath;
+import static org.neo4j.kernel.Traversal.defaultPathToString;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -31,7 +34,6 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.helpers.collection.ArrayIterator;
 import org.neo4j.helpers.collection.ReverseArrayIterator;
-import org.neo4j.kernel.Traversal;
 
 public final class PathImpl implements Path
 {
@@ -134,17 +136,26 @@ public final class PathImpl implements Path
         start = left.start;
         end = endNode;
     }
+    
+    private PathImpl( Node start, Relationship[] path, Node end )
+    {
+        this.start = start;
+        this.path = path;
+        this.end = end;
+    }
 
     public static Path singular( Node start )
     {
-        return new Builder( start ).build();
+        return new PathImpl( start, new Relationship[0], start );
     }
 
+    @Override
     public Node startNode()
     {
         return start;
     }
 
+    @Override
     public Node endNode()
     {
         if ( end != null )
@@ -161,11 +172,13 @@ public final class PathImpl implements Path
         return stepNode;
     }
 
+    @Override
     public Relationship lastRelationship()
     {
         return path != null && path.length > 0 ? path[path.length - 1] : null;
     }
 
+    @Override
     public Iterable<Node> nodes()
     {
         return nodeIterator( start );
@@ -181,6 +194,7 @@ public final class PathImpl implements Path
     {
         return new Iterable<Node>()
         {
+            @Override
             public Iterator<Node> iterator()
             {
                 return new Iterator<Node>()
@@ -188,11 +202,13 @@ public final class PathImpl implements Path
                     Node current = start;
                     int index = 0;
 
+                    @Override
                     public boolean hasNext()
                     {
                         return index <= path.length;
                     }
 
+                    @Override
                     public Node next()
                     {
                         if ( current == null )
@@ -215,6 +231,7 @@ public final class PathImpl implements Path
                         }
                     }
 
+                    @Override
                     public void remove()
                     {
                         throw new UnsupportedOperationException();
@@ -224,6 +241,7 @@ public final class PathImpl implements Path
         };
     }
 
+    @Override
     public Iterable<Relationship> relationships()
     {
         return new Iterable<Relationship>()
@@ -249,6 +267,7 @@ public final class PathImpl implements Path
         };
     }
 
+    @Override
     public Iterator<PropertyContainer> iterator()
     {
         return new Iterator<PropertyContainer>()
@@ -256,11 +275,13 @@ public final class PathImpl implements Path
             Iterator<? extends PropertyContainer> current = nodes().iterator();
             Iterator<? extends PropertyContainer> next = relationships().iterator();
 
+            @Override
             public boolean hasNext()
             {
                 return current.hasNext();
             }
 
+            @Override
             public PropertyContainer next()
             {
                 try
@@ -275,6 +296,7 @@ public final class PathImpl implements Path
                 }
             }
 
+            @Override
             public void remove()
             {
                 next.remove();
@@ -282,6 +304,7 @@ public final class PathImpl implements Path
         };
     }
 
+    @Override
     public int length()
     {
         return path.length;
@@ -354,6 +377,25 @@ public final class PathImpl implements Path
     @Override
     public String toString()
     {
-        return Traversal.defaultPathToString( this );
+        return defaultPathToString( this );
+    }
+
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        beginIndex = absoluteNodeIndexInPath( beginIndex, this );
+        Relationship[] subPath = new Relationship[length()-beginIndex];
+        arraycopy( path, beginIndex, subPath, 0, subPath.length );
+        return new PathImpl( node( beginIndex ), subPath, end );
+    }
+
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
+    {
+        beginIndex = absoluteNodeIndexInPath( beginIndex, this );
+        endIndex = absoluteNodeIndexInPath( endIndex, this );
+        Relationship[] subPath = new Relationship[endIndex-beginIndex];
+        arraycopy( path, beginIndex, subPath, 0, subPath.length );
+        return new PathImpl( node( beginIndex ), subPath, node( endIndex ) );
     }
 }

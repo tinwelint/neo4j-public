@@ -19,6 +19,8 @@
  */
 package org.neo4j.graphalgo.impl.path;
 
+import static org.neo4j.kernel.StandardExpander.toPathExpander;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,8 +32,6 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import org.neo4j.graphalgo.PathFinder;
-import org.neo4j.graphalgo.impl.util.PathImpl;
-import org.neo4j.graphalgo.impl.util.PathImpl.Builder;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -45,8 +45,7 @@ import org.neo4j.graphdb.traversal.TraversalMetadata;
 import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.helpers.collection.NestingIterator;
 import org.neo4j.helpers.collection.PrefetchingIterator;
-
-import static org.neo4j.kernel.StandardExpander.toPathExpander;
+import org.neo4j.kernel.impl.util.PathImpl;
 
 /**
  * Find (all or one) simple shortest path(s) between two nodes. It starts
@@ -129,11 +128,13 @@ public class ShortestPath implements PathFinder<Path>
         this( maxDepth, toPathExpander( relExpander ), maxResultCount, findPathsOnMaxDepthOnly );
     }
     
+    @Override
     public Iterable<Path> findAllPaths( Node start, Node end )
     {
         return internalPaths( start, end, false );
     }
     
+    @Override
     public Path findSinglePath( Node start, Node end )
     {
         Iterator<Path> paths = internalPaths( start, end, true ).iterator();
@@ -270,7 +271,7 @@ public class ShortestPath implements PathFinder<Path>
         private int currentDepth;
         private Iterator<Relationship> nextRelationships;
         private final Collection<Node> nextNodes = new ArrayList<Node>();
-        private Map<Node, LevelData> visitedNodes = new HashMap<Node, LevelData>();
+        private final Map<Node, LevelData> visitedNodes = new HashMap<Node, LevelData>();
         private final Collection<Long> sharedVisitedRels;
         private Node lastParentTraverserNode;
         private final MutableInteger sharedFrozenDepth;
@@ -460,6 +461,18 @@ public class ShortestPath implements PathFinder<Path>
         {
             throw new UnsupportedOperationException();
         }
+        
+        @Override
+        public Path subPath( int beginIndex )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public Path subPath( int beginIndex, int endIndex )
+        {
+            throw new UnsupportedOperationException();
+        }
     }
     
     protected Collection<Node> filterNextLevelNodes( Collection<Node> nextNodes )
@@ -490,7 +503,7 @@ public class ShortestPath implements PathFinder<Path>
     private static class LevelData
     {
         private long[] relsToHere;
-        private int depth;
+        private final int depth;
         
         LevelData( Relationship relToHere, int depth )
         {
@@ -521,7 +534,7 @@ public class ShortestPath implements PathFinder<Path>
     // One long lived instance
     private static class Hits
     {
-        private Map<Integer, Collection<Hit>> hits =
+        private final Map<Integer, Collection<Hit>> hits =
             new HashMap<Integer, Collection<Hit>>();
         private int lowestDepth;
         private int totalHitCount;
@@ -639,7 +652,7 @@ public class ShortestPath implements PathFinder<Path>
         };
     }
 
-    private static Builder toBuilder( Node startNode, LinkedList<Relationship> rels )
+    private static org.neo4j.kernel.impl.util.PathImpl.Builder toBuilder( Node startNode, LinkedList<Relationship> rels )
     {
         PathImpl.Builder builder = new PathImpl.Builder( startNode );
         for ( Relationship rel : rels )
@@ -658,11 +671,13 @@ public class ShortestPath implements PathFinder<Path>
     
     private static final HitDecider YES_HIT_DECIDER = new HitDecider()
     {
+        @Override
         public boolean isHit( int depth )
         {
             return true;
         }
         
+        @Override
         public boolean canVisitRelationship( Collection<Long> rels, Relationship rel )
         {
             return true;
@@ -678,11 +693,13 @@ public class ShortestPath implements PathFinder<Path>
             this.depth = depth;
         }
         
+        @Override
         public boolean isHit( int depth )
         {
             return this.depth == depth;
         }
         
+        @Override
         public boolean canVisitRelationship( Collection<Long> rels, Relationship rel )
         {
             return rels.add( rel.getId() );

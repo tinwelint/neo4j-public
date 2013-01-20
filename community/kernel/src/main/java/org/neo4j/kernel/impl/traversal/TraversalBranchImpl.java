@@ -21,11 +21,13 @@ package org.neo4j.kernel.impl.traversal;
 
 import static org.neo4j.kernel.Traversal.absoluteNodeIndexInPath;
 import static org.neo4j.kernel.Traversal.absoluteRelationshipIndexInPath;
+import static org.neo4j.kernel.Traversal.defaultPathToString;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -34,7 +36,7 @@ import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.TraversalBranch;
 import org.neo4j.graphdb.traversal.TraversalContext;
 import org.neo4j.helpers.collection.PrefetchingIterator;
-import org.neo4j.kernel.Traversal;
+import org.neo4j.kernel.impl.util.PathImpl;
 
 class TraversalBranchImpl implements TraversalBranch
 {
@@ -127,12 +129,14 @@ class TraversalBranchImpl implements TraversalBranch
         setEvaluation( context.evaluate( this, null ) );
     }
 
+    @Override
     public void initialize( final PathExpander expander, TraversalContext metadata )
     {
         evaluate( metadata );
         expandRelationships( expander );
     }
 
+    @Override
     public TraversalBranch next( PathExpander expander, TraversalContext context )
     {
         while ( relationships.hasNext() )
@@ -174,16 +178,19 @@ class TraversalBranchImpl implements TraversalBranch
         relationships = PRUNED_ITERATOR;
     }
 
+    @Override
     public int length()
     {
         return depthAndEvaluationBits&0x3FFFFFFF;
     }
 
+    @Override
     public TraversalBranch parent()
     {
         return this.parent;
     }
 
+    @Override
     public int expanded()
     {
         return expandedCount;
@@ -207,6 +214,7 @@ class TraversalBranchImpl implements TraversalBranch
         setEvaluation( Evaluation.of( includes() & eval.includes(), continues() & eval.continues() ) );
     }
 
+    @Override
     public Node startNode()
     {
         return findStartBranch().endNode();
@@ -222,16 +230,19 @@ class TraversalBranchImpl implements TraversalBranch
         return branch;
     }
 
+    @Override
     public Node endNode()
     {
         return source;
     }
 
+    @Override
     public Relationship lastRelationship()
     {
         return howIGotHere;
     }
 
+    @Override
     public Iterable<Relationship> relationships()
     {
         LinkedList<Relationship> relationships = new LinkedList<Relationship>();
@@ -283,6 +294,7 @@ class TraversalBranchImpl implements TraversalBranch
         };
     }
 
+    @Override
     public Iterable<Node> nodes()
     {
         LinkedList<Node> nodes = new LinkedList<Node>();
@@ -328,13 +340,19 @@ class TraversalBranchImpl implements TraversalBranch
     @Override
     public Node node( int index )
     {
+        return branch( index ).endNode();
+    }
+
+    private TraversalBranch branch( int index )
+    {
         int stepsBack = length() - absoluteNodeIndexInPath( index, this );
         TraversalBranch branch = this;
         while ( stepsBack-- > 0 )
             branch = branch.parent();
-        return branch.endNode();
+        return branch;
     }
 
+    @Override
     public Iterator<PropertyContainer> iterator()
     {
         LinkedList<PropertyContainer> entities = new LinkedList<PropertyContainer>();
@@ -401,12 +419,45 @@ class TraversalBranchImpl implements TraversalBranch
     @Override
     public String toString()
     {
-        return Traversal.defaultPathToString( this );
+        return defaultPathToString( this );
     }
     
     @Override
     public Object state()
     {
         return null;
+    }
+    
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        beginIndex = absoluteNodeIndexInPath( beginIndex, this );
+        PathImpl.Builder builder = new PathImpl.Builder( endNode() );
+        TraversalBranch branch = this;
+        for ( int i = length()-1; i >= beginIndex; i-- )
+        {
+            builder.push( lastRelationship() );
+            branch = branch.parent();
+        }
+        return new PathImpl.Builder( branch.endNode() ).build( builder );
+    }
+    
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
+    {
+        beginIndex = absoluteNodeIndexInPath( beginIndex, this );
+        endIndex = absoluteNodeIndexInPath( endIndex, this );
+        TraversalBranch branch = this;
+        int goBack = length()-endIndex+1;
+        while ( goBack-- > 0 )
+            branch = branch.parent();
+        
+        PathImpl.Builder builder = new PathImpl.Builder( branch.endNode() );
+        for ( int i = length()-1; i >= beginIndex; i-- )
+        {
+            builder.push( lastRelationship() );
+            branch = branch.parent();
+        }
+        return new PathImpl.Builder( branch.endNode() ).build( builder );
     }
 }

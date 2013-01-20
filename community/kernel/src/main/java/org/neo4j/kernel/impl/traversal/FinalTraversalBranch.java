@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.traversal;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -40,6 +41,7 @@ public final class FinalTraversalBranch implements TraversalBranch
         this.path = path;
     }
 
+    @Override
     public int length()
     {
         // TODO Auto-generated method stub
@@ -61,6 +63,7 @@ public final class FinalTraversalBranch implements TraversalBranch
     {
     }
 
+    @Override
     public Node endNode()
     {
         // TODO Auto-generated method stub
@@ -74,18 +77,21 @@ public final class FinalTraversalBranch implements TraversalBranch
         return null;
     }
 
+    @Override
     public TraversalBranch parent()
     {
         // TODO Auto-generated method stub
         return null;
     }
 
+    @Override
     public Relationship lastRelationship()
     {
         // TODO Auto-generated method stub
         return null;
     }
 
+    @Override
     public int expanded()
     {
         return 0;
@@ -108,6 +114,7 @@ public final class FinalTraversalBranch implements TraversalBranch
     {
     }
     
+    @Override
     public void initialize( PathExpander expander, TraversalContext metadata )
     {
     }
@@ -163,6 +170,20 @@ public final class FinalTraversalBranch implements TraversalBranch
 
     @Override
     public Node node( int index )
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Path subPath( int beginIndex )
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Path subPath( int beginIndex, int endIndex )
     {
         // TODO Auto-generated method stub
         return null;

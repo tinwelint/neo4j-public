@@ -21,6 +21,8 @@ package org.neo4j.kernel.impl.traversal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.neo4j.graphdb.traversal.Evaluators.atDepth;
 import static org.neo4j.helpers.collection.IteratorUtil.first;
 import static org.neo4j.kernel.Traversal.bidirectionalTraversal;
@@ -34,6 +36,7 @@ import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.Uniqueness;
 
 public class TestPath extends AbstractTestBase
@@ -83,6 +86,7 @@ public class TestPath extends AbstractTestBase
         Node d = to3.getEndNode();
         Relationship to4 = d.getRelationships( Direction.OUTGOING ).iterator().next();
         Node e = to4.getEndNode();
+        
         assertEquals( (Integer) 4, (Integer) path.length() );
         assertEquals( a, path.startNode() );
         assertEquals( e, path.endNode() );
@@ -165,7 +169,102 @@ public class TestPath extends AbstractTestBase
         assertNodesByIndex( bidirectionalPath );
         assertRelationshipsByIndex( bidirectionalPath );
     }
+    
+    @Test
+    public void subPaths() throws Exception
+    {
+        // GIVEN
+        Path path = first( traversal().evaluator( atDepth( 4 ) ).traverse( node( "A" ) ) );
 
+        // THEN
+        assertSubPaths( path );
+    }
+    
+    @Test
+    public void bidirectionalSubPaths() throws Exception
+    {
+        // GIVEN
+        TraversalDescription side = traversal().uniqueness( Uniqueness.NODE_PATH );
+        BidirectionalTraversalDescription bidirectional = bidirectionalTraversal().mirroredSides( side );
+        Path path = first( bidirectional.traverse( a, e ) );
+
+        // THEN
+        assertSubPaths( path );
+    }
+    
+    private void assertSubPaths( Path path )
+    {
+        // illegal indexes
+        assertException( IndexOutOfBoundsException.class, subPath( 5 ), path );
+        assertException( IndexOutOfBoundsException.class, subPath( -6 ), path );
+        
+        // beginIndex
+        expectPath( path.subPath( 0 ), "A,B,C,D,E" );
+        expectPath( path.subPath( 1 ), "B,C,D,E" );
+        expectPath( path.subPath( 2 ), "C,D,E" );
+        expectPath( path.subPath( 3 ), "D,E" );
+        expectPath( path.subPath( 4 ), "E" );
+        expectPath( path.subPath( -1 ), "E" );
+        expectPath( path.subPath( -2 ), "D,E" );
+        expectPath( path.subPath( -3 ), "C,D,E" );
+        expectPath( path.subPath( -4 ), "B,C,D,E" );
+        expectPath( path.subPath( -5 ), "B,C,D,E" );
+        
+        // endIndex
+        expectPath( path.subPath( 0, 1 ), "A" );
+        expectPath( path.subPath( 0, 2 ), "A,B" );
+        expectPath( path.subPath( 0, 3 ), "A,B,C" );
+        expectPath( path.subPath( 0, 4 ), "A,B,C,D" );
+        expectPath( path.subPath( 0, 5 ), "A,B,C,D,E" );
+        assertException( IndexOutOfBoundsException.class, subPath( 0, 0 ), path );
+        expectPath( path.subPath( 0, -1 ), "A,B,C,D" );
+        expectPath( path.subPath( 0, -2 ), "A,B,C" );
+        expectPath( path.subPath( 0, -3 ), "A,B" );
+        expectPath( path.subPath( 0, -4 ), "A" );
+        
+        // both
+        expectPath( path.subPath( 1, 4 ), "B,C,D" );
+    }
+
+    private <T,R> void assertException( Class<? extends Exception> exceptionClass, Function<T, R> function, T argument )
+    {
+        try
+        {
+            function.apply( argument );
+            fail( "Expected exception of type " + exceptionClass );
+        }
+        catch ( Exception e )
+        {
+            assertTrue( exceptionClass.isAssignableFrom( e.getClass() ) );
+        }
+    }
+
+    private Function<Path, Void> subPath( final int beginIndex )
+    {
+        return new Function<Path, Void>()
+        {
+            @Override
+            public Void apply( Path from )
+            {
+                from.subPath( beginIndex );
+                return null;
+            }
+        };
+    }
+
+    private Function<Path, Void> subPath( final int beginIndex, final int endIndex )
+    {
+        return new Function<Path, Void>()
+        {
+            @Override
+            public Void apply( Path from )
+            {
+                from.subPath( beginIndex, endIndex );
+                return null;
+            }
+        };
+    }
+    
     private void assertRelationshipsByIndex( Path path )
     {
         for ( int i = 0; i < relationships.length; i++ )

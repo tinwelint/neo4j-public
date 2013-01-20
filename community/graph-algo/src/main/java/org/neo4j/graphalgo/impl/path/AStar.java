@@ -19,6 +19,8 @@
  */
 package org.neo4j.graphalgo.impl.path;
 
+import static org.neo4j.kernel.StandardExpander.toPathExpander;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,7 +36,6 @@ import org.neo4j.graphalgo.CostEvaluator;
 import org.neo4j.graphalgo.EstimateEvaluator;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphalgo.WeightedPath;
-import org.neo4j.graphalgo.impl.util.PathImpl;
 import org.neo4j.graphalgo.impl.util.WeightedPathImpl;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -47,8 +48,7 @@ import org.neo4j.graphdb.RelationshipExpander;
 import org.neo4j.graphdb.traversal.BranchState;
 import org.neo4j.graphdb.traversal.TraversalMetadata;
 import org.neo4j.helpers.collection.PrefetchingIterator;
-
-import static org.neo4j.kernel.StandardExpander.toPathExpander;
+import org.neo4j.kernel.impl.util.PathImpl;
 
 public class AStar implements PathFinder<WeightedPath>
 {
@@ -71,6 +71,7 @@ public class AStar implements PathFinder<WeightedPath>
         this.estimateEvaluator = estimateEvaluator;
     }
     
+    @Override
     public WeightedPath findSinglePath( Node start, Node end )
     {
         lastMetadata = new Metadata();
@@ -100,6 +101,7 @@ public class AStar implements PathFinder<WeightedPath>
         return null;
     }
     
+    @Override
     public Iterable<WeightedPath> findAllPaths( Node node, Node end )
     {
         WeightedPath path = findSinglePath( node, end );
@@ -317,6 +319,18 @@ public class AStar implements PathFinder<WeightedPath>
 
         @Override
         public Iterator<PropertyContainer> iterator()
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public Path subPath( int beginIndex )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public Path subPath( int beginIndex, int endIndex )
         {
             throw new UnsupportedOperationException();
         }
