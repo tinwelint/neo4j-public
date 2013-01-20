@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,12 +28,14 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.impl.core.GraphProperties;
+import org.neo4j.kernel.impl.core.NodeManager.IndexLock;
 import org.neo4j.kernel.impl.transaction.IllegalResourceException;
 import org.neo4j.kernel.impl.transaction.LockManager;
 import org.neo4j.kernel.impl.transaction.LockManagerImpl;
 import org.neo4j.kernel.impl.transaction.LockNotFoundException;
 import org.neo4j.kernel.impl.transaction.RagManager;
 import org.neo4j.kernel.info.LockInfo;
+import org.neo4j.kernel.logging.Logging;
 
 public class SlaveLockManager implements LockManager
 {
@@ -96,6 +98,12 @@ public class SlaveLockManager implements LockManager
             transactionSupport.makeSureTxHasBeenInitialized();
             response = master.acquireGraphReadLock( requestContextFactory.newRequestContext() );
         }
+        else if ( resource instanceof IndexLock )
+        {
+            transactionSupport.makeSureTxHasBeenInitialized();
+            IndexLock indexLock = (IndexLock) resource;
+            response = master.acquireIndexReadLock( requestContextFactory.newRequestContext(), indexLock.getIndex(), indexLock.getKey() );
+        }
         else
         {
             return true;
@@ -157,6 +165,12 @@ public class SlaveLockManager implements LockManager
             transactionSupport.makeSureTxHasBeenInitialized();
             response = master.acquireGraphWriteLock( requestContextFactory.newRequestContext() );
         }
+        else if ( resource instanceof IndexLock )
+        {
+            transactionSupport.makeSureTxHasBeenInitialized();
+            IndexLock indexLock = (IndexLock) resource;
+            response = master.acquireIndexWriteLock( requestContextFactory.newRequestContext(), indexLock.getIndex(), indexLock.getKey() );
+        }
         else
         {
             return true;
@@ -180,9 +194,9 @@ public class SlaveLockManager implements LockManager
     }
 
     @Override
-    public void dumpLocksOnResource( Object resource )
+    public void dumpLocksOnResource( Object resource, Logging logging )
     {
-        local.dumpLocksOnResource( resource );
+        local.dumpLocksOnResource( resource, logging );
     }
 
     @Override
@@ -198,14 +212,14 @@ public class SlaveLockManager implements LockManager
     }
 
     @Override
-    public void dumpRagStack()
+    public void dumpRagStack( Logging logging )
     {
-        local.dumpRagStack();
+        local.dumpRagStack( logging );
     }
 
     @Override
-    public void dumpAllLocks()
+    public void dumpAllLocks( Logging logging )
     {
-        local.dumpAllLocks();
+        local.dumpAllLocks( logging );
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.transaction.xaframework;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import org.neo4j.graphdb.factory.GraphDatabaseSetting;
@@ -116,7 +117,7 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     }
 
     @Override
-    public String getFileName( long version )
+    public File getFileName( long version )
     {
         return logicalLog.getFileName( version );
     }

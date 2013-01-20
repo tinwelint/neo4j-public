@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.index.IndexProvider;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.collection.Iterables;
@@ -81,7 +82,8 @@ public class EmbeddedGraphDatabase extends InternalAbstractGraphDatabase
                                   Iterable<CacheProvider> cacheProviders,
                                   Iterable<TransactionInterceptorProvider> txInterceptorProviders )
     {
-        super( storeDir, params, indexProviders, kernelExtensions, cacheProviders, txInterceptorProviders );
+        super( storeDir, params, Iterables.<Class<?>, Class<?>>iterable( (Class<?>) GraphDatabaseSettings.class ),
+                indexProviders, kernelExtensions, cacheProviders, txInterceptorProviders );
 
         run();
     }

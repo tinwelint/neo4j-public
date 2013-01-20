@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.impl.util;
+
+import static org.neo4j.helpers.collection.IteratorUtil.loop;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -32,13 +33,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.neo4j.helpers.Format;
 import org.neo4j.helpers.collection.Visitor;
 
-import static org.neo4j.helpers.collection.IteratorUtil.loop;
-
 public abstract class StringLogger
 {
     public static final String DEFAULT_NAME = "messages.log";
     public static final StringLogger SYSTEM =
-            new ActualStringLogger( new PrintWriter( System.out ) )
+            new ActualStringLogger( new PrintWriter( System.out, true ) )
             {
                 @Override
                 public void close()
@@ -66,14 +65,14 @@ public abstract class StringLogger
         }
     }
 
-    public static StringLogger logger( String storeDir )
+    public static StringLogger loggerDirectory( File logDirectory )
     {
-        return logger( storeDir, DEFAULT_THRESHOLD_FOR_ROTATION );
+        return loggerDirectory( logDirectory, DEFAULT_THRESHOLD_FOR_ROTATION );
     }
 
-    public static StringLogger logger( String storeDir, int rotationThreshold )
+    public static StringLogger loggerDirectory( File logDirectory, int rotationThreshold )
     {
-        return new ActualStringLogger( new File( storeDir, DEFAULT_NAME ).getAbsolutePath(),
+        return new ActualStringLogger( new File( logDirectory, DEFAULT_NAME ).getAbsolutePath(),
                 rotationThreshold );
     }
 
@@ -152,6 +151,114 @@ public abstract class StringLogger
         } ) );
     }
 
+    public static StringLogger tee( final StringLogger logger1, final StringLogger logger2 )
+    {
+        return new StringLogger() {
+
+            public void logLongMessage( String msg, Visitor<LineLogger> source, boolean flush )
+            {
+                logger1.logLongMessage( msg, source, flush );
+                logger2.logLongMessage( msg, source, flush );
+            }
+
+            public void logMessage( String msg, boolean flush )
+            {
+                logger1.logMessage( msg, flush );
+                logger2.logMessage( msg, flush );
+            }
+
+            public void logMessage( String msg, Throwable cause, boolean flush )
+            {
+                logger1.logMessage( msg, cause, flush );
+                logger2.logMessage( msg, cause, flush );
+            }
+
+            public void addRotationListener( Runnable listener )
+            {
+                logger1.addRotationListener( listener );
+                logger2.addRotationListener( listener );
+            }
+
+            public void flush()
+            {
+                logger1.flush();
+                logger2.flush();
+            }
+
+            public void close()
+            {
+                logger1.close();
+                logger2.close();
+            }
+
+            protected void logLine( String line )
+            {
+                logger1.logLine( line );
+                logger2.logLine( line );
+            }
+        };
+    }
+
+    /**
+     * Create a StringLogger that only creates a file on the first attempt to write something to the log.
+     */
+    public static StringLogger lazyLogger( final File logFile )
+    {
+        return new StringLogger() {
+
+            StringLogger logger = null;
+
+            public void logLongMessage( String msg, Visitor<LineLogger> source, boolean flush )
+            {
+                createLogger();
+                logger.logLongMessage( msg, source, flush );
+            }
+
+            public void logMessage( String msg, boolean flush )
+            {
+                createLogger();
+                logger.logMessage( msg, flush );
+            }
+
+            public void logMessage( String msg, Throwable cause, boolean flush )
+            {
+                createLogger();
+                logger.logMessage( msg, cause, flush );
+            }
+
+            public void addRotationListener( Runnable listener )
+            {
+                createLogger();
+                logger.addRotationListener( listener );
+            }
+
+            public void flush()
+            {
+                createLogger();
+                logger.flush();
+            }
+
+            public void close()
+            {
+                createLogger();
+                logger.close();
+            }
+
+            protected void logLine( String line )
+            {
+                createLogger();
+                logger.logLine( line );
+            }
+
+            private synchronized void createLogger()
+            {
+                if (logger == null){
+                    logger = logger( logFile );
+                }
+            }
+        };
+    }
+
     public void logMessage( String msg )
     {
         logMessage( msg, false );
@@ -164,12 +271,14 @@ public abstract class StringLogger
 
     public void debug( String msg )
     {
-        // Ignore
+        if ( isDebugEnabled() )
+            logMessage( msg );
     }
 
     public void debug( String msg, Throwable cause )
     {
-        // Ignore
+        if ( isDebugEnabled() )
+            logMessage( msg, cause );
     }
 
     public boolean isDebugEnabled()
@@ -346,7 +455,7 @@ public abstract class StringLogger
         public synchronized void logMessage( String msg, boolean flush )
         {
 //            ensureOpen();
-            out.println( time() + ": " + msg );
+            out.println( time() + " INFO  [org.neo4j]: " + msg );
             if ( flush )
             {
                 out.flush();
@@ -363,7 +472,7 @@ public abstract class StringLogger
         public synchronized void logMessage( String msg, Throwable cause, boolean flush )
         {
 //            ensureOpen();
-            out.println( time() + ": " + msg + " " + cause.getMessage() );
+            out.println( time() + " ERROR [org.neo4j]: " + msg + " " + cause.getMessage());
             cause.printStackTrace( out );
             if ( flush )
             {
@@ -375,7 +484,7 @@ public abstract class StringLogger
         @Override
         public synchronized void logLongMessage( String msg, Visitor<LineLogger> source, boolean flush )
         {
-            out.println( time() + ": " + msg );
+            out.println( time() + " INFO  [org.neo4j]: " + msg );
             source.visit( new LineLoggerImpl( this ) );
             if ( flush )
             {
@@ -500,6 +609,29 @@ public abstract class StringLogger
         public void logLine( String line )
         {
             target.logLine( line );
+        }
+    }
+    
+    protected static class SystemLogger extends ActualStringLogger
+    {
+        private boolean debugEnabled;
+
+        private SystemLogger( boolean debugEnabled )
+        {
+            super( new PrintWriter( System.out ) );
+            this.debugEnabled = debugEnabled;
+        }
+        
+        @Override
+        public boolean isDebugEnabled()
+        {
+            return debugEnabled;
+        }
+
+        @Override
+        public void close()
+        {
+            // don't close System.out
         }
     }
 }

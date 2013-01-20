@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.ha;
 
 import static org.junit.Assert.assertEquals;
@@ -27,7 +26,6 @@ import static org.neo4j.backup.BackupEmbeddedIT.createSomeData;
 import static org.neo4j.backup.BackupEmbeddedIT.runBackupToolFromOtherJvmToGetExitCode;
 import static org.neo4j.test.ha.ClusterManager.fromXml;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ha.ClusterManager;
@@ -52,17 +50,17 @@ public class BackupHaIT
     @Before
     public void startCluster() throws Throwable
     {
-        FileUtils.deleteDirectory( new File( PATH ) );
-        FileUtils.deleteDirectory( new File( BACKUP_PATH ) );
+        FileUtils.deleteDirectory( PATH );
+        FileUtils.deleteDirectory( BACKUP_PATH );
 
         clusterManager = new ClusterManager( fromXml( getClass().getResource( "/threeinstances.xml" ).toURI() ),
-                new File( PATH ), MapUtil.stringMap( OnlineBackupSettings.online_backup_enabled.name(),
-                GraphDatabaseSetting.TRUE ) )
+                PATH, MapUtil.stringMap( OnlineBackupSettings.online_backup_enabled.name(),
+                Settings.TRUE ) )
         {
             @Override
             protected void config( GraphDatabaseBuilder builder, String clusterName, int serverId )
             {
-                builder.setConfig( OnlineBackupSettings.online_backup_port, (4444 + serverId) + "" );
+                builder.setConfig( OnlineBackupSettings.online_backup_server, (":"+(4444 + serverId) ));
             }
         };
         clusterManager.start();
@@ -88,18 +86,18 @@ public class BackupHaIT
     public void makeSureBackupCanBePerformedFromWronglyNamedCluster() throws Throwable
     {
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
-                backupArguments( true, "ha://localhost:5001", BACKUP_PATH, "non.existent" ) ) );
+                backupArguments( true, "ha://localhost:5001", BACKUP_PATH.getPath(), "non.existent" ) ) );
     }
 
     private void testBackupFromCluster( String askForCluster ) throws Throwable
     {
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
-                backupArguments( true, "ha://127.0.0.1:5001", BACKUP_PATH, askForCluster ) ) );
+                backupArguments( true, "ha://localhost:5001", BACKUP_PATH.getPath(), askForCluster ) ) );
         assertEquals( representation, DbRepresentation.of( BACKUP_PATH ) );
         ManagedCluster cluster = clusterManager.getCluster( askForCluster == null ? "neo4j.ha" : askForCluster );
         DbRepresentation newRepresentation = createSomeData( cluster.getAnySlave() );
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
-                backupArguments( false, "ha://127.0.0.1:5002", BACKUP_PATH, askForCluster ) ) );
+                backupArguments( false, "ha://localhost:5002", BACKUP_PATH.getPath(), askForCluster ) ) );
         assertEquals( newRepresentation, DbRepresentation.of( BACKUP_PATH ) );
     }
 

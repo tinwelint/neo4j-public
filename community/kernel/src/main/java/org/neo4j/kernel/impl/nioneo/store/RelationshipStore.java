@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
     // second_next_rel_id+next_prop_id(int)
     public static final int RECORD_SIZE = 33;
 
-    public RelationshipStore(String fileName, Config configuration, IdGeneratorFactory idGeneratorFactory,
+    public RelationshipStore(File fileName, Config configuration, IdGeneratorFactory idGeneratorFactory,
                              WindowPoolFactory windowPoolFactory, FileSystemAbstraction fileSystemAbstraction, StringLogger stringLogger)
     {
         super(fileName, configuration, IdType.RELATIONSHIP, idGeneratorFactory,

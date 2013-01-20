@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,13 @@
  */
 package slavetest;
 
+import static org.neo4j.shell.impl.AbstractServer.DEFAULT_PORT;
+
 import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.backup.OnlineBackupSettings;
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
@@ -50,23 +53,16 @@ public class StartHaDb
             System.out.println( "Supply 'id=<serverId>'" );
             System.exit( 1 );
         }
-        
+
         int serverId = args.getNumber( "id", null ).intValue();
-        return new HighlyAvailableGraphDatabaseFactory().newHighlyAvailableDatabaseBuilder( new File( BASE_PATH, "" + serverId ).getAbsolutePath() ).
+        return new HighlyAvailableGraphDatabaseFactory().newHighlyAvailableDatabaseBuilder( new File( BASE_PATH,
+                "" + serverId ).getAbsolutePath() ).
+                setConfig( ClusterSettings.initial_hosts, ":5001,:5002:5003" ).
                 setConfig( HaSettings.server_id, "" + serverId ).
-                setConfig( HaSettings.ha_server, "127.0.0.1:" + (6001+serverId) ).
-                setConfig( HaSettings.initial_hosts, ":5001,:5002:5003" ).
+                setConfig( HaSettings.ha_server, "127.0.0.1:" + (6001 + serverId) ).
                 setConfig( ShellSettings.remote_shell_enabled, GraphDatabaseSetting.TRUE ).
-                setConfig( ShellSettings.remote_shell_port, "" + (1337 + serverId) ).
+                setConfig( ShellSettings.remote_shell_port, "" + (DEFAULT_PORT + serverId) ).
                 setConfig( OnlineBackupSettings.online_backup_enabled, GraphDatabaseSetting.FALSE ).
                 newGraphDatabase();
-    }
-
-    private static String multiply( String ip, int port, int times )
-    {
-        StringBuilder result = new StringBuilder();
-        for ( int i = 0; i < times; i++ )
-            result.append( i > 0 ? "," : "" ).append( ip + ":" + (port+i) );
-        return result.toString();
     }
 }

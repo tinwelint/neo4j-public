@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -83,7 +83,7 @@ public class TestProperties extends AbstractNeo4jTestCase
          * PropertyIndexStore on disk when reading it back.
          */
         String path = TargetDirectory.forTest( TestProperties.class ).directory(
-                "empty-string" ).getCanonicalPath();
+                "empty-string", true ).getCanonicalPath();
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( path );
         Transaction tx = db.beginTx();
         Node node = db.createNode();
@@ -280,5 +280,15 @@ public class TestProperties extends AbstractNeo4jTestCase
         
         assertEquals( value1, first( node1.getPropertyValues() ) );
         assertEquals( value2, first( node2.getPropertyValues() ) );
+    }
+    
+    @Test
+    public void name() throws Exception
+    {
+        Node node = getGraphDb().createNode();
+        node.setProperty( "name", "yo" );
+        node.getProperty( "name" );
+        commit();
+        node.getProperty( "name" );
     }
 }

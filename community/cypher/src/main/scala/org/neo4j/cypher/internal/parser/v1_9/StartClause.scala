@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.commands._
 import expressions.{Literal, Expression, ParameterExpression, Identifier}
 import org.neo4j.graphdb.Direction
 import org.neo4j.helpers.ThisShouldNotHappenError
+import org.neo4j.cypher.internal.mutation.{CreateNode, CreateRelationship}
 
 
 trait StartClause extends Base with Expressions with CreateUnique {
@@ -52,6 +53,7 @@ trait StartClause extends Base with Expressions with CreateUnique {
       end = rel.end.copy(props = Map())
     )
     case n:ParsedEntity => n.copy(props = Map())
+    case _ => throw new ThisShouldNotHappenError("Stefan", "This non-exhaustive match would have been a RuntimeException in the past")
   }
 
   private def translate(abstractPattern: AbstractPattern): Maybe[Any] = abstractPattern match {
@@ -77,13 +79,13 @@ trait StartClause extends Base with Expressions with CreateUnique {
                        else
                          (b, a)
 
-      Yes(Seq(CreateRelationshipStartItem(name, (from, startProps), (to, endProps), relType.head, props)))
+      Yes(Seq(CreateRelationshipStartItem(CreateRelationship(name, (from, startProps), (to, endProps), relType.head, props))))
 
     case ParsedEntity(_, Identifier(name), props, True()) =>
-      Yes(Seq(CreateNodeStartItem(name, props)))
+      Yes(Seq(CreateNodeStartItem(CreateNode(name, props))))
 
     case ParsedEntity(_, p: ParameterExpression, _, True()) =>
-      Yes(Seq(CreateNodeStartItem(namer.name(None), Map[String, Expression]("*" -> p))))
+      Yes(Seq(CreateNodeStartItem(CreateNode(namer.name(None), Map[String, Expression]("*" -> p)))))
 
     case _ => No(Seq(""))
   }

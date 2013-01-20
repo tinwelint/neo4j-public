@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.test;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSetting.FALSE;
@@ -120,12 +119,12 @@ public class ImpermanentGraphDatabase extends EmbeddedGraphDatabase
     }
 
     @Override
-    protected Logging createStringLogger()
+    protected Logging createLogging()
     {
         try
         {
-            String storeDir = config.get( Configuration.store_dir );
-            String logFile = new File(storeDir, StringLogger.DEFAULT_NAME).getAbsolutePath();
+            File storeDir = config.get( Configuration.store_dir );
+            File logFile = new File(storeDir, StringLogger.DEFAULT_NAME);
             FileChannel fc = fileSystem.open( logFile, "rw" );
             FileChannelLoggingService logging = new FileChannelLoggingService( fc );
             life.add( logging );

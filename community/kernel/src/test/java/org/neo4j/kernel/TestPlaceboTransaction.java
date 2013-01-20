@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,24 +26,33 @@ import static org.mockito.Mockito.when;
 
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
-import javax.transaction.TransactionManager;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.kernel.impl.core.TransactionState;
+import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
+import org.neo4j.kernel.impl.transaction.LockManager;
 
 public class TestPlaceboTransaction
 {
-    private TransactionManager mockTxManager;
+    private AbstractTransactionManager mockTxManager;
     private Transaction mockTopLevelTx;
     private PlaceboTransaction placeboTx;
+    private LockManager lockManager;
+    private TransactionState state;
+    private PropertyContainer resource;
     
     @Before
     public void before() throws Exception
     {
-        mockTxManager = mock( TransactionManager.class );
+        mockTxManager = mock( AbstractTransactionManager.class );
         mockTopLevelTx = mock( Transaction.class );
         when( mockTxManager.getTransaction() ).thenReturn( mockTopLevelTx );
-        placeboTx = new PlaceboTransaction( mockTxManager );
+        lockManager = mock( LockManager.class );
+        state = mock( TransactionState.class );
+        placeboTx = new PlaceboTransaction( mockTxManager, lockManager, state );
+        resource = mock( PropertyContainer.class );
     }
 
     @Test
@@ -88,5 +97,25 @@ public class TestPlaceboTransaction
         
         // Then
         verify( mockTopLevelTx ).setRollbackOnly();
+    }
+
+    @Test
+    public void canAcquireReadLock() throws Exception
+    {
+        // when
+        placeboTx.acquireReadLock( resource );
+        
+        // then
+        verify( state ).acquireReadLock( resource );
+    }
+
+    @Test
+    public void canAcquireWriteLock() throws Exception
+    {
+        // when
+        placeboTx.acquireWriteLock( resource );
+        
+        // then
+        verify( state ).acquireWriteLock( resource );
     }
 }

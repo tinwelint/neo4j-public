@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,28 @@
  */
 package org.neo4j.kernel.ha;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.ANY;
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.FALSE;
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.HostnamePortSetting;
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.TRUE;
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.TimeSpanSetting;
+import static org.neo4j.helpers.Settings.BYTES;
+import static org.neo4j.helpers.Settings.DURATION;
+import static org.neo4j.helpers.Settings.HOSTNAME_PORT;
+import static org.neo4j.helpers.Settings.INTEGER;
+import static org.neo4j.helpers.Settings.MANDATORY;
+import static org.neo4j.helpers.Settings.list;
+import static org.neo4j.helpers.Settings.min;
+import static org.neo4j.helpers.Settings.options;
+import static org.neo4j.helpers.Settings.setting;
+import static org.neo4j.kernel.impl.cache.GcrSettings.log_interval;
+import static org.neo4j.kernel.impl.cache.GcrSettings.node_cache_array_fraction;
+import static org.neo4j.kernel.impl.cache.GcrSettings.node_cache_size;
+import static org.neo4j.kernel.impl.cache.GcrSettings.relationship_cache_array_fraction;
+import static org.neo4j.kernel.impl.cache.GcrSettings.relationship_cache_size;
 
-import org.neo4j.graphdb.factory.Default;
+import java.util.List;
+
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.Description;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting.BooleanSetting;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting.IntegerSetting;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting.OptionsSetting;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting.StringSetting;
+import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.ConfigurationMigrator;
 import org.neo4j.kernel.configuration.Migrator;
-import org.neo4j.kernel.impl.cache.GCResistantCacheProvider;
 
 /**
  * Settings for High Availability mode
@@ -44,92 +50,71 @@ public class HaSettings
     @Migrator
     public static final ConfigurationMigrator migrator = new EnterpriseConfigurationMigrator();
 
-    @Default("20s")
-    public static final TimeSpanSetting read_timeout = new TimeSpanSetting( "ha.read_timeout" );
+    @Description("Timeout for reading network data")
+    public static final Setting<Long> read_timeout = setting( "ha.read_timeout", DURATION, "20s" );
 
-    @Default("20")
-    public static final TimeSpanSetting state_switch_timeout = new TimeSpanSetting( "ha.state_switch_timeout" );
+    @Description( "Timeout for waiting for instance to become master or slave" )
+    public static final Setting<Long> state_switch_timeout = setting( "ha.state_switch_timeout", DURATION, "20s" );
 
-    public static final TimeSpanSetting lock_read_timeout = new TimeSpanSetting( "ha.lock_read_timeout" );
+    @Description( "Timeout for taking locks" )
+    public static final Setting<Long> lock_read_timeout = setting( "ha.lock_read_timeout", DURATION, read_timeout );
 
-    @Default("20")
-    public static final GraphDatabaseSetting.IntegerSetting max_concurrent_channels_per_slave = new
-            GraphDatabaseSetting.IntegerSetting( "ha.max_concurrent_channels_per_slave",
-            "Must be valid timeout in seconds", 1, null );
+    @Description( "Maximum number of connections a slave can have to the master" )
+    public static final Setting<Integer> max_concurrent_channels_per_slave =
+            setting( "ha.max_concurrent_channels_per_slave", INTEGER, "20", min( 1 ) );
 
-    public static final IntegerSetting server_id = new GraphDatabaseSetting.IntegerSetting( "ha.server_id",
-            "Must be a valid server id" );
+    @Description( "Id for a cluster instance. Must be unique within the cluster" )
+    public static final Setting<Integer> server_id = setting( "ha.server_id", INTEGER, MANDATORY );
 
-    @Default(":6361")
-    public static final HostnamePortSetting ha_server = new HostnamePortSetting( "ha.server" );
+    @Description( "Where to bind High Availability protocol server" )
+    public static final Setting<HostnamePort> ha_server = setting( "ha.server", HOSTNAME_PORT, ":6361-6371" );
 
-    @Default(FALSE)
-    public static final BooleanSetting cluster_discovery_enabled = new BooleanSetting( "ha.discovery.enabled" );
+    @Description( "Policy for how to handle branched data" )
+    public static final Setting<BranchedDataPolicy> branched_data_policy = setting( "ha.branched_data_policy",
+            options( BranchedDataPolicy.class ), "keep_all" );
 
-    public static final StringSetting cluster_discovery_url = new StringSetting( "ha.discovery.url", ANY,
-            "Must be a valid URL" );
+    @Description( "List of ZooKeeper coordinators. Only needed for rolling upgrade from 1.8 to 1.9" )
+    @Deprecated
+    public static Setting<List<HostnamePort>> coordinators = setting( "ha.coordinators", list( ",", HOSTNAME_PORT ),
+            "" );
 
-    @Default("")
-    public static final GraphDatabaseSetting.StringSetting initial_hosts = new GraphDatabaseSetting.StringSetting(
-            "ha.initial_hosts", GraphDatabaseSetting.ANY, "Must be a valid list of hosts" );
+    @Description( "ZooKeeper session timeout. Only needed for rolling upgrade from 1.8 to 1.9" )
+    @Deprecated
+    public static final Setting<Long> zk_session_timeout = setting( "ha.zk_session_timeout", DURATION, "5s");
 
-    @Default(":5001-5099")
-    public static final GraphDatabaseSetting.HostnamePortSetting cluster_server = new GraphDatabaseSetting
-            .HostnamePortSetting(
-            "ha.cluster_server" );
+    @Description("Max size of the data chunks that flows between master and slaves in HA. Bigger size may increase " +
+            "throughput," +
+            "but may be more sensitive to variations in bandwidth, whereas lower size increases tolerance for " +
+            "bandwidth variations. " +
+            "Examples: 500k or 3M. Must be within 1k-16M")
+    public static final Setting<Long> com_chunk_size =
+            setting( "ha.com_chunk_size", BYTES, "2M", min( 1024L ) );
 
-    @Default(TRUE)
-    public static final BooleanSetting allow_init_cluster = new BooleanSetting( "ha.allow_init_cluster" );
-
-    @Default("keep_all")
-    public static final BranchedDataPolicySetting branched_data_policy = new BranchedDataPolicySetting();
-
-    @Default("0")
-    public static final TimeSpanSetting pull_interval = new TimeSpanSetting( "ha.pull_interval" );
+    @Description( "Interval of pulling updates from master" )
+    public static final Setting<Long> pull_interval = setting( "ha.pull_interval", DURATION, "0s" );
 
     @Description("The amount of slaves the master will ask to replicate a committed transaction. " +
             "The master will not throw an exception on commit if the replication failed.")
-    @Default("1")
-    public static final IntegerSetting tx_push_factor = new IntegerSetting( "ha.tx_push_factor",
-            "Must be a valid replication factor", 0, null );
+    public static final Setting<Integer> tx_push_factor = setting( "ha.tx_push_factor", INTEGER, "1", min( 0 ) );
 
     @Description("Push strategy of a transaction to a slave during commit. " +
             " Round robin (\"round_robin\")  " +
             " or fixed (\"fixed\") selecting the slave with highest machine id first")
-    @Default("fixed")
-    public static final OptionsSetting tx_push_strategy = new TxPushStrategySetting();
+    public static final Setting<TxPushStrategy> tx_push_strategy = setting( "ha.tx_push_strategy", options(
+            TxPushStrategy.class ), "fixed" );
 
-    public static final GraphDatabaseSetting gcr_node_cache_size = GCResistantCacheProvider.Configuration
-            .node_cache_size;
-    public static final GraphDatabaseSetting gcr_relationship_cache_size = GCResistantCacheProvider.Configuration
-            .relationship_cache_size;
-    public static final GraphDatabaseSetting gcr_node_cache_array_fraction = GCResistantCacheProvider.Configuration
-            .node_cache_array_fraction;
-    public static final GraphDatabaseSetting gcr_relationship_cache_array_fraction = GCResistantCacheProvider
-            .Configuration.relationship_cache_array_fraction;
-    public static final GraphDatabaseSetting gcr_log_interval = GCResistantCacheProvider.Configuration.log_interval;
+    public static final Setting<Long> gcr_node_cache_size = node_cache_size;
+    public static final Setting<Long> gcr_relationship_cache_size = relationship_cache_size;
+    public static final Setting<Float> gcr_node_cache_array_fraction = node_cache_array_fraction;
+    public static final Setting<Float> gcr_relationship_cache_array_fraction = relationship_cache_array_fraction;
+    public static final Setting<Long> gcr_log_interval = log_interval;
 
-    public static class TxPushStrategySetting
-            extends OptionsSetting
+    public static enum TxPushStrategy
     {
         @Description("Round robin")
-        public static final String roundRobin = "round_robin";
+        round_robin,
 
         @Description("Fixed")
-        public static final String fixed = "fixed";
-
-        public TxPushStrategySetting()
-        {
-            super( "ha.tx_push_strategy", roundRobin, fixed );
-        }
-    }
-
-    public static final class BranchedDataPolicySetting
-            extends GraphDatabaseSetting.EnumerableSetting<BranchedDataPolicy>
-    {
-        public BranchedDataPolicySetting()
-        {
-            super( "ha.branched_data_policy", BranchedDataPolicy.class );
-        }
+        fixed
     }
 }

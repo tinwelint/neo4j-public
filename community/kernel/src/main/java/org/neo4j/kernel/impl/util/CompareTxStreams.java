@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.util;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.kernel.impl.transaction.xaframework.InMemoryLogBuffer;
@@ -28,7 +29,7 @@ public class CompareTxStreams
 {
     public static void main( String[] args ) throws IOException
     {
-        compareLogStreams( LogExtractor.from( args[0] ), LogExtractor.from( args[1] ) );
+        compareLogStreams( LogExtractor.from( new File(args[0]) ), LogExtractor.from( new File( args[1] )) );
     }
 
     protected static void compareLogStreams( LogExtractor extractor1, LogExtractor extractor2 ) throws IOException

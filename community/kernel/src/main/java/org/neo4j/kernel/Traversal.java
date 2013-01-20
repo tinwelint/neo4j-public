@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -328,10 +328,11 @@ public class Traversal
      * {@link TraversalBranch} representing a path from the start node of the
      * <code>source</code> {@link TraversalBranch} to the start node of the
      * <code>target</code> {@link TraversalBranch}. The resulting
-     * {@link TraversalBranch} will not {@link TraversalBranch#next() expand
-     * further}, and does not provide a {@link TraversalBranch#parent() parent}
-     * {@link TraversalBranch}.
-     *
+     * {@link TraversalBranch} will not
+     * {@link TraversalBranch#next(PathExpander, org.neo4j.graphdb.traversal.TraversalContext)
+     * ) expand further}, and does not provide a
+     * {@link TraversalBranch#parent() parent} {@link TraversalBranch}.
+     * 
      * @param source the {@link TraversalBranch} where the resulting path starts
      * @param target the {@link TraversalBranch} where the resulting path ends
      * @throws IllegalArgumentException if the {@link TraversalBranch#endNode()

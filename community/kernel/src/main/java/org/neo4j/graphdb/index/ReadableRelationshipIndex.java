@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,8 +38,8 @@ public interface ReadableRelationshipIndex extends ReadableIndex<Relationship>
     /**
      * Returns exact matches from this index, given the key/value pair. Matches
      * will be for key/value pairs just as they were added by the
-     * {@link #add(PropertyContainer, String, Object)} method.
-     *
+     * {@link Index#add(PropertyContainer, String, Object)} method.
+     * 
      * @param key the key in the key/value pair to match.
      * @param valueOrNull the value in the key/value pair to match.
      * @param startNodeOrNull filter so that only {@link Relationship}s with

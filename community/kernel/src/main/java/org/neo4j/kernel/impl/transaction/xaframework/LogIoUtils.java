@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ public class LogIoUtils
     
     public static long[] readLogHeader( FileSystemAbstraction fileSystem, File file ) throws IOException
     {
-        FileChannel channel = fileSystem.open( file.getAbsolutePath(), "r" );
+        FileChannel channel = fileSystem.open( file, "r" );
         try
         {
             return readLogHeader( ByteBuffer.allocateDirect( 100*1000 ), channel, true );

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -211,27 +211,29 @@ class PatternGraph(val patternNodes: Map[String, PatternNode],
     var visited = Seq[PatternElement]()
     var loop = false
 
-    val follow = (element: PatternElement) => element match {
+    def follow(element: PatternElement) = element match {
       case n: PatternNode         => true
       case r: PatternRelationship => !visited.contains(r)
     }
 
-    val vNode = (n: PatternNode, x: Unit) => {
+    def visit_node(n: PatternNode, x: Unit) {
       if (visited.contains(n))
         loop = true
       visited = visited :+ n
     }
 
-    val vRel = (r: PatternRelationship, x: Unit) => visited :+= r
+    def visit_relationship(r: PatternRelationship, x: Unit) {
+      visited :+= r
+    }
 
     boundPatternElements.foreach {
-      case pr: PatternRelationship => pr.startNode.traverse(follow, vNode, vRel, (), Seq())
-      case pn: PatternNode         => pn.traverse(follow, vNode, vRel, (), Seq())
+      case pr: PatternRelationship => pr.startNode.traverse(follow, visit_node, visit_relationship, (), Seq())
+      case pn: PatternNode         => pn.traverse(follow, visit_node, visit_relationship, (), Seq())
     }
 
     val notVisitedElements = allPatternElements.filterNot(visited contains)
     if (notVisitedElements.nonEmpty) {
-      throw new SyntaxException("All parts of the pattern must either directly or indirectly be connected to at least one bound entity. These identifiers were found to be disconnected: " + notVisitedElements.map(_.key).mkString("", ", ", ""))
+      throw new SyntaxException("All parts of the pattern must either directly or indirectly be connected to at least one bound entity. These identifiers were found to be disconnected: " + notVisitedElements.map(_.key).sorted.mkString(", "))
     }
 
     loop

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.kernel.impl.nioneo.store;
+
+import java.io.File;
 
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
@@ -39,7 +41,7 @@ public class PropertyIndexStore extends AbstractNameStore<PropertyIndexRecord>
     public static final String TYPE_DESCRIPTOR = "PropertyIndexStore";
     private static final int RECORD_SIZE = 1/*inUse*/ + 4/*prop count*/ + 4/*nameId*/;
 
-    public PropertyIndexStore(String fileName, Config config,
+    public PropertyIndexStore(File fileName, Config config,
                               IdGeneratorFactory idGeneratorFactory, WindowPoolFactory windowPoolFactory,
                               FileSystemAbstraction fileSystemAbstraction, StringLogger stringLogger,
                               DynamicStringStore nameStore)

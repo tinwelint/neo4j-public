@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,6 +29,8 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.consistency.checking.full.TaskExecutionOrder.MULTI_PASS;
 import static org.neo4j.consistency.checking.full.TaskExecutionOrder.SINGLE_THREADED;
 
+import java.io.File;
+
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.neo4j.helpers.progress.ProgressListener;
@@ -48,7 +50,7 @@ public class StoreProcessorTaskTest
         StoreProcessor multiPassProcessor2 = mock( StoreProcessor.class );
 
         NodeStore store = mock( NodeStore.class );
-        when( store.getStorageFileName() ).thenReturn( "node-store" );
+        when( store.getStorageFileName() ).thenReturn( new File("node-store") );
 
         StoreProcessorTask<NodeRecord> task = new StoreProcessorTask<NodeRecord>(
                 store, ProgressMonitorFactory.NONE.multipleParts( "check" ), SINGLE_THREADED,
@@ -71,7 +73,7 @@ public class StoreProcessorTaskTest
         StoreProcessor multiPassProcessor2 = mock( StoreProcessor.class );
 
         NodeStore store = mock( NodeStore.class );
-        when( store.getStorageFileName() ).thenReturn( "node-store" );
+        when( store.getStorageFileName() ).thenReturn( new File("node-store") );
 
         StoreProcessorTask<NodeRecord> task = new StoreProcessorTask<NodeRecord>(
                 store, ProgressMonitorFactory.NONE.multipleParts( "check" ), MULTI_PASS,
@@ -94,7 +96,7 @@ public class StoreProcessorTaskTest
         StoreProcessor multiPassProcessor2 = mock( StoreProcessor.class );
 
         NodeStore store = mock( NodeStore.class );
-        when( store.getStorageFileName() ).thenReturn( "node-store" );
+        when( store.getStorageFileName() ).thenReturn( new File("node-store") );
 
         StoreProcessorTask<NodeRecord> task = new StoreProcessorTask<NodeRecord>(
                 store, ProgressMonitorFactory.NONE.multipleParts( "check" ), MULTI_PASS,

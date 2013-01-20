@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,26 +19,28 @@
  */
 package org.neo4j.kernel.impl.transaction.xaframework;
 
+import java.io.File;
 import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 
 import org.neo4j.kernel.TransactionInterceptorProviders;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.xa.Command;
-import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.impl.transaction.TransactionStateFactory;
+import org.neo4j.kernel.logging.Logging;
 
 public class InterceptingXaLogicalLog extends XaLogicalLog
 {
     private final XaDataSource ds;
     private final TransactionInterceptorProviders providers;
 
-    public InterceptingXaLogicalLog( String fileName, XaResourceManager xaRm,
+    public InterceptingXaLogicalLog( File fileName, XaResourceManager xaRm,
             XaCommandFactory cf, XaTransactionFactory xaTf,
             TransactionInterceptorProviders providers, LogBufferFactory logBufferFactory,
-            FileSystemAbstraction fileSystem, StringLogger stringLogger,
-            LogPruneStrategy pruneStrategy )
+            FileSystemAbstraction fileSystem, Logging logging,
+            LogPruneStrategy pruneStrategy, TransactionStateFactory stateFactory )
     {
-        super( fileName, xaRm, cf, xaTf, logBufferFactory, fileSystem, stringLogger, pruneStrategy );
+        super( fileName, xaRm, cf, xaTf, logBufferFactory, fileSystem, logging, pruneStrategy, stateFactory );
         this.providers = providers;
         this.ds = xaRm.getDataSource();
     }

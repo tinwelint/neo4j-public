@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -32,9 +33,9 @@ import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeRecord;
 public class LegacyRelationshipTypeStoreReader
 {
     public static final String FROM_VERSION = "RelationshipTypeStore v0.9.9";
-    private String fileName;
+    private File fileName;
 
-    public LegacyRelationshipTypeStoreReader( String fileName )
+    public LegacyRelationshipTypeStoreReader( File fileName )
     {
         this.fileName = fileName;
     }

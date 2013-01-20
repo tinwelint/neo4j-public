@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.cluster;
 
 import java.net.URI;
@@ -31,9 +30,8 @@ import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 import org.neo4j.cluster.statemachine.StateTransitionLogger;
 import org.neo4j.cluster.timeout.TimeoutStrategy;
 import org.neo4j.helpers.DaemonThreadFactory;
-import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConfigurationDefaults;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.logging.Logging;
@@ -63,26 +61,11 @@ public class NetworkedServerFactory
         final NetworkInstance node = new NetworkInstance( new NetworkInstance.Configuration()
         {
             @Override
-            public int[] getPorts()
+            public HostnamePort clusterServer()
             {
-                int[] port = ClusterSettings.cluster_server.getPorts( config.getParams() );
-                if ( port != null )
-                {
-                    return port;
-                }
-
-                // If not specified, use the default
-                return ClusterSettings.cluster_server.getPorts( MapUtil.stringMap( ClusterSettings.cluster_server
-                        .name(),
-                        ConfigurationDefaults.getDefault( ClusterSettings.cluster_server, ClusterSettings.class ) ) );
+                return config.get( ClusterSettings.cluster_server );
             }
-
-            @Override
-            public String getAddress()
-            {
-                return ClusterSettings.cluster_server.getAddress( config.getParams() );
-            }
-        }, logging.getLogger( NetworkInstance.class ) );
+        }, logging );
 
         final ProtocolServer protocolServer = protocolServerFactory.newProtocolServer( timeoutStrategy, node, node,
                 acceptorInstanceStore, electionCredentialsProvider );

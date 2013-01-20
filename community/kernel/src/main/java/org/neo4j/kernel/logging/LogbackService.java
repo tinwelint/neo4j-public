@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,14 +17,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.logging;
 
 import java.io.File;
+import java.net.URL;
 
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.joran.JoranConfigurator;
-import ch.qos.logback.core.joran.spi.JoranException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
@@ -35,6 +32,10 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.slf4j.Logger;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
+
 /**
  * Logging service that uses Logback as backend.
  */
@@ -44,25 +45,32 @@ public class LogbackService
 {
     private Config config;
     private final LoggerContext loggerContext;
+    private final String logbackConfigurationFilename;
 
     private LifeSupport loggingLife = new LifeSupport();
     protected RestartOnChange restartOnChange;
 
     public LogbackService( Config config, LoggerContext loggerContext )
     {
+        this(config, loggerContext, "neo4j-logback.xml");
+    }
+
+    public LogbackService( Config config, LoggerContext loggerContext, String logbackConfigurationFilename )
+    {
         this.config = config;
         this.loggerContext = loggerContext;
+        this.logbackConfigurationFilename = logbackConfigurationFilename;
     }
 
     @Override
     public void init()
             throws Throwable
     {
-        final String storeDir = config.get( InternalAbstractGraphDatabase.Configuration.store_dir );
+        final File storeDir = config.get( InternalAbstractGraphDatabase.Configuration.store_dir );
 
         if ( storeDir != null )
         {
-            File file = new File( storeDir ).getAbsoluteFile();
+            File file = storeDir.getAbsoluteFile();
             if ( !file.exists() )
             {
                 file.mkdirs();
@@ -77,7 +85,7 @@ public class LogbackService
                 {
                     JoranConfigurator configurator = new JoranConfigurator();
                     configurator.setContext( loggerContext );
-                    loggerContext.putProperty( "neo_store", storeDir );
+                    loggerContext.putProperty( "neo_store", storeDir.getPath() );
                     loggerContext.putProperty( "remote_logging_enabled", config.get( GraphDatabaseSettings
                             .remote_logging_enabled ).toString() );
                     loggerContext.putProperty( "remote_logging_host", config.get( GraphDatabaseSettings
@@ -87,7 +95,12 @@ public class LogbackService
                     try
 
                     {
-                        configurator.doConfigure( getClass().getResource( "/neo4j-logback.xml" ) );
+                        URL resource = getClass().getClassLoader().getResource( logbackConfigurationFilename );
+
+                        if (resource == null)
+                            throw new IllegalStateException( String.format("Could not find %s configuration", logbackConfigurationFilename ));
+
+                        configurator.doConfigure( resource );
                     }
                     catch ( JoranException e )
                     {
@@ -131,7 +144,7 @@ public class LogbackService
     {
         Logger logger;
 
-        Slf4jStringLogger( Logger logger )
+        public Slf4jStringLogger( Logger logger )
         {
             this.logger = logger;
         }

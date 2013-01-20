@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.cluster.protocol.heartbeat;
 
 import static org.neo4j.cluster.com.message.Message.timeout;
@@ -35,7 +34,7 @@ import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.LearnerContext;
 import org.neo4j.cluster.protocol.cluster.ClusterContext;
 import org.neo4j.helpers.Listeners;
-import org.neo4j.helpers.Specification;
+import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Iterables;
 
 /**
@@ -133,10 +132,10 @@ public class HeartbeatContext
 
     public Iterable<URI> getAlive()
     {
-        return Iterables.filter( new Specification<URI>()
+        return Iterables.filter( new Predicate<URI>()
         {
             @Override
-            public boolean satisfiedBy( URI item )
+            public boolean accept( URI item )
             {
                 return !isFailed( item );
             }

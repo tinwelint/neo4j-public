@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.helpers.collection;
 
 import java.lang.reflect.Array;
@@ -33,7 +32,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.neo4j.helpers.Function;
-import org.neo4j.helpers.Specification;
+import org.neo4j.helpers.Predicate;
 
 /**
  * TODO
@@ -53,7 +52,7 @@ public final class Iterables
             @Override
             public Object next()
             {
-                throw new NoSuchElementException(  );
+                throw new NoSuchElementException();
             }
 
             @Override
@@ -140,19 +139,19 @@ public final class Iterables
         };
     }
 
-    public static <T> Function<Iterable<T>, Iterable<T>> limit( final int limitItems)
+    public static <T> Function<Iterable<T>, Iterable<T>> limit( final int limitItems )
     {
         return new Function<Iterable<T>, Iterable<T>>()
         {
             @Override
-            public Iterable<T> map(Iterable<T> ts)
+            public Iterable<T> apply( Iterable<T> ts )
             {
-                return limit(limitItems, ts);
+                return limit( limitItems, ts );
             }
         };
     }
 
-    public static <T> Iterable<T> unique( final Iterable<T> iterable)
+    public static <T> Iterable<T> unique( final Iterable<T> iterable )
     {
         return new Iterable<T>()
         {
@@ -169,11 +168,13 @@ public final class Iterables
                     @Override
                     public boolean hasNext()
                     {
-                        while(iterator.hasNext())
+                        while ( iterator.hasNext() )
                         {
                             nextItem = iterator.next();
-                            if (items.add( nextItem ))
+                            if ( items.add( nextItem ) )
+                            {
                                 return true;
+                            }
                         }
 
                         return false;
@@ -182,8 +183,10 @@ public final class Iterables
                     @Override
                     public T next()
                     {
-                        if (nextItem == null && !hasNext())
-                            throw new NoSuchElementException(  );
+                        if ( nextItem == null && !hasNext() )
+                        {
+                            throw new NoSuchElementException();
+                        }
 
                         return nextItem;
                     }
@@ -199,7 +202,7 @@ public final class Iterables
 
     public static <T, C extends Collection<T>> C addAll( C collection, Iterable<? extends T> iterable )
     {
-        for( T item : iterable )
+        for ( T item : iterable )
         {
             collection.add( item );
         }
@@ -211,7 +214,7 @@ public final class Iterables
     {
         long c = 0;
         Iterator<?> iterator = iterable.iterator();
-        while( iterator.hasNext() )
+        while ( iterator.hasNext() )
         {
             iterator.next();
             c++;
@@ -219,7 +222,7 @@ public final class Iterables
         return c;
     }
 
-    public static <X> Iterable<X> filter( Specification<? super X> specification, Iterable<X> i )
+    public static <X> Iterable<X> filter( Predicate<? super X> specification, Iterable<X> i )
     {
         return new FilterIterable<X>( i, specification );
     }
@@ -227,10 +230,11 @@ public final class Iterables
     public static <X> X first( Iterable<? extends X> i )
     {
         Iterator<? extends X> iter = i.iterator();
-        if( iter.hasNext() )
+        if ( iter.hasNext() )
         {
             return iter.next();
-        } else
+        }
+        else
         {
             return null;
         }
@@ -239,21 +243,24 @@ public final class Iterables
     public static <X> X single( Iterable<? extends X> i )
     {
         Iterator<? extends X> iter = i.iterator();
-        if( iter.hasNext() )
+        if ( iter.hasNext() )
         {
             X result = iter.next();
 
-            if (iter.hasNext())
+            if ( iter.hasNext() )
+            {
                 throw new IllegalArgumentException( "More than one element in iterable" );
+            }
 
             return result;
-        } else
+        }
+        else
         {
             throw new IllegalArgumentException( "No elements in iterable" );
         }
     }
 
-    public static <X> Iterable<X> skip( final int skip, final Iterable<X> iterable)
+    public static <X> Iterable<X> skip( final int skip, final Iterable<X> iterable )
     {
         return new Iterable<X>()
         {
@@ -262,12 +269,16 @@ public final class Iterables
             {
                 Iterator<X> iterator = iterable.iterator();
 
-                for (int i = 0; i < skip; i++)
+                for ( int i = 0; i < skip; i++ )
                 {
-                    if (iterator.hasNext())
+                    if ( iterator.hasNext() )
+                    {
                         iterator.next();
+                    }
                     else
+                    {
                         return Iterables.<X>empty().iterator();
+                    }
                 }
 
                 return iterator;
@@ -279,8 +290,10 @@ public final class Iterables
     {
         Iterator<? extends X> iter = i.iterator();
         X item = null;
-        while( iter.hasNext() )
+        while ( iter.hasNext() )
+        {
             item = iter.next();
+        }
 
         return item;
     }
@@ -292,13 +305,13 @@ public final class Iterables
         return list;
     }
 
-    public static <T> boolean matchesAny( Specification<? super T> specification, Iterable<T> iterable )
+    public static <T> boolean matchesAny( Predicate<? super T> specification, Iterable<T> iterable )
     {
         boolean result = false;
 
-        for( T item : iterable )
+        for ( T item : iterable )
         {
-            if( specification.satisfiedBy( item ) )
+            if ( specification.accept( item ) )
             {
                 result = true;
                 break;
@@ -308,12 +321,12 @@ public final class Iterables
         return result;
     }
 
-    public static <T> boolean matchesAll( Specification<? super T> specification, Iterable<T> iterable )
+    public static <T> boolean matchesAll( Predicate<? super T> specification, Iterable<T> iterable )
     {
         boolean result = true;
-        for( T item : iterable )
+        for ( T item : iterable )
         {
-            if( !specification.satisfiedBy( item ) )
+            if ( !specification.accept( item ) )
             {
                 result = false;
             }
@@ -339,14 +352,14 @@ public final class Iterables
             @Override
             public Iterator<T> iterator()
             {
-                final Iterable<Iterator<T>> iterators = toList(map( new Function<Iterable<T>, Iterator<T>>()
-                        {
-                            @Override
-                            public Iterator<T> map( Iterable<T> iterable )
-                            {
-                                return iterable.iterator();
-                            }
-                        }, Arrays.asList( iterables) ));
+                final Iterable<Iterator<T>> iterators = toList( map( new Function<Iterable<T>, Iterator<T>>()
+                {
+                    @Override
+                    public Iterator<T> apply( Iterable<T> iterable )
+                    {
+                        return iterable.iterator();
+                    }
+                }, Arrays.asList( iterables ) ) );
 
                 return new Iterator<T>()
                 {
@@ -357,9 +370,9 @@ public final class Iterables
                     @Override
                     public boolean hasNext()
                     {
-                        for( Iterator<T> iterator : iterators )
+                        for ( Iterator<T> iterator : iterators )
                         {
-                            if (iterator.hasNext())
+                            if ( iterator.hasNext() )
                             {
                                 return true;
                             }
@@ -371,17 +384,19 @@ public final class Iterables
                     @Override
                     public T next()
                     {
-                        if (iterator == null)
+                        if ( iterator == null )
                         {
                             iterator = iterators.iterator();
                         }
 
-                        while (iterator.hasNext())
+                        while ( iterator.hasNext() )
                         {
                             iter = iterator.next();
 
-                            if (iter.hasNext())
+                            if ( iter.hasNext() )
+                            {
                                 return iter.next();
+                            }
                         }
 
                         iterator = null;
@@ -392,8 +407,10 @@ public final class Iterables
                     @Override
                     public void remove()
                     {
-                        if (iter != null)
+                        if ( iter != null )
+                        {
                             iter.remove();
+                        }
                     }
                 };
             }
@@ -405,10 +422,10 @@ public final class Iterables
         return new MapIterable<FROM, TO>( from, function );
     }
 
-    public static <T> Iterable<T> iterable( Enumeration<T> enumeration )
+    public static <T> Iterable<T> iterableEnumeration( Enumeration<T> enumeration )
     {
         List<T> list = new ArrayList<T>();
-        while( enumeration.hasMoreElements() )
+        while ( enumeration.hasMoreElements() )
         {
             T item = enumeration.nextElement();
             list.add( item );
@@ -428,12 +445,12 @@ public final class Iterables
         return iter;
     }
 
-    public static <T> Iterable<T> concat(Iterable<? extends T> ... iterables)
+    public static <T> Iterable<T> concat( Iterable<? extends T>... iterables )
     {
-        return concat(Arrays.asList( (Iterable<T>[])iterables ));
+        return concat( Arrays.asList( (Iterable<T>[]) iterables ) );
     }
 
-    public static <T> Iterable<T> concat(final Iterable<Iterable<T>> iterables)
+    public static <T> Iterable<T> concat( final Iterable<Iterable<T>> iterables )
     {
         return new CombiningIterable<T>( iterables );
     }
@@ -443,9 +460,9 @@ public final class Iterables
         return new Function<FROM, TO>()
         {
             @Override
-            public TO map( FROM from )
+            public TO apply( FROM from )
             {
-                return (TO)from;
+                return (TO) from;
             }
         };
     }
@@ -470,11 +487,13 @@ public final class Iterables
                     @Override
                     public boolean hasNext()
                     {
-                        if( first != null )
+                        if ( first != null )
+                        {
                             return true;
+                        }
                         else
                         {
-                            if( iterator == null )
+                            if ( iterator == null )
                             {
                                 iterator = iterable.iterator();
                             }
@@ -486,17 +505,21 @@ public final class Iterables
                     @Override
                     public T next()
                     {
-                        if( first != null )
+                        if ( first != null )
                         {
                             try
                             {
                                 return first;
-                            } finally
+                            }
+                            finally
                             {
                                 first = null;
                             }
-                        } else
+                        }
+                        else
+                        {
                             return iterator.next();
+                        }
                     }
 
                     @Override
@@ -524,10 +547,11 @@ public final class Iterables
                     @Override
                     public boolean hasNext()
                     {
-                        if(iterator.hasNext())
+                        if ( iterator.hasNext() )
                         {
                             return true;
-                        } else
+                        }
+                        else
                         {
                             return last != null;
                         }
@@ -536,16 +560,21 @@ public final class Iterables
                     @Override
                     public T next()
                     {
-                        if (iterator.hasNext() )
+                        if ( iterator.hasNext() )
+                        {
                             return iterator.next();
+                        }
                         else
+                        {
                             try
                             {
                                 return last;
-                            } finally
-                            {
-                                last  = null;
                             }
+                            finally
+                            {
+                                last = null;
+                            }
+                        }
                     }
 
                     @Override
@@ -557,9 +586,9 @@ public final class Iterables
         };
     }
 
-    public static <T> Iterable<T> cache(Iterable<T> iterable)
+    public static <T> Iterable<T> cache( Iterable<T> iterable )
     {
-        return new CacheIterable<T>(iterable);
+        return new CacheIterable<T>( iterable );
     }
 
     public static <T> List<T> toList( Iterable<T> iterable )
@@ -567,15 +596,17 @@ public final class Iterables
         return addAll( new ArrayList<T>(), iterable );
     }
 
-    public static Object[] toArray(Iterable<Object> iterable)
+    public static Object[] toArray( Iterable<Object> iterable )
     {
         return toArray( Object.class, iterable );
     }
 
-    public static <T> T[] toArray(Class<T> componentType, Iterable<T> iterable)
+    public static <T> T[] toArray( Class<T> componentType, Iterable<T> iterable )
     {
-        if (iterable == null)
+        if ( iterable == null )
+        {
             return null;
+        }
 
         List<T> list = toList( iterable );
         return list.toArray( (T[]) Array.newInstance( componentType, list.size() ) );
@@ -619,7 +650,7 @@ public final class Iterables
             {
                 FROM from = fromIterator.next();
 
-                return function.map( from );
+                return function.apply( from );
             }
 
             public void remove()
@@ -634,9 +665,9 @@ public final class Iterables
     {
         private Iterable<T> iterable;
 
-        private Specification<? super T> specification;
+        private Predicate<? super T> specification;
 
-        public FilterIterable( Iterable<T> iterable, Specification<? super T> specification )
+        public FilterIterable( Iterable<T> iterable, Predicate<? super T> specification )
         {
             this.iterable = iterable;
             this.specification = specification;
@@ -652,13 +683,13 @@ public final class Iterables
         {
             private Iterator<T> iterator;
 
-            private Specification<? super T> specification;
+            private Predicate<? super T> specification;
 
             private T currentValue;
             boolean finished = false;
             boolean nextConsumed = true;
 
-            public FilterIterator( Iterator<T> iterator, Specification<? super T> specification )
+            public FilterIterator( Iterator<T> iterator, Predicate<? super T> specification )
             {
                 this.specification = specification;
                 this.iterator = iterator;
@@ -667,19 +698,19 @@ public final class Iterables
             public boolean moveToNextValid()
             {
                 boolean found = false;
-                while( !found && iterator.hasNext() )
+                while ( !found && iterator.hasNext() )
                 {
                     T currentValue = iterator.next();
-                    boolean satisfies = specification.satisfiedBy( currentValue );
+                    boolean satisfies = specification.accept( currentValue );
 
-                    if( satisfies )
+                    if ( satisfies )
                     {
                         found = true;
                         this.currentValue = currentValue;
                         nextConsumed = false;
                     }
                 }
-                if( !found )
+                if ( !found )
                 {
                     finished = true;
                 }
@@ -688,15 +719,16 @@ public final class Iterables
 
             public T next()
             {
-                if( !nextConsumed )
+                if ( !nextConsumed )
                 {
                     nextConsumed = true;
                     return currentValue;
-                } else
+                }
+                else
                 {
-                    if( !finished )
+                    if ( !finished )
                     {
-                        if( moveToNextValid() )
+                        if ( moveToNextValid() )
                         {
                             nextConsumed = true;
                             return currentValue;
@@ -747,19 +779,20 @@ public final class Iterables
 
             public boolean hasNext()
             {
-                if( currentIterator == null )
+                if ( currentIterator == null )
                 {
-                    if( iterator.hasNext() )
+                    if ( iterator.hasNext() )
                     {
                         I next = iterator.next();
                         currentIterator = next.iterator();
-                    } else
+                    }
+                    else
                     {
                         return false;
                     }
                 }
 
-                while( !currentIterator.hasNext() &&
+                while ( !currentIterator.hasNext() &&
                         iterator.hasNext() )
                 {
                     currentIterator = iterator.next().iterator();
@@ -775,7 +808,7 @@ public final class Iterables
 
             public void remove()
             {
-                if( currentIterator == null )
+                if ( currentIterator == null )
                 {
                     throw new IllegalStateException();
                 }
@@ -786,7 +819,7 @@ public final class Iterables
     }
 
     private static class CacheIterable<T>
-        implements Iterable<T>
+            implements Iterable<T>
     {
         private Iterable<T> iterable;
         private Iterable<T> cache;
@@ -799,8 +832,10 @@ public final class Iterables
         @Override
         public Iterator<T> iterator()
         {
-            if (cache != null)
+            if ( cache != null )
+            {
                 return cache.iterator();
+            }
 
             final Iterator<T> source = iterable.iterator();
 
@@ -812,7 +847,7 @@ public final class Iterables
                 public boolean hasNext()
                 {
                     boolean hasNext = source.hasNext();
-                    if (!hasNext)
+                    if ( !hasNext )
                     {
                         cache = iteratorCache;
                     }
@@ -834,5 +869,37 @@ public final class Iterables
                 }
             };
         }
+    }
+    
+    /**
+     * Returns the index of the first occurrence of the specified element
+     * in this iterable, or -1 if this iterable does not contain the element.
+     * More formally, returns the lowest index <tt>i</tt> such that
+     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>,
+     * or -1 if there is no such index.
+     */
+    public static <T> int indexOf( T itemToFind, Iterable<T> iterable )
+    {
+        if ( itemToFind == null )
+        {
+            int index = 0;
+            for ( T item : iterable )
+            {
+                if ( item == null )
+                    return index;
+                index++;
+            }
+        }
+        else
+        {
+            int index = 0;
+            for ( T item : iterable )
+            {
+                if ( itemToFind.equals( item ) )
+                    return index;
+                index++;
+            }
+        }
+        return -1;
     }
 }

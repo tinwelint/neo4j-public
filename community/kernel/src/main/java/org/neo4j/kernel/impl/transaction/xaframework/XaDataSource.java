@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -111,7 +111,7 @@ public abstract class XaDataSource implements Lifecycle
         throw new UnsupportedOperationException( getClass().getName() );
     }
 
-    public String getFileName( long version )
+    public File getFileName( long version )
     {
         throw new UnsupportedOperationException( getClass().getName() );
     }
@@ -134,7 +134,7 @@ public abstract class XaDataSource implements Lifecycle
 
     /**
      * Returns the current version of this data source. A invoke to the
-     * {@link #rotateLogicalLog()} when {@link #keepLogicalLogs(boolean)} is
+     * {@link #rotateLogicalLog()} when keepLogicalLogs(boolean) is
      * set to <code>true</code> will result in a log with that version created.
      *
      * @return the current version of the logical log

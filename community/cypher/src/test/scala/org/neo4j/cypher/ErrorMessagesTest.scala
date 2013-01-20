@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,6 @@ import internal.StringExtras
 import org.scalatest.Assertions
 import org.junit.Assert._
 import org.junit.{Ignore, Test}
-import org.neo4j.graphdb.NotFoundException
 
 class ErrorMessagesTest extends ExecutionEngineHelper with Assertions with StringExtras {
   @Test def noReturnColumns() {
@@ -239,8 +238,20 @@ class ErrorMessagesTest extends ExecutionEngineHelper with Assertions with Strin
       "Properties on pattern elements are not allowed in MATCH")
   }
 
-  private def expectError[T <: CypherException](query: String, expectedError: String)(implicit manifest: Manifest[T]): T = {
-    val error = intercept[T](engine.execute(query).toList)
+  @Test def missing_something_to_delete() {
+    expectError(
+      "START p=node(0) DELETE x",
+      "Unknown identifier `x`")
+  }
+
+  @Test def aggregations_must_be_included_in_return() {
+    expectError(
+      "START a=node(0) RETURN a ORDER BY count(*)",
+      "Aggregation expressions must be listed in the RETURN clause to be used in ORDER BY")
+  }
+
+  private def expectError(query: String, expectedError: String):CypherException = {
+    val error = intercept[CypherException](engine.execute(query).toList)
     val s = """
 Wrong error message produced: %s
 Expected: %s
@@ -254,8 +265,8 @@ Expected: %s
     error
   }
 
-  private def expectNotFoundError(query: String, expectedError: String)  {
-    val error = intercept[NotFoundException](engine.execute(query).toList)
+  private def expectNotFoundError(query: String, expectedError: String):CypherException = {
+    val error = intercept[CypherException](engine.execute(query).toList)
     val s = """
 Wrong error message produced: %s
 Expected: %s
@@ -271,9 +282,12 @@ Expected: %s
   }
 
   private def expectSyntaxError(query: String, expectedError: String, expectedOffset: Int) {
-    val exception = expectError[SyntaxException](query, expectedError)
-    val s = query + "\n" + exception.toString()
-    assertEquals(s, Some(expectedOffset), exception.offset)
-  }
+    expectError(query, expectedError) match {
+      case e: SyntaxException =>
+        val s = query + "\n" + e.toString()
+        assertEquals(s, Some(expectedOffset), e.offset)
 
+      case e => fail("Expected a SyntaxException, but got: " + e.getMessage)
+    }
+  }
 }

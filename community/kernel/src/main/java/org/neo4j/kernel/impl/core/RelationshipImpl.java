@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,9 @@ package org.neo4j.kernel.impl.core;
 
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.kernel.impl.core.LockReleaser.CowEntityElement;
-import org.neo4j.kernel.impl.core.LockReleaser.PrimitiveElement;
+import org.neo4j.kernel.impl.core.WritableTransactionState.CowEntityElement;
+import org.neo4j.kernel.impl.core.WritableTransactionState.PrimitiveElement;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
-import org.neo4j.kernel.impl.transaction.LockException;
-import org.neo4j.kernel.impl.transaction.LockType;
 import org.neo4j.kernel.impl.util.ArrayMap;
 
 public class RelationshipImpl extends ArrayBasedPrimitive
@@ -61,9 +58,9 @@ public class RelationshipImpl extends ArrayBasedPrimitive
 
     @Override
     protected PropertyData changeProperty( NodeManager nodeManager,
-            PropertyData property, Object value )
+            PropertyData property, Object value, TransactionState tx )
     {
-        return nodeManager.relChangeProperty( this, property, value );
+        return nodeManager.relChangeProperty( this, property, value, tx );
     }
 
     @Override
@@ -80,9 +77,9 @@ public class RelationshipImpl extends ArrayBasedPrimitive
 
     @Override
     protected void removeProperty( NodeManager nodeManager,
-            PropertyData property )
+            PropertyData property, TransactionState tx )
     {
-        nodeManager.relRemoveProperty( this, property );
+        nodeManager.relRemoveProperty( this, property, tx );
     }
 
     @Override
@@ -110,40 +107,36 @@ public class RelationshipImpl extends ArrayBasedPrimitive
     
     int getTypeId()
     {
-        return (int)((idAndMore&0xFFFF000000000000L)>>48);
+        return (int)((idAndMore&0xFFFF000000000000L)>>>48);
     }
     
     public void delete( NodeManager nodeManager, Relationship proxy )
     {
         NodeImpl startNode = null;
         NodeImpl endNode = null;
-        boolean startNodeLocked = false;
-        boolean endNodeLocked = false;
-        boolean thisLocked = false;
         boolean success = false;
+        TransactionState tx = null;
         try
         {
+            tx = nodeManager.getTransactionState();
             startNode = nodeManager.getLightNode( getStartNodeId() );
             if ( startNode != null )
             {
-                nodeManager.acquireLock( startNode, LockType.WRITE );
-                startNodeLocked = true;
+                tx.acquireWriteLock( nodeManager.newNodeProxyById( getStartNodeId() ) );
             }
             endNode = nodeManager.getLightNode( getEndNodeId() );
             if ( endNode != null )
             {
-                nodeManager.acquireLock( endNode, LockType.WRITE );
-                endNodeLocked = true;
+                tx.acquireWriteLock( nodeManager.newNodeProxyById( getEndNodeId() ) );
             }
-            nodeManager.acquireLock( proxy, LockType.WRITE );
-            thisLocked = true;
+            tx.acquireWriteLock( proxy );
             // no need to load full relationship, all properties will be
             // deleted when relationship is deleted
 
             ArrayMap<Integer,PropertyData> skipMap =
-                nodeManager.getOrCreateCowPropertyRemoveMap( this );
+                tx.getOrCreateCowPropertyRemoveMap( this );
             ArrayMap<Integer,PropertyData> removedProps =
-                nodeManager.deleteRelationship( this );
+                nodeManager.deleteRelationship( this, tx );
             if ( removedProps.size() > 0 )
             {
                 for ( int index : removedProps.keySet() )
@@ -152,66 +145,23 @@ public class RelationshipImpl extends ArrayBasedPrimitive
                 }
             }
             success = true;
-            RelationshipType type = nodeManager.getRelationshipTypeById( getTypeId() );
+            int typeId = getTypeId();
             long id = getId();
             if ( startNode != null )
             {
-                startNode.removeRelationship( nodeManager, type, id );
+                tx.getOrCreateCowRelationshipRemoveMap( startNode, typeId ).add( id );
             }
             if ( endNode != null )
             {
-                endNode.removeRelationship( nodeManager, type, id );
+                tx.getOrCreateCowRelationshipRemoveMap( endNode, typeId ).add( id );
             }
             success = true;
         }
         finally
         {
-            boolean releaseFailed = false;
-            try
-            {
-                if ( thisLocked )
-                {
-                    nodeManager.releaseLock( proxy, LockType.WRITE );
-                }
-            }
-            catch ( Exception e )
-            {
-                releaseFailed = true;
-                e.printStackTrace();
-            }
-            try
-            {
-                if ( startNodeLocked )
-                {
-                    nodeManager.releaseLock( startNode, LockType.WRITE );
-                }
-            }
-            catch ( Exception e )
-            {
-                releaseFailed = true;
-                e.printStackTrace();
-            }
-            try
-            {
-                if ( endNodeLocked )
-                {
-                    nodeManager.releaseLock( endNode, LockType.WRITE );
-                }
-            }
-            catch ( Exception e )
-            {
-                releaseFailed = true;
-                e.printStackTrace();
-            }
             if ( !success )
             {
                 nodeManager.setRollbackOnly();
-            }
-            if ( releaseFailed )
-            {
-                throw new LockException( "Unable to release locks ["
-                    + startNode + "," + endNode + "] in relationship delete->"
-                    + this );
             }
         }
     }

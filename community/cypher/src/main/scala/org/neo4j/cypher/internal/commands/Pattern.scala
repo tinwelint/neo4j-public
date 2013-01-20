@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import org.neo4j.graphdb.Direction
 import collection.Seq
 import org.neo4j.cypher.internal.symbols._
 
-trait Pattern extends TypeSafe {
+trait Pattern extends TypeSafe with AstNode[Pattern] {
   def optional: Boolean
   def predicate: Predicate
   def possibleStartPoints: Seq[(String,CypherType)]
@@ -36,7 +36,6 @@ trait Pattern extends TypeSafe {
   protected def rightArrow(dir: Direction) = if (dir == Direction.OUTGOING) "->" else "-"
 
   def rewrite( f : Expression => Expression) : Pattern
-  def equalOrUnnamed(name1: String, name2: String) = name1 == name2 || (notNamed(name1) && notNamed(name2))
   protected def filtered(x:Seq[String]): Seq[String] =x.filter(isNamed)
 
   def nodes:Seq[String]
@@ -68,28 +67,20 @@ case class RelatedTo(left: String,
 
   def rewrite(f: (Expression) => Expression) =
     new RelatedTo(left, right, relName, relTypes, direction, optional, predicate.rewrite(f))
-  override def equals(p1: Any): Boolean = p1 match {
-    case null => false
-    case other: RelatedTo =>
-      equalOrUnnamed(other.left, left) &&
-        equalOrUnnamed(other.right, right) &&
-        equalOrUnnamed(other.relName, relName) &&
-        other.relTypes  == relTypes &&
-        other.direction == direction &&
-        other.optional == optional &&
-        other.predicate == predicate
-    case _ => false
-  }
 
   def nodes = Seq(left,right)
 
   def rels = Seq(relName)
 
-  def assertTypes(symbols: SymbolTable) {
-    predicate.assertTypes(symbols)
+  def throwIfSymbolsMissing(symbols: SymbolTable) {
+    predicate.throwIfSymbolsMissing(symbols)
   }
 
   def symbolTableDependencies = predicate.symbolTableDependencies
+
+  def children = Seq(predicate)
+
+  override def addsToRow() = Seq(left, right, relName)
 }
 
 abstract class PathPattern extends Pattern {
@@ -144,29 +135,15 @@ case class VarLengthRelatedTo(pathName: String,
   def rewrite(f: (Expression) => Expression) = new VarLengthRelatedTo(pathName,start,end, minHops,maxHops,relTypes,direction,relIterator,optional,predicate.rewrite(f))
   lazy val possibleStartPoints: Seq[(String, AnyType)] = Seq(start -> NodeType(), end -> NodeType(), pathName -> PathType())
 
-  override def equals(p1: Any): Boolean = p1 match {
-    case null => false
-    case other: VarLengthRelatedTo =>
-      equalOrUnnamed(other.pathName, pathName) &&
-        equalOrUnnamed(other.start, start) &&
-        equalOrUnnamed(other.end, end) &&
-        other.minHops == minHops &&
-        other.maxHops == maxHops &&
-        other.relTypes == relTypes &&
-        other.direction == direction &&
-        other.relIterator == relIterator &&
-        other.optional == optional &&
-        other.predicate == predicate
-    case _ => false
-  }
-
   def nodes = Seq(start,end)
 
   def rels = Seq()
 
-  def assertTypes(symbols: SymbolTable) {
-    predicate.assertTypes(symbols)
+  def throwIfSymbolsMissing(symbols: SymbolTable) {
+    predicate.throwIfSymbolsMissing(symbols)
   }
+
+  def children = Seq(predicate)
 }
 
 case class ShortestPath(pathName: String,
@@ -205,8 +182,10 @@ case class ShortestPath(pathName: String,
 
   def nodes = Seq(start,end)
 
-  def assertTypes(symbols: SymbolTable) {
+  def throwIfSymbolsMissing(symbols: SymbolTable) {
     possibleStartPoints.foreach(p => symbols.evaluateType(p._1, p._2))
-    predicate.assertTypes(symbols)
+    predicate.throwIfSymbolsMissing(symbols)
   }
+
+  def children = Seq(predicate)
 }

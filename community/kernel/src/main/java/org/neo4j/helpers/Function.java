@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,25 +17,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.helpers;
 
 /**
  * Generic function interface to map from one type to another.
- *
+ * <p/>
  * This can be used with the Iterables methods to transform lists of objects.
  *
- * @param <From>
- * @param <To>
+ * @param <T>
+ * @param <R>
  */
-public interface Function<From, To>
+public interface Function<T, R>
 {
     /**
-     * Map a single item from one type to another
+     * Apply a value to this function
      *
      * @param from the input item
-     *
      * @return the mapped item
      */
-    To map( From from );
+    R apply( T from );
 }

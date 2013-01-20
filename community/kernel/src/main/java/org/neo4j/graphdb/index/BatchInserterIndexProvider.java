@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,7 +34,7 @@ import org.neo4j.kernel.impl.batchinsert.BatchInserter;
  * @author Mattias Persson
  * 
  * @deprecated this interface has been moved to
- *             {@link org.neo4j.unsafe.batchinsert.BatchInserterIndexProvider.java}
+ *             {@link org.neo4j.unsafe.batchinsert.BatchInserterIndexProvider}
  *             as of version 1.7.
  */
 public interface BatchInserterIndexProvider

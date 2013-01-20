@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -57,16 +57,13 @@ class MatchBuilder extends PlanBuilder with PatternGraphBuilder {
 
   def canWorkWith(plan: ExecutionPlanInProgress) = {
     val q = plan.query
-    q.patterns.filter(yesOrNo(_, plan.pipe, q.start)).nonEmpty
+    q.patterns.exists(yesOrNo(_, plan.pipe, q.start))
   }
 
   private def yesOrNo(q: QueryToken[_], p: Pipe, start: Seq[QueryToken[StartItem]]) = q match {
     case Unsolved(x: ShortestPath) => false
     case Unsolved(x: Pattern) => {
-      val patternIdentifiers = x.possibleStartPoints.map(_._1)
-      val startItems = start.map(_.token.identifierName)
-
-      startItems.exists( patternIdentifiers.contains )
+      val patternIdentifiers: Seq[String] = x.possibleStartPoints.map(_._1)
 
       val apa = start.map(si => patternIdentifiers.find(_ == si.token.identifierName) match {
         case Some(_) => si.solved
@@ -74,8 +71,7 @@ class MatchBuilder extends PlanBuilder with PatternGraphBuilder {
       })
 
       val resolvedStartPoints =  apa.foldLeft(true)(_ && _)
-
-      val pipeSatisfied = x.predicate.checkTypes(p.symbols)
+      val pipeSatisfied = x.predicate.symbolDependenciesMet(p.symbols)
 
       resolvedStartPoints && pipeSatisfied
     }

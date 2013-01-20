@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,20 @@
  */
 package org.neo4j.server;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientResponse.Status;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 import org.neo4j.jmx.Primitives;
 import org.neo4j.jmx.impl.JmxKernelExtension;
 import org.neo4j.kernel.GraphDatabaseAPI;
@@ -48,12 +48,10 @@ import org.neo4j.test.ImpermanentGraphDatabase;
 import org.neo4j.test.TestData;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse.Status;
-
 public class WrappingNeoServerBootstrapperTest extends ExclusiveServerTestBase
 {
-    public @Rule
+    public
+    @Rule
     TestData<RESTDocsGenerator> gen = TestData.producedThrough( RESTDocsGenerator.PRODUCER );
 
     static InternalAbstractGraphDatabase myDb;
@@ -79,7 +77,10 @@ public class WrappingNeoServerBootstrapperTest extends ExclusiveServerTestBase
     public void usingWrappingNeoServerBootstrapper()
     {
         // START SNIPPET: usingWrappingNeoServerBootstrapper
-        InternalAbstractGraphDatabase graphdb = getGraphDb();
+        // You provide the database, which must implement GraphDatabaseAPI.
+        // Both EmbeddedGraphDatabase and HighlyAvailableGraphDatabase do this.
+        GraphDatabaseAPI graphdb = getGraphDb();
+
         WrappingNeoServerBootstrapper srv;
         srv = new WrappingNeoServerBootstrapper( graphdb );
         srv.start();
@@ -95,9 +96,9 @@ public class WrappingNeoServerBootstrapperTest extends ExclusiveServerTestBase
         // START SNIPPET: customConfiguredWrappingNeoServerBootstrapper
         // let the database accept remote neo4j-shell connections
         GraphDatabaseAPI graphdb = (GraphDatabaseAPI) new GraphDatabaseFactory()
-            .newEmbeddedDatabaseBuilder( "target/configDb" )
-            .setConfig( ShellSettings.remote_shell_enabled, GraphDatabaseSetting.TRUE )
-            .newGraphDatabase();
+                .newEmbeddedDatabaseBuilder( "target/configDb" )
+                .setConfig( ShellSettings.remote_shell_enabled, Settings.TRUE )
+                .newGraphDatabase();
         ServerConfigurator config;
         config = new ServerConfigurator( graphdb );
         // let the server endpoint be on a custom port
@@ -131,6 +132,7 @@ public class WrappingNeoServerBootstrapperTest extends ExclusiveServerTestBase
         assertTrue( response.contains( "neo4j-sh (0)$" ) );
         srv.stop();
     }
+
     @Test
     public void shouldAllowModifyingListenPorts() throws UnknownHostException
     {
@@ -169,7 +171,8 @@ public class WrappingNeoServerBootstrapperTest extends ExclusiveServerTestBase
                 myDb );
         srv.start();
 
-        long originalNodeNumber = myDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class ).getSingleManagementBean( Primitives.class ).getNumberOfNodeIdsInUse();
+        long originalNodeNumber = myDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
+                .getSingleManagementBean( Primitives.class ).getNumberOfNodeIdsInUse();
 
         FunctionalTestHelper helper = new FunctionalTestHelper( srv.getServer() );
         JaxRsResponse response = new RestRequest().get( helper.dataUri() );
@@ -179,7 +182,8 @@ public class WrappingNeoServerBootstrapperTest extends ExclusiveServerTestBase
         response = new RestRequest().post( helper.dataUri() + "node", nodeData );
         assertEquals( 201, response.getStatus() );
 
-        long newNodeNumber = myDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class ).getSingleManagementBean( Primitives.class ).getNumberOfNodeIdsInUse();
+        long newNodeNumber = myDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
+                .getSingleManagementBean( Primitives.class ).getNumberOfNodeIdsInUse();
 
         assertEquals( originalNodeNumber + 1, newNodeNumber );
 

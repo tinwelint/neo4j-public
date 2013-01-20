@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,12 +41,7 @@ case class SingleGraphRelationship(rel: Relationship) extends GraphRelationship 
     case x => x == this || x == rel
   }
 
-  override def toString =
-    try {
-      rel.getProperty("name").toString
-    } catch {
-      case e:NotFoundException => rel.toString
-    }
+  override def toString = rel.toString
 }
 
 case class VariableLengthGraphRelationship(path: Path) extends GraphRelationship {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,7 @@ import expressions.HeadFunction
 import org.neo4j.cypher.internal.executionplan.PartiallySolvedQuery
 import org.neo4j.cypher.internal.commands.ReturnItem
 import org.neo4j.cypher.internal.executionplan.ExecutionPlanInProgress
+import org.neo4j.cypher.internal.symbols.NodeType
 
 class AggregationBuilderTest extends BuilderTest {
 
@@ -54,10 +55,11 @@ class AggregationBuilderTest extends BuilderTest {
     val expectedQuery = q.copy(
       aggregation = q.aggregation.map(_.solve),
       aggregateQuery = q.aggregateQuery.solve,
+      returns = Seq(Unsolved(ReturnItem(CachedExpression("n", NodeType()), "n"))),
       extracted = true
     )
 
-    assert(resultPlan.query == expectedQuery)
+    assert(resultPlan.query === expectedQuery)
   }
 
   @Test def should_not_accept_if_there_are_still_other_things_to_do_in_the_query() {

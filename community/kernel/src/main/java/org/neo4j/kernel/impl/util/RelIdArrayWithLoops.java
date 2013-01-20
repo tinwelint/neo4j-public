@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,7 @@ public class RelIdArrayWithLoops extends RelIdArray
 {
     private IdBlock lastLoopBlock;
     
-    public RelIdArrayWithLoops( String type )
+    public RelIdArrayWithLoops( int type )
     {
         super( type );
     }
@@ -40,7 +40,7 @@ public class RelIdArrayWithLoops extends RelIdArray
         lastLoopBlock = from.getLastLoopBlock();
     }
     
-    protected RelIdArrayWithLoops( String type, IdBlock out, IdBlock in, IdBlock loop )
+    protected RelIdArrayWithLoops( int type, IdBlock out, IdBlock in, IdBlock loop )
     {
         super( type, out, in );
         this.lastLoopBlock = loop;

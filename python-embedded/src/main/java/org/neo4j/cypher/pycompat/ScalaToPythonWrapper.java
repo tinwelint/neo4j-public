@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.neo4j.graphdb.Path;
-import scala.collection.JavaConversions;
 
 /**
  * Used to wrap gnarly scala classes into something that JPype understands.
@@ -41,11 +40,10 @@ public class ScalaToPythonWrapper
         {
             return new WrappedMap( (Map<String, Object>) obj );
         }
-        else if(obj instanceof JavaConversions.SeqWrapper)
+        else if(obj instanceof Collection )
         {
-            return new WrappedCollection<Object>( (Collection)obj );
+            return new WrappedCollection( (Collection) obj );
         }
-
         return obj;
     }
 

@@ -1,6 +1,6 @@
 # -*- mode: Python; coding: utf-8 -*-
 
-# Copyright (c) 2002-2011 "Neo Technology,"
+# Copyright (c) 2002-2013 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 #
 # This file is part of Neo4j.
@@ -126,12 +126,13 @@ class CypherTest(unit_tests.GraphDatabaseTest):
         
         end_points = result['end_points'].single
         
-        # Should have gotten two end points
-        self.assertEqual(len(end_points), 2)
-        
         # Should be able to iterate across them
+        count = 0
         for path in end_points:
-            pass
+            count += 1
+            
+        # Should have been two of them
+        self.assertEquals(count, 2)
         
         
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.backup;
 
 import static java.util.Collections.emptyMap;
@@ -52,6 +51,7 @@ import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.ProgressIndicator;
+import org.neo4j.helpers.Settings;
 import org.neo4j.helpers.Triplet;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
@@ -64,6 +64,8 @@ import org.neo4j.kernel.impl.transaction.xaframework.LogIoUtils;
 import org.neo4j.kernel.impl.transaction.xaframework.NoSuchLogVersionException;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.logging.DevNullLoggingService;
+import org.neo4j.kernel.logging.Logging;
 
 class BackupService
 {
@@ -90,7 +92,7 @@ class BackupService
             throw new RuntimeException( targetDirectory + " already contains a database" );
         }
 
-        BackupClient client = new BackupClient( sourceHostNameOrIp, sourcePort, StringLogger.DEV_NULL, null );
+        BackupClient client = new BackupClient( sourceHostNameOrIp, sourcePort, new DevNullLoggingService(), null );
         client.start();
         long timestamp = System.currentTimeMillis();
         Map<String, Long> lastCommittedTxs = emptyMap();
@@ -133,7 +135,7 @@ class BackupService
                      * span the next-to-last up to the latest for each datasource
                      */
                     BackupClient recoveryClient = new BackupClient(
-                            sourceHostNameOrIp, sourcePort, targetDb.getMessageLog(), targetDb.getStoreId() );
+                            sourceHostNameOrIp, sourcePort, targetDb.getDependencyResolver().resolveDependency( Logging.class ), targetDb.getStoreId() );
                     recoveryClient.start();
                     Response<Void> recoveryResponse = null;
                     Map<String, Long> recoveryDiff = new HashMap<String, Long>();
@@ -244,7 +246,7 @@ class BackupService
     }
 
     BackupOutcome doIncrementalBackup( String sourceHostNameOrIp, int sourcePort, String targetDirectory,
-                                              boolean verification )
+                                       boolean verification )
     {
         if ( !directoryContainsDb( targetDirectory ) )
         {
@@ -257,7 +259,7 @@ class BackupService
             @Override
             public void configure( Map<String, String> config )
             {
-                config.put( GraphDatabaseSettings.keep_logical_logs.name(), GraphDatabaseSetting.TRUE );
+                config.put( GraphDatabaseSettings.keep_logical_logs.name(), Settings.TRUE );
             }
         };
 
@@ -327,22 +329,16 @@ class BackupService
 
     static EmbeddedGraphDatabase startTemporaryDb( String targetDirectory, ConfigParam... params )
     {
-        if ( params != null && params.length > 0 )
+        Map<String, String> config = new HashMap<String, String>();
+        config.put( OnlineBackupSettings.online_backup_enabled.name(), GraphDatabaseSetting.FALSE );
+        for ( ConfigParam param : params )
         {
-            Map<String, String> config = new HashMap<String, String>();
-            for ( ConfigParam param : params )
+            if ( param != null )
             {
-                if ( param != null )
-                {
-                    param.configure( config );
-                }
+                param.configure( config );
             }
-            return new EmbeddedGraphDatabase( targetDirectory, config );
         }
-        else
-        {
-            return new EmbeddedGraphDatabase( targetDirectory );
-        }
+        return new EmbeddedGraphDatabase( targetDirectory, config );
     }
 
     private RequestContext addDiffToSlaveContext( RequestContext original,
@@ -383,7 +379,7 @@ class BackupService
     private BackupOutcome incrementalWithContext( String sourceHostNameOrIp, int sourcePort, GraphDatabaseAPI targetDb,
                                                   RequestContext context )
     {
-        BackupClient client = new BackupClient( sourceHostNameOrIp, sourcePort, targetDb.getMessageLog(),
+        BackupClient client = new BackupClient( sourceHostNameOrIp, sourcePort, targetDb.getDependencyResolver().resolveDependency( Logging.class ),
                 targetDb.getStoreId() );
         client.start();
         Map<String, Long> lastCommittedTxs;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,27 +25,26 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.neo4j.server.NeoServer;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.webadmin.rest.representations.ServerRootRepresentation;
 
 @Path( "/" )
 public class RootService
 {
-    @GET
-    public Response getServiceDefinition( @Context UriInfo uriInfo, @Context OutputFormat output )
+    private final NeoServer neoServer;
+
+    public RootService( @Context NeoServer neoServer )
     {
-        ServerRootRepresentation representation = new ServerRootRepresentation( uriInfo.getBaseUri(), services() );
+        this.neoServer = neoServer;
+    }
+
+    @GET
+    public Response getServiceDefinition(  @Context UriInfo uriInfo, @Context OutputFormat output )
+    {
+        ServerRootRepresentation representation =
+                new ServerRootRepresentation( uriInfo.getBaseUri(), neoServer.getServices() );
 
         return output.ok( representation );
     }
-
-    private AdvertisableService[] services()
-    {
-        AdvertisableService console = new ConsoleService( (ConsoleSessionFactory) null, null, null );
-        AdvertisableService jmx = new JmxService( null, null );
-        MonitorService monitor = new MonitorService( null, null );
-
-        return new AdvertisableService[] { console, jmx, monitor };
-    }
-
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ import org.neo4j.cypher.ParameterWrongTypeException
 import collection.JavaConverters._
 
 object GetGraphElements {
-  def getElements[T](data: Any, name: String, getElement: Long => T): Seq[T] = {
+  def getElements[T : Manifest](data: Any, name: String, getElement: Long => T): Seq[T] = {
     def castElement(x: Any): T = x match {
       case i: Int => getElement(i)
       case i: Long => getElement(i)

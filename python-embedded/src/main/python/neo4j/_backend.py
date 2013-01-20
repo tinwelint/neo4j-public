@@ -1,6 +1,6 @@
 # -*- mode: Python; coding: utf-8 -*-
 
-# Copyright (c) 2002-2011 "Neo Technology,"
+# Copyright (c) 2002-2013 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 #
 # This file is part of Neo4j.
@@ -21,7 +21,7 @@
 """Neo4j backend selection for Python."""
 
 import sys, inspect
-#, 'FinalTraversalBranch','AsOneStartBranch', 
+
 NEO4J_JAVA_CLASSES = (
     ('org.neo4j.kernel.impl.core',      ('NodeProxy', 'RelationshipProxy',)),
     ('org.neo4j.kernel',                ('Uniqueness', 'Traversal', 'EmbeddedGraphDatabase',\
@@ -37,8 +37,6 @@ NEO4J_JAVA_CLASSES = (
     ('org.neo4j.graphdb.index',         ('Index', 'IndexHits',)),
     ('org.neo4j.helpers.collection',    ('IterableWrapper',)),
     ('org.neo4j.cypher.pycompat',       ('ExecutionEngine','WrappedPath',)),
-    #('com.tinkerpop.blueprints.pgm.impls.neo4j', ('Neo4jGraph', 'Neo4jEdge', 'Neo4jVertex')),
-    #('com.tinkerpop.gremlin', ('Gremlin')),
     ('java.util',                       ('HashMap',)),
 )	
 
@@ -113,8 +111,16 @@ except: # this isn't jython (and doesn't have the java module)
         return jvmargs
     
     def get_jvm_path():
+        def jvm_exists(jvm):
+            return jvm != None and os.path.exists(jvm)
+        
+        # Try finding it through jPype
         jvm = jpype.getDefaultJVMPath()
-        if sys.platform == "win32" and (jvm is None or not os.path.exists(jvm)):
+        if jvm_exists(jvm):
+            return jvm
+        
+        # Windows specific check
+        if sys.platform == "win32":
             # JPype does not always find java correctly
             # on windows, try using JAVA_HOME to detect it.
 	          rootJre = os.getenv("JAVA_HOME", "c:/Program Files/Java/jre6")
@@ -125,8 +131,22 @@ except: # this isn't jython (and doesn't have the java module)
 	          for i in ['/bin/client/jvm.dll','/bin/server/jvm.dll']:
 	              if os.path.exists(rootJre + i) :
 		                jvm = rootJre + i
+		    
+        elif sys.platform == "darwin" :
+            # No OS X specific checks yet :(
+            pass
+        else:
+            # Linux specific checks
+            known_locations = ("/usr/lib/jvm",)
+            for jvm_root in known_locations:
+                if os.path.exists(jvm_root):
+                    # Go through each JVM found
+                    for folder in os.listdir(jvm_root):
+                      # Look for libjvm.so
+                      if jvm_exists(jvm_root + "/" + folder + "/jre/lib/i386/client/libjvm.so"):
+                          return jvm
         
-        if jvm is None:
+        if not jvm_exists(jvm):
             if os.getenv("JAVA_HOME", None) != None:
                 raise IOError("Unable to find a java runtime to use. JAVA_HOME is set to '%s', but I could not find a JVM to use there." % os.getenv("JAVA_HOME"))
             else:

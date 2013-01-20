@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -39,9 +39,9 @@ public class TestChangingOfLogFormat
     @Test
     public void inabilityToStartFromOldFormatFromNonCleanShutdown() throws Exception
     {
-        String storeDir = "target/var/oldlog";
+        File storeDir = new File("target/var/oldlog");
         deleteFileOrDirectory( storeDir ); 
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir.getPath() );
         Transaction tx = db.beginTx();
         db.createNode();
         tx.success();
@@ -54,7 +54,7 @@ public class TestChangingOfLogFormat
         
         try
         {
-            db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+            db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir.getPath() );
             fail( "Shouldn't be able to do recovery (and upgrade log format version) on non-clean shutdown" );
         }
         catch ( Exception e )

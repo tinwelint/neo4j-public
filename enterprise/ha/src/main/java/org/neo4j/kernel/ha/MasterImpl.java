@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -54,16 +54,17 @@ import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.core.GraphProperties;
-import org.neo4j.kernel.impl.core.LockReleaser;
 import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.store.IdGenerator;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
+import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.IllegalResourceException;
 import org.neo4j.kernel.impl.transaction.LockManager;
-import org.neo4j.kernel.impl.transaction.LockType;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.logging.Logging;
 
 /**
  * This is the real master code that executes on a master. The actual
@@ -79,31 +80,26 @@ public class MasterImpl extends LifecycleAdapter implements Master
     private final StringLogger msgLog;
     private final Config config;
 
-    private final Map<RequestContext, MasterTransaction> transactions = new ConcurrentHashMap<RequestContext,
+    private Map<RequestContext, MasterTransaction> transactions = new ConcurrentHashMap<RequestContext,
             MasterTransaction>();
     private ScheduledExecutorService unfinishedTransactionsExecutor;
     private long unfinishedTransactionThresholdMillis;
     private GraphProperties graphProperties;
-    private final LockManager lockManager;
-    private final LockReleaser lockReleaser;
     private final TransactionManager txManager;
 
-    public MasterImpl( GraphDatabaseAPI db, StringLogger logger, Config config )
+    public MasterImpl( GraphDatabaseAPI db, Logging logging, Config config )
     {
         this.graphDb = db;
-        this.msgLog = logger;
+        this.msgLog = logging.getLogger( getClass() );
         this.config = config;
         graphProperties = graphDb.getDependencyResolver().resolveDependency( NodeManager.class ).getGraphProperties();
-        lockManager = graphDb.getDependencyResolver().resolveDependency( LockManager.class );
-        lockReleaser = graphDb.getDependencyResolver().resolveDependency( LockReleaser.class );
         txManager = graphDb.getDependencyResolver().resolveDependency( TransactionManager.class );
     }
 
     @Override
     public void start() throws Throwable
     {
-        this.unfinishedTransactionThresholdMillis = config.isSet( HaSettings.lock_read_timeout ) ?
-                config.get( HaSettings.lock_read_timeout ) : config.get( HaSettings.read_timeout );
+        this.unfinishedTransactionThresholdMillis = config.get( HaSettings.lock_read_timeout );
         this.unfinishedTransactionsExecutor =
                 Executors.newSingleThreadScheduledExecutor( new NamedThreadFactory( "Unfinished transaction reaper" ) );
         this.unfinishedTransactionsExecutor.scheduleWithFixedDelay( new Runnable()
@@ -122,7 +118,8 @@ public class MasterImpl extends LifecycleAdapter implements Master
                     for ( Map.Entry<RequestContext, MasterTransaction> entry : safeTransactions.entrySet() )
                     {
                         long time = entry.getValue().timeLastSuspended.get();
-                        if ( (time != 0 && System.currentTimeMillis() - time >= unfinishedTransactionThresholdMillis) || entry.getValue().finishAsap() )
+                        if ( (time != 0 && System.currentTimeMillis() - time >= unfinishedTransactionThresholdMillis)
+                                || entry.getValue().finishAsap() )
                         {
                             long displayableTime = (time == 0 ? 0 : (System.currentTimeMillis() - time));
                             msgLog.logMessage( "Found old tx " + entry.getKey() + ", " +
@@ -159,6 +156,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
     public void stop()
     {
         unfinishedTransactionsExecutor.shutdown();
+        transactions = null;
     }
 
     @Override
@@ -181,9 +179,11 @@ public class MasterImpl extends LifecycleAdapter implements Master
         Transaction otherTx = suspendOtherAndResumeThis( context, false );
         try
         {
+            LockManager lockManager = graphDb.getLockManager();
+            TransactionState state = ((AbstractTransactionManager)graphDb.getTxManager()).getTransactionState();
             for ( Object entity : entities )
             {
-                lockGrabber.grab( lockManager, lockReleaser, entity );
+                lockGrabber.grab( lockManager, state, entity );
             }
             return packResponse( context, new LockResult( LockStatus.OK_LOCKED ) );
         }
@@ -500,24 +500,22 @@ public class MasterImpl extends LifecycleAdapter implements Master
 
     private static interface LockGrabber
     {
-        void grab( LockManager lockManager, LockReleaser lockReleaser, Object entity );
+        void grab( LockManager lockManager, TransactionState state, Object entity );
     }
 
     private static LockGrabber READ_LOCK_GRABBER = new LockGrabber()
     {
-        public void grab( LockManager lockManager, LockReleaser lockReleaser, Object entity )
+        public void grab( LockManager lockManager, TransactionState state, Object entity )
         {
-            lockManager.getReadLock( entity );
-            lockReleaser.addLockToTransaction( entity, LockType.READ );
+            state.acquireReadLock( entity );
         }
     };
 
     private static LockGrabber WRITE_LOCK_GRABBER = new LockGrabber()
     {
-        public void grab( LockManager lockManager, LockReleaser lockReleaser, Object entity )
+        public void grab( LockManager lockManager, TransactionState state, Object entity )
         {
-            lockManager.getWriteLock( entity );
-            lockReleaser.addLockToTransaction( entity, LockType.WRITE );
+            state.acquireWriteLock( entity );
         }
     };
 
@@ -592,7 +590,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
         @Override
         public String toString()
         {
-            return transaction+"[lastSuspended="+timeLastSuspended+", finishAsap="+finishAsap+"]";
+            return transaction + "[lastSuspended=" + timeLastSuspended + ", finishAsap=" + finishAsap + "]";
         }
 
         boolean finishAsap()

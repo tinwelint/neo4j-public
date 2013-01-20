@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,12 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -27,14 +33,9 @@ import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.RecordStore;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 public class StoreProcessorTest
 {
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldProcessAllTheRecordsInAStore() throws Exception
     {
@@ -54,6 +55,7 @@ public class StoreProcessorTest
         verify( recordStore ).forceGetRecord( 3 );
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldStopProcessingRecordsWhenSignalledToStop() throws Exception
     {

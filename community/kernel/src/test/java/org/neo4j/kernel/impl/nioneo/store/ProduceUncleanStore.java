@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,7 +41,7 @@ public class ProduceUncleanStore
         GraphDatabaseService db = new EmbeddedGraphDatabase( storeDir )
         {
             @Override
-            protected Logging createStringLogger()
+            protected Logging createLogging()
             {
                 // Create a dev/null logging service due there being a locking problem
                 // on windows (this class being run as a separate JVM from another test).

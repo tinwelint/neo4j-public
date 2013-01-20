@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.cluster.protocol.election;
 
 import static org.neo4j.helpers.collection.Iterables.filter;
@@ -33,7 +32,7 @@ import java.util.Map;
 import org.neo4j.cluster.protocol.cluster.ClusterContext;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatContext;
 import org.neo4j.helpers.Function;
-import org.neo4j.helpers.Specification;
+import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Iterables;
 
 /**
@@ -224,17 +223,17 @@ public class ElectionContext
 
     public Iterable<String> getRolesRequiringElection()
     {
-        return filter( new Specification<String>() // Only include roles that are not elected
+        return filter( new Predicate<String>() // Only include roles that are not elected
         {
             @Override
-            public boolean satisfiedBy( String role )
+            public boolean accept( String role )
             {
                 return clusterContext.getConfiguration().getElected( role ) == null;
             }
         }, map( new Function<ElectionRole, String>() // Convert ElectionRole to String
         {
             @Override
-            public String map( ElectionRole role )
+            public String apply( ElectionRole role )
             {
                 return role.getName();
             }

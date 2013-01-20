@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.nioneo.store;
 
 import static java.lang.System.arraycopy;
 
+import java.io.File;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -52,7 +53,7 @@ public class DynamicArrayStore extends AbstractDynamicStore
     public static final String VERSION = "ArrayPropertyStore v0.A.0";
     public static final String TYPE_DESCRIPTOR = "ArrayPropertyStore";
 
-    public DynamicArrayStore(String fileName, Config configuration, IdType idType,
+    public DynamicArrayStore(File fileName, Config configuration, IdType idType,
                              IdGeneratorFactory idGeneratorFactory, WindowPoolFactory windowPoolFactory,
                              FileSystemAbstraction fileSystemAbstraction, StringLogger stringLogger)
     {

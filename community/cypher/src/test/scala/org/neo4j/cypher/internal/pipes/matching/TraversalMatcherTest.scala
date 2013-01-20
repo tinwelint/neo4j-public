@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,18 @@ package org.neo4j.cypher.internal.pipes.matching
 import org.junit.Test
 import org.neo4j.cypher.GraphDatabaseTestBase
 import org.neo4j.graphdb.Path
-import org.neo4j.cypher.internal.pipes.{ExecutionContext, MutableMaps, QueryState}
+import org.neo4j.cypher.internal.pipes.{MutableMaps, QueryState}
 import org.neo4j.graphdb.DynamicRelationshipType.withName
 import org.neo4j.graphdb.Direction.OUTGOING
 import org.neo4j.cypher.internal.commands.True
+import org.neo4j.cypher.internal.spi.gdsimpl.GDSBackedQueryContext
+import org.neo4j.cypher.internal.ExecutionContext
 
 
 class TraversalMatcherTest extends GraphDatabaseTestBase {
 
-  val A = withName("A")
-  val B = withName("B")
+  val A = "A"
+  val B = "B"
 
   val pr2 = SingleStep(1, Seq(B), OUTGOING, None, True(), True())
   val pr1 = SingleStep(0, Seq(A), OUTGOING, Some(pr2), True(), True())
@@ -49,9 +51,9 @@ class TraversalMatcherTest extends GraphDatabaseTestBase {
 
     val matcher = new BidirectionalTraversalMatcher(pr1, start, end)
 
-    val queryState = new QueryState(graph, Map.empty)
+    val queryState = new QueryState(graph, new GDSBackedQueryContext(graph), Map.empty)
 
-    val result: Seq[Path] = matcher.findMatchingPaths(queryState, ExecutionContext.empty).toSeq
+    val result: Seq[Path] = matcher.findMatchingPaths(queryState, ExecutionContext(state=QueryState(graph))).toSeq
 
     assert(result.size === 1)
     assert(result.head.startNode() === a)
@@ -88,9 +90,9 @@ class TraversalMatcherTest extends GraphDatabaseTestBase {
 
     val matcher = new BidirectionalTraversalMatcher(pr1, start, end)
 
-    val queryState = new QueryState(graph, Map.empty)
+    val queryState = new QueryState(graph, new GDSBackedQueryContext(graph), Map.empty)
 
-    val result: Seq[Path] = matcher.findMatchingPaths(queryState, ExecutionContext.empty).toSeq
+    val result: Seq[Path] = matcher.findMatchingPaths(queryState, ExecutionContext(state=QueryState(graph))).toSeq
 
     assert(result.size === 3)
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.cluster.protocol.cluster;
 
 import java.net.URI;
@@ -30,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.helpers.Function;
-import org.neo4j.helpers.Specification;
+import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Iterables;
 
 /**
@@ -39,7 +38,6 @@ import org.neo4j.helpers.collection.Iterables;
 public class ClusterConfiguration
 {
     public static final String COORDINATOR = "coordinator";
-    public static final String SLAVE = "slave";
 
     private final String name;
     private List<URI> members;
@@ -128,8 +126,7 @@ public class ClusterConfiguration
             assert members.contains( uri );
         }
 
-        this.roles.clear();
-        this.roles.putAll( roles );
+        this.roles = new HashMap<String, URI>( roles );
     }
 
     public List<URI> getMembers()
@@ -174,14 +171,14 @@ public class ClusterConfiguration
         return Iterables.map( new Function<Map.Entry<String, URI>, String>()
         {
             @Override
-            public String map( Map.Entry<String, URI> stringURIEntry )
+            public String apply( Map.Entry<String, URI> stringURIEntry )
             {
                 return stringURIEntry.getKey();
             }
-        }, Iterables.filter( new Specification<Map.Entry<String, URI>>()
+        }, Iterables.filter( new Predicate<Map.Entry<String, URI>>()
         {
             @Override
-            public boolean satisfiedBy( Map.Entry<String, URI> item )
+            public boolean accept( Map.Entry<String, URI> item )
             {
                 return item.getValue().equals( node );
             }

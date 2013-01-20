@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,7 @@
 package org.neo4j.backup;
 
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.slf4j.impl.StaticLoggerBinder.getSingleton;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +30,7 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import ch.qos.logback.classic.LoggerContext;
 import org.neo4j.com.ComException;
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.graphdb.TransactionFailureException;
@@ -37,12 +39,13 @@ import org.neo4j.helpers.Args;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConfigurationDefaults;
 import org.neo4j.kernel.impl.storemigration.LogFiles;
 import org.neo4j.kernel.impl.storemigration.StoreFiles;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
-import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.logging.LogbackService;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.logging.SystemOutLogging;
 
 public class BackupTool
 {
@@ -121,14 +124,27 @@ public class BackupTool
         if ( service != null )
         { // If in here, it means a module was loaded. Use it and substitute the
             // passed URI
-            backupURI = service.resolve( backupURI, arguments, new Logging()
+            Logging logging;
+            try
             {
-                @Override
-                public StringLogger getLogger( Class loggingClass )
-                {
-                    return StringLogger.SYSTEM;
-                }
-            } );
+                getClass().getClassLoader().loadClass( "ch.qos.logback.classic.LoggerContext" );
+                LifeSupport life = new LifeSupport();
+                LogbackService logbackService = life.add( new LogbackService( tuningConfiguration, (LoggerContext) getSingleton().getLoggerFactory(), "neo4j-backup-logback.xml" ));
+                life.start();
+                logging = logbackService;
+            }
+            catch ( Throwable e )
+            {
+                logging = new SystemOutLogging();
+            }
+
+            try
+            {
+                backupURI = service.resolve( backupURI, arguments, logging );
+            } catch (Throwable e)
+            {
+                throw new ToolFailureException( e.getMessage() );
+            }
         }
         doBackup( full, backupURI, to, verify, tuningConfiguration );
     }
@@ -178,8 +194,7 @@ public class BackupTool
             }
         }
         specifiedProperties.put( GraphDatabaseSettings.store_dir.name(), storeDir );
-        return new Config( new ConfigurationDefaults( GraphDatabaseSettings.class, ConsistencyCheckSettings.class )
-                .apply( specifiedProperties ) );
+        return new Config( specifiedProperties, GraphDatabaseSettings.class, ConsistencyCheckSettings.class );
     }
 
     private void doBackup( boolean trueForFullFalseForIncremental, URI from, String to, boolean checkConsistency,

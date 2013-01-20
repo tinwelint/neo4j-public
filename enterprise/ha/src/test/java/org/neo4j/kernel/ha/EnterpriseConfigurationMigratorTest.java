@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.ha;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -26,7 +25,7 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.neo4j.com.Server;
+import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.ConfigurationMigrator;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -46,7 +45,7 @@ public class EnterpriseConfigurationMigratorTest
         Map<String, String> migrated = migrator.apply( original, StringLogger.SYSTEM );
         Assert.assertThat( migrated.containsKey( "enable_online_backup" ), is( false ) );
         Assert.assertThat( migrated.get( "online_backup_enabled" ), is( "true" ) );
-        Assert.assertThat( migrated.get( "online_backup_port" ), is( Integer.toString( Server.DEFAULT_BACKUP_PORT ) ) );
+        Assert.assertThat( migrated.get( "online_backup_server" ), is( OnlineBackupSettings.online_backup_server.getDefaultValue() ) );
     }
 
     @Test
@@ -57,7 +56,7 @@ public class EnterpriseConfigurationMigratorTest
         Map<String, String> migrated = migrator.apply( original, StringLogger.SYSTEM );
         Assert.assertThat( migrated.containsKey( "enable_online_backup" ), is( false ) );
         Assert.assertThat( migrated.get( "online_backup_enabled" ), is( "true" ) );
-        Assert.assertThat( migrated.get( "online_backup_port" ), is( "123" ) );
+        Assert.assertThat( migrated.get( "online_backup_server" ), is( ":123" ) );
     }
 
     @Test

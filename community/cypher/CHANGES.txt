@@ -1,11 +1,33 @@
+1.9.RC
+------
+o Made it possible to run the parser concurrently
+
+1.9.M04 (2013-01-17)
+-------
+o Clearer error message for when aggregations are used in ORDER BY and not in RETURN
+o Fixes #394 - Identifiers inside of FOREACH get the wrong type
+o Fixes #390 - IN/ANY/NONE/ANY/SINGLE causes RuntimeException for some patterns
+o Fixes #387 - Some patterns produced "Unexpected traversal state" in Cypher
+o Upgraded the Scala version to 2.10
+o Fixes #355 - Collections in collections are still Scala collections instead of Java collections
+
+1.9.M03
+-------
+o Fixes #336 - Patterns that re-use a pattern node can produce non-existing matches
+o Fixes #369 - The substring-function sometimes fails when no length is specified
+
 1.9.M02
--------------------
+-------
 o The traversal pattern matcher now supports variable length relationship patterns
 o Fixes #946 - HAS(...) fails with ThisShouldNotHappenException for some patterns
 o Made Cypher better at keeping a numeric type. Adding two integers now returns an integer, and not a double.
 o Major refactoring to make certain Cypher is more lazy
 o When asking for the top x rows by some value, Cypher will now only keep a list the size of x
 o Fix so identifiers created inside a foreach can be used by other statements in the foreach
+o Fix for problems when using patterns with multiple unnamed nodes
+o Fixes problems when doing ORDER BY ... LIMIT x. When x is larger than the input set, sorting was never done.
+o Fixed problem with dependencies inside foreach statements being reported wrongly
+o Fixes problems when updating a graph element with a map containing null values
 
 1.9.M01 (2012-10-23)
 --------------------

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -50,4 +50,7 @@ class InternalException(message:String, inner:Exception=null) extends CypherExce
 
 class MissingIndexException(indexName:String) extends CypherException("Index `" + indexName + "` does not exist")
 
+class InvalidAggregateException(message:String) extends CypherException(message)
+
 class NodeStillHasRelationshipsException(val nodeId:Long, cause:Throwable) extends CypherException("Node with id " + nodeId + " still has relationships, and can not be deleted.")
+

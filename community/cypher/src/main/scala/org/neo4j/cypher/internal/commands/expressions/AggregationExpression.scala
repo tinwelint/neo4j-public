@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,11 @@
  */
 package org.neo4j.cypher.internal.commands.expressions
 
-import collection.Seq
 import org.neo4j.cypher.internal.pipes.aggregation._
 import org.neo4j.cypher.internal.symbols._
 import org.neo4j.cypher.SyntaxException
-import collection.Map
 import org.neo4j.helpers.ThisShouldNotHappenError
-import org.neo4j.cypher.internal.pipes.ExecutionContext
+import org.neo4j.cypher.internal.ExecutionContext
 
 abstract class AggregationExpression extends Expression {
   def apply(ctx: ExecutionContext) = throw new ThisShouldNotHappenError("Andres", "Aggregations should not be used like this.")
@@ -38,11 +36,8 @@ abstract class AggregationWithInnerExpression(inner:Expression) extends Aggregat
     throw new SyntaxException("Can't use aggregate functions inside of aggregate functions.")
   
   def expectedInnerType: CypherType
-  
-  def filter(f: (Expression) => Boolean) = if (f(this))
-    Seq(this) ++ inner.filter(f)
-  else
-    inner.filter(f)
+
+  def children = Seq(inner)
 
   def symbolTableDependencies = inner.symbolTableDependencies
 }

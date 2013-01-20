@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -96,7 +95,7 @@ public class XaResourceManager
         }
         return status.getTransactionStatus().getTransaction();
     }
-
+    
     synchronized void start( XAResource xaResource, Xid xid )
         throws XAException
     {
@@ -109,7 +108,7 @@ public class XaResourceManager
         if ( xidMap.get( xid ) == null )
         {
             int identifier = log.start( xid, txIdGenerator.getCurrentMasterId(), txIdGenerator.getMyId() );
-            XaTransaction xaTx = tf.create( identifier );
+            XaTransaction xaTx = tf.create( identifier, transactionManager.getTransactionState() );
             xidMap.put( xid, new XidStatus( xaTx ) );
         }
     }
@@ -243,6 +242,7 @@ public class XaResourceManager
         private boolean prepared = false;
         private boolean commitStarted = false;
         private boolean rollback = false;
+        private boolean startWritten = false;
         private final XaTransaction xaTransaction;
 
         TransactionStatus( XaTransaction xaTransaction )
@@ -280,9 +280,14 @@ public class XaResourceManager
             return commitStarted;
         }
 
-        boolean started()
+        boolean startWritten()
         {
-            return prepared || commitStarted || rollback;
+            return startWritten;
+        }
+        
+        void markStartWritten()
+        {
+            this.startWritten = true;
         }
 
         XaTransaction getTransaction()
@@ -302,9 +307,10 @@ public class XaResourceManager
     private void checkStartWritten( TransactionStatus status, XaTransaction tx )
             throws XAException
     {
-        if ( !status.started() && !tx.isRecovered() )
+        if ( !status.startWritten() && !tx.isRecovered() )
         {
             log.writeStartEntry( tx.getIdentifier() );
+            status.markStartWritten();
         }
     }
 
@@ -429,6 +435,7 @@ public class XaResourceManager
             }
             TransactionStatus txStatus = status.getTransactionStatus();
             xaTransaction = txStatus.getTransaction();
+            TxIdGenerator txIdGenerator = xaTransaction.getTxIdGenerator();
             checkStartWritten( txStatus, xaTransaction );
             isReadOnly = xaTransaction.isReadOnly();
             if ( onePhase )
@@ -648,7 +655,6 @@ public class XaResourceManager
             }
         } );
         txOrderMap.clear(); // = null;
-        Logger logger = Logger.getLogger( tf.getClass().getName() );
         while ( !xids.isEmpty() )
         {
             Xid xid = xids.removeFirst();
@@ -660,24 +666,24 @@ public class XaResourceManager
             {
                 if ( txStatus.commitStarted() )
                 {
-                    logger.fine( "Marking 1PC [" + name + "] tx "
-                        + identifier + " as done" );
+                    msgLog.debug( "Marking 1PC [" + name + "] tx "
+                            + identifier + " as done" );
                     log.doneInternal( identifier );
                     xidMap.remove( xid );
                     recoveredTxCount--;
                 }
                 else if ( !txStatus.prepared() )
                 {
-                    logger.fine( "Rolling back non prepared tx [" + name + "]"
-                        + "txIdent[" + identifier + "]" );
+                    msgLog.debug( "Rolling back non prepared tx [" + name + "]"
+                            + "txIdent[" + identifier + "]" );
                     log.doneInternal( xaTransaction.getIdentifier() );
                     xidMap.remove( xid );
                     recoveredTxCount--;
                 }
                 else
                 {
-                    logger.fine( "2PC tx [" + name + "] " + txStatus +
-                        " txIdent[" + identifier + "]" );
+                    msgLog.debug( "2PC tx [" + name + "] " + txStatus +
+                            " txIdent[" + identifier + "]" );
                 }
             }
         }

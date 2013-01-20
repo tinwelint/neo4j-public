@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,7 +33,7 @@ import javax.ws.rs.core.Response;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.AbstractGraphDatabase;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.WrappingDatabase;
@@ -42,12 +42,15 @@ import org.neo4j.server.rest.domain.JsonParseException;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.server.webadmin.console.ScriptSession;
+import org.neo4j.server.webadmin.rest.console.ConsoleService;
+import org.neo4j.server.webadmin.console.ConsoleSessionFactory;
+import org.neo4j.server.webadmin.console.ShellSession;
 import org.neo4j.shell.ShellSettings;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 public class Neo4jShellConsoleSessionTest implements ConsoleSessionFactory
 {
-    private static final String LN = System.getProperty("line.separator");
+    private static final String LN = System.getProperty( "line.separator" );
     private ConsoleService consoleService;
     private Database database;
     private final URI uri = URI.create( "http://peteriscool.com:6666/" );
@@ -56,9 +59,9 @@ public class Neo4jShellConsoleSessionTest implements ConsoleSessionFactory
     public void setUp() throws Exception
     {
         this.database = new WrappingDatabase( (AbstractGraphDatabase) new TestGraphDatabaseFactory().
-            newImpermanentDatabaseBuilder().
-            setConfig( ShellSettings.remote_shell_enabled, GraphDatabaseSetting.TRUE ).
-            newGraphDatabase() );
+                newImpermanentDatabaseBuilder().
+                setConfig( ShellSettings.remote_shell_enabled, Settings.TRUE ).
+                newGraphDatabase() );
         this.consoleService = new ConsoleService( this, database, new OutputFormat( new JsonFormat(), uri, null ) );
     }
 
@@ -80,30 +83,31 @@ public class Neo4jShellConsoleSessionTest implements ConsoleSessionFactory
         Response response = consoleService.exec( new JsonFormat(),
                 "{ \"command\" : \"start n=node(0) return n;\", \"engine\":\"shell\" }" );
 
-     
-        assertEquals( 200, response.getStatus() );
-        String result = decode( response ).get(0);
 
-        String expected = "+-----------+"+LN
-                         +"| n         |"+LN
-                         +"+-----------+"+LN
-                         +"| Node[0]{} |"+LN
-                         +"+-----------+"+LN
-                         +"1 row";
-        
+        assertEquals( 200, response.getStatus() );
+        String result = decode( response ).get( 0 );
+
+        String expected = "+-----------+" + LN
+                + "| n         |" + LN
+                + "+-----------+" + LN
+                + "| Node[0]{} |" + LN
+                + "+-----------+" + LN
+                + "1 row";
+
         assertThat( result, containsString( expected ) );
     }
-    
+
     private List<String> decode( final Response response ) throws UnsupportedEncodingException, JsonParseException
     {
-        return (List<String>)JsonHelper.readJson(new String( (byte[]) response.getEntity(), "UTF-8" ));
+        return (List<String>) JsonHelper.readJson( new String( (byte[]) response.getEntity(), "UTF-8" ) );
     }
 
     @Override
     public Iterable<String> supportedEngines()
     {
-        return new ArrayList<String>(){{
-            add("shell");
-        }};
+        return new ArrayList<String>()
+        {{
+                add( "shell" );
+            }};
     }
 }

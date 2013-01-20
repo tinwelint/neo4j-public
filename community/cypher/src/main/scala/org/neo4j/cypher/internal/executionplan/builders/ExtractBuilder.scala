@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -45,7 +45,6 @@ object ExtractBuilder {
 
     val expressions = expressionsToExtract.filter {
       case (k, CachedExpression(_, _)) => false
-      case (k, Identifier(_))              => false
       case _                           => true
     }
 
@@ -53,11 +52,12 @@ object ExtractBuilder {
     val pipe = plan.pipe
 
     if (expressions.nonEmpty) {
-      val newPsq = expressions.foldLeft(query)((psq, exp) => psq.rewrite(fromQueryExpression =>
+      val newPsq = expressions.foldLeft(query)((psq, exp) => psq.rewrite(fromQueryExpression => {
         if (exp._2 == fromQueryExpression)
           CachedExpression(exp._1, fromQueryExpression.getType(plan.pipe.symbols))
         else
           fromQueryExpression
+      }
       ))
 
       val resultPipe = new ExtractPipe(pipe, expressions)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import static org.neo4j.consistency.store.RecordReference.SkippingReference.skipReference;
+
 import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.checking.ComparativeRecordChecker;
 import org.neo4j.consistency.report.ConsistencyReport;
@@ -31,8 +33,6 @@ import org.neo4j.kernel.impl.nioneo.store.DynamicRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyIndexRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeRecord;
-
-import static org.neo4j.consistency.store.RecordReference.SkippingReference.skipReference;
 
 abstract class DynamicOwner<RECORD extends AbstractBaseRecord> implements Owner
 {
@@ -162,6 +162,7 @@ abstract class DynamicOwner<RECORD extends AbstractBaseRecord> implements Owner
         @Override
         public void checkReference( RECORD name, AbstractBaseRecord record, REPORT genericReport, RecordAccess records )
         {
+            @SuppressWarnings("UnnecessaryLocalVariable" /* Intellij has issues compiling the generic type */)
             ConsistencyReport.NameConsistencyReport report = genericReport;
             if ( record instanceof RelationshipTypeRecord )
             {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -106,15 +106,18 @@ public class ServerBuilder
             };
         }
 
-        return new CommunityNeoServer(new PropertyFileConfigurator( new Validator( new DatabaseLocationMustBeSpecifiedRule() ), configFile ))
+        return new CommunityNeoServer( new PropertyFileConfigurator( new Validator(
+                new DatabaseLocationMustBeSpecifiedRule() ), configFile ) )
 	    {
         	@Override
-        	protected PreFlightTasks createPreflightTasks() {
+        	protected PreFlightTasks createPreflightTasks()
+            {
         		return preflightTasks;
         	}
 
         	@Override
-        	protected Database createDatabase() {
+        	protected Database createDatabase()
+            {
         		return persistent ? 
         				new CommunityDatabase(configurator.configuration()) :
     					new EphemeralDatabase(configurator.configuration());

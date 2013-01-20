@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.impl.nioneo.store;
 
 import static org.junit.Assert.assertEquals;
@@ -46,7 +45,6 @@ import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConfigurationDefaults;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.test.ImpermanentGraphDatabase;
 import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
@@ -116,11 +114,11 @@ public class IdGeneratorRebuildFailureEmulationTest
         String file = prefix + File.separator + Thread.currentThread().getStackTrace()[2].getMethodName().replace(
                 '_', '.' );
         // emulate the need for rebuilding id generators by deleting it
-        fs.deleteFile( file + ".id" );
+        fs.deleteFile( new File( file + ".id") );
         NeoStore neostore = null;
         try
         {
-            neostore = factory.newNeoStore( prefix + File.separator + "neostore" );
+            neostore = factory.newNeoStore( new File( prefix + File.separator + "neostore") );
             // emulate a failure during rebuild:
             emulateFailureOnRebuildOf( neostore );
         }
@@ -158,8 +156,8 @@ public class IdGeneratorRebuildFailureEmulationTest
         graphdb.shutdown();
         Map<String, String> config = new HashMap<String, String>();
         config.put( GraphDatabaseSettings.rebuild_idgenerators_fast.name(), GraphDatabaseSetting.FALSE );
-        factory = new StoreFactory( new Config(
-                new ConfigurationDefaults(GraphDatabaseSettings.class ).apply( config )),
+        config.put( GraphDatabaseSettings.store_dir.name(), prefix );
+        factory = new StoreFactory( new Config( config, GraphDatabaseSettings.class ),
                 new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fs, StringLogger.SYSTEM, null );
     }
 

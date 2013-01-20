@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.backup;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -47,6 +46,7 @@ import org.mockito.ArgumentCaptor;
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.TaskExecutionOrder;
 import org.neo4j.consistency.store.windowpool.WindowPoolImplementation;
+import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.test.TargetDirectory;
 
@@ -88,7 +88,10 @@ public class BackupToolTest
         assertFalse( config.getValue().get( ConsistencyCheckSettings.consistency_check_property_owners ) );
         assertEquals( TaskExecutionOrder.MULTI_PASS,
                 config.getValue().get( ConsistencyCheckSettings.consistency_check_execution_order ) );
-        assertEquals( WindowPoolImplementation.SCAN_RESISTANT,
+        WindowPoolImplementation expectedPoolImplementation = !GraphDatabaseSetting.osIsWindows() ?
+                WindowPoolImplementation.SCAN_RESISTANT :
+                WindowPoolImplementation.MOST_FREQUENTLY_USED;
+        assertEquals( expectedPoolImplementation,
                 config.getValue().get( ConsistencyCheckSettings.consistency_check_window_pool_implementation ) );
     }
 

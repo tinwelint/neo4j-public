@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,27 +42,29 @@ public interface BatchInserterIndexProvider
      * {@link Map} can contain any provider-implementation-specific data that
      * can control how an index behaves.
      * 
-     * @param indexName the name of the index. It will be created if it
-     * doesn't exist.
+     * @param indexName the name of the index. It will be created if it doesn't
+     *            exist.
      * @param config a {@link Map} of configuration parameters to use with the
-     * index if it doesn't exist. Parameters can be anything and are
-     * implementation-specific.
-     * @return the {@link Index} corresponding to the {@code indexName}.
+     *            index if it doesn't exist. Parameters can be anything and are
+     *            implementation-specific.
+     * @return the {@link BatchInserterIndex} corresponding to the
+     *         {@code indexName}.
      */
     BatchInserterIndex nodeIndex( String indexName, Map<String, String> config );
     
     /**
-     * Returns a {@link BatchInserterIndex} for {@link Relationship}s for the name
-     * {@code indexName} with the given {@code config}. The {@code config}
+     * Returns a {@link BatchInserterIndex} for {@link Relationship}s for the
+     * name {@code indexName} with the given {@code config}. The {@code config}
      * {@link Map} can contain any provider-implementation-specific data that
      * can control how an index behaves.
      * 
-     * @param indexName the name of the index. It will be created if it
-     * doesn't exist.
+     * @param indexName the name of the index. It will be created if it doesn't
+     *            exist.
      * @param config a {@link Map} of configuration parameters to use with the
-     * index if it doesn't exist. Parameters can be anything and are
-     * implementation-specific.
-     * @return the {@link Index} corresponding to the {@code indexName}.
+     *            index if it doesn't exist. Parameters can be anything and are
+     *            implementation-specific.
+     * @return the {@link BatchInserterIndex} corresponding to the
+     *         {@code indexName}.
      */
     BatchInserterIndex relationshipIndex( String indexName, Map<String, String> config );
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,11 +23,10 @@ import expressions.Expression
 import expressions.Identifier._
 import org.neo4j.cypher.internal.symbols._
 import org.neo4j.cypher.internal.pipes.matching.MatchingContext
-import collection.Map
 import org.neo4j.helpers.ThisShouldNotHappenError
 import org.neo4j.graphdb.Path
 import org.neo4j.cypher.internal.executionplan.builders.PatternGraphBuilder
-import org.neo4j.cypher.internal.pipes.ExecutionContext
+import org.neo4j.cypher.internal.ExecutionContext
 
 case class PathExpression(pathPattern: Seq[Pattern])
   extends Expression
@@ -63,12 +62,12 @@ case class PathExpression(pathPattern: Seq[Pattern])
     matches.map(getPath)
   }
 
-  def filter(f: (Expression) => Boolean): Seq[Expression] = Seq()
+  def children = pathPattern
 
   def rewrite(f: (Expression) => Expression): Expression = f(PathExpression(pathPattern.map(_.rewrite(f))))
 
   def calculateType(symbols: SymbolTable): CypherType = {
-    pathPattern.foreach(_.assertTypes(symbols))
+    pathPattern.foreach(_.throwIfSymbolsMissing(symbols))
     new CollectionType(PathType())
   }
 
@@ -77,4 +76,6 @@ case class PathExpression(pathPattern: Seq[Pattern])
     val startPointDependencies = pathPattern.flatMap(_.possibleStartPoints).map(_._1).filter(isNamed).toSet
     patternDependencies ++ startPointDependencies
   }
+
+  override def toString() = pathPattern.mkString
 }

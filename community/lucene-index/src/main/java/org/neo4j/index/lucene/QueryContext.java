@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -164,8 +164,8 @@ public class QueryContext
     /**
      * Returns the default operator used between terms in compound queries.
      * 
-     * @return the default {@link Operator} specified with {@link #defaultOperator(Operator)}
-     * or "OR" if none specified.
+     * @return the default {@link Operator} specified with
+     *         {@link #defaultOperator} or "OR" if none specified.
      */
     public Operator getDefaultOperator()
     {

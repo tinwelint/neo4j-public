@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.configuration;
 
 import org.junit.Test;
@@ -43,7 +42,10 @@ public class TestGraphDatabaseConfigurationMigrator
     public void testEnableOnlineBackup()
     {
         ConfigurationMigrator migrator = new GraphDatabaseConfigurationMigrator(  );
-        assertThat( migrator.apply( stringMap( "enable_online_backup", "true" ), StringLogger.DEV_NULL  ), equalTo( stringMap( "online_backup_enabled", "true", "online_backup_port", "6362" ) ) );
+        assertThat( migrator.apply( stringMap( "enable_online_backup", "true" ), StringLogger.DEV_NULL  ), equalTo( stringMap( "online_backup_enabled", "true", "online_backup_server", ":6372-6382" ) ) );
+
+        // 1.9
+        assertThat( migrator.apply( stringMap( "online_backup_port", "1234" ), StringLogger.DEV_NULL  ), equalTo( stringMap( "online_backup_server", ":1234" ) ) );
     }
 
     @Test

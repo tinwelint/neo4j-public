@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,14 +21,15 @@ package org.neo4j.consistency.store.windowpool;
 
 import static java.lang.String.format;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 
+import org.neo4j.consistency.store.paging.Cart;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
-import org.neo4j.consistency.store.paging.Cart;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPool;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPoolFactory;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -76,8 +77,8 @@ public class ScanResistantWindowPoolFactory implements WindowPoolFactory
         {
             try
             {
-                return new LoggingStatisticsListener(
-                        configuration.get( GraphDatabaseSettings.log_mapped_memory_stats_filename ) );
+                return new LoggingStatisticsListener( configuration.get(
+                        GraphDatabaseSettings.log_mapped_memory_stats_filename ) );
             }
             catch ( FileNotFoundException e )
             {
@@ -87,7 +88,7 @@ public class ScanResistantWindowPoolFactory implements WindowPoolFactory
         return new MappingStatisticsListener()
         {
             @Override
-            public void onStatistics( String storeFileName, int acquiredPages, int mappedPages, long samplePeriod )
+            public void onStatistics( File storeFileName, int acquiredPages, int mappedPages, long samplePeriod )
             {
                 // silent
             }
@@ -95,7 +96,7 @@ public class ScanResistantWindowPoolFactory implements WindowPoolFactory
     }
 
     @Override
-    public WindowPool create( String storageFileName, int recordSize, FileChannel fileChannel,
+    public WindowPool create( File storageFileName, int recordSize, FileChannel fileChannel,
                               Config configuration, StringLogger log )
     {
         try

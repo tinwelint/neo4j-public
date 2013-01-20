@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,17 +20,17 @@
 package org.neo4j.cypher.internal.pipes.matching
 
 import org.junit.Test
-import org.neo4j.graphdb.{RelationshipType, DynamicRelationshipType, Direction}
+import org.neo4j.graphdb.Direction
 import org.scalatest.Assertions
 import org.neo4j.cypher.internal.commands.{True, Predicate}
 import org.neo4j.cypher.internal.commands.expressions.Expression
 import org.neo4j.cypher.internal.symbols.SymbolTable
-import org.neo4j.cypher.internal.pipes.ExecutionContext
+import org.neo4j.cypher.internal.ExecutionContext
 
 class ExpanderStepReversalTest extends Assertions {
-  val A = DynamicRelationshipType.withName("A")
-  val B = DynamicRelationshipType.withName("B")
-  val C = DynamicRelationshipType.withName("C")
+  val A = "A"
+  val B = "B"
+  val C = "C"
 
   val c = step(2, Seq(C), Direction.INCOMING, None)
   val b = step(1, Seq(B), Direction.BOTH, Some(c))
@@ -104,14 +104,14 @@ class ExpanderStepReversalTest extends Assertions {
   }
 
   private def step(id: Int,
-                   typ: Seq[RelationshipType],
+                   typ: Seq[String],
                    direction: Direction,
                    next: Option[ExpanderStep]) = SingleStep(id, typ, direction, next, True(), True())
 
-  def step(id: Int, t: RelationshipType, dir: Direction, next: Option[ExpanderStep], relName: String, nodeName: String): ExpanderStep =
+  def step(id: Int, t: String, dir: Direction, next: Option[ExpanderStep], relName: String, nodeName: String): ExpanderStep =
     SingleStep(id, Seq(t), dir, next, relPredicate = Pred(relName), nodePredicate = Pred(nodeName))
 
-  def step(id: Int, t: RelationshipType, dir: Direction, next: Option[ExpanderStep], relName: String): ExpanderStep =
+  def step(id: Int, t: String, dir: Direction, next: Option[ExpanderStep], relName: String): ExpanderStep =
     SingleStep(id, Seq(t), dir, next, relPredicate = Pred(relName), nodePredicate = True())
 }
 
@@ -124,7 +124,7 @@ case class Pred(identifier: String) extends Predicate {
 
   def containsIsNull = false
 
-  def filter(f: (Expression) => Boolean) = null
+  def children = Seq.empty
 
   def assertInnerTypes(symbols: SymbolTable) {}
 

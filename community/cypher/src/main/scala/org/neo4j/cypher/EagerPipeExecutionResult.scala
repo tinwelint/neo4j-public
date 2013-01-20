@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ class EagerPipeExecutionResult(result: Iterator[Map[String, Any]],
                                columns: List[String],
                                state: QueryState,
                                db: GraphDatabaseService)
-  extends PipeExecutionResult(result, columns) {
+  extends PipeExecutionResult(result, columns, state) {
 
   val (eagerResult,timeTaken) = super.createTimedResults
   lazy val inner = eagerResult.iterator

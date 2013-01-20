@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,16 @@
  */
 package org.neo4j.cypher.internal.pipes
 
-import org.neo4j.cypher.internal.mutation.{CreateUniqueAction, NamedExpectation, UpdateAction}
+import org.neo4j.cypher.internal.mutation._
 import org.neo4j.graphdb.{GraphDatabaseService, NotInTransactionException}
 import org.neo4j.cypher.{SyntaxException, ParameterWrongTypeException, InternalException}
-import org.neo4j.cypher.internal.commands.{CreateRelationshipStartItem, CreateNodeStartItem}
+import org.neo4j.cypher.internal.mutation.CreateUniqueAction
+import scala.Some
+import org.neo4j.cypher.internal.mutation.CreateNode
 import collection.Map
 import org.neo4j.cypher.internal.commands.expressions.{Identifier, Expression}
 import org.neo4j.cypher.internal.symbols.SymbolTable
+import org.neo4j.cypher.internal.ExecutionContext
 
 class ExecuteUpdateCommandsPipe(source: Pipe, db: GraphDatabaseService, commands: Seq[UpdateAction])
   extends PipeWithSource(source) {
@@ -61,8 +64,8 @@ class ExecuteUpdateCommandsPipe(source: Pipe, db: GraphDatabaseService, commands
 
 
   private def extractEntitiesWithProperties(action: UpdateAction): Seq[NamedExpectation] = action match {
-    case CreateNodeStartItem(key, props)                      => Seq(NamedExpectation(key, props))
-    case CreateRelationshipStartItem(key, from, to, _, props) => Seq(NamedExpectation(key, props)) ++ extractIfEntity(from) ++ extractIfEntity(to)
+    case CreateNode(key, props)                      => Seq(NamedExpectation(key, props))
+    case CreateRelationship(key, from, to, _, props) => Seq(NamedExpectation(key, props)) ++ extractIfEntity(from) ++ extractIfEntity(to)
     case CreateUniqueAction(links@_*)                         => links.flatMap(l => Seq(l.start, l.end, l.rel))
     case _                                                    => Seq()
   }
@@ -88,7 +91,7 @@ class ExecuteUpdateCommandsPipe(source: Pipe, db: GraphDatabaseService, commands
 
   def symbols = source.symbols.add(commands.flatMap(_.identifiers).toMap)
 
-  def assertTypes(symbols: SymbolTable) {
-    commands.foreach(_.assertTypes(symbols))
+  def throwIfSymbolsMissing(symbols: SymbolTable) {
+    commands.foreach(_.throwIfSymbolsMissing(symbols))
   }
 }

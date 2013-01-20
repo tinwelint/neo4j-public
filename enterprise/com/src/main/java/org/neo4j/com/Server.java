@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,6 +24,7 @@ import static org.neo4j.com.DechunkingChannelBuffer.assertSameProtocolVersion;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,6 +55,7 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.neo4j.com.RequestContext.Tx;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.Triplet;
@@ -62,11 +64,12 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.logging.Logging;
 
 /**
  * Receives requests from {@link Client clients}. Delegates actual work to an instance
  * of a specified communication interface, injected in the constructor.
- * 
+ * <p/>
  * frameLength vs. chunkSize: frameLength is the maximum and hardcoded size in each
  * Netty buffer created by this server and handed off to a {@link Client}. If the
  * client has got a smaller frameLength than this server it will fail on reading a frame
@@ -76,26 +79,27 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  * frameLength should be a constant for an implementation and must have the same value
  * on server as well as clients connecting to that server, whereas chunkSize very well
  * can be configurable and vary between server and client.
- * 
+ *
  * @see Client
  */
 public abstract class Server<T, R> extends Protocol implements ChannelPipelineFactory, Lifecycle
 {
+
+    private InetSocketAddress socketAddress;
+
     public interface Configuration
     {
         long getOldChannelThreshold();
 
         int getMaxConcurrentTransactions();
 
-        int getPort();
-
         int getChunkSize();
 
-        String getServerAddress();
+        HostnamePort getServerAddress();
     }
 
     static final byte INTERNAL_PROTOCOL_VERSION = 2;
-    public static final int DEFAULT_BACKUP_PORT = 6362;
+    public static final int DEFAULT_BACKUP_PORT = 6372;
 
     // It's ok if there are more transactions, since these worker threads doesn't
     // do any actual work themselves, but spawn off other worker threads doing the
@@ -132,14 +136,14 @@ public abstract class Server<T, R> extends Protocol implements ChannelPipelineFa
     private TxChecksumVerifier txVerifier;
     private int chunkSize;
 
-    public Server( T requestTarget, Configuration config, StringLogger logger, int frameLength,
+    public Server( T requestTarget, Configuration config, Logging logging, int frameLength,
                    byte applicationProtocolVersion, TxChecksumVerifier txVerifier )
     {
         this.requestTarget = requestTarget;
         this.config = config;
         this.frameLength = frameLength;
         this.applicationProtocolVersion = applicationProtocolVersion;
-        this.msgLog = logger;
+        this.msgLog = logging.getLogger( getClass() );
         this.txVerifier = txVerifier;
     }
 
@@ -156,10 +160,10 @@ public abstract class Server<T, R> extends Protocol implements ChannelPipelineFa
         assertChunkSizeIsWithinFrameSize( chunkSize, frameLength );
         executor = Executors.newCachedThreadPool( new NamedThreadFactory( "Server receiving" ) );
         workerExecutor = Executors.newCachedThreadPool( new NamedThreadFactory( "Server receiving" ) );
-        targetCallExecutor = Executors.newCachedThreadPool(
-                new NamedThreadFactory( getClass().getSimpleName() + ":" + config.getPort() ) );
-        unfinishedTransactionExecutor = Executors.newScheduledThreadPool( 2,
-                new NamedThreadFactory( "Unfinished transactions" ) );
+        targetCallExecutor = Executors.newCachedThreadPool( new NamedThreadFactory( getClass().getSimpleName() + ":"
+                + config.getServerAddress().getPort() ) );
+        unfinishedTransactionExecutor = Executors.newScheduledThreadPool( 2, new NamedThreadFactory( "Unfinished " +
+                "transactions" ) );
         channelFactory = new NioServerSocketChannelFactory(
                 executor, workerExecutor, config.getMaxConcurrentTransactions() );
         silentChannelExecutor = Executors.newSingleThreadScheduledExecutor( new NamedThreadFactory( "Silent channel " +
@@ -168,31 +172,47 @@ public abstract class Server<T, R> extends Protocol implements ChannelPipelineFa
         bootstrap = new ServerBootstrap( channelFactory );
         bootstrap.setPipelineFactory( this );
 
-        Channel channel;
-        InetSocketAddress socketAddress;
-        if ( config.getServerAddress() == null )
+        Channel channel = null;
+        socketAddress = null;
+
+        // Try binding to any port in the port range
+        int[] ports = config.getServerAddress().getPorts();
+
+        ChannelException ex = null;
+
+        for ( int port = ports[0]; port <= ports[1]; port++ )
         {
-            socketAddress = new InetSocketAddress( config.getPort() );
+            if ( config.getServerAddress().getHost() == null )
+            {
+                socketAddress = new InetSocketAddress( InetAddress.getLocalHost().getHostAddress(), port );
+            }
+            else
+            {
+                socketAddress = new InetSocketAddress( config.getServerAddress().getHost(), port );
+            }
+            try
+            {
+                channel = bootstrap.bind( socketAddress );
+                ex = null;
+                break;
+            }
+            catch ( ChannelException e )
+            {
+                ex = e;
+            }
         }
-        else
+
+        if ( ex != null )
         {
-            socketAddress = new InetSocketAddress( config.getServerAddress(), config.getPort() );
-        }
-        try
-        {
-            channel = bootstrap.bind( socketAddress );
-        }
-        catch ( ChannelException e )
-        {
-            msgLog.logMessage( "Failed to bind server to " + socketAddress, e );
+            msgLog.logMessage( "Failed to bind server to " + socketAddress, ex );
             executor.shutdown();
             workerExecutor.shutdown();
-            throw new IOException( e );
+            throw new IOException( ex );
         }
+
         channelGroup = new DefaultChannelGroup();
         channelGroup.add( channel );
-        msgLog.logMessage( getClass().getSimpleName() + " communication server started and bound to " +
-                socketAddress, true );
+        msgLog.logMessage( getClass().getSimpleName() + " communication server started and bound to " + socketAddress );
     }
 
     @Override
@@ -213,6 +233,11 @@ public abstract class Server<T, R> extends Protocol implements ChannelPipelineFa
     @Override
     public void shutdown() throws Throwable
     {
+    }
+    
+    public InetSocketAddress getSocketAddress()
+    {
+        return socketAddress;
     }
 
     private Runnable silentChannelFinisher()
@@ -483,7 +508,8 @@ public abstract class Server<T, R> extends Protocol implements ChannelPipelineFa
         }
         catch ( final IllegalProtocolVersionException e )
         {   // Version mismatch, fail with a good exception back to the client
-            final ChunkingChannelBuffer failureResponse = new ChunkingChannelBuffer( ChannelBuffers.dynamicBuffer(), channel,
+            final ChunkingChannelBuffer failureResponse = new ChunkingChannelBuffer( ChannelBuffers.dynamicBuffer(),
+                    channel,
                     chunkSize, getInternalProtocolVersion(), applicationProtocolVersion );
             submitSilent( targetCallExecutor, new Runnable()
             {

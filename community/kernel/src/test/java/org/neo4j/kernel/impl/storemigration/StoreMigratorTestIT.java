@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -61,7 +61,7 @@ public class StoreMigratorTestIT
     {
         URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
 
-        LegacyStore legacyStore = new LegacyStore( legacyStoreResource.getFile(), StringLogger.DEV_NULL );
+        LegacyStore legacyStore = new LegacyStore( new File(legacyStoreResource.getFile()), StringLogger.DEV_NULL );
 
         Config config = MigrationTestUtils.defaultConfig();
         File outputDir = new File( "target/outputDatabase" );
@@ -71,7 +71,7 @@ public class StoreMigratorTestIT
         String storeFileName = "target/outputDatabase/neostore";
         StoreFactory factory = new StoreFactory( config, defaultIdGeneratorFactory(),
                 new DefaultWindowPoolFactory(), defaultFileSystemAbstraction(), StringLogger.DEV_NULL, defaultTxHook() );
-        NeoStore neoStore = factory.createNeoStore( storeFileName );
+        NeoStore neoStore = factory.createNeoStore( new File( storeFileName ));
 
         ListAccumulatorMigrationProgressMonitor monitor = new ListAccumulatorMigrationProgressMonitor();
 

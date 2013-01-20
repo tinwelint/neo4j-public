@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,11 +34,17 @@ public interface HighAvailability
     @Description( "Whether this instance is available or not" )
     boolean isAvailable();
     
+    @Description( "Whether this instance is alive or not" )
+    boolean isAlive();
+    
     @Description( "The role this instance has in the cluster" )
     String getRole();
 
     @Description( "The time when the data on this instance was last updated from the master" )
     String getLastUpdateTime();
+
+    @Description( "The latest transaction id present in this instance's store" )
+    long getLastCommittedTxId();
 
     @Description( "Information about all instances in this cluster" )
     ClusterMemberInfo[] getInstancesInCluster();

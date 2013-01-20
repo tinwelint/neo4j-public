@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.core;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.kernel.impl.AbstractNeo4jTestCase.deleteFileOrDirectory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -69,7 +70,7 @@ public class TestJumpingIdGenerator
     @Test
     public void testOffsettedFileChannel() throws Exception
     {
-        String fileName = "target/var/neostore.nodestore.db";
+        File fileName = new File("target/var/neostore.nodestore.db");
         deleteFileOrDirectory( fileName );
         FileSystemAbstraction offsettedFileSystem = new JumpingFileSystemAbstraction( 10 );
         IdGenerator idGenerator = new JumpingIdGeneratorFactory( 10 ).get( IdType.NODE );

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,7 +51,7 @@ public class PersistenceWindowPoolTest
         // given
         String filename = new File( directory.directory(), "mapped.file" ).getAbsolutePath();
         RandomAccessFile file = resources.add( new RandomAccessFile( filename, "rw" ) );
-        PersistenceWindowPool pool = new PersistenceWindowPool( "test.store", 8, file.getChannel(), 0, false, false, StringLogger.DEV_NULL );
+        PersistenceWindowPool pool = new PersistenceWindowPool( new File("test.store"), 8, file.getChannel(), 0, false, false, StringLogger.DEV_NULL );
 
         PersistenceWindow initialWindow = pool.acquire( 0, OperationType.READ );
         pool.release( initialWindow );
@@ -69,7 +69,7 @@ public class PersistenceWindowPoolTest
         String filename = new File( target.graphDbDir( true ), "dirty" ).getAbsolutePath();
         RandomAccessFile file = resources.add( new RandomAccessFile( filename, "rw" ) );
         final int blockSize = 8;
-        final PersistenceWindowPool pool = new PersistenceWindowPool( "test.store", blockSize, file.getChannel(), 0, false, false, StringLogger.DEV_NULL );
+        final PersistenceWindowPool pool = new PersistenceWindowPool( new File("test.store"), blockSize, file.getChannel(), 0, false, false, StringLogger.DEV_NULL );
         
         // The gist:
         // T1 acquires position 0 as WRITE
@@ -80,7 +80,7 @@ public class PersistenceWindowPoolTest
         // Verify that what T1 wrote is on disk
         
         final PersistenceWindow t1Row = pool.acquire( 0, OperationType.WRITE );
-        OtherThreadExecutor<Void> otherThread = new OtherThreadExecutor<Void>( null ); 
+        OtherThreadExecutor<Void> otherThread = new OtherThreadExecutor<Void>( "other thread", null ); 
         Future<Throwable> future = otherThread.executeDontWait( new WorkerCommand<Void, Throwable>()
         {
             @Override

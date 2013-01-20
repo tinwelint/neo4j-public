@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,11 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.IdGenerator;
 import org.neo4j.kernel.impl.nioneo.store.IdGeneratorImpl;
@@ -34,9 +35,10 @@ public class DefaultIdGeneratorFactory
 {
     private final Map<IdType, IdGenerator> generators = new HashMap<IdType, IdGenerator>();
 
-    public IdGenerator open( FileSystemAbstraction fs, String fileName, int grabSize, IdType idType )
+    public IdGenerator open( FileSystemAbstraction fs, File fileName, int grabSize, IdType idType, long highId )
     {
-        IdGenerator generator = new IdGeneratorImpl( fs, fileName, grabSize, idType.getMaxValue(), idType.allowAggressiveReuse() );
+        IdGenerator generator = new IdGeneratorImpl( fs, fileName, grabSize, idType.getMaxValue(),
+                idType.allowAggressiveReuse(), highId );
         generators.put( idType, generator );
         return generator;
     }
@@ -46,7 +48,7 @@ public class DefaultIdGeneratorFactory
         return generators.get( idType );
     }
 
-    public void create( FileSystemAbstraction fs, String fileName, long highId )
+    public void create( FileSystemAbstraction fs, File fileName, long highId )
     {
         IdGeneratorImpl.createGenerator( fs, fileName, highId );
     }

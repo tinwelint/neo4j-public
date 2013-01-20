@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -326,8 +326,9 @@ public abstract class MapUtil
     /**
      * Stores the data in {@code config} into {@code writer} in a standard java
      * {@link Properties} format.
+     * 
      * @param config the data to store in the properties file.
-     * @param stream the {@link Writer} to store the properties in.
+     * @param writer the {@link Writer} to store the properties in.
      * @throws IOException IO error.
      */
     public static void store( Map<String, String> config, Writer writer ) throws IOException
@@ -339,10 +340,11 @@ public abstract class MapUtil
     
     /**
      * Stores the data in {@code config} into {@code writer} in a standard java
-     * {@link Properties} format. Any {@link IOException} is wrapped and thrown as a
-     * {@link RuntimeException} instead.
+     * {@link Properties} format. Any {@link IOException} is wrapped and thrown
+     * as a {@link RuntimeException} instead.
+     * 
      * @param config the data to store in the properties file.
-     * @param stream the {@link Writer} to store the properties in.
+     * @param writer the {@link Writer} to store the properties in.
      * @throws IOException IO error.
      */
     public static void storeStrictly( Map<String, String> config, Writer writer )
@@ -376,5 +378,19 @@ public abstract class MapUtil
             reversedMap.put( entry.getValue(), entry.getKey() );
         }
         return reversedMap;
+    }
+
+    public static <K, V> Map<K, V> copyAndPut(Map<K, V> map, K key, V value)
+    {
+        Map<K, V> copy = new HashMap<K, V>( map );
+        copy.put( key,  value);
+        return copy;
+    }
+
+    public static <K, V> Map<K, V> copyAndRemove(Map<K, V> map, K key)
+    {
+        Map<K, V> copy = new HashMap<K, V>( map );
+        copy.remove( key );
+        return copy;
     }
 }

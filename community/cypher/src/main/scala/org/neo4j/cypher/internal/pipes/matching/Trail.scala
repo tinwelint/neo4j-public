@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,6 +42,9 @@ abstract class Trail {
 
   def contains(target: String): Boolean
 
+  /**
+   * @return The original predicates that this Trail uses
+   */
   def predicates: Seq[Predicate]
 
   def patterns: Seq[Pattern]

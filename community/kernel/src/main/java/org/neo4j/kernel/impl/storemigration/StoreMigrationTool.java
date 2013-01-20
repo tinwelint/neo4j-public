@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,20 +17,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.impl.storemigration;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConfigurationDefaults;
 import org.neo4j.kernel.impl.nioneo.store.DefaultWindowPoolFactory;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
@@ -46,19 +45,20 @@ public class StoreMigrationTool
         String legacyStoreDirectory = args[0];
         String targetStoreDirectory = args[1];
 
-        new StoreMigrationTool().run( legacyStoreDirectory, targetStoreDirectory, StringLogger.SYSTEM);
+        new StoreMigrationTool().run( legacyStoreDirectory, targetStoreDirectory, StringLogger.SYSTEM );
     }
 
     private void run( String legacyStoreDirectory, String targetStoreDirectory, StringLogger log ) throws IOException
     {
-        LegacyStore legacyStore = new LegacyStore( new File( new File( legacyStoreDirectory ), NeoStore.DEFAULT_NAME ).getPath(), log );
+        LegacyStore legacyStore = new LegacyStore( new File( new File( legacyStoreDirectory ), NeoStore.DEFAULT_NAME ), log );
 
-        Map<String,String> config = new HashMap<String,String>();
+        Map<String, String> config = new HashMap<String, String>();
 
         File targetStoreDirectoryFile = new File( targetStoreDirectory );
         if ( targetStoreDirectoryFile.exists() )
         {
-            throw new IllegalStateException( "Cannot migrate to a directory that already exists, please delete first and re-run" );
+            throw new IllegalStateException( "Cannot migrate to a directory that already exists, " +
+                    "please delete first and re-run" );
         }
         boolean success = targetStoreDirectoryFile.mkdirs();
         if ( !success )
@@ -70,14 +70,13 @@ public class StoreMigrationTool
         config.put( "neo_store", targetStoreFile.getPath() );
         FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
 
-        config = new ConfigurationDefaults(GraphDatabaseSettings.class ).apply( config );
-
-        NeoStore neoStore = new StoreFactory(new Config( config ), new DefaultIdGeneratorFactory(),
-                new DefaultWindowPoolFactory(), fileSystem, log, null ).createNeoStore(targetStoreFile.getPath());
+        NeoStore neoStore = new StoreFactory( new Config( config, GraphDatabaseSettings.class ),
+                new DefaultIdGeneratorFactory(),
+                new DefaultWindowPoolFactory(), fileSystem, log, null ).createNeoStore( targetStoreFile );
 
         long startTime = System.currentTimeMillis();
 
-        new StoreMigrator( new VisibleMigrationProgressMonitor( System.out ) ) .migrate( legacyStore, neoStore );
+        new StoreMigrator( new VisibleMigrationProgressMonitor( log, System.out ) ).migrate( legacyStore, neoStore );
 
         long duration = System.currentTimeMillis() - startTime;
         System.out.printf( "Migration completed in %d s%n", duration / 1000 );

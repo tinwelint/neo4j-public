@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,14 @@
  */
 package org.neo4j.kernel.ha;
 
-import java.net.URI;
-
 import javax.management.NotCompliantMBeanException;
 
-import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.Format;
 import org.neo4j.helpers.Service;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
 import org.neo4j.kernel.HighlyAvailableKernelData;
-import org.neo4j.kernel.ha.HighAvailabilityMembers.MemberInfo;
 import org.neo4j.management.ClusterMemberInfo;
 import org.neo4j.management.HighAvailability;
 
@@ -87,25 +83,13 @@ public final class HighAvailabilityBean extends ManagementBeanProvider
         @Override
         public String getInstanceId()
         {
-            return kernelData.getMemberInfo().getInstanceId();
+            return Integer.toString( kernelData.getMemberInfo().getServerId() );
         }
 
         @Override
         public ClusterMemberInfo[] getInstancesInCluster()
         {
-            try
-            {
-                MemberInfo[] members = kernelData.getClusterInfo();
-                ClusterMemberInfo[] result = new ClusterMemberInfo[members.length];
-                for ( int i = 0; i < result.length; i++ )
-                    result[i] = clusterMemberInfo( members[i] );
-                return result;
-            }
-            catch ( Throwable e )
-            {
-                e.printStackTrace();
-                throw Exceptions.launderedException( e );
-            }
+            return kernelData.getClusterInfo();
         }
 
         @Override
@@ -119,11 +103,24 @@ public final class HighAvailabilityBean extends ManagementBeanProvider
         {
             return kernelData.getMemberInfo().isAvailable();
         }
+        
+        @Override
+        public boolean isAlive()
+        {
+            return kernelData.getMemberInfo().isAlive();
+        }
 
         @Override
         public String getLastUpdateTime()
         {
-            return Format.date( kernelData.getMemberInfo().getLastUpdateTime() );
+            long lastUpdateTime = kernelData.getMemberInfo().getLastUpdateTime();
+            return lastUpdateTime == 0 ? "N/A" : Format.date( lastUpdateTime );
+        }
+
+        @Override
+        public long getLastCommittedTxId()
+        {
+            return kernelData.getMemberInfo().getLastCommittedTxId();
         }
 
         @Override
@@ -132,7 +129,8 @@ public final class HighAvailabilityBean extends ManagementBeanProvider
             long time = System.currentTimeMillis();
             try
             {
-                // TODO make this work through a MemberOps class passed in as a dependency
+                kernelData.graphDatabase().getDependencyResolver().resolveDependency(
+                        UpdatePuller.class ).pullUpdates();
             }
             catch ( Exception e )
             {
@@ -141,20 +139,5 @@ public final class HighAvailabilityBean extends ManagementBeanProvider
             time = System.currentTimeMillis() - time;
             return "Update completed in " + time + "ms";
         }
-    }
-
-    private static String[] urisAsStrings( URI[] uris )
-    {
-        String[] strings = new String[uris.length];
-        for ( int i = 0; i < strings.length; i++ )
-            strings[i] = uris[i].toString();
-        return strings;
-    }
-
-    public static ClusterMemberInfo clusterMemberInfo( MemberInfo member )
-    {
-        return new ClusterMemberInfo( "" + member.getServerId(),
-                member.isAvailable(), member.getHaRole(), member.getClusterRoles(),
-                HighAvailabilityBean.urisAsStrings( member.getUris() ) );
     }
 }

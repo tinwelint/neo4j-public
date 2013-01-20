@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -142,6 +142,7 @@ public abstract class SubProcess<T, P> implements Serializable
                         SubProcess.class.getName(), serialize( callback ) );
             }
             pid = getPid( process );
+//            new ProcessStreamHandler( process, false, "[" + toString() + ":" + pid + "] " ).launch();
             pipe( "[" + toString() + ":" + pid + "] ", process.getErrorStream(), errorStreamTarget() );
             pipe( "[" + toString() + ":" + pid + "] ", process.getInputStream(), inputStreamTarget() );
             if ( debugger != null )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,8 +26,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.impl.core.LockReleaser.CowEntityElement;
-import org.neo4j.kernel.impl.core.LockReleaser.PrimitiveElement;
+import org.neo4j.kernel.impl.core.WritableTransactionState.CowEntityElement;
+import org.neo4j.kernel.impl.core.WritableTransactionState.PrimitiveElement;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.util.ArrayMap;
 
@@ -58,7 +58,8 @@ public class GraphProperties extends Primitive implements PropertyContainer
     }
 
     @Override
-    protected PropertyData changeProperty( NodeManager nodeManager, PropertyData property, Object value )
+    protected PropertyData changeProperty( NodeManager nodeManager, PropertyData property, Object value,
+            TransactionState tx)
     {
         return nodeManager.graphChangeProperty( property, value );
     }
@@ -70,7 +71,7 @@ public class GraphProperties extends Primitive implements PropertyContainer
     }
 
     @Override
-    protected void removeProperty( NodeManager nodeManager, PropertyData property )
+    protected void removeProperty( NodeManager nodeManager, PropertyData property, TransactionState tx )
     {
         nodeManager.graphRemoveProperty( property );
     }

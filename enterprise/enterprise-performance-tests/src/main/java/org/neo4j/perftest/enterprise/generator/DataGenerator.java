@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -205,9 +205,8 @@ public class DataGenerator
 
     private static void printCount( RecordStore<?> store )
     {
-        String name = store.getStorageFileName();
-        name = name.substring( name.lastIndexOf( '/' ) + 1 );
-        System.out.format( "Number of records in %s: %d%n", name, store.getHighId() );
+        File name = store.getStorageFileName();
+        System.out.format( "Number of records in %s: %d%n", name.getName(), store.getHighId() );
     }
 
     private static Map<String, String> batchInserterConfig( Configuration configuration )

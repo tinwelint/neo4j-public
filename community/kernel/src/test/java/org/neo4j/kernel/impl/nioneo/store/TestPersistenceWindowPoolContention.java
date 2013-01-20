@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -68,7 +68,7 @@ public class TestPersistenceWindowPoolContention
         file.delete();
         channel = new RandomAccessFile( file, "rw" ).getChannel();
         write( channel, fileSize );
-        pool = new PersistenceWindowPool( "contention test", recordSize, channel, mappingSize, true, false, StringLogger.DEV_NULL );
+        pool = new PersistenceWindowPool( new File("contention test"), recordSize, channel, mappingSize, true, false, StringLogger.DEV_NULL );
     }
 
     private void write( FileChannel channel, long bytes ) throws IOException

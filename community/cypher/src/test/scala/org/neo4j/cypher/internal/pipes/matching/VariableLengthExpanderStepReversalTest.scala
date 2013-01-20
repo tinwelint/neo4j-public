@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,20 +27,20 @@ import org.neo4j.cypher.internal.commands.True
 class VariableLengthExpanderStepReversalTest extends Assertions {
 
   private def step(id: Int,
-                   typ: Seq[RelationshipType],
+                   typ: Seq[String],
                    direction: Direction,
                    next: Option[ExpanderStep]) = SingleStep(id, typ, direction, next, True(), True())
 
   private def varStep(id: Int,
-                      typ: Seq[RelationshipType],
+                      typ: Seq[String],
                       direction: Direction,
                       min: Int,
                       max: Option[Int],
                       next: Option[ExpanderStep]) = VarLengthStep(id, typ, direction, min, max, next, True(), True())
 
-  val A = DynamicRelationshipType.withName("A")
-  val B = DynamicRelationshipType.withName("B")
-  val C = DynamicRelationshipType.withName("C")
+  val A = "A"
+  val B = "B"
+  val C = "C"
 
   @Test def reverse_single_step() {
     // ()-[:A*]->()

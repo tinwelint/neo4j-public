@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -58,7 +58,7 @@ public class PropertyWriterTestIT
         File fileName = new File( outputDir, "neostore" );
         StoreFactory storeFactory = new StoreFactory( config, defaultIdGeneratorFactory(),
                 new DefaultWindowPoolFactory(), defaultFileSystemAbstraction(), StringLogger.DEV_NULL, defaultTxHook() );
-        neoStore = storeFactory.createNeoStore( fileName.getAbsolutePath() );
+        neoStore = storeFactory.createNeoStore( fileName );
         return neoStore.getPropertyStore();
     }
 

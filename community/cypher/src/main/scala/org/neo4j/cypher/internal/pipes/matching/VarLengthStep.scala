@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.pipes.matching
 import org.neo4j.graphdb.{Node, Relationship, Direction, RelationshipType}
 import org.neo4j.cypher.internal.commands.Predicate
 import collection.JavaConverters._
-import org.neo4j.cypher.internal.pipes.ExecutionContext
+import org.neo4j.cypher.internal.ExecutionContext
 
 /*
 Variable length paths are expanded by decreasing min and max, if it's a bounded path. Once
@@ -37,7 +37,7 @@ expand, if we have one. If we don't have a next step, we return an empty result 
 as the next step.
  */
 case class VarLengthStep(id: Int,
-                         typ: Seq[RelationshipType],
+                         typ: Seq[String],
                          direction: Direction,
                          min: Int,
                          max: Option[Int],
@@ -49,7 +49,7 @@ case class VarLengthStep(id: Int,
 
   def expand(node: Node, parameters: ExecutionContext): (Iterable[Relationship], Option[ExpanderStep]) = {
     def filter(r: Relationship, n: Node): Boolean = {
-      val m = new MiniMap(r, n, parameters)
+      val m = new MiniMap(r, n, parameters.state)
       relPredicate.isMatch(m) && nodePredicate.isMatch(m)
     }
 
@@ -65,7 +65,7 @@ case class VarLengthStep(id: Int,
 
     def expandRecursively(rels: Iterable[Relationship]): Iterable[Relationship] = {
       if (min == 0) {
-        rels ++ next.map(s => s.expand(node, parameters)._1).flatten
+        rels ++ next.toSeq.map(s => s.expand(node, parameters)._1).flatten
       } else {
         rels
       }
@@ -80,10 +80,8 @@ case class VarLengthStep(id: Int,
       }
     }
 
-    val matchingRelationships = typ match {
-      case Seq() => node.getRelationships(direction).asScala.filter(r => filter(r, r.getOtherNode(node)))
-      case x     => node.getRelationships(direction, x: _*).asScala.filter(r => filter(r, r.getOtherNode(node)))
-    }
+    val matchingRelationships = parameters.state.query.getRelationshipsFor(node, direction, typ:_*).asScala
+
 
     val result = if (matchingRelationships.isEmpty && min == 0) {
       /*
@@ -122,7 +120,7 @@ case class VarLengthStep(id: Int,
         ">"
 
     val typeString =
-      typ.map(_.name()).mkString("|")
+      typ.mkString("|")
 
     val varLengthString = max match {
       case None    => "%s..".format(min)
@@ -142,7 +140,7 @@ case class VarLengthStep(id: Int,
     case other: VarLengthStep =>
       val a = id == other.id
       val b = direction == other.direction
-      val c = typ.map(_.name()) == other.typ.map(_.name())
+      val c = typ == other.typ
       val d = min == other.min
       val e = max == other.max
       val f = next == other.next

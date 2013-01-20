@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,41 +21,46 @@ package org.neo4j.kernel.ha;
 
 import java.net.URI;
 
-import org.neo4j.cluster.BindingListener;
-import org.neo4j.cluster.client.ClusterClient;
-import org.neo4j.kernel.ha.HighAvailabilityMembers.MemberInfo;
+import org.neo4j.helpers.Functions;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
+import org.neo4j.kernel.ha.cluster.member.ClusterMember;
+import org.neo4j.kernel.ha.cluster.member.ClusterMembers;
+import org.neo4j.kernel.impl.core.LastTxIdGetter;
 import org.neo4j.management.ClusterDatabaseInfo;
 import org.neo4j.management.ClusterMemberInfo;
 
 public class ClusterDatabaseInfoProvider
 {
-    private URI me;
-    private final HighAvailabilityMembers members;
+    private final ClusterMembers members;
+    private final LastTxIdGetter txIdGetter;
+    private final LastUpdateTime lastUpdateTime;
 
-    public ClusterDatabaseInfoProvider( ClusterClient clusterClient, HighAvailabilityMembers members )
+    public ClusterDatabaseInfoProvider( ClusterMembers members, LastTxIdGetter txIdGetter,
+                                        LastUpdateTime lastUpdateTime )
     {
         this.members = members;
-        clusterClient.addBindingListener( new BindingListener()
-        {
-            @Override
-            public void listeningAt( URI uri )
-            {
-                me = uri;
-            }
-        } );
+        this.txIdGetter = txIdGetter;
+        this.lastUpdateTime = lastUpdateTime;
     }
 
     public ClusterDatabaseInfo getInfo()
     {
-        for ( MemberInfo member : members.getMembers() )
-            if ( member.getClusterUri().equals( me ) )
-            {
-                ClusterMemberInfo info = HighAvailabilityBean.clusterMemberInfo( member );
-                return new ClusterDatabaseInfo( info.getInstanceId(), info.isAvailable(),
-                        info.getHaRole(), info.getClusterRoles(), info.getUris(), 0, 0 );
-            }
-        
-        // TODO return something instead of throwing exception, right?
-        throw new IllegalStateException( "Couldn't find any information about myself, can't be right" );
+        ClusterMember self = members.getSelf();
+        if (self == null)
+            return null;
+
+        URI haUri = self.getHAUri();
+        int serverId = -1;
+        if ( haUri != null )
+        {
+            serverId = HighAvailabilityModeSwitcher.getServerId( haUri );
+        }
+
+        return new ClusterDatabaseInfo( new ClusterMemberInfo( self.getClusterUri().toString(), self.getHAUri() != null,
+                true, self.getHARole(),
+                Iterables.toArray(String.class, Iterables.map( Functions.TO_STRING, self.getRoleURIs() ) ),
+                Iterables.toArray(String.class, Iterables.map( Functions.TO_STRING, self.getRoles() ) ) ),
+                txIdGetter.getLastTxId(), lastUpdateTime.getLastUpdateTime(), serverId );
     }
 }

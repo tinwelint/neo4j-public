@@ -93,28 +93,34 @@
               <outputDirectory>${project.build.directory}/javadoc-sources</outputDirectory>
               <resources>
                 <resource>
-                  <directory>../management/src/main/java/</directory>
+                  <directory>${project.build.directory}/../../management/src/main/java/</directory>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/../../../community/lucene-index/src/main/java/</directory>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/../../../community/graph-algo/src/main/java/</directory>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/../../../community/kernel/src/main/java/</directory>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/../../../community/jmx/src/main/java/</directory>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/../../../community/graph-matching/src/main/java/</directory>
+                  <filtering>false</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/../../../community/cypher/src/main/java/</directory>
                   <filtering>false</filtering>
                 </resource>
               </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>get-javadoc-sources</id>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <excludeTransitive>false</excludeTransitive>
-              <classifier>sources</classifier>
-              <outputDirectory>${project.build.directory}/javadoc-sources</outputDirectory>
-              <includeGroupIds>org.neo4j</includeGroupIds>
-              <excludeArtifactIds>neo4j-management</excludeArtifactIds>
             </configuration>
           </execution>
         </executions>
@@ -129,6 +135,23 @@
               <goal>javadoc</goal>
             </goals>
             <configuration>
+              <additionnalDependencies>
+                <additionnalDependency>
+                  <groupId>ch.qos.logback</groupId>
+                  <artifactId>logback-classic</artifactId>
+                  <version>1.0.0</version>
+                </additionnalDependency>
+                <additionnalDependency>
+                  <groupId>ch.qos.logback</groupId>
+                  <artifactId>logback-core</artifactId>
+                  <version>1.0.0</version>
+                </additionnalDependency>
+                <additionnalDependency>
+                  <groupId>org.slf4j</groupId>
+                  <artifactId>slf4j-api</artifactId>
+                  <version>1.6.4</version>
+                </additionnalDependency>
+              </additionnalDependencies>
               <outputDirectory>${project.build.directory}/site/apidocs</outputDirectory>
               <sourcepath>${project.build.directory}/javadoc-sources</sourcepath>
               <header>${project.name}</header>
@@ -136,7 +159,7 @@
               <skip>${javadoc.skip}</skip>
               <windowtitle>${project.name} ${project.version} API</windowtitle>
               <excludePackageNames>
-                *.impl.*:org.neo4j.ext.udc:org.neo4j.kernel.ha:org.neo4j.kernel.ha.*:org.neo4j.com:org.neo4j.com.*:org.apache.lucene.index
+                *.impl.*:*.internal.*:org.neo4j.ext.udc:org.neo4j.kernel.ha:org.neo4j.kernel.ha.*:org.neo4j.com:org.neo4j.com.*:org.apache.lucene.index:org.neo4j.cluster.*:org.neo4j.helpers.progress:org.neo4j.kernel.configuration:org.neo4j.kernel.guard:org.neo4j.kernel.info:org.neo4j.kernel.logging
               </excludePackageNames>
               <groups>
                 <group>
@@ -213,11 +236,28 @@
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
+          <additionnalDependencies>
+            <additionnalDependency>
+              <groupId>ch.qos.logback</groupId>
+              <artifactId>logback-classic</artifactId>
+              <version>1.0.0</version>
+            </additionnalDependency>
+            <additionnalDependency>
+              <groupId>ch.qos.logback</groupId>
+              <artifactId>logback-core</artifactId>
+              <version>1.0.0</version>
+            </additionnalDependency>
+            <additionnalDependency>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-api</artifactId>
+              <version>1.6.4</version>
+            </additionnalDependency>
+          </additionnalDependencies>
           <header>${project.name}</header>
           <doctitle>${project.name} ${project.version} API</doctitle>
           <windowtitle>${project.name} ${project.version} API</windowtitle>
           <excludePackageNames>
-            *.impl.*:org.neo4j.ext.udc:org.neo4j.kernel.ha:org.neo4j.kernel.ha.*:org.neo4j.com:org.neo4j.com.*:org.apache.lucene.index
+                *.impl.*:*.internal.*:org.neo4j.ext.udc:org.neo4j.kernel.ha:org.neo4j.kernel.ha.*:org.neo4j.com:org.neo4j.com.*:org.apache.lucene.index:org.neo4j.cluster.*:org.neo4j.helpers.progress:org.neo4j.kernel.configuration:org.neo4j.kernel.guard:org.neo4j.kernel.info:org.neo4j.kernel.logging
           </excludePackageNames>
           <groups>
             <group>

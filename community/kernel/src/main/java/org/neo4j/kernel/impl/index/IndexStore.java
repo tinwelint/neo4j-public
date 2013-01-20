@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,8 +35,9 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.util.IoPrimitiveUtils;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-public class IndexStore
+public class IndexStore extends LifecycleAdapter
 {
     public static final String INDEX_DB_FILE_NAME = "index.db";
     private static final byte[] MAGICK = new byte[] { 'n', 'e', 'o', '4', 'j', '-', 'i', 'n', 'd', 'e', 'x' };
@@ -49,12 +50,11 @@ public class IndexStore
     private ByteBuffer dontUseBuffer = ByteBuffer.allocate( 100 );
     private final FileSystemAbstraction fileSystem;
     
-    public IndexStore( String graphDbStoreDir, FileSystemAbstraction fileSystem )
+    public IndexStore( File graphDbStoreDir, FileSystemAbstraction fileSystem )
     {
         this.fileSystem = fileSystem;
-        this.file = new File( new File( graphDbStoreDir ), INDEX_DB_FILE_NAME );
+        this.file = new File( graphDbStoreDir, INDEX_DB_FILE_NAME );
         this.oldFile = new File( file.getParentFile(), file.getName() + ".old" );
-        read();
     }
     
     private ByteBuffer buffer( int size )
@@ -69,7 +69,7 @@ public class IndexStore
     private void read()
     {
         File fileToReadFrom = file.exists() ? file : oldFile;
-        if ( !fileSystem.fileExists( fileToReadFrom.getAbsolutePath() ) )
+        if ( !fileSystem.fileExists( fileToReadFrom ) )
         {
             return;
         }
@@ -77,12 +77,12 @@ public class IndexStore
         FileChannel channel = null;
         try
         {
-            channel = fileSystem.open( fileToReadFrom.getAbsolutePath(), "r" );
+            channel = fileSystem.open( fileToReadFrom, "r" );
             Integer version = tryToReadVersion( channel );
             if ( version == null )
             {
                 close( channel );
-                channel = fileSystem.open( fileToReadFrom.getAbsolutePath(), "r" );
+                channel = fileSystem.open( fileToReadFrom, "r" );
                 // Legacy format, TODO
                 readMap( channel, nodeConfig, version );
                 relConfig.putAll( nodeConfig );
@@ -107,7 +107,13 @@ public class IndexStore
             close( channel );
         }
     }
-
+    
+    @Override
+    public void start() throws Throwable
+    {
+        read();
+    }
+    
     private Map<String, Map<String, String>> readMap( FileChannel channel,
             Map<String, Map<String, String>> map, Integer sizeOrTillEof ) throws IOException
     {
@@ -246,10 +252,10 @@ public class IndexStore
         write( tmpFile );
         
         // Make sure the .old file doesn't exist, then rename the current one to .old
-        fileSystem.deleteFile( oldFile.getAbsolutePath() );
+        fileSystem.deleteFile( oldFile );
         try
         {
-            if ( fileSystem.fileExists( file.getAbsolutePath() ) && !fileSystem.renameFile( file.getAbsolutePath(), oldFile.getAbsolutePath() ) )
+            if ( fileSystem.fileExists( file ) && !fileSystem.renameFile( file, oldFile ) )
             {
                 throw new RuntimeException( "Couldn't rename " + file + " -> " + oldFile );
             }
@@ -262,7 +268,7 @@ public class IndexStore
         // Rename the .tmp file to the current name
         try
         {
-            if ( !fileSystem.renameFile( tmpFile.getAbsolutePath(), this.file.getAbsolutePath() ) )
+            if ( !fileSystem.renameFile( tmpFile, this.file ) )
             {
                 throw new RuntimeException( "Couldn't rename " + tmpFile + " -> " + file );
             }
@@ -271,7 +277,7 @@ public class IndexStore
         {
             throw new RuntimeException( "Couldn't rename " + tmpFile + " -> " + file );
         }
-        fileSystem.deleteFile( oldFile.getAbsolutePath() );
+        fileSystem.deleteFile( oldFile );
     }
     
     private void write( File file )
@@ -279,7 +285,7 @@ public class IndexStore
         FileChannel channel = null;
         try
         {
-            channel = fileSystem.open( file.getAbsolutePath(), "rw" );
+            channel = fileSystem.open( file, "rw" );
             channel.write( ByteBuffer.wrap( MAGICK ) );
             IoPrimitiveUtils.writeInt( channel, buffer( 4 ), VERSION );
             writeMap( channel, nodeConfig );

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,11 +27,9 @@ import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.kernel.impl.core.LockReleaser;
-import org.neo4j.kernel.impl.core.LockReleaser.LockElement;
+import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.LockManager;
-import org.neo4j.kernel.impl.transaction.LockType;
 
 public class TopLevelTransaction implements Transaction
 {
@@ -55,27 +53,38 @@ public class TopLevelTransaction implements Transaction
             return success && !failure;
         }
 
-        public boolean triedToSucceed()
+        public boolean successCalled()
         {
             return success;
+        }
+        
+        public boolean failureCalled()
+        {
+            return failure;
         }
     }
     
     private final AbstractTransactionManager transactionManager;
-    private final TransactionOutcome transactionOutcome = new TransactionOutcome();
+    protected final TransactionOutcome transactionOutcome = new TransactionOutcome();
     private final LockManager lockManager;
-    private final LockReleaser lockReleaser;
+    private final TransactionState state;
 
-    public TopLevelTransaction( AbstractTransactionManager transactionManager, LockManager lockManager, LockReleaser lockReleaser )
+    public TopLevelTransaction( AbstractTransactionManager transactionManager, LockManager lockManager,
+            TransactionState state )
     {
         this.transactionManager = transactionManager;
         this.lockManager = lockManager;
-        this.lockReleaser = lockReleaser;
+        this.state = state;
     }
 
     public void failure()
     {
         transactionOutcome.failed();
+        markAsRollbackOnly();
+    }
+
+    protected void markAsRollbackOnly()
+    {
         try
         {
             transactionManager.getTransaction().setRollbackOnly();
@@ -129,7 +138,7 @@ public class TopLevelTransaction implements Transaction
         }
         catch ( Exception e )
         {
-            if ( transactionOutcome.triedToSucceed() )
+            if ( transactionOutcome.successCalled() )
             {
                 throw new TransactionFailureException(
                     "Unable to commit transaction", e );
@@ -145,16 +154,12 @@ public class TopLevelTransaction implements Transaction
     @Override
     public Lock acquireWriteLock( PropertyContainer entity )
     {
-        lockManager.getWriteLock( entity );
-        LockElement lockElement = lockReleaser.addLockToTransaction( entity, LockType.WRITE );
-        return new LockImpl( lockManager, lockElement );
+        return state.acquireWriteLock( entity );
     }
 
     @Override
     public Lock acquireReadLock( PropertyContainer entity )
     {
-        lockManager.getReadLock( entity );
-        LockElement lockElement = lockReleaser.addLockToTransaction( entity, LockType.READ );
-        return new LockImpl( lockManager, lockElement );
+        return state.acquireReadLock( entity );
     }
 }

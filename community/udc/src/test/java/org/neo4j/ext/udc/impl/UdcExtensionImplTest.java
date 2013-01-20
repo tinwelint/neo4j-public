@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.ext.udc.impl;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -41,21 +40,24 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.http.localserver.LocalTestServer;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.neo4j.ext.udc.Edition;
 import org.neo4j.ext.udc.UdcConstants;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.server.rest.web.CollectUserAgentFilter;
+import org.neo4j.test.TargetDirectory;
 // import org.neo4j.kernel.ha.HaSettings;
 
 /**
@@ -67,8 +69,10 @@ import org.neo4j.server.rest.web.CollectUserAgentFilter;
  */
 public class UdcExtensionImplTest
 {
+    @Rule
+    public TestName testName = new TestName();
 
-    Random rnd = new Random();
+    private File path;
     private LocalTestServer server;
     private PingerHandler handler;
     private String serverAddress;
@@ -79,6 +83,7 @@ public class UdcExtensionImplTest
     {
         UdcTimerTask.successCounts.clear();
         UdcTimerTask.failureCounts.clear();
+        path = TargetDirectory.forTest( getClass() ).directory( testName.getMethodName(), true );
     }
 
     /**
@@ -90,7 +95,7 @@ public class UdcExtensionImplTest
     @Test
     public void shouldNotCrashNormalGraphdbCreation() throws IOException
     {
-        GraphDatabaseService graphdb = createTempDatabase( null );
+        GraphDatabaseService graphdb = createDatabase( null );
         destroy( graphdb );
     }
 
@@ -100,7 +105,7 @@ public class UdcExtensionImplTest
     @Test
     public void shouldLoadWhenNormalGraphdbIsCreated() throws Exception
     {
-        GraphDatabaseService graphdb = createTempDatabase( null );
+        GraphDatabaseService graphdb = createDatabase( null );
         // when the UDC extension successfully loads, it initializes the attempts count to 0
         assertGotSuccessWithRetry( IS_ZERO );
         destroy( graphdb );
@@ -112,8 +117,8 @@ public class UdcExtensionImplTest
     @Test
     public void shouldLoadForEachCreatedGraphdb() throws IOException
     {
-        GraphDatabaseService graphdb1 = createTempDatabase( null );
-        GraphDatabaseService graphdb2 = createTempDatabase( null );
+        GraphDatabaseService graphdb1 = createDatabase( "graphDb1", null );
+        GraphDatabaseService graphdb2 = createDatabase( "graphDb2", null );
         Set<String> successCountValues = UdcTimerTask.successCounts.keySet();
         assertThat( successCountValues.size(), equalTo( 2 ) );
         assertThat( "this", is( not( "that" ) ) );
@@ -124,8 +129,10 @@ public class UdcExtensionImplTest
     @Test
     public void shouldRecordFailuresWhenThereIsNoServer() throws Exception
     {
+        File possibleDirectory = new File( path, "should-record-failures" );
+
         GraphDatabaseService graphdb = new GraphDatabaseFactory().
-                newEmbeddedDatabaseBuilder( "should-record-failures" ).
+                newEmbeddedDatabaseBuilder( possibleDirectory.getPath() ).
                 loadPropertiesFromURL( getClass().getResource( "/org/neo4j/ext/udc/udc.properties" ) ).
                 setConfig( UdcSettings.first_delay, "100" ).
                 setConfig( UdcSettings.udc_host, "127.0.0.1:1" ).
@@ -138,7 +145,7 @@ public class UdcExtensionImplTest
     public void shouldRecordSuccessesWhenThereIsAServer() throws Exception
     {
         setupServer();
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertGotFailureWithRetry( IS_ZERO );
         destroy( graphdb );
@@ -149,7 +156,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
 
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "unit-testing", handler.getQueryMap().get( SOURCE ) );
 
@@ -180,7 +187,7 @@ public class UdcExtensionImplTest
 
         config.put( UdcSettings.udc_registration_key.name(), "marketoid" );
 
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "test-reg", handler.getQueryMap().get( REGISTRATION ) );
 
@@ -192,7 +199,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
 
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "test-reg", handler.getQueryMap().get( REGISTRATION ) );
 
@@ -204,7 +211,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
 
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "test", handler.getQueryMap().get( TAGS ) );
 
@@ -216,10 +223,9 @@ public class UdcExtensionImplTest
     public void shouldBeAbleToDetermineEditionFromClasspath() throws Exception
     {
         setupServer();
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( Edition.community.name(), handler.getQueryMap().get( EDITION ) );
-
 
         destroy( graphdb );
     }
@@ -229,7 +235,7 @@ public class UdcExtensionImplTest
     {
         CollectUserAgentFilter.addUserAgent( "test/1.0" );
         setupServer();
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "test/1.0", handler.getQueryMap().get( USER_AGENTS ) );
 
@@ -243,7 +249,7 @@ public class UdcExtensionImplTest
         CollectUserAgentFilter.addUserAgent( "test/1.0" );
         CollectUserAgentFilter.addUserAgent( "foo/bar" );
         setupServer();
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         String userAgents = handler.getQueryMap().get( USER_AGENTS );
         assertEquals( true, userAgents.contains( "test/1.0" ) );
@@ -259,7 +265,7 @@ public class UdcExtensionImplTest
         CollectUserAgentFilter.addUserAgent( "test/1.0" );
         setupServer();
         config.put( UdcSettings.interval.name(), "1000" );
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         String userAgents = handler.getQueryMap().get( USER_AGENTS );
         assertEquals( true, userAgents.contains( "test/1.0" ) );
@@ -296,7 +302,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
 
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertNotNull( handler.getQueryMap().get( MAC ) );
 
@@ -309,7 +315,7 @@ public class UdcExtensionImplTest
         setupServer();
         System.setProperty( UdcConstants.UDC_PROPERTY_PREFIX + ".test", "udc-property" );
         System.setProperty( "os.test", "os-property" );
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "udc-property", handler.getQueryMap().get( "test" ) );
         assertEquals( "os-property", handler.getQueryMap().get( "os.test" ) );
@@ -322,7 +328,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
         System.setProperty( "os.name", "Windows" );
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
 
@@ -337,7 +343,7 @@ public class UdcExtensionImplTest
             return;
         }
         setupServer();
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
 
         assertEquals( DefaultUdcInformationCollector.searchForPackageSystems(), handler.getQueryMap().get( "dist" ) );
@@ -350,7 +356,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
         System.setProperty( "os.name", "Mac OS X" );
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
 
@@ -362,7 +368,7 @@ public class UdcExtensionImplTest
     {
         setupServer();
 
-        GraphDatabaseService graphdb = createTempDatabase( config );
+        GraphDatabaseService graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         String version = handler.getQueryMap().get( VERSION );
         assertTrue( version.matches( "\\d\\.\\d(\\.|\\-).*?" ) );
@@ -385,6 +391,31 @@ public class UdcExtensionImplTest
         assertTrue( "1.10-SNAPSHOT".matches( pattern ) );
         assertTrue( "1.10.M01".matches( pattern ) );
     }
+
+    @Test
+    public void testUdcPropertyFileKeysMatchSettings() throws Exception 
+    {
+        Map<String, String> config = MapUtil.load( getClass().getResourceAsStream( "/org/neo4j/ext/udc/udc.properties" ) );
+        assertEquals( "test-reg", config.get(UdcSettings.udc_registration_key.name() ) );
+        assertEquals( "unit-testing", config.get( UdcSettings.udc_source.name() ) );
+    }
+
+    @Test
+    public void shouldFilterPlusBuildNumbers() throws Exception {
+        assertThat(new DefaultUdcInformationCollector(null, null, null).filterVersionForUDC("1.9.0-M01+00001"), is(equalTo("1.9.0-M01")));
+    }
+
+    @Test
+    public void shouldNotFilterSnapshotBuildNumbers() throws Exception {
+        assertThat(new DefaultUdcInformationCollector(null, null, null).filterVersionForUDC("1.9-SNAPSHOT"), is(equalTo("1.9-SNAPSHOT")));
+
+    }
+
+    @Test
+    public void shouldNotFilterReleaseBuildNumbers() throws Exception {
+        assertThat( new DefaultUdcInformationCollector( null, null, null ).filterVersionForUDC( "1.9" ), is( equalTo( "1.9" ) ) );
+    }
+
 
     private static interface Condition<T>
     {
@@ -432,18 +463,21 @@ public class UdcExtensionImplTest
         fail();
     }
 
-    private GraphDatabaseService createTempDatabase( Map<String, String> config ) throws IOException
+    private GraphDatabaseService createDatabase( Map<String, String> config ) throws IOException
     {
-        String randomDbName = "tmpdb-" + rnd.nextInt();
-        File possibleDirectory = new File( "target" + File.separator
-                + randomDbName );
+        return createDatabase( "db", config );
+    }
+
+    private GraphDatabaseService createDatabase( String name, Map<String, String> config ) throws IOException
+    {
+        File possibleDirectory = new File( path, name );
         if ( possibleDirectory.exists() )
         {
             FileUtils.deleteDirectory( possibleDirectory );
         }
 
         GraphDatabaseBuilder graphDatabaseBuilder = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(
-                randomDbName );
+                possibleDirectory.getPath() );
         graphDatabaseBuilder.loadPropertiesFromURL( getClass().getResource( "/org/neo4j/ext/udc/udc.properties" ) );
 
         if ( config != null )
@@ -456,8 +490,9 @@ public class UdcExtensionImplTest
 
     private void destroy( GraphDatabaseService dbToDestroy ) throws IOException
     {
+        InternalAbstractGraphDatabase db = (InternalAbstractGraphDatabase) dbToDestroy;
         dbToDestroy.shutdown();
-        FileUtils.deleteDirectory( new File( ((GraphDatabaseAPI) dbToDestroy).getStoreDir() ) );
+        FileUtils.deleteDirectory( new File( db.getStoreDir() ) );
     }
 
 }

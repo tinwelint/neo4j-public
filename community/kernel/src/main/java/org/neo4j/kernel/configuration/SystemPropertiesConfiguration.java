@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.configuration;
 
 import java.lang.reflect.Field;
@@ -25,10 +24,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.graphdb.config.Setting;
+import org.neo4j.helpers.Function;
+import org.neo4j.helpers.Functions;
 
 /**
- * Collect settings from System.getProperties(). For the given settings classes, using the GraphDatabaseSetting pattern,
+ * Collect settings from System.getProperties(). For the given settings classes, using the Setting pattern,
  * check if the individual settings are available as system properties, and if so, add them to the given map.
  */
 public class SystemPropertiesConfiguration
@@ -47,7 +48,17 @@ public class SystemPropertiesConfiguration
 
     public Map<String,String> apply(Map<String,String> config )
     {
-        Map<String,String> systemProperties = new HashMap<String, String>(  );
+        // Create test config with base plus system props on top
+        Map<String,String> systemProperties = new HashMap<String, String>( config );
+        for ( Map.Entry<Object, Object> prop : System.getProperties().entrySet() )
+        {
+            systemProperties.put( prop.getKey().toString(), prop.getValue().toString() );
+        }
+
+        // For each system property, see if it passes validation
+        // If so, add it to result set
+        Map<String, String> result = new HashMap<String, String>( config );
+        Function<String, String> systemPropertiesFunction = Functions.map(systemProperties);
         for( Map.Entry<Object, Object> prop : System.getProperties().entrySet() )
         {
             String key = (String) prop.getKey();
@@ -57,11 +68,13 @@ public class SystemPropertiesConfiguration
                 {
                     try
                     {
-                        GraphDatabaseSetting setting = (GraphDatabaseSetting) field.get( null );
+                        Setting<Object> setting = (Setting<Object>) field.get( null );
                         if (setting.name().equals( key ))
                         {
-                            setting.validate( (String) prop.getValue() );
-                            systemProperties.put( key, (String) prop.getValue() );
+                            setting.apply( systemPropertiesFunction );
+
+                            // Valid setting, copy it from system properties
+                            result.put( key, (String) prop.getValue() );
                         }
                     }
                     catch( Throwable e )
@@ -71,7 +84,6 @@ public class SystemPropertiesConfiguration
                 }
             }
         }
-        systemProperties.putAll( config );
-        return systemProperties;
+        return result;
     }
 }

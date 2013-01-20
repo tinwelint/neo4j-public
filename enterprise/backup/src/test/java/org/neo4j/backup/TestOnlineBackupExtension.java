@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,8 +38,7 @@ public class TestOnlineBackupExtension extends KernelExtensionFactoryContractTes
         if ( shouldLoad )
         {
             configuration.put( OnlineBackupSettings.online_backup_enabled.name(), GraphDatabaseSetting.TRUE );
-            configuration.put( OnlineBackupSettings.online_backup_port.name(), BackupServer.DEFAULT_PORT + instance +
-                    "" );
+            configuration.put( OnlineBackupSettings.online_backup_server.name(), ":"+(BackupServer.DEFAULT_PORT + instance) );
         }
         return configuration;
     }

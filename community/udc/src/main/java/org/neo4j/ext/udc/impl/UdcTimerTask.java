@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TimerTask;
 
+import org.neo4j.helpers.HostnamePort;
+
 public class UdcTimerTask extends TimerTask
 {
 
@@ -35,7 +37,7 @@ public class UdcTimerTask extends TimerTask
     private final String storeId;
     private final Pinger pinger;
 
-    public UdcTimerTask( String hostAddress, UdcInformationCollector collector )
+    public UdcTimerTask( HostnamePort hostAddress, UdcInformationCollector collector )
     {
         this.storeId = collector.getStoreId();
 
@@ -52,7 +54,8 @@ public class UdcTimerTask extends TimerTask
         {
             pinger.ping();
             incrementSuccessCount( storeId );
-        } catch ( IOException e )
+        }
+        catch ( IOException e )
         {
             incrementFailureCount( storeId );
         }

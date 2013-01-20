@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,16 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.impl.nioneo.store;
 
+import static org.neo4j.helpers.Exceptions.launderedException;
+
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.UTF8;
@@ -39,8 +40,6 @@ import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPool;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPoolFactory;
 import org.neo4j.kernel.impl.util.StringLogger;
 
-import static org.neo4j.helpers.Exceptions.launderedException;
-
 /**
  * Contains common implementation for {@link AbstractStore} and
  * {@link AbstractDynamicStore}.
@@ -49,8 +48,8 @@ public abstract class CommonAbstractStore
 {
     public static abstract class Configuration
     {
-        public static final GraphDatabaseSetting.StringSetting store_dir = InternalAbstractGraphDatabase.Configuration.store_dir;
-        public static final GraphDatabaseSetting.StringSetting neo_store = InternalAbstractGraphDatabase.Configuration.neo_store;
+        public static final Setting<File> store_dir = InternalAbstractGraphDatabase.Configuration.store_dir;
+        public static final Setting<File> neo_store = InternalAbstractGraphDatabase.Configuration.neo_store;
         
         public static final GraphDatabaseSetting.BooleanSetting grab_file_lock = GraphDatabaseSettings.grab_file_lock;
         public static final GraphDatabaseSetting.BooleanSetting read_only = GraphDatabaseSettings.read_only;
@@ -61,15 +60,12 @@ public abstract class CommonAbstractStore
     public static final String ALL_STORES_VERSION = "v0.A.0";
     public static final String UNKNOWN_VERSION = "Uknown";
 
-    protected static final Logger logger = Logger
-        .getLogger( CommonAbstractStore.class.getName() );
-
     protected Config configuration;
     private final IdGeneratorFactory idGeneratorFactory;
     private final WindowPoolFactory windowPoolFactory;
     protected FileSystemAbstraction fileSystemAbstraction;
 
-    protected final String storageFileName;
+    protected final File storageFileName;
     protected final IdType idType;
     protected StringLogger stringLogger;
     private IdGenerator idGenerator = null;
@@ -101,7 +97,7 @@ public abstract class CommonAbstractStore
      *            The Id used to index into this store
      * @param windowPoolFactory
      */
-    public CommonAbstractStore( String fileName, Config configuration, IdType idType,
+    public CommonAbstractStore( File fileName, Config configuration, IdType idType,
                                 IdGeneratorFactory idGeneratorFactory, WindowPoolFactory windowPoolFactory,
                                 FileSystemAbstraction fileSystemAbstraction, StringLogger stringLogger )
     {
@@ -122,8 +118,7 @@ public abstract class CommonAbstractStore
         }
         catch ( Exception e )
         {
-            if ( fileChannel != null )
-                closeChannel();
+            releaseFileLockAndCloseFileChannel();
             throw launderedException( e );
         }
     }
@@ -430,7 +425,7 @@ public abstract class CommonAbstractStore
     /**
      * @return the store directory from config.
      */
-    protected String getStoreDir()
+    protected File getStoreDir()
     {
         return configuration.get( Configuration.store_dir );
     }
@@ -496,7 +491,7 @@ public abstract class CommonAbstractStore
      *
      * @return The name of this store
      */
-    public String getStorageFileName()
+    public File getStorageFileName()
     {
         return storageFileName;
     }
@@ -506,7 +501,7 @@ public abstract class CommonAbstractStore
      */
     protected void openIdGenerator( boolean firstTime )
     {
-        idGenerator = openIdGenerator( storageFileName + ".id", idType.getGrabSize(), firstTime );
+        idGenerator = openIdGenerator( new File( storageFileName.getPath() + ".id"), idType.getGrabSize(), firstTime );
 
         /* MP: 2011-11-23
          * There may have been some migration done in the startup process, so if there have been some
@@ -516,15 +511,14 @@ public abstract class CommonAbstractStore
         updateHighId();
     }
 
-    protected IdGenerator openIdGenerator( String fileName, int grabSize, boolean firstTime )
+    protected IdGenerator openIdGenerator( File fileName, int grabSize, boolean firstTime )
     {
-        return idGeneratorFactory.open( fileSystemAbstraction, fileName, grabSize, getIdType()
-        );
+        return idGeneratorFactory.open( fileSystemAbstraction, fileName, grabSize, getIdType(), figureOutHighestIdInUse() );
     }
 
     protected abstract long figureOutHighestIdInUse();
 
-    protected void createIdGenerator( String fileName )
+    protected void createIdGenerator( File fileName )
     {
         idGeneratorFactory.create( fileSystemAbstraction, fileName, 0 );
     }
@@ -576,7 +570,7 @@ public abstract class CommonAbstractStore
         }
         if ( (isReadOnly() && !isBackupSlave()) || idGenerator == null || !storeOk )
         {
-            closeChannel();
+            releaseFileLockAndCloseFileChannel();
             return;
         }
         long highId = idGenerator.getHighId();
@@ -603,6 +597,7 @@ public abstract class CommonAbstractStore
                     ByteBuffer buffer = ByteBuffer.wrap(
                         UTF8.encode( getTypeAndVersionDescriptor() ) );
                     fileChannel.write( buffer );
+                    stringLogger.debug( "Closing " + storageFileName + ", truncating at " + fileChannel.position() + " vs file size " + fileChannel.size() );
                     fileChannel.truncate( fileChannel.position() );
                     fileChannel.force( false );
                     releaseFileLockAndCloseFileChannel();
@@ -620,33 +615,11 @@ public abstract class CommonAbstractStore
         {
             releaseFileLockAndCloseFileChannel();
             success = true;
-//=======
-//            try
-//            {
-//                fileChannel.close();
-//            }
-//            catch ( IOException e )
-//            {
-//                logger.log( Level.WARNING, "Could not close fileChannel [" + storageFileName + "]", e );
-//            }
-//>>>>>>> parent of 739f974... Change start-up sequence so that version number in neostore gets checked, not just in the child stores
         }
         if ( !success )
         {
             throw new UnderlyingStorageException( "Unable to close store "
                 + getStorageFileName(), storedIoe );
-        }
-    }
-
-    private void closeChannel()
-    {
-        try
-        {
-            fileChannel.close();
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
         }
     }
 
@@ -662,9 +635,10 @@ public abstract class CommonAbstractStore
             {
                 fileChannel.close();
             }
-        } catch ( IOException e )
+        }
+        catch ( IOException e )
         {
-            logger.log( Level.WARNING, "Could not close [" + storageFileName + "]", e );
+            stringLogger.warn( "Could not close [" + storageFileName + "]", e );
         }
         fileChannel = null;
     }

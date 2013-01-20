@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.commands.SortItem
 import org.neo4j.cypher.internal.symbols.{NumberType, SymbolTable}
 import collection.mutable.ListBuffer
 import org.neo4j.cypher.internal.commands.expressions.Expression
+import org.neo4j.cypher.internal.ExecutionContext
 
 /*
  * TopPipe is used when a query does a ORDER BY ... LIMIT query. Instead of ordering the whole result set and then
@@ -35,6 +36,7 @@ class TopPipe(source: Pipe, sortDescription: List[SortItem], countExpression: Ex
     var last: Option[ExecutionContext] = None
     val largerThanLast = (ctx: ExecutionContext) => last.forall(s => compareBy(s, ctx, sortDescription))
     var size = 0
+    var sorted = false
 
     val input = source.createResults(state)
 
@@ -60,12 +62,15 @@ class TopPipe(source: Pipe, sortDescription: List[SortItem], countExpression: Ex
               result -= last.get
               result += ctx
               result = result.sortWith((a, b) => compareBy(a, b, sortDescription))
-
+              sorted = true
               last = Some(result.last)
             }
       }
     }
 
+    if (!sorted) {
+      result = result.sortWith((a, b) => compareBy(a, b, sortDescription))
+    }
 
 
     result.toIterator
@@ -75,8 +80,8 @@ class TopPipe(source: Pipe, sortDescription: List[SortItem], countExpression: Ex
 
   def symbols = source.symbols
 
-  def assertTypes(symbols: SymbolTable) {
-    sortDescription.foreach(_.expression.assertTypes(symbols))
+  def throwIfSymbolsMissing(symbols: SymbolTable) {
+    sortDescription.foreach(_.expression.throwIfSymbolsMissing(symbols))
     countExpression.evaluateType(NumberType(), symbols)
   }
 }

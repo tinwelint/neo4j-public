@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,11 @@
  */
 package org.neo4j.consistency.store;
 
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -30,11 +35,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Suite;
 import org.neo4j.consistency.report.PendingReferenceCheck;
 import org.neo4j.helpers.Exceptions;
-
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({SkippingRecordAccessTest.TestRecordReferenceMethods.class,

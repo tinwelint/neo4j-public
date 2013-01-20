@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2002-2012 "Neo Technology,"
+# Copyright (c) 2002-2013 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 #
 # This file is part of Neo4j.
@@ -346,3 +346,17 @@ selectinittool() {
   fi
 }
 
+# check if running JDK 6, warn if not
+checkjvmcompatibility() {
+  $JAVACMD -version 2>&1 | egrep -q "Java HotSpot\\(TM\\) (64-Bit Server|Client) VM"
+  if [ $? -eq 1 ]
+  then
+    echo "WARNING! You are using an unsupported Java runtime. Please use JDK 6."
+  else
+    $JAVACMD -version 2>&1 | egrep -q "java version \"1.6"
+    if [ $? -eq 1 ]
+    then
+      echo "WARNING! You are using an unsupported version of the JDK. Please use JDK 6."
+    fi
+  fi
+}

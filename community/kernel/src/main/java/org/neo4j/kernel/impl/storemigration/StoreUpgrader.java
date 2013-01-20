@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.impl.storemigration;
 
 import java.io.File;
@@ -60,12 +59,12 @@ public class StoreUpgrader
         this.databaseFiles = databaseFiles;
     }
 
-    public void attemptUpgrade( String storageFileName )
+    public void attemptUpgrade( File storageFileName )
     {
         upgradeConfiguration.checkConfigurationAllowsAutomaticUpgrade();
-        upgradableDatabase.checkUpgradeable( new File( storageFileName ) );
+        upgradableDatabase.checkUpgradeable( storageFileName );
 
-        File workingDirectory = new File( storageFileName ).getParentFile();
+        File workingDirectory = storageFileName.getParentFile();
         File upgradeDirectory = new File( workingDirectory, "upgrade" );
         File backupDirectory = new File( workingDirectory, "upgrade_backup" );
 
@@ -89,7 +88,7 @@ public class StoreUpgrader
         }
     }
 
-    private void migrateToIsolatedDirectory( String storageFileName, File upgradeDirectory )
+    private void migrateToIsolatedDirectory( File storageFileName, File upgradeDirectory )
     {
         if (upgradeDirectory.exists()) {
             try
@@ -103,9 +102,9 @@ public class StoreUpgrader
         }
         upgradeDirectory.mkdir();
 
-        String upgradeFileName = new File( upgradeDirectory, NeoStore.DEFAULT_NAME ).getPath();
+        File upgradeFileName = new File( upgradeDirectory, NeoStore.DEFAULT_NAME );
         Map<String, String> upgradeConfig = new HashMap<String, String>( originalConfig.getParams() );
-        upgradeConfig.put( "neo_store", upgradeFileName );
+        upgradeConfig.put( "neo_store", upgradeFileName.getPath() );
 
 
         Config upgradeConfiguration = new Config( upgradeConfig );

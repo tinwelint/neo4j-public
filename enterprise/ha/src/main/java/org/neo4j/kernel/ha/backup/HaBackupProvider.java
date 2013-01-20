@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,32 +17,34 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.ha.backup;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.backup.BackupExtensionService;
+import org.neo4j.backup.OnlineBackupKernelExtension;
 import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.client.ClusterClient;
-import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
+import org.neo4j.cluster.member.ClusterMemberEvents;
+import org.neo4j.cluster.member.ClusterMemberListener;
+import org.neo4j.cluster.member.paxos.PaxosClusterMemberEvents;
+import org.neo4j.cluster.protocol.election.CoordinatorIncapableCredentialsProvider;
 import org.neo4j.helpers.Args;
+import org.neo4j.helpers.Predicates;
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConfigurationDefaults;
 import org.neo4j.kernel.ha.HaSettings;
-import org.neo4j.kernel.ha.cluster.HighAvailabilityEvents;
-import org.neo4j.kernel.ha.cluster.HighAvailabilityListener;
-import org.neo4j.kernel.ha.cluster.paxos.PaxosHighAvailabilityEvents;
+import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.logging.SystemOutLogging;
 
 @Service.Implementation(BackupExtensionService.class)
 public final class HaBackupProvider extends BackupExtensionService
@@ -57,63 +59,67 @@ public final class HaBackupProvider extends BackupExtensionService
     {
         String master = null;
         StringLogger logger = logging.getLogger( HaBackupProvider.class );
-        logger.logMessage( "Asking cluster member at '" + address
+        logger.debug( "Asking cluster member at '" + address
                 + "' for master" );
 
         String clusterName = args.get( ClusterSettings.cluster_name.name(), null );
         if ( clusterName == null )
         {
-            clusterName = args.get( ClusterSettings.cluster_name.name(),
-                    ConfigurationDefaults.getDefault( ClusterSettings.cluster_name, ClusterSettings.class ) );
+            clusterName = args.get( ClusterSettings.cluster_name.name(), ClusterSettings.cluster_name.getDefaultValue() );
         }
 
-        master = getMasterServerInCluster( address.getSchemeSpecificPart().substring(
-                2 ), clusterName, logging ); // skip the "//" part
-
-        logger.logMessage( "Found master '" + master + "' in cluster" );
-        URI toReturn = null;
         try
         {
-            toReturn = new URI( master );
+            master = getMasterServerInCluster( address.getSchemeSpecificPart().substring(
+                    2 ), clusterName, logging ); // skip the "//" part
+
+            logger.debug( "Found master '" + master + "' in cluster" );
+            return URI.create( master );
         }
-        catch ( URISyntaxException e )
+        catch ( Exception e )
         {
-            // no way
+            throw new RuntimeException( e.getMessage() );
         }
-        return toReturn;
     }
 
-    private static String getMasterServerInCluster( String from, String clusterName, final Logging logging )
+    private String getMasterServerInCluster( String from, String clusterName, final Logging logging )
     {
         LifeSupport life = new LifeSupport();
-        Map<String, String> params = new ConfigurationDefaults( ClusterSettings.class,
-                OnlineBackupSettings.class ).apply( new HashMap<String, String>() );
+        Map<String, String> params = new HashMap<String, String>();
         params.put( HaSettings.server_id.name(), "-1" );
         params.put( ClusterSettings.cluster_name.name(), clusterName );
-        params.put( HaSettings.initial_hosts.name(), from );
-        params.put( HaSettings.cluster_discovery_enabled.name(), "false" );
-        final Config config = new Config( params );
+        params.put( ClusterSettings.initial_hosts.name(), from );
+        params.put( ClusterSettings.cluster_discovery_enabled.name(), "false" );
+        final Config config = new Config( params,
+                ClusterSettings.class, OnlineBackupSettings.class );
 
-        ClusterClient clusterClient = life.add( new ClusterClient( ClusterClient.adapt( config,
-                new BackupElectionCredentialsProvider() ), logging ) );
-        HighAvailabilityEvents events = life.add( new PaxosHighAvailabilityEvents( PaxosHighAvailabilityEvents.adapt(
-                config ), clusterClient, StringLogger.SYSTEM ) );
+        ClusterClient clusterClient = life.add( new ClusterClient( ClusterClient.adapt( config ), logging,
+                new CoordinatorIncapableCredentialsProvider() ) );
+        ClusterMemberEvents events = life.add( new PaxosClusterMemberEvents( clusterClient, clusterClient,
+                clusterClient, new SystemOutLogging(), Predicates.<PaxosClusterMemberEvents.ClusterMembersSnapshot>TRUE() ) );
+
         final Semaphore infoReceivedLatch = new Semaphore( 0 );
-        final ClusterInfoHolder addresses = new ClusterInfoHolder();
-
-        events.addClusterEventListener( new HighAvailabilityListener()
+        final AtomicReference<URI> backupUri = new AtomicReference<URI>(  );
+        events.addClusterMemberListener( new ClusterMemberListener.Adapter()
         {
-            @Override
-            public void masterIsElected( URI masterUri )
-            {
-            }
+            Map<URI, URI> backupUris = new HashMap<URI, URI>();
+            URI master = null;
 
             @Override
-            public void memberIsAvailable( String role, URI masterClusterUri, Iterable<URI> masterURIs )
+            public void memberIsAvailable( String role, URI clusterUri, URI roleUri )
             {
-                if ( ClusterConfiguration.COORDINATOR.equals( role ) )
+                if ( OnlineBackupKernelExtension.BACKUP.equals( role ) )
                 {
-                    addresses.held = masterURIs;
+                    backupUris.put( clusterUri, roleUri );
+                }
+                else if ( HighAvailabilityModeSwitcher.MASTER.equals( role ) )
+                {
+                    master = clusterUri;
+                }
+
+                if ( master != null && backupUris.containsKey( master ) )
+                {
+                    backupUri.set( backupUris.get( master ) );
                     infoReceivedLatch.release();
                 }
             }
@@ -126,7 +132,7 @@ public final class HaBackupProvider extends BackupExtensionService
         {
             if ( !infoReceivedLatch.tryAcquire( 10, TimeUnit.SECONDS ) )
             {
-                throw new RuntimeException( "Could not find master in cluster " + clusterName + " at " + from + ", " +
+                throw new RuntimeException( "Could not find backup server in cluster " + clusterName + " at " + from + ", " +
                         "operation timed out" );
             }
         }
@@ -139,20 +145,6 @@ public final class HaBackupProvider extends BackupExtensionService
             life.shutdown();
         }
 
-        String backupAddress = null;
-        for ( URI uri : addresses.held )
-        {
-            if ( "backup".equals( uri.getScheme() ) )
-            {
-                backupAddress = uri.toString();
-                break;
-            }
-        }
-        return backupAddress;
-    }
-
-    private static final class ClusterInfoHolder
-    {
-        public Iterable<URI> held;
+        return backupUri.get().toString();
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.commands.expressions
 import org.neo4j.cypher.internal.symbols._
 import org.neo4j.cypher.internal.helpers.CollectionSupport
-import org.neo4j.cypher.internal.pipes.ExecutionContext
+import org.neo4j.cypher.internal.ExecutionContext
 
 case class ReduceFunction(collection: Expression, id: String, expression: Expression, acc:String, init:Expression )
   extends NullInNullOutExpression(collection) with CollectionSupport {
@@ -34,12 +34,10 @@ case class ReduceFunction(collection: Expression, id: String, expression: Expres
     computedMap(acc)
   }
                     
-  def rewrite(f: (Expression) => Expression) = f(ReduceFunction(collection.rewrite(f), id, expression.rewrite(f), acc, init.rewrite(f)))
+  def rewrite(f: (Expression) => Expression) =
+    f(ReduceFunction(collection.rewrite(f), id, expression.rewrite(f), acc, init.rewrite(f)))
 
-  def filter(f: (Expression) => Boolean) = if (f(this))
-    Seq(this) ++ collection.filter(f)
-  else
-    collection.filter(f)
+  def children = Seq(collection, expression, init)
 
   def identifierDependencies(expectedType: CypherType) = AnyType
 

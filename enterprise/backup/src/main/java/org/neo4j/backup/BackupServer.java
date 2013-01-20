@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,23 +29,24 @@ import org.neo4j.com.RequestContext;
 import org.neo4j.com.RequestType;
 import org.neo4j.com.Server;
 import org.neo4j.com.TxChecksumVerifier;
-import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.logging.Logging;
 
 class BackupServer extends Server<TheBackupInterface, Object>
 {
     static final byte PROTOCOL_VERSION = 1;
     private final BackupRequestType[] contexts = BackupRequestType.values();
     static int DEFAULT_PORT = DEFAULT_BACKUP_PORT;
-    static final int FRAME_LENGTH = Protocol.MEGA*4;
+    static final int FRAME_LENGTH = Protocol.MEGA * 4;
 
-    public BackupServer( TheBackupInterface requestTarget, final int port, StringLogger logger ) throws IOException
+    public BackupServer( TheBackupInterface requestTarget, final HostnamePort server , Logging logging ) throws IOException
     {
         super( requestTarget, new Configuration()
         {
             @Override
             public long getOldChannelThreshold()
             {
-                return Client.DEFAULT_READ_RESPONSE_TIMEOUT_SECONDS*1000;
+                return Client.DEFAULT_READ_RESPONSE_TIMEOUT_SECONDS * 1000;
             }
 
             @Override
@@ -55,29 +56,23 @@ class BackupServer extends Server<TheBackupInterface, Object>
             }
 
             @Override
-            public int getPort()
-            {
-                return port;
-            }
-
-            @Override
             public int getChunkSize()
             {
                 return FRAME_LENGTH;
             }
 
             @Override
-            public String getServerAddress()
+            public HostnamePort getServerAddress()
             {
-                return null;
+                return server;
             }
-        }, logger, FRAME_LENGTH, PROTOCOL_VERSION,
+        }, logging, FRAME_LENGTH, PROTOCOL_VERSION,
                 TxChecksumVerifier.ALWAYS_MATCH );
     }
 
     @Override
     protected void responseWritten( RequestType<TheBackupInterface> type, Channel channel,
-            RequestContext context )
+                                    RequestContext context )
     {
     }
 

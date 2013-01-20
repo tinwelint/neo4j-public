@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -263,5 +263,5 @@ public interface TraversalDescription
      * @return a {@link Traverser} used to step through the graph and to get
      * results from.
      */
-    Traverser traverse( Node... startNode );
+    Traverser traverse( Node... startNodes );
 }

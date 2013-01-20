@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,13 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.UTF8;
@@ -73,7 +75,7 @@ public abstract class AbstractStore extends CommonAbstractStore
         }
     }
 
-    public AbstractStore( String fileName, Config conf, IdType idType,
+    public AbstractStore( File fileName, Config conf, IdType idType,
                           IdGeneratorFactory idGeneratorFactory, WindowPoolFactory windowPoolFactory,
                           FileSystemAbstraction fileSystemAbstraction, StringLogger stringLogger )
     {
@@ -166,15 +168,15 @@ public abstract class AbstractStore extends CommonAbstractStore
             throw new ReadOnlyDbException();
         }
 
-        logger.fine( "Rebuilding id generator for[" + getStorageFileName()
+        stringLogger.debug( "Rebuilding id generator for[" + getStorageFileName()
             + "] ..." );
         closeIdGenerator();
-        if ( fileSystemAbstraction.fileExists( getStorageFileName() + ".id" ) )
+        if ( fileSystemAbstraction.fileExists( new File( getStorageFileName().getPath() + ".id" ) ))
         {
-            boolean success = fileSystemAbstraction.deleteFile( getStorageFileName() + ".id" );
+            boolean success = fileSystemAbstraction.deleteFile( new File( getStorageFileName().getPath() + ".id" ));
             assert success;
         }
-        createIdGenerator( getStorageFileName() + ".id" );
+        createIdGenerator( new File( getStorageFileName().getPath() + ".id" ));
         openIdGenerator( false );
         FileChannel fileChannel = getFileChannel();
         long highId = 1;
@@ -226,7 +228,7 @@ public abstract class AbstractStore extends CommonAbstractStore
         setHighId( highId + 1 );
         stringLogger.logMessage( getStorageFileName() + " rebuild id generator, highId=" + getHighId() +
                 " defragged count=" + defraggedCount, true );
-        logger.fine( "[" + getStorageFileName() + "] high id=" + getHighId()
+        stringLogger.debug( "[" + getStorageFileName() + "] high id=" + getHighId()
             + " (defragged=" + defraggedCount + ")" );
         closeIdGenerator();
         openIdGenerator( false );

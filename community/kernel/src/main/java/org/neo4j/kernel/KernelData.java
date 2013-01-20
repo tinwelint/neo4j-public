@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,22 @@
  */
 package org.neo4j.kernel;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 
 public abstract class KernelData
 {
-    public static final GraphDatabaseSetting<String> forced_id = GraphDatabaseSettings.forced_kernel_id;
-    private static final Map<String, KernelData> instances = new HashMap<String, KernelData>();
+    public static final Setting<String> forced_id = GraphDatabaseSettings.forced_kernel_id;
+    private static final Map<String, KernelData> instances = new ConcurrentHashMap<String, KernelData>();
 
     private static synchronized String newInstance( KernelData instance )
     {
         String instanceId = instance.configuration.get( forced_id );
-        if ( instanceId == null )
-        {
-            instanceId = "";
-        }
-        instanceId = instanceId.trim();
-        if ( instanceId.equals( "" ) )
+        if ( instanceId == null || instanceId.equals( "" ) )
         {
             for ( int i = 0; i < instances.size() + 1; i++ )
             {
@@ -61,7 +56,8 @@ public abstract class KernelData
 
     private static synchronized void removeInstance( String instanceId )
     {
-        instances.remove( instanceId );
+        if (instances.remove( instanceId ) == null)
+            throw new IllegalArgumentException( "No kernel found with instance id "+instanceId );
     }
 
     private final String instanceId;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.graphdb.mockfs;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 
@@ -27,7 +28,6 @@ import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 
 public class LimitedFilesystemAbstraction implements FileSystemAbstraction
 {
-
     private FileSystemAbstraction inner;
     private boolean outOfSpace;
     private Integer bytesAtATime = null;
@@ -38,58 +38,58 @@ public class LimitedFilesystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public FileChannel open( String fileName, String mode ) throws IOException
+    public FileChannel open( File fileName, String mode ) throws IOException
     {
         return new LimitedFileChannel( inner.open( fileName, mode ), this );
     }
 
     @Override
-    public FileLock tryLock( String fileName, FileChannel channel ) throws IOException
+    public FileLock tryLock( File fileName, FileChannel channel ) throws IOException
     {
         return inner.tryLock( fileName, channel );
     }
 
     @Override
-    public FileChannel create( String fileName ) throws IOException
+    public FileChannel create( File fileName ) throws IOException
     {
         ensureHasSpace();
         return new LimitedFileChannel( inner.create( fileName ), this );
     }
 
     @Override
-    public boolean fileExists( String fileName )
+    public boolean fileExists( File fileName )
     {
         return inner.fileExists( fileName );
     }
 
     @Override
-    public long getFileSize( String fileName )
+    public long getFileSize( File fileName )
     {
         return inner.getFileSize( fileName );
     }
 
     @Override
-    public boolean deleteFile( String fileName )
+    public boolean deleteFile( File fileName )
     {
         return inner.deleteFile( fileName );
     }
 
     @Override
-    public boolean renameFile( String from, String to ) throws IOException
+    public boolean renameFile( File from, File to ) throws IOException
     {
         ensureHasSpace();
         return inner.renameFile( from, to );
     }
 
     @Override
-    public void copyFile( String from, String to ) throws IOException
+    public void copyFile( File from, File to ) throws IOException
     {
         ensureHasSpace();
         inner.copyFile( from, to );
     }
 
     @Override
-    public void autoCreatePath( String path ) throws IOException
+    public void autoCreatePath( File path ) throws IOException
     {
         ensureHasSpace();
         inner.autoCreatePath( path );
@@ -102,7 +102,7 @@ public class LimitedFilesystemAbstraction implements FileSystemAbstraction
 
     public void ensureHasSpace() throws IOException
     {
-        if(outOfSpace)
+        if( outOfSpace )
         {
             throw new IOException( "No space left on device" );
         }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,80 +29,91 @@ import javax.transaction.Synchronization;
 import org.junit.Test;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.impl.util.MultipleCauseException;
+import org.neo4j.kernel.logging.DevNullLoggingService;
+import org.neo4j.kernel.logging.SystemOutLogging;
 
-
-public class TestTransactionImpl {
-
-	@Test
-    public void shouldBeAbleToAccessAllExceptionsOccurringInSynchronizationsBeforeCompletion() throws IllegalStateException, RollbackException
+public class TestTransactionImpl
+{
+    @Test
+    public void shouldBeAbleToAccessAllExceptionsOccurringInSynchronizationsBeforeCompletion()
+            throws IllegalStateException, RollbackException
     {
-		
-		TxManager mockedTxManager = mock(TxManager.class);
-		TransactionImpl tx = new TransactionImpl(mockedTxManager, ForceMode.forced);
-		
-		// Evil synchronizations
-		final RuntimeException firstException = new RuntimeException("Ex1");
-		Synchronization meanSync1 = new Synchronization() {
-			
-			@Override
-			public void beforeCompletion() {
-				throw firstException;
-			}
-			
-			@Override
-			public void afterCompletion(int status) {}
-		};
-		final RuntimeException secondException = new RuntimeException("Ex1");
-		Synchronization meanSync2 = new Synchronization() {
-			
-			@Override
-			public void beforeCompletion() {
-				throw secondException;
-			}
-			
-			@Override
-			public void afterCompletion(int status) {}
-		};
-		
-		tx.registerSynchronization(meanSync1);
-		tx.registerSynchronization(meanSync2);
-		tx.doBeforeCompletion();
-		
-		assertThat(tx.getRollbackCause(), is(MultipleCauseException.class));
-		
-		MultipleCauseException error = (MultipleCauseException)tx.getRollbackCause();
-		assertThat(error.getCause(), is((Throwable)firstException));
-		assertThat(error.getCauses().size(), is(2));
-		assertThat(error.getCauses().get(0), is((Throwable)firstException));
-		assertThat(error.getCauses().get(1), is((Throwable)secondException));
-		
+        TxManager mockedTxManager = mock( TxManager.class );
+        TransactionImpl tx = new TransactionImpl( mockedTxManager, ForceMode.forced, TransactionStateFactory.noStateFactory( new DevNullLoggingService() ), new SystemOutLogging().getLogger( TxManager.class ) );
+
+        // Evil synchronizations
+        final RuntimeException firstException = new RuntimeException( "Ex1" );
+        Synchronization meanSync1 = new Synchronization()
+        {
+
+            @Override
+            public void beforeCompletion()
+            {
+                throw firstException;
+            }
+
+            @Override
+            public void afterCompletion( int status )
+            {
+            }
+        };
+        final RuntimeException secondException = new RuntimeException( "Ex1" );
+        Synchronization meanSync2 = new Synchronization()
+        {
+
+            @Override
+            public void beforeCompletion()
+            {
+                throw secondException;
+            }
+
+            @Override
+            public void afterCompletion( int status )
+            {
+            }
+        };
+
+        tx.registerSynchronization( meanSync1 );
+        tx.registerSynchronization( meanSync2 );
+        tx.doBeforeCompletion();
+
+        assertThat( tx.getRollbackCause(), is( MultipleCauseException.class ) );
+
+        MultipleCauseException error = (MultipleCauseException) tx.getRollbackCause();
+        assertThat( error.getCause(), is( (Throwable) firstException ) );
+        assertThat( error.getCauses().size(), is( 2 ) );
+        assertThat( error.getCauses().get( 0 ), is( (Throwable) firstException ) );
+        assertThat( error.getCauses().get( 1 ), is( (Throwable) secondException ) );
+
     }
 
-	@Test
-    public void shouldNotThrowMultipleCauseIfOnlyOneErrorOccursInBeforeCompletion() throws IllegalStateException, RollbackException
+    @Test
+    public void shouldNotThrowMultipleCauseIfOnlyOneErrorOccursInBeforeCompletion() throws IllegalStateException,
+            RollbackException
     {
-		
-		TxManager mockedTxManager = mock(TxManager.class);
-		TransactionImpl tx = new TransactionImpl(mockedTxManager, ForceMode.forced);
-		
-		// Evil synchronizations
-		final RuntimeException firstException = new RuntimeException("Ex1");
-		Synchronization meanSync1 = new Synchronization() {
-			
-			@Override
-			public void beforeCompletion() {
-				throw firstException;
-			}
-			
-			@Override
-			public void afterCompletion(int status) {}
-		};
-		
-		tx.registerSynchronization(meanSync1);
-		tx.doBeforeCompletion();
-		
-		assertThat(tx.getRollbackCause(), is((Throwable)firstException));
-		
+        TxManager mockedTxManager = mock( TxManager.class );
+        TransactionImpl tx = new TransactionImpl( mockedTxManager, ForceMode.forced, TransactionStateFactory.noStateFactory( new DevNullLoggingService() ), new SystemOutLogging().getLogger( TxManager.class ) );
+
+        // Evil synchronizations
+        final RuntimeException firstException = new RuntimeException( "Ex1" );
+        Synchronization meanSync1 = new Synchronization()
+        {
+
+            @Override
+            public void beforeCompletion()
+            {
+                throw firstException;
+            }
+
+            @Override
+            public void afterCompletion( int status )
+            {
+            }
+        };
+
+        tx.registerSynchronization( meanSync1 );
+        tx.doBeforeCompletion();
+
+        assertThat( tx.getRollbackCause(), is( (Throwable) firstException ) );
     }
-	
 }

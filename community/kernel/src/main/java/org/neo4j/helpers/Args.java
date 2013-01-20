@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -123,6 +123,18 @@ public class Args
         }
         return this.map.containsKey( key ) ? defaultValueIfNoValue : defaultValueIfNotFound;
     }
+    
+    public <T extends Enum<T>> T getEnum( Class<T> enumClass, String key, T defaultValue )
+    {
+        String raw = this.map.get( key );
+        if ( raw == null )
+            return defaultValue;
+        
+        for ( T candidate : enumClass.getEnumConstants() )
+            if ( candidate.name().equals( raw ) )
+                return candidate;
+        throw new IllegalArgumentException( "No enum instance '" + raw + "' in " + enumClass.getName() );
+    }
 
     public Object put( String key, String value )
     {
@@ -137,6 +149,31 @@ public class Args
     public List<String> orphans()
     {
         return new ArrayList<String>( this.orphans );
+    }
+    
+    public String[] asArgs()
+    {
+        List<String> list = new ArrayList<String>();
+        for ( String orphan : orphans )
+        {
+            String quote = orphan.contains( " " ) ? " " : "";
+            list.add( quote + orphan + quote );
+        }
+        for ( Map.Entry<String, String> entry : map.entrySet() )
+        {
+            String quote = entry.getKey().contains( " " ) || entry.getValue().contains( " " ) ? " " : "";
+            list.add( quote + (entry.getKey().length() > 1 ? "--" : "-") + entry.getKey() + "=" + entry.getValue() + quote );
+        }
+        return list.toArray( new String[0] );
+    }
+    
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        for ( String arg : asArgs() )
+            builder.append( builder.length() > 0 ? " " : "" ).append( arg );
+        return builder.toString();
     }
 
     private static boolean isOption( String arg )

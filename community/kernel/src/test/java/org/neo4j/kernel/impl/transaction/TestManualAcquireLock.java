@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.fail;
 
 import org.junit.After;
@@ -129,7 +130,7 @@ public class TestManualAcquireLock extends AbstractNeo4jTestCase
     {
         public Worker()
         {
-            super( new State( getGraphDb() ) );
+            super( "other thread", new State( getGraphDb() ) );
         }
         
         void beginTx() throws Exception
@@ -169,7 +170,7 @@ public class TestManualAcquireLock extends AbstractNeo4jTestCase
                     node.setProperty( key, value );
                     return null;
                 }
-            }, 200 );
+            }, 200, MILLISECONDS );
         }
     }
 }

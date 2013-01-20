@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,22 +21,25 @@ package org.neo4j.cypher.internal.mutation
 
 import org.neo4j.cypher.CypherTypeException
 import org.neo4j.cypher.internal.symbols._
-import org.neo4j.graphdb.{RelationshipType => KernelRelType, _}
-import org.neo4j.cypher.internal.pipes.{QueryState, ExecutionContext}
+import org.neo4j.cypher.internal.pipes.{QueryState}
 
 import java.util.{Map => JavaMap}
 import scala.collection.JavaConverters._
 import collection.Map
-import org.neo4j.cypher.internal.commands._
-import expressions.Expression
 import org.neo4j.cypher.internal.helpers.CollectionSupport
+import org.neo4j.cypher.internal.commands.expressions.Expression
+import org.neo4j.graphdb.{Node, Relationship, PropertyContainer}
+import org.neo4j.cypher.internal.commands.AstNode
+import org.neo4j.cypher.internal.ExecutionContext
 
-trait UpdateAction extends TypeSafe {
+trait UpdateAction extends TypeSafe with AstNode[UpdateAction] {
   def exec(context: ExecutionContext, state: QueryState): Traversable[ExecutionContext]
-  def assertTypes(symbols:SymbolTable)
-  def identifiers:Seq[(String,CypherType)]
-  def rewrite(f: Expression => Expression):UpdateAction
-  def filter(f: Expression => Boolean): Seq[Expression]
+
+  def throwIfSymbolsMissing(symbols: SymbolTable)
+
+  def identifiers: Seq[(String, CypherType)]
+
+  def rewrite(f: Expression => Expression): UpdateAction
 }
 
 trait GraphElementPropertyFunctions extends CollectionSupport {
@@ -47,33 +50,54 @@ trait GraphElementPropertyFunctions extends CollectionSupport {
     }
   }
 
-  def checkTypes(props: Map[String, Expression], symbols:SymbolTable) {
-    props.values.foreach(_.checkTypes(symbols))
+  def throwIfSymbolsMissing(props: Map[String, Expression], symbols: SymbolTable) {
+    props.values.foreach(_.throwIfSymbolsMissing(symbols))
   }
 
-  def symbolTableDependencies(props: Map[String, Expression]):Set[String] = props.values.flatMap(_.symbolTableDependencies).toSet
+  def symbolTableDependencies(props: Map[String, Expression]): Set[String] = props.values.flatMap(_.symbolTableDependencies).toSet
 
-  def rewrite(props: Map[String, Expression], f: (Expression) => Expression): Map[String, Expression] = props.map{ case (k,v) => k->v.rewrite(f) }
-
-  def getMapFromExpression(v: Any): Map[String, Any] = v match {
-    case m: collection.Map[String, Any] => m.toMap
-    case m: JavaMap[String, Any] => m.asScala.toMap
-    case x => throw new CypherTypeException("Don't know how to extract parameters from this type: " + x.getClass.getName)
+  def rewrite(props: Map[String, Expression], f: (Expression) => Expression): Map[String, Expression] = props.map {
+    case (k, v) => k -> v.rewrite(f)
   }
+
+  def getMapFromExpression(v: Any): Map[String, Any] = {
+    if (v.isInstanceOf[collection.Map[_, _]])
+      v.asInstanceOf[collection.Map[String, Any]].toMap
+    else if (v.isInstanceOf[JavaMap[_, _]])
+      v.asInstanceOf[JavaMap[String, Any]].asScala.toMap
+    else
+      throw new CypherTypeException(s"Don't know how to extract parameters from this type: ${v.getClass.getName}")
+  }
+
 
   private def setAllMapKeyValues(expression: Expression, context: ExecutionContext, pc: PropertyContainer, state: QueryState) {
     val map = getMapFromExpression(expression(context))
-    map.foreach {
-      case (key, value) => {
-        pc.setProperty(key, value)
-        state.propertySet.increase()
+
+    pc match {
+      case n: Node => map.foreach {
+        case (key, value) =>
+          state.query.nodeOps().setProperty(n, key, value)
+          state.propertySet.increase()
+      }
+
+      case r: Relationship => map.foreach {
+        case (key, value) =>
+          state.query.relationshipOps().setProperty(r, key, value)
+          state.propertySet.increase()
       }
     }
   }
 
   private def setSingleValue(expression: Expression, context: ExecutionContext, pc: PropertyContainer, key: String, state: QueryState) {
     val value = makeValueNeoSafe(expression(context))
-    pc.setProperty(key, value)
+    pc match {
+      case n: Node =>
+        state.query.nodeOps().setProperty(n, key, value)
+
+      case r: Relationship =>
+        state.query.relationshipOps().setProperty(r, key, value)
+    }
+
     state.propertySet.increase()
   }
 
@@ -90,16 +114,16 @@ trait GraphElementPropertyFunctions extends CollectionSupport {
       Array[String]()
     } else try {
       seq.head match {
-        case c: String => seq.map(_.asInstanceOf[String]).toArray[String]
+        case c: String  => seq.map(_.asInstanceOf[String]).toArray[String]
         case b: Boolean => seq.map(_.asInstanceOf[Boolean]).toArray[Boolean]
-        case b: Byte => seq.map(_.asInstanceOf[Byte]).toArray[Byte]
-        case s: Short => seq.map(_.asInstanceOf[Short]).toArray[Short]
-        case i: Int => seq.map(_.asInstanceOf[Int]).toArray[Int]
-        case l: Long => seq.map(_.asInstanceOf[Long]).toArray[Long]
-        case f: Float => seq.map(_.asInstanceOf[Float]).toArray[Float]
-        case d: Double => seq.map(_.asInstanceOf[Double]).toArray[Double]
-        case c: Char => seq.map(_.asInstanceOf[Char]).toArray[Char]
-        case _ => throw new CypherTypeException("Tried to set a property to a collection of mixed types. " + a.toString)
+        case b: Byte    => seq.map(_.asInstanceOf[Byte]).toArray[Byte]
+        case s: Short   => seq.map(_.asInstanceOf[Short]).toArray[Short]
+        case i: Int     => seq.map(_.asInstanceOf[Int]).toArray[Int]
+        case l: Long    => seq.map(_.asInstanceOf[Long]).toArray[Long]
+        case f: Float   => seq.map(_.asInstanceOf[Float]).toArray[Float]
+        case d: Double  => seq.map(_.asInstanceOf[Double]).toArray[Double]
+        case c: Char    => seq.map(_.asInstanceOf[Char]).toArray[Char]
+        case _          => throw new CypherTypeException("Tried to set a property to a collection of mixed types. " + a.toString)
       }
     } catch {
       case e: ClassCastException => throw new CypherTypeException("Collections containing mixed types can not be stored in properties.", e)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,8 +35,7 @@ class StoreProcessorTask<R extends AbstractBaseRecord> implements Runnable
                         StoreProcessor... multiPassProcessors )
     {
         this.store = store;
-        String storeFileName = store.getStorageFileName().substring(
-                store.getStorageFileName().lastIndexOf( '/' ) + 1 );
+        String storeFileName = store.getStorageFileName().getName();
 
         if ( order == TaskExecutionOrder.MULTI_PASS )
         {

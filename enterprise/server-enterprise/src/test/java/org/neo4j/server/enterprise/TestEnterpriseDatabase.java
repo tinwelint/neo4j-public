@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,22 +28,24 @@ import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.server.configuration.MapBasedConfiguration;
 
 
-public class TestEnterpriseDatabase {
+public class TestEnterpriseDatabase
+{
 
-	@Test
-	public void shouldStartInSingleModeByDefault() throws Throwable
-	{
-		Configuration config = new MapBasedConfiguration();
-		EnterpriseDatabase db = new EnterpriseDatabase(config);
-		
-		try 
-		{
-			db.start();
-			
-			assertThat(db.getGraph(), is(EmbeddedGraphDatabase.class));
-		} finally {
-			db.stop();
-		}
-	}
-	
+    @Test
+    public void shouldStartInSingleModeByDefault() throws Throwable
+    {
+        Configuration config = new MapBasedConfiguration();
+        EnterpriseDatabase db = new EnterpriseDatabase( config );
+
+        try
+        {
+            db.start();
+
+            assertThat( db.getGraph(), is( EmbeddedGraphDatabase.class ) );
+        }
+        finally
+        {
+            db.stop();
+        }
+    }
 }

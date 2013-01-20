@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,14 +20,15 @@
 package org.neo4j.cypher
 
 import internal.helpers.CollectionSupport
+import internal.pipes.QueryState
 import internal.StringExtras
 import internal.commands.expressions.StringHelper
 import scala.collection.JavaConverters._
 import java.io.{StringWriter, PrintWriter}
-import collection.Map
 import collection.immutable.{Map => ImmutableMap}
+import collection.Map
 
-class PipeExecutionResult(result: Iterator[Map[String, Any]], val columns: List[String])
+class PipeExecutionResult(result: Iterator[Map[String, Any]], val columns: List[String], state:QueryState)
   extends ExecutionResult
   with StringExtras
   with CollectionSupport
@@ -45,7 +46,7 @@ class PipeExecutionResult(result: Iterator[Map[String, Any]], val columns: List[
   }
 
   private def makeValueJavaCompatible(value: Any): Any = value match {
-    case iter: Seq[_] => iter.asJava
+    case iter: Seq[_] => iter.map(makeValueJavaCompatible).asJava
     case x => x
   }
 
@@ -58,7 +59,7 @@ class PipeExecutionResult(result: Iterator[Map[String, Any]], val columns: List[
 
     result.foreach((m) => {
       m.foreach((kv) => {
-        val length = text(kv._2).size
+        val length = text(kv._2, state.query).size
         if (!columnSizes.contains(kv._1) || columnSizes.get(kv._1).get < length) {
           columnSizes.put(kv._1, length)
         }
@@ -129,7 +130,7 @@ class PipeExecutionResult(result: Iterator[Map[String, Any]], val columns: List[
   private def createString(columns: List[String], columnSizes: Map[String, Int], m: Map[String, Any]): String = {
     columns.map(c => {
       val length = columnSizes.get(c).get
-      val txt = text(m.get(c).get)
+      val txt = text(m.get(c).get, state.query)
       val value = makeSize(txt, length)
       value
     }).mkString("| ", " | ", " |")

@@ -1,5 +1,5 @@
 @echo off
-rem Copyright (c) 2002-2012 "Neo Technology,"
+rem Copyright (c) 2002-2013 "Neo Technology,"
 rem Network Engine for Objects in Lund AB [http://neotechnology.com]
 rem
 rem This file is part of Neo4j.
@@ -17,4 +17,11 @@ rem
 rem You should have received a copy of the GNU General Public License
 rem along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-echo "The Coordinator functionality and corresponding scripts are no longer required for Neo4j HA operations since version 1.9"
+set serviceName="Neo4jCoordinator"
+set serviceDisplayName="Neo4j-HA-Coordinator"
+set serviceStartType=auto
+set classpath="-DserverClasspath=lib/*.jar;system/lib/*.jar"
+set mainclass="-DserverMainClass=org.neo4j.server.enterprise.StandaloneClusterClient"
+set configFile="conf\coord-wrapper.conf"
+
+call "%~dp0\base.bat" %1 %2 %3 %4 %5

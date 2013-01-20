@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,12 +17,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.server.enterprise;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
@@ -31,13 +29,11 @@ import javax.ws.rs.core.MediaType;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.Settings;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.server.ha.ServerCluster;
@@ -58,18 +54,6 @@ public class HaServerFunctionalTest
         }
     };
 
-    @BeforeClass
-    public static void startZooKeeper()
-    {
-        if ( GraphDatabaseSetting.osIsWindows() ) return;
-    }
-
-    @AfterClass
-    public static void stopZooKeeper() throws IOException
-    {
-        dir.cleanup();
-    }
-
     private ServerCluster cluster;
 
     @After
@@ -82,14 +66,14 @@ public class HaServerFunctionalTest
     @Test
     public void canStartUpServerCluster() throws Exception
     {
-        if ( GraphDatabaseSetting.osIsWindows() ) return;
+        if ( Settings.osIsWindows() ) return;
         cluster = new ServerCluster( testName.getMethodName(), dir, SERVER_PORTS );
     }
 
     @Test
     public void canWriteToOneServerInTheClusterAndReadFromAnother() throws Exception
     {
-        if ( GraphDatabaseSetting.osIsWindows() ) return;
+        if ( Settings.osIsWindows() ) return;
         cluster = new ServerCluster( testName.getMethodName(), dir, SERVER_PORTS );
         URI base = cluster.getRandomServerUri();
 
@@ -102,7 +86,7 @@ public class HaServerFunctionalTest
     @Test
     public void canWriteToOneServerInTheClusterThenReadFromAnotherAfterShuttingDownTheWriteServer() throws Exception
     {
-        if ( GraphDatabaseSetting.osIsWindows() ) return;
+        if ( Settings.osIsWindows() ) return;
         cluster = new ServerCluster( testName.getMethodName(), dir, SERVER_PORTS );
         URI base = cluster.getRandomServerUri();
 

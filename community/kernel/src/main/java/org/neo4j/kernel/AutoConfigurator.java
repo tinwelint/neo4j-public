@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,11 +31,11 @@ public class AutoConfigurator
 {
     private final int totalPhysicalMemMb;
     private final int maxVmUsageMb;
-    private final String dbPath;
+    private final File dbPath;
     private final boolean useMemoryMapped;
     private final FileSystemAbstraction fs;
 
-    public AutoConfigurator( FileSystemAbstraction fs, String dbPath, boolean useMemoryMapped, boolean dump )
+    public AutoConfigurator( FileSystemAbstraction fs, File dbPath, boolean useMemoryMapped, boolean dump )
     {
         this.fs = fs;
         this.dbPath = dbPath;
@@ -174,7 +174,7 @@ public class AutoConfigurator
 
     private int getFileSizeMb( String file )
     {
-        long length = fs.getFileSize( dbPath + File.separator + "neostore." + file );
+        long length = fs.getFileSize( new File(dbPath, "neostore." + file ));
         int mb = (int) ( length / 1024 / 1024 );
         if ( mb > 0 )
         {

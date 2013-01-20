@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,8 @@ package org.neo4j.kernel.impl.transaction.xaframework;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.test.TargetDirectory.forTest;
+
+import java.io.File;
 
 import org.junit.Test;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -45,10 +47,10 @@ public class TestStandaloneLogExtractor
     
     private void run( boolean cleanShutdown, int nr ) throws Exception
     {
-        String sourceDir = forTest( getClass() ).directory( "source" + nr, true ).getAbsolutePath();
+        File sourceDir = forTest( getClass() ).directory( "source" + nr, true );
         Process process = Runtime.getRuntime().exec( new String[]{
             "java", "-cp", System.getProperty( "java.class.path" ), CreateSomeTransactions.class.getName(),
-            sourceDir, "" + cleanShutdown
+            sourceDir.getPath(), "" + cleanShutdown
         } );
 
         new ProcessStreamHandler( process, true ).waitForResult();

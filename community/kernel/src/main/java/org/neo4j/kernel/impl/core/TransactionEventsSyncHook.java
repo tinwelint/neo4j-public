@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,15 +25,14 @@ import java.util.List;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
-import javax.transaction.TransactionManager;
 
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.TransactionEventHandlers;
+import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 
 public class TransactionEventsSyncHook implements Synchronization
 {
     private final TransactionEventHandlers handlers;
-    private final NodeManager nodeManager;
 
     /**
      * This is null at construction time, then populated in beforeCompletion and
@@ -41,21 +40,18 @@ public class TransactionEventsSyncHook implements Synchronization
      */
     private List<TransactionEventHandlers.HandlerAndState> states;
     private TransactionData transactionData;
-    private final TransactionManager tm;
+    private final AbstractTransactionManager tm;
 
-    public TransactionEventsSyncHook(
-            NodeManager nodeManager,
-            TransactionEventHandlers transactionEventHandlers,
-            TransactionManager tm )
+    public TransactionEventsSyncHook( TransactionEventHandlers transactionEventHandlers, AbstractTransactionManager tm )
     {
-        this.nodeManager = nodeManager;
         this.handlers = transactionEventHandlers;
         this.tm = tm;
     }
 
     public void beforeCompletion()
     {
-        this.transactionData = nodeManager.getTransactionData();
+        this.transactionData = tm.getTransactionState().getTransactionData();
+        
         try
         {
             if ( tm.getStatus() != Status.STATUS_ACTIVE ) 
@@ -76,5 +72,4 @@ public class TransactionEventsSyncHook implements Synchronization
     {
         handlers.afterCompletion(transactionData, status, states);
     }
-
 }

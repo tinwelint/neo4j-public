@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -101,10 +101,10 @@ public enum Evaluation
      * traversal. The returned evaluation will always return true for
      * {@link Evaluation#includes()}.
      * 
-     * @param includes whether or not to continue further down a
-     * {@link TraversalBranch} in the traversal.
+     * @param continues whether or not to continue further down a
+     *            {@link TraversalBranch} in the traversal.
      * @return an {@link Evaluation} representing whether or not to continue
-     * further down a {@link TraversalBranch} in the traversal.
+     *         further down a {@link TraversalBranch} in the traversal.
      */
     public static Evaluation ofContinues( boolean continues )
     {

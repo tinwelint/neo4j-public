@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,14 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel.impl.transaction.xaframework;
+
+import java.io.File;
 
 import org.neo4j.kernel.TransactionInterceptorProviders;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
-import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.impl.transaction.TransactionStateFactory;
+import org.neo4j.kernel.logging.Logging;
 
 /**
 * TODO
@@ -32,30 +34,30 @@ import org.neo4j.kernel.impl.util.StringLogger;
 public class XaFactory
 {
     private final Config config;
-    private TxIdGenerator txIdGenerator;
-    private AbstractTransactionManager txManager;
-    private LogBufferFactory logBufferFactory;
-    private FileSystemAbstraction fileSystemAbstraction;
-    private StringLogger stringLogger;
+    private final TxIdGenerator txIdGenerator;
+    private final AbstractTransactionManager txManager;
+    private final LogBufferFactory logBufferFactory;
+    private final FileSystemAbstraction fileSystemAbstraction;
+    private final Logging logging;
     private final RecoveryVerifier recoveryVerifier;
     private final LogPruneStrategy pruneStrategy;
 
-    public XaFactory(Config config, TxIdGenerator txIdGenerator, AbstractTransactionManager txManager,
+    public XaFactory( Config config, TxIdGenerator txIdGenerator, AbstractTransactionManager txManager,
             LogBufferFactory logBufferFactory, FileSystemAbstraction fileSystemAbstraction,
-            StringLogger stringLogger, RecoveryVerifier recoveryVerifier, LogPruneStrategy pruneStrategy )
+            Logging logging, RecoveryVerifier recoveryVerifier, LogPruneStrategy pruneStrategy )
     {
         this.config = config;
         this.txIdGenerator = txIdGenerator;
         this.txManager = txManager;
         this.logBufferFactory = logBufferFactory;
         this.fileSystemAbstraction = fileSystemAbstraction;
-        this.stringLogger = stringLogger;
+        this.logging = logging;
         this.recoveryVerifier = recoveryVerifier;
         this.pruneStrategy = pruneStrategy;
     }
 
-    public XaContainer newXaContainer(XaDataSource xaDataSource, String logicalLog, XaCommandFactory cf, XaTransactionFactory tf,
-                                      TransactionInterceptorProviders providers )
+    public XaContainer newXaContainer( XaDataSource xaDataSource, File logicalLog, XaCommandFactory cf,
+            XaTransactionFactory tf, TransactionStateFactory stateFactory, TransactionInterceptorProviders providers )
     {
         if ( logicalLog == null || cf == null || tf == null )
         {
@@ -65,17 +67,17 @@ public class XaFactory
         }
 
         // TODO The dependencies between XaRM, LogicalLog and XaTF should be resolved to avoid the setter
-        XaResourceManager rm = new XaResourceManager( xaDataSource, tf, txIdGenerator, txManager, recoveryVerifier, logicalLog );
+        XaResourceManager rm = new XaResourceManager( xaDataSource, tf, txIdGenerator, txManager, recoveryVerifier, logicalLog.getName() );
 
         XaLogicalLog log;
         if ( providers.shouldInterceptDeserialized() && providers.hasAnyInterceptorConfigured() )
         {
             log = new InterceptingXaLogicalLog( logicalLog, rm, cf, tf, providers, logBufferFactory,
-                    fileSystemAbstraction, stringLogger, pruneStrategy );
+                    fileSystemAbstraction, logging, pruneStrategy, stateFactory );
         }
         else
         {
-            log = new XaLogicalLog( logicalLog, rm, cf, tf, logBufferFactory, fileSystemAbstraction, stringLogger, pruneStrategy );
+            log = new XaLogicalLog( logicalLog, rm, cf, tf, logBufferFactory, fileSystemAbstraction, logging, pruneStrategy, stateFactory );
         }
 
         // TODO These setters should be removed somehow

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.kernel;
 
 import javax.transaction.TransactionManager;
@@ -26,7 +25,6 @@ import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
-import org.neo4j.kernel.impl.core.LockReleaser;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.RelationshipTypeHolder;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
@@ -39,10 +37,10 @@ import org.neo4j.kernel.info.DiagnosticsManager;
 
 /**
  * This API can be used to get access to services.
- * <p/>
- * TODO: The methods exposing internal services directly should go away. It indicates lack of abstractions somewhere.
- * DO NOT ADD MORE USAGE OF THESE!
  */
+// TODO: The methods exposing internal services directly should go away. It
+// indicates lack of abstractions somewhere.
+// DO NOT ADD MORE USAGE OF THESE!
 public interface GraphDatabaseAPI
         extends GraphDatabaseService
 {
@@ -50,9 +48,6 @@ public interface GraphDatabaseAPI
 
     @Deprecated
     NodeManager getNodeManager();
-
-    @Deprecated
-    LockReleaser getLockReleaser();
 
     @Deprecated
     LockManager getLockManager();
@@ -65,7 +60,7 @@ public interface GraphDatabaseAPI
 
     @Deprecated
     DiagnosticsManager getDiagnosticsManager();
-
+    
     @Deprecated
     StringLogger getMessageLog();
 

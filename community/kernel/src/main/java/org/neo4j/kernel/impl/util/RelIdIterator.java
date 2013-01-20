@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,15 @@
  */
 package org.neo4j.kernel.impl.util;
 
+import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
+
 public interface RelIdIterator
 {
-    String getType();
+    int getType();
 
     RelIdArray getIds();
 
-    RelIdIterator updateSource( RelIdArray newSource );
+    RelIdIterator updateSource( RelIdArray newSource, DirectionWrapper direction );
 
     boolean hasNext();
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -57,10 +57,10 @@ public class StoreRecoverer {
 		params.put(GraphDatabaseSettings.store_dir.name(), dataDir.getAbsolutePath());
 		Config config = new Config(params, GraphDatabaseSettings.class);
 		
-		String baseLogPath = config.get(GraphDatabaseSettings.logical_log);
+        File baseLogPath = config.get(GraphDatabaseSettings.logical_log);
 		XaLogicalLogFiles logFiles = new XaLogicalLogFiles(baseLogPath, fs);
 		
-		String log;
+        File log;
 		switch(logFiles.determineState()) 
         {
 	    case CLEAN:

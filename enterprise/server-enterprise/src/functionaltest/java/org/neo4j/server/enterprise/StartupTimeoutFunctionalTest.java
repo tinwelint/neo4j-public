@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.server.enterprise;
 
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -28,10 +30,8 @@ import java.util.Properties;
 import org.junit.After;
 import org.junit.Test;
 import org.neo4j.kernel.ha.HaSettings;
-import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.server.ServerStartupException;
-import org.neo4j.server.TestStartupTimeout;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.modules.ServerModule;
@@ -145,8 +145,7 @@ public class StartupTimeoutFunctionalTest {
 	
 	private Configurator buildProperties() throws IOException
     {
-        target.cleanup();
-        target.directory( "conf" )
+        target.directory( "conf" );
 
         Properties databaseProperties = new Properties();
         String databasePropertiesFileName = target.file( "conf/neo4j.properties" ).getAbsolutePath();
@@ -155,7 +154,8 @@ public class StartupTimeoutFunctionalTest {
 
         Properties serverProperties = new Properties();
         String serverPropertiesFilename = target.file( "conf/neo4j-server.properties" ).getAbsolutePath();
-        serverProperties.setProperty( Configurator.DATABASE_LOCATION_PROPERTY_KEY, target.directory( "data/graph.db" ) );
+        serverProperties.setProperty( Configurator.DATABASE_LOCATION_PROPERTY_KEY,
+                target.directory( "data/graph.db", true ).getAbsolutePath() );
         serverProperties.setProperty( Configurator.DB_TUNING_PROPERTY_FILE_KEY, databasePropertiesFileName );
         serverProperties.setProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY, serverPropertiesFilename );
         serverProperties.store( new FileWriter(serverPropertiesFilename), null);

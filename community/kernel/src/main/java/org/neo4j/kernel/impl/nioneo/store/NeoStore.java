@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
@@ -48,7 +48,7 @@ public class NeoStore extends AbstractStore
     public static abstract class Configuration
         extends AbstractStore.Configuration
     {
-        public static final GraphDatabaseSetting.IntegerSetting relationship_grab_size = GraphDatabaseSettings.relationship_grab_size;
+        public static final Setting<Integer> relationship_grab_size = GraphDatabaseSettings.relationship_grab_size;
     }
 
     public static final String TYPE_DESCRIPTOR = "NeoStore";
@@ -62,9 +62,8 @@ public class NeoStore extends AbstractStore
 
     public static boolean isStorePresent( FileSystemAbstraction fs, Config config )
     {
-        String store = config.get( Configuration.neo_store );
-        File neoStore = new File( store );
-        return fs.fileExists( neoStore.getAbsolutePath() );
+        File neoStore = config.get( Configuration.neo_store );
+        return fs.fileExists( neoStore );
     }
 
     private NodeStore nodeStore;
@@ -76,10 +75,10 @@ public class NeoStore extends AbstractStore
     private long lastCommittedTx = -1;
 
     private final int REL_GRAB_SIZE;
-    private final String fileName;
+    private final File fileName;
     private final Config conf;
 
-    public NeoStore(String fileName, Config conf,
+    public NeoStore(File fileName, Config conf,
                     IdGeneratorFactory idGeneratorFactory, WindowPoolFactory windowPoolFactory,
                     FileSystemAbstraction fileSystemAbstraction,
                     StringLogger stringLogger, TxHook txHook,
@@ -316,17 +315,17 @@ public class NeoStore extends AbstractStore
         }
     }
 
-    public static long getStoreVersion( FileSystemAbstraction fs, String storeDir )
+    public static long getStoreVersion( FileSystemAbstraction fs, File storeDir )
     {
         return getRecord( fs, storeDir, 4 );
     }
 
-    public static long getTxId( FileSystemAbstraction fs, String storeDir )
+    public static long getTxId( FileSystemAbstraction fs, File storeDir )
     {
         return getRecord( fs, storeDir, 3 );
     }
 
-    private static long getRecord( FileSystemAbstraction fs, String storeDir, long recordPosition )
+    private static long getRecord( FileSystemAbstraction fs, File storeDir, long recordPosition )
     {
         FileChannel channel = null;
         try

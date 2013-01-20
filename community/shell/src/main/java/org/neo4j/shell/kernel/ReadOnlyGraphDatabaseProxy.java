@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -61,10 +61,10 @@ import org.neo4j.kernel.PlaceboTransaction;
 import org.neo4j.kernel.TransactionBuilder;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
-import org.neo4j.kernel.impl.core.LockReleaser;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.ReadOnlyDbException;
 import org.neo4j.kernel.impl.core.RelationshipTypeHolder;
+import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
 import org.neo4j.kernel.impl.persistence.PersistenceSource;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
@@ -197,7 +197,6 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
             throw new ReadOnlyDbException();
         }
 
-        @Override
         public int getEventIdentifier()
         {
             return 0;
@@ -206,6 +205,12 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         @Override
         public void doRecovery() throws Throwable
         {
+        }
+
+        @Override
+        public TransactionState getTransactionState()
+        {
+            return TransactionState.NO_STATE;
         }
     };
 
@@ -883,12 +888,6 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
     public NodeManager getNodeManager()
     {
         return actual.getNodeManager();
-    }
-
-    @Override
-    public LockReleaser getLockReleaser()
-    {
-        return actual.getLockReleaser();
     }
 
     @Override

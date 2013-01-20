@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -39,8 +40,6 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
-
-import scala.actors.threadpool.Arrays;
 
 public class CypherSql
 {
@@ -272,7 +271,7 @@ public class CypherSql
         // get the correct direction for graphdb
         for ( Object[] objects : relationships )
         {
-            Collections.reverse( Arrays.asList( objects ) );
+            Collections.reverse( Arrays.asList(objects) );
         }
         createRelationshipsInGraphdb( entity, matchAttribute, entity,
                 matchAttribute, relationships, relationshipType );
@@ -394,7 +393,6 @@ public class CypherSql
     {
         String sql = "CREATE TABLE " + identifierQuoteString + name
                      + identifierQuoteString + "(" + definition + ")";
-        System.out.println( sql );
         Statement statement = sqldb.createStatement();
         statement.execute( sql );
     }
@@ -563,7 +561,7 @@ public class CypherSql
     String executeCypher( String cypher )
     {
         return engine.execute( cypher )
-                .toString();
+                .dumpToString();
     }
 
     String executeSql( String sql ) throws SQLException

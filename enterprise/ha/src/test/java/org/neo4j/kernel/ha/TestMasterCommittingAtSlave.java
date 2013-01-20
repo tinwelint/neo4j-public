@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.neo4j.kernel.ha.SlavePriorities.givenOrder;
 import static org.neo4j.kernel.ha.SlavePriorities.roundRobin;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -252,12 +253,12 @@ public class TestMasterCommittingAtSlave
         private static final byte[] BRANCH = new byte[]{0, 1, 2};
         private static final String NAME = "fake";
 
-        private final String dir;
+        private final File dir;
 
         FakeDataSource()
         {
             super( BRANCH, NAME );
-            this.dir = TargetDirectory.forTest( getClass() ).graphDbDir( true ).getAbsolutePath();
+            this.dir = TargetDirectory.forTest( getClass() ).graphDbDir( true );
         }
 
         @Override

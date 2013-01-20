@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2012 "Neo Technology,"
+ * Copyright (c) 2002-2013 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.test.server.ha;
 
 import java.io.File;
@@ -38,8 +37,9 @@ import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.Triplet;
 import org.neo4j.jmx.impl.JmxKernelExtension;
 import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.HaSettings;
-import org.neo4j.kernel.ha.cluster.ClusterMemberState;
+import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberState;
 import org.neo4j.management.HighAvailability;
 import org.neo4j.server.Bootstrapper;
 import org.neo4j.server.configuration.Configurator;
@@ -189,8 +189,9 @@ public final class ServerCluster
         // Kernel (and HA) configuration
         config( dbConfig, //
                 Pair.of( ClusterSettings.cluster_name.name(), name ),//
-                Pair.of( ClusterSettings.ha_server.name(), "localhost:" + ports.first() ),//
-                Pair.of( ClusterSettings.server_id.name(), Integer.toString( id ) ) );
+                Pair.of( HaSettings.ha_server.name(), "localhost:" + ports.first() ),//
+                Pair.of( HaSettings.server_id.name(), Integer.toString( id ) ),
+                Pair.of( ClusterSettings.initial_hosts.name(), ":5001,:5002,:5003" ) );
 
         return Pair.of( serverConfig.getAbsolutePath(), serverDir );
     }
@@ -270,6 +271,11 @@ public final class ServerCluster
         return result;
     }
 
+    public Triplet<ServerManager, URI, File>[] getServers()
+    {
+        return servers;
+    }
+
     public interface ServerManager
     {
         URI awaitStartup();
@@ -277,6 +283,8 @@ public final class ServerCluster
         void update();
 
         boolean isMaster();
+
+        String getHaURI();
     }
 
     private static class ServerProcess extends SubProcess<ServerManager, String> implements
@@ -304,6 +312,12 @@ public final class ServerCluster
             System.setProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY, configFilePath );
             this.bootstrap = new EnterpriseBootstrapper();
             this.startupStatus = this.bootstrap.start();
+        }
+
+        @Override
+        public String getHaURI()
+        {
+            return graphDb().getDependencyResolver().resolveDependency( Config.class ).get( HaSettings.ha_server ).toString();
         }
 
         @Override
@@ -354,7 +368,7 @@ public final class ServerCluster
         @Override
         public boolean isMaster()
         {
-            return ClusterMemberState.MASTER.toString().equals( ha().getInstanceState() );
+            return HighAvailabilityMemberState.MASTER.toString().equals( ha().getRole() );
         }
 
         @Override
