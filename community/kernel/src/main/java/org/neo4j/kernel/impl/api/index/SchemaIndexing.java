@@ -29,7 +29,8 @@ import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
 import org.neo4j.kernel.impl.transaction.DataSourceRegistrationListener;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
  * TODO temporary name
@@ -37,7 +38,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
  * Used when committing for notifying schema indexes about updates made to the graph.
  * Currently in the form of {@link PropertyRecord property records}.
  */
-public class SchemaIndexing extends LifecycleAdapter
+public class SchemaIndexing implements Lifecycle
 {
     // TODO pull out an interface instead of overriding all methods
     public static final SchemaIndexing NO_INDEXING = new SchemaIndexing( null, null, null )
@@ -63,6 +64,7 @@ public class SchemaIndexing extends LifecycleAdapter
     private NeoStore neoStore;
     private IndexPopulationService populationService = NO_POPULATION_SERVICE;
     private final IndexPopulatorMapper populatorMapper;
+    private final LifeSupport life = new LifeSupport();
     
     public SchemaIndexing( XaDataSourceManager dataSourceManager, ThreadToStatementContextBridge ctxProvider,
             IndexPopulatorMapper populatorMapper )
@@ -70,6 +72,12 @@ public class SchemaIndexing extends LifecycleAdapter
         this.dataSourceManager = dataSourceManager;
         this.ctxProvider = ctxProvider;
         this.populatorMapper = populatorMapper;
+    }
+    
+    @Override
+    public void init() throws Throwable
+    {
+        life.init();
     }
     
     @Override
@@ -83,17 +91,25 @@ public class SchemaIndexing extends LifecycleAdapter
                 if ( ds.getName().equals( NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME ) )
                 {
                     neoStore = ((NeoStoreXaDataSource)ds).getNeoStore();
-                    populationService = new BackgroundIndexPopulationService( populatorMapper, neoStore, ctxProvider );
+                    populationService = life.add(
+                            new BackgroundIndexPopulationService( populatorMapper, neoStore, ctxProvider ) );
                 }
             }
         } );
+        life.start();
     }
     
     @Override
     public void stop() throws Throwable
     {
-        populationService.shutdown();
+        life.stop();
         populationService = NO_POPULATION_SERVICE;
+    }
+    
+    @Override
+    public void shutdown() throws Throwable
+    {
+        life.shutdown();
     }
     
     public void indexUpdates( Iterable<NodePropertyUpdate> updates )

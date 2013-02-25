@@ -33,10 +33,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -47,6 +49,7 @@ import org.neo4j.kernel.ThreadToStatementContextBridge;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
+import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
 public class IndexPopulationJobTest
@@ -57,15 +60,15 @@ public class IndexPopulationJobTest
         // GIVEN
         String value = "Taylor";
         long nodeId = createNode( map( name, value ), FIRST );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, manipulator );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
 
         // WHEN
         job.run();
 
         // THEN
-        verify( manipulator ).add( 0, nodeId, value );
-        verify( manipulator ).done();
-        verifyNoMoreInteractions( manipulator );
+        verify( populator ).add( 0, nodeId, value );
+        verify( populator ).done();
+        verifyNoMoreInteractions( populator );
     }
 
     @Test
@@ -77,16 +80,16 @@ public class IndexPopulationJobTest
         createNode( map( name, value ), SECOND );
         createNode( map( age, 31 ), FIRST );
         long node4 = createNode( map( age, 35, name, value ), FIRST );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, manipulator );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
 
         // WHEN
         job.run();
 
         // THEN
-        verify( manipulator ).add( anyInt(), eq( node1 ), eq( value ) );
-        verify( manipulator ).add( anyInt(), eq( node4 ), eq( value ) );
-        verify( manipulator ).done();
-        verifyNoMoreInteractions( manipulator );
+        verify( populator ).add( anyInt(), eq( node1 ), eq( value ) );
+        verify( populator ).add( anyInt(), eq( node4 ), eq( value ) );
+        verify( populator ).done();
+        verifyNoMoreInteractions( populator );
     }
     
     @SuppressWarnings( "unchecked" )
@@ -137,6 +140,20 @@ public class IndexPopulationJobTest
         assertEquals( expectedAdded, populator.added ); 
         Map<Long, Object> expectedRemoved = MapUtil.<Long,Object>genericMap( node2, value2 );
         assertEquals( expectedRemoved, populator.removed ); 
+    }
+    
+    @Test
+    public void shouldCompleteIndexPopulation() throws Exception
+    {
+        // GIVEN
+        createNode( map( name, "Mattias" ), FIRST );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+
+        // WHEN
+        job.run();
+
+        // THEN
+        verify( completor ).complete( Matchers.<Callable<IndexSnapshot>>any() );
     }
     
     private class NodeChangingPopulator extends IndexPopulator.Adapter
@@ -215,7 +232,8 @@ public class IndexPopulationJobTest
     private final String name = "name", age = "age";
     private ThreadToStatementContextBridge ctxProvider;
     private StatementContext context;
-    private IndexPopulator manipulator;
+    private IndexPopulator populator;
+    private IndexPopulationCompletor completor;
     
     @Before
     public void before() throws Exception
@@ -223,7 +241,8 @@ public class IndexPopulationJobTest
         db = new ImpermanentGraphDatabase();
         ctxProvider = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         context = ctxProvider.getCtxForReading();
-        manipulator = mock( IndexPopulator.class );
+        populator = mock( IndexPopulator.class );
+        completor = mock( IndexPopulationCompletor.class );
     }
 
     @After
@@ -238,7 +257,7 @@ public class IndexPopulationJobTest
         return new IndexPopulationJob(
                 context.getLabelId( FIRST.name() ),
                 context.getPropertyKeyId( name ),
-                populator, db.getXaDataSourceManager().getNeoStoreDataSource().getNeoStore(), ctxProvider );
+                populator, db.getXaDataSourceManager().getNeoStoreDataSource().getNeoStore(), ctxProvider, completor );
     }
 
     private long createNode( Map<String, Object> properties, Label... labels )

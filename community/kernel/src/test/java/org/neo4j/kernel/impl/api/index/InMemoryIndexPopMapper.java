@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.api.IndexPopulatorMapper;
+import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 
 public class InMemoryIndexPopMapper implements IndexPopulatorMapper
@@ -71,8 +72,15 @@ public class InMemoryIndexPopMapper implements IndexPopulatorMapper
         }
 
         @Override
-        public void done()
+        public IndexSnapshot done()
         {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void clear()
+        {
+            indexData.clear();
         }
     }
 }

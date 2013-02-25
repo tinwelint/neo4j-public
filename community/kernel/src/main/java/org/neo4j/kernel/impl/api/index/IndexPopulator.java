@@ -19,8 +19,12 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
+
 public interface IndexPopulator
 {
+    void clear();
+    
     /**
      * Called when initially populating an index over existing data. Guaranteed to be
      * called by the same thread every time.
@@ -43,8 +47,9 @@ public interface IndexPopulator
 
     /**
      * Called to signal end of background index population
+     * @return 
      */
-    void done();
+    IndexSnapshot done();
     
     public static class Adapter implements IndexPopulator
     {
@@ -59,7 +64,13 @@ public interface IndexPopulator
         }
 
         @Override
-        public void done()
+        public IndexSnapshot done()
+        {
+            return IndexPopulationCompletor.NO_SNAPSHOT;
+        }
+
+        @Override
+        public void clear()
         {
         }
     }

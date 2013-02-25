@@ -25,7 +25,9 @@ import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 
 import org.neo4j.helpers.Pair;
+import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
 import org.neo4j.kernel.impl.core.PropertyIndex;
+import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.NameData;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
@@ -348,4 +350,6 @@ public interface NeoStoreTransaction
     void removeLabelFromNode( long labelId, long nodeId );
 
     Iterable<Long> getLabelsForNode( long nodeId );
+
+    void completeIndexCreation( IndexRule index, IndexSnapshot snapshot );
 }

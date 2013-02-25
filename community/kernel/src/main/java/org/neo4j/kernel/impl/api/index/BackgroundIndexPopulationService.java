@@ -35,8 +35,9 @@ import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-public class BackgroundIndexPopulationService implements IndexPopulationService
+public class BackgroundIndexPopulationService extends LifecycleAdapter implements IndexPopulationService
 {
     private final ExecutorService populationExecutor = newFixedThreadPool( 3 ); // TODO
     private final IndexPopulatorMapper indexManipulatorMapper;
@@ -58,7 +59,7 @@ public class BackgroundIndexPopulationService implements IndexPopulationService
     }
     
     @Override
-    public void indexCreated( IndexDefinition index )
+    public void indexCreated( IndexDefinition index, IndexPopulationCompletor completor )
     {
         String propertyKey = single( index.getPropertyKeys() );
         long labelId;
@@ -79,7 +80,8 @@ public class BackgroundIndexPopulationService implements IndexPopulationService
         
         // TODO task management including handling of failures during population.
         IndexPopulator populator = indexManipulatorMapper.getPopulator( index );
-        IndexPopulationJob job = new IndexPopulationJob( labelId, propertyKeyId, populator, neoStore, ctxProvider );
+        IndexPopulationJob job = new IndexPopulationJob( labelId, propertyKeyId, populator,
+                neoStore, ctxProvider, completor );
         populationExecutor.submit( job );
         indexJobs.add( job );
     }

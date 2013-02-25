@@ -20,10 +20,12 @@
 package org.neo4j.kernel.impl.api.index;
 
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.neo4j.helpers.Predicate;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
@@ -44,35 +46,42 @@ class IndexPopulationJob implements Runnable
 {
     private final long labelId;
     private final long propertyKeyId;
-    private final IndexPopulator indexManipulator;
+    private final IndexPopulator populator;
     private final NeoStore neoStore;
+    private int count;
 
     // NOTE: unbounded queue expected here
     private final Queue<NodePropertyUpdate> queue = new ConcurrentLinkedQueue<NodePropertyUpdate>();
     private final ThreadToStatementContextBridge ctxProvider;
+    private final IndexPopulationCompletor completor;
 
-    public IndexPopulationJob( long labelId, long propertyKeyId, IndexPopulator indexManipulator, NeoStore neoStore,
-                               ThreadToStatementContextBridge ctxProvider )
+    public IndexPopulationJob( long labelId, long propertyKeyId, IndexPopulator populator, NeoStore neoStore,
+                               ThreadToStatementContextBridge ctxProvider, IndexPopulationCompletor completor )
     {
         this.labelId = labelId;
         this.propertyKeyId = propertyKeyId;
-        this.indexManipulator = indexManipulator;
+        this.populator = populator;
         this.neoStore = neoStore;
         this.ctxProvider = ctxProvider;
+        this.completor = completor;
     }
     
     @Override
     public void run()
     {
+        populator.clear();
+        
         indexAllNodes();
         
-        // TODO grab lock
-        // TODO process the rest of the queue
-
-        indexManipulator.done();
-        
-        // TODO switch index state
-        // TODO release lock
+        completor.complete( new Callable<IndexSnapshot>()
+        {
+            @Override
+            public IndexSnapshot call()
+            {
+                populateFromQueueIfAvailable( Long.MAX_VALUE, count );
+                return populator.done();
+            }
+        } );
     }
 
     @SuppressWarnings("unchecked")
@@ -96,7 +105,7 @@ class IndexPopulationJob implements Runnable
         {
             boolean hasBeenIndexed = update.getNodeId() <= highestIndexedNodeId;
             if ( hasBeenIndexed )
-                update.apply( n++, indexManipulator );
+                update.apply( n++, populator );
         }
         return n;
     }
@@ -121,7 +130,6 @@ class IndexPopulationJob implements Runnable
     private class NodeIndexingProcessor extends Processor
     {
         private final PropertyStore propertyStore;
-        private int count;
 
         public NodeIndexingProcessor( PropertyStore propertyStore )
         {
@@ -160,7 +168,7 @@ class IndexPopulationJob implements Runnable
                             // Make sure the value is loaded, even if it's of a "heavy" kind.
                             propertyStore.makeHeavy( property );
                             Object propertyValue = property.getType().getValue( property, propertyStore );
-                            indexManipulator.add( count++, node.getId(), propertyValue );
+                            populator.add( count++, node.getId(), propertyValue );
                         }
                     }
                 }
