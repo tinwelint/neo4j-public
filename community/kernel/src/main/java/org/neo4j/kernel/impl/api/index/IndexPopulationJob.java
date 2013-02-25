@@ -65,10 +65,14 @@ class IndexPopulationJob implements Runnable
     public void run()
     {
         indexAllNodes();
+        
+        // TODO grab lock
+        // TODO process the rest of the queue
 
         indexManipulator.done();
         
-        // TODO atomic switchover (?)
+        // TODO switch index state
+        // TODO release lock
     }
 
     @SuppressWarnings("unchecked")
@@ -86,15 +90,15 @@ class IndexPopulationJob implements Runnable
         processor.applyFiltered( nodeStore, predicate );
     }
 
-    private void populateFromQueueIfAvailable( long maxIndexedId )
+    private int populateFromQueueIfAvailable( long highestIndexedNodeId, int n )
     {
-        int n = 0;
         for ( NodePropertyUpdate update = queue.poll(); update != null; update = queue.poll(), n++ )
         {
-            boolean hasNotYetBeenIndexed = update.getNodeId() <= maxIndexedId;
-            if ( hasNotYetBeenIndexed )
-                update.apply( n, indexManipulator );
+            boolean hasBeenIndexed = update.getNodeId() <= highestIndexedNodeId;
+            if ( hasBeenIndexed )
+                update.apply( n++, indexManipulator );
         }
+        return n;
     }
 
     public void cancel()
@@ -132,7 +136,7 @@ class IndexPopulationJob implements Runnable
 
             // Process queued updates
             // TODO synchronization
-            populateFromQueueIfAvailable( node.getId() );
+            count = populateFromQueueIfAvailable( node.getId(), count );
         }
 
         private void indexNodeRecord( NodeRecord node )

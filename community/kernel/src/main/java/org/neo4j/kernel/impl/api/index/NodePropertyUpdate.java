@@ -98,4 +98,11 @@ public class NodePropertyUpdate
                 break;
         }
     }
+    
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName() + "[" + nodeId + ", prop:" + propertyKeyId + ", before:" + valueBefore +
+                ", after:" + valueAfter + "]";
+    }
 }

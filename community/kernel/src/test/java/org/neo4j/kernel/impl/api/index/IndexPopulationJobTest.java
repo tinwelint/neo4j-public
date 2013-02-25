@@ -19,14 +19,20 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.After;
 import org.junit.Before;
@@ -35,6 +41,8 @@ import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
@@ -49,7 +57,7 @@ public class IndexPopulationJobTest
         // GIVEN
         String value = "Taylor";
         long nodeId = createNode( map( name, value ), FIRST );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, manipulator );
 
         // WHEN
         job.run();
@@ -69,7 +77,7 @@ public class IndexPopulationJobTest
         createNode( map( name, value ), SECOND );
         createNode( map( age, 31 ), FIRST );
         long node4 = createNode( map( age, 35, name, value ), FIRST );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, manipulator );
 
         // WHEN
         job.run();
@@ -79,6 +87,127 @@ public class IndexPopulationJobTest
         verify( manipulator ).add( anyInt(), eq( node4 ), eq( value ) );
         verify( manipulator ).done();
         verifyNoMoreInteractions( manipulator );
+    }
+    
+    @SuppressWarnings( "unchecked" )
+    @Test
+    public void shouldIndexUpdatesWhenDoingThePopulation() throws Exception
+    {
+        // GIVEN
+        Object value1 = "Mattias", value2 = "Jacob", value3 = "Stefan", changedValue = "changed";
+        long node1 = createNode( map( name, value1 ), FIRST );
+        long node2 = createNode( map( name, value2 ), FIRST );
+        long node3 = createNode( map( name, value3 ), FIRST );
+        long changeNode = node1;
+        long propertyKeyId = context.getPropertyKeyId( name );
+        NodeChangingPopulator populator = new NodeChangingPopulator( changeNode, propertyKeyId, value1, changedValue );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+        populator.setJob( job );
+
+        // WHEN
+        job.run();
+
+        // THEN
+        Set<Pair<Long,Object>> expected = asSet(
+                Pair.of( node1, value1 ),
+                Pair.of( node2, value2 ),
+                Pair.of( node3, value3 ),
+                Pair.of( node1, changedValue ) );
+        assertEquals( expected, populator.added ); 
+    }
+    
+    @Test
+    public void shouldRemoveViaIndexUpdatesWhenDoingThePopulation() throws Exception
+    {
+        // GIVEN
+        String value1 = "Mattias", value2 = "Jacob", value3 = "Stefan";
+        long node1 = createNode( map( name, value1 ), FIRST );
+        long node2 = createNode( map( name, value2 ), FIRST );
+        long node3 = createNode( map( name, value3 ), FIRST );
+        long propertyKeyId = context.getPropertyKeyId( name );
+        NodeDeletingPopulator populator = new NodeDeletingPopulator( node2, propertyKeyId, value2 );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+        populator.setJob( job );
+
+        // WHEN
+        job.run();
+
+        // THEN
+        Map<Long, Object> expectedAdded = MapUtil.<Long,Object>genericMap( node1, value1, node2, value2, node3, value3 );
+        assertEquals( expectedAdded, populator.added ); 
+        Map<Long, Object> expectedRemoved = MapUtil.<Long,Object>genericMap( node2, value2 );
+        assertEquals( expectedRemoved, populator.removed ); 
+    }
+    
+    private class NodeChangingPopulator extends IndexPopulator.Adapter
+    {
+        private final Set<Pair<Long, Object>> added = new HashSet<Pair<Long,Object>>();
+        private IndexPopulationJob job;
+        private final long changedNode;
+        private final Object newValue;
+        private final Object previousValue;
+        private final long propertyKeyId;
+        
+        public NodeChangingPopulator( long changedNode, long propertyKeyId, Object previousValue, Object newValue )
+        {
+            this.changedNode = changedNode;
+            this.propertyKeyId = propertyKeyId;
+            this.previousValue = previousValue;
+            this.newValue = newValue;
+        }
+
+        @Override
+        public void add( int n, long nodeId, Object propertyValue )
+        {
+            if ( n == 1 )
+            {
+                job.indexUpdates( asList( new NodePropertyUpdate( changedNode, propertyKeyId, previousValue, newValue ) ) );
+            }
+            added.add( Pair.of( nodeId, propertyValue ) );
+        }
+
+        public void setJob( IndexPopulationJob job )
+        {
+            this.job = job;
+        }
+    }
+    
+    private class NodeDeletingPopulator extends IndexPopulator.Adapter
+    {
+        private final Map<Long, Object> added = new HashMap<Long, Object>();
+        private final Map<Long, Object> removed = new HashMap<Long, Object>();
+        private final long nodeToDelete;
+        private IndexPopulationJob job;
+        private final long propertyKeyId;
+        private final Object valueToDelete;
+
+        public NodeDeletingPopulator( long nodeToDelete, long propertyKeyId, Object valueToDelete )
+        {
+            this.nodeToDelete = nodeToDelete;
+            this.propertyKeyId = propertyKeyId;
+            this.valueToDelete = valueToDelete;
+        }
+        
+        public void setJob( IndexPopulationJob job )
+        {
+            this.job = job;
+        }
+
+        @Override
+        public void add( int n, long nodeId, Object propertyValue )
+        {
+            if ( n == 2 )
+            {
+                job.indexUpdates( asList( new NodePropertyUpdate( nodeToDelete, propertyKeyId, valueToDelete, null ) ) );
+            }
+            added.put( nodeId, propertyValue );
+        }
+
+        @Override
+        public void remove( int n, long nodeId, Object propertyValue )
+        {
+            removed.put( nodeId, propertyValue );
+        }
     }
     
     private ImpermanentGraphDatabase db;
@@ -103,13 +232,13 @@ public class IndexPopulationJobTest
         db.shutdown();
     }
 
-    private IndexPopulationJob newIndexPopulationJob( Label label, String propertyKey )
+    private IndexPopulationJob newIndexPopulationJob( Label label, String propertyKey, IndexPopulator populator )
             throws LabelNotFoundKernelException, PropertyKeyNotFoundException
     {
         return new IndexPopulationJob(
                 context.getLabelId( FIRST.name() ),
                 context.getPropertyKeyId( name ),
-                manipulator, db.getXaDataSourceManager().getNeoStoreDataSource().getNeoStore(), ctxProvider );
+                populator, db.getXaDataSourceManager().getNeoStoreDataSource().getNeoStore(), ctxProvider );
     }
 
     private long createNode( Map<String, Object> properties, Label... labels )

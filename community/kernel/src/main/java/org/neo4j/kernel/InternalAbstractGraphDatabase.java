@@ -499,10 +499,7 @@ public abstract class InternalAbstractGraphDatabase
         
         cacheBridge = new BridgingCacheAccess( nodeManager, schemaCache );
         
-        schemaIndexing = indexPopulatorMapper != null ? 
-                life.add( new SchemaIndexing( xaDataSourceManager, statementContextProvider,
-                        indexPopulatorMapper.newMapper() ) ) :
-                SchemaIndexing.NO_INDEXING;
+        schemaIndexing = createSchemaIndexing();
 
         createNeoDataSource();
 
@@ -516,6 +513,14 @@ public abstract class InternalAbstractGraphDatabase
 
         // TODO This is probably too coarse-grained and we should have some strategy per user of config instead
         life.add( new ConfigurationChangedRestarter() );
+    }
+
+    protected SchemaIndexing createSchemaIndexing()
+    {
+        return indexPopulatorMapper != null ? 
+                life.add( new SchemaIndexing( xaDataSourceManager, statementContextProvider,
+                        indexPopulatorMapper.newMapper() ) ) :
+                SchemaIndexing.NO_INDEXING;
     }
 
     protected TransactionStateFactory createTransactionStateFactory()

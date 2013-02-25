@@ -45,4 +45,22 @@ public interface IndexPopulator
      * Called to signal end of background index population
      */
     void done();
+    
+    public static class Adapter implements IndexPopulator
+    {
+        @Override
+        public void add( int n, long nodeId, Object propertyValue )
+        {
+        }
+
+        @Override
+        public void remove( int n, long nodeId, Object propertyValue )
+        {
+        }
+
+        @Override
+        public void done()
+        {
+        }
+    }
 }
