@@ -49,8 +49,8 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.NestingIterable;
+import org.neo4j.kernel.impl.api.index.IntegratedIndexing;
 import org.neo4j.kernel.impl.api.index.NodePropertyUpdate;
-import org.neo4j.kernel.impl.api.index.old.OldIndexingService;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.core.TransactionState;
@@ -119,16 +119,16 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     private final TransactionState state;
     private XaConnection xaConnection;
     private final CacheAccessBackDoor cacheAccess;
-    private final OldIndexingService indexingService;
+    private final IntegratedIndexing integratedIndexing;
 
     WriteTransaction( int identifier, XaLogicalLog log, TransactionState state, NeoStore neoStore,
-            CacheAccessBackDoor cacheAccess, OldIndexingService indexingService )
+            CacheAccessBackDoor cacheAccess, IntegratedIndexing indexingService )
     {
         super( identifier, log, state );
         this.neoStore = neoStore;
         this.state = state;
         this.cacheAccess = cacheAccess;
-        this.indexingService = indexingService;
+        this.integratedIndexing = indexingService;
     }
 
     @Override
@@ -540,7 +540,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             
             // property change set for index updates
             Iterable<NodePropertyUpdate> updates = convertIntoLogicalPropertyUpdates( propCommands );
-            indexingService.indexUpdates( updates );
+            integratedIndexing.getService().update( updates );
             
             if ( isRecovered )
                 neoStore.setRecoveredStatus( true );

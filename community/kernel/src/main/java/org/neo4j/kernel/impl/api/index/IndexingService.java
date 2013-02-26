@@ -1,77 +1,31 @@
+/*
+ * Copyright (C) 2012 Neo Technology
+ * All rights reserved
+ */
 package org.neo4j.kernel.impl.api.index;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
-import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-class IndexingService extends LifecycleAdapter
+public interface IndexingService extends Lifecycle
 {
-    // TODO force indexes on shutdown/stop ?
+    void update( Iterable<NodePropertyUpdate> updates );
 
-    // TODO create hierachy of filters for smarter update processing
+    IndexContext getContextForRule( IndexRule rule );
 
-    private final ExecutorService executor;
-    private final SchemaIndexProvider provider;
-    private final NeoStore store;
+    public static class Adapter extends LifecycleAdapter implements IndexingService {
+        public static final Adapter EMPTY = new Adapter();
 
-    private final ConcurrentHashMap<Long, IndexContext> contexts = new ConcurrentHashMap<Long, IndexContext>();
-
-    IndexingService( ExecutorService executor, SchemaIndexProvider provider, NeoStore store )
-    {
-        this.executor = executor;
-        this.provider = provider;
-        this.store = store;
-    }
-
-    public void update(Iterable<NodePropertyUpdate> updates) {
-        for (IndexContext context : contexts.values())
-            context.update( updates );
-    }
-
-    public IndexContext getContextForRule( IndexRule rule )
-    {
-        long ruleId = rule.getId();
-        IndexContext indexContext = contexts.get( ruleId );
-        if (indexContext == null)
+        @Override
+        public void update( Iterable<NodePropertyUpdate> updates )
         {
-            IndexContext potentialNewContext = createContextForRule( rule );
-            IndexContext oldContext = contexts.putIfAbsent( ruleId, potentialNewContext );
-            return oldContext == null ? potentialNewContext : oldContext;
-        }
-        else
-            return indexContext;
-    }
-
-    @SuppressWarnings("UnnecessaryLocalVariable")
-    private IndexContext createContextForRule( IndexRule rule )
-    {
-        long ruleId = rule.getId();
-        IndexContext populatingWriter = new WritingIndexContext( provider.getOnlineWriter( ruleId ), rule );
-        PopulatingIndexContext populatingContext = new PopulatingIndexContext( populatingWriter, executor, store );
-        IndexContext onlineWriter = new WritingIndexContext( provider.getPopulatingWriter( ruleId ), rule );
-        AtomicDelegatingIndexContext atomicContext = new AtomicDelegatingIndexContext( populatingContext );
-        Flipper flipper = new Flipper( atomicContext, onlineWriter );
-        populatingContext.setFlipper( flipper );
-        IndexContext filteringContext = new RuleUpdateFilterIndexContext( atomicContext, rule );
-        IndexContext autoRemovingContext = new AutoRemovingIndexContext( filteringContext );
-        return autoRemovingContext;
-    }
-
-    class AutoRemovingIndexContext extends DelegatingIndexContext {
-        AutoRemovingIndexContext( IndexContext delegate )
-        {
-            super( delegate );
         }
 
         @Override
-        public void drop()
+        public IndexContext getContextForRule( IndexRule rule )
         {
-            super.drop();
-            contexts.remove( getIndexRule().getId(), this );
+            return IndexContext.Adapter.EMPTY;
         }
     }
-
 }

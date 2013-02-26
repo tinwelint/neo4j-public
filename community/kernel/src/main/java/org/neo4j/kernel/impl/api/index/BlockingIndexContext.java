@@ -41,15 +41,20 @@ public class BlockingIndexContext extends DelegatingIndexContext
 
     private void awaitReady()
     {
-        try
-        {
-            latch.await();
-        }
-        catch ( InterruptedException e )
-        {
-            // TODO read CouldDownLatch, spurious wakeups and such
-            Thread.interrupted();
-            throw new RuntimeException( e );
+        boolean interrupted = false;
+        try {
+            while (true) {
+                try {
+                    latch.await();
+                    return;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    // fall through and retry
+                }
+            }
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
         }
     }
 }

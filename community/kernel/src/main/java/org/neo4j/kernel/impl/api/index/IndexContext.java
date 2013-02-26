@@ -16,6 +16,15 @@ public interface IndexContext
     
     public static abstract class Adapter implements IndexContext
     {
+        public static final Adapter EMPTY = new Adapter()
+        {
+            @Override
+            public IndexRule getIndexRule()
+            {
+                throw new UnsupportedOperationException(  );
+            }
+        };
+
         @Override
         public void create()
         {

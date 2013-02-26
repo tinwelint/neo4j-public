@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
+import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class FlippingIndexContextTest
 {
@@ -51,6 +52,12 @@ public class FlippingIndexContextTest
         void triggerFlip( Runnable action )
         {
             this.flipper.flip( action );
+        }
+
+        @Override
+        public IndexRule getIndexRule()
+        {
+            throw new UnsupportedOperationException(  );
         }
     }
 }
