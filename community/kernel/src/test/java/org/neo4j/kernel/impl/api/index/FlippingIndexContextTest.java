@@ -17,7 +17,7 @@ public class FlippingIndexContextTest
         // GIVEN
         MockedPopulatingIndexContext populatingContext = new MockedPopulatingIndexContext();
         IndexContext onlineContext = mock( IndexContext.class );
-        final AtomicDelegatingIndexContext delegatingContext = new AtomicDelegatingIndexContext( populatingContext );
+        final FlippableIndexContext delegatingContext = new FlippableIndexContext( populatingContext );
         Flipper flipper = new Flipper( delegatingContext, onlineContext );
         populatingContext.setFlipper( flipper );
         final AtomicBoolean actionRun = new AtomicBoolean( false );

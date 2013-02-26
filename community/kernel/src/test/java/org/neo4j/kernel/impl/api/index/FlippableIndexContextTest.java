@@ -22,9 +22,7 @@ package org.neo4j.kernel.impl.api.index;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.stubVoid;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,7 +31,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-public class AtomicDelegatingIndexContextTest
+public class FlippableIndexContextTest
 {
     @Test
     public void shouldBeAbleToSwitchDelegate() throws Exception
@@ -41,7 +39,7 @@ public class AtomicDelegatingIndexContextTest
         // GIVEN
         IndexContext actual = mock( IndexContext.class );
         IndexContext other = mock( IndexContext.class );
-        AtomicDelegatingIndexContext delegate = new AtomicDelegatingIndexContext( actual );
+        FlippableIndexContext delegate = new FlippableIndexContext( actual );
 
         // WHEN
         delegate.setDelegate( other );
@@ -54,10 +52,13 @@ public class AtomicDelegatingIndexContextTest
     @Test
     public void shouldOnlySwitchDelegatesBetweenUses() throws InterruptedException
     {
+        // This test ensures that is not possible to use FlippableIndexContext while a flip is in progress
+        // in order to avoid nasty races (an update call still using the populator)
+
         // GIVEN
         final IndexContext actual = mock( IndexContext.class );
         final IndexContext other = mock( IndexContext.class );
-        final AtomicDelegatingIndexContext atomic = new AtomicDelegatingIndexContext( actual );
+        final FlippableIndexContext flippable = new FlippableIndexContext( actual );
         final AtomicReference<IndexContext> result = new AtomicReference<IndexContext>();
 
         final CountDownLatch actualLatch = new CountDownLatch( 1 );
@@ -68,8 +69,8 @@ public class AtomicDelegatingIndexContextTest
             public Object answer( InvocationOnMock invocation ) throws Throwable
             {
                 actualLatch.await();
-                result.set( atomic.getDelegate() );
-                return invocation.callRealMethod();
+                result.set( flippable.getDelegate() );
+                return null;
             }
         } ).when( actual ).getIndexRule();
 
@@ -77,7 +78,7 @@ public class AtomicDelegatingIndexContextTest
             @Override
             public void run()
             {
-                atomic.getIndexRule();
+                flippable.getIndexRule();
             }
         };
 
@@ -95,7 +96,7 @@ public class AtomicDelegatingIndexContextTest
                 {
                     throw new RuntimeException( e );
                 }
-                atomic.setDelegate( other );
+                flippable.setDelegate( other );
             }
         };
 

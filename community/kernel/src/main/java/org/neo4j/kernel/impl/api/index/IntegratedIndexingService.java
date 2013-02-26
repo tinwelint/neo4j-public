@@ -54,10 +54,10 @@ public class IntegratedIndexingService extends LifecycleAdapter implements Index
         IndexContext populatingWriter = new WritingIndexContext( provider.getPopulatingWriter( ruleId ), rule );
         PopulatingIndexContext populatingContext = new PopulatingIndexContext( populatingWriter, executor, store );
         IndexContext onlineWriter = new WritingIndexContext( provider.getOnlineWriter( ruleId ), rule );
-        AtomicDelegatingIndexContext atomicContext = new AtomicDelegatingIndexContext( populatingContext );
-        Flipper flipper = new Flipper( atomicContext, onlineWriter );
+        FlippableIndexContext flippableContext = new FlippableIndexContext( populatingContext );
+        Flipper flipper = new Flipper( flippableContext, onlineWriter );
         populatingContext.setFlipper( flipper );
-        IndexContext filteringContext = new RuleUpdateFilterIndexContext( atomicContext, rule );
+        IndexContext filteringContext = new RuleUpdateFilterIndexContext( flippableContext, rule );
         IndexContext autoRemovingContext = new AutoRemovingIndexContext( filteringContext );
         return autoRemovingContext;
     }
