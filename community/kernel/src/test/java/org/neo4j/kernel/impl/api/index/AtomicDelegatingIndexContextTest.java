@@ -19,10 +19,19 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.stubVoid;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class AtomicDelegatingIndexContextTest
 {
@@ -40,5 +49,73 @@ public class AtomicDelegatingIndexContextTest
 
         // THEN
         verify( other ).drop();
+    }
+
+    @Test
+    public void shouldOnlySwitchDelegatesBetweenUses() throws InterruptedException
+    {
+        // GIVEN
+        final IndexContext actual = mock( IndexContext.class );
+        final IndexContext other = mock( IndexContext.class );
+        final AtomicDelegatingIndexContext atomic = new AtomicDelegatingIndexContext( actual );
+        final AtomicReference<IndexContext> result = new AtomicReference<IndexContext>();
+
+        final CountDownLatch actualLatch = new CountDownLatch( 1 );
+
+        doAnswer( new Answer()
+        {
+            @Override
+            public Object answer( InvocationOnMock invocation ) throws Throwable
+            {
+                actualLatch.await();
+                result.set( atomic.getDelegate() );
+                return invocation.callRealMethod();
+            }
+        } ).when( actual ).getIndexRule();
+
+        Runnable triggerActual = new Runnable() {
+            @Override
+            public void run()
+            {
+                atomic.getIndexRule();
+            }
+        };
+
+        final CountDownLatch delegateChangeLatch = new CountDownLatch( 1 );
+
+        Runnable triggerDelegateChange = new Runnable() {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    delegateChangeLatch.await( );
+                }
+                catch ( InterruptedException e )
+                {
+                    throw new RuntimeException( e );
+                }
+                atomic.setDelegate( other );
+            }
+        };
+
+        // WHEN
+
+        // trigger blocking call into AtomicDelegatingIndexContext
+        new Thread(triggerActual).start();
+
+        // trigger changing delegate
+        new Thread(triggerDelegateChange).start();
+
+        delegateChangeLatch.countDown();
+
+        // signal blocking call to finish
+        actualLatch.countDown();
+
+
+        // THEN
+        while (result.get() == null) {}
+
+        assertEquals( actual, result.get() );
     }
 }
