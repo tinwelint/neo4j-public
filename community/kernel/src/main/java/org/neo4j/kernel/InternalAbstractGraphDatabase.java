@@ -70,8 +70,8 @@ import org.neo4j.kernel.extension.KernelExtensions;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.api.Kernel;
 import org.neo4j.kernel.impl.api.SchemaCache;
-import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.impl.api.index.old.OldIndexingService;
 import org.neo4j.kernel.impl.cache.Cache;
 import org.neo4j.kernel.impl.cache.CacheProvider;
 import org.neo4j.kernel.impl.cache.MonitorGc;
@@ -211,7 +211,7 @@ public abstract class InternalAbstractGraphDatabase
     protected KernelAPI kernelAPI;
     protected ThreadToStatementContextBridge statementContextProvider;
     protected BridgingCacheAccess cacheBridge;
-    protected IndexingService indexingService;
+    protected OldIndexingService indexingService;
     protected SchemaIndexProvider schemaIndexProvider;
 
     protected final LifeSupport life = new LifeSupport();
@@ -514,12 +514,12 @@ public abstract class InternalAbstractGraphDatabase
         life.add( new ConfigurationChangedRestarter() );
     }
 
-    protected IndexingService createSchemaIndexing()
+    protected OldIndexingService createSchemaIndexing()
     {
         return schemaIndexProvider != null ?
-                life.add( new IndexingService( xaDataSourceManager, statementContextProvider,
+                life.add( new OldIndexingService( xaDataSourceManager, statementContextProvider,
                         schemaIndexProvider ) ) :
-                IndexingService.NO_INDEXING;
+                OldIndexingService.NO_INDEXING;
     }
 
     protected TransactionStateFactory createTransactionStateFactory()
@@ -1405,7 +1405,7 @@ public abstract class InternalAbstractGraphDatabase
             {
                 return (T) DependencyResolverImpl.this;
             }
-            else if ( IndexingService.class.isAssignableFrom( type ) )
+            else if ( OldIndexingService.class.isAssignableFrom( type ) )
             {
                 return (T) indexingService;
             }

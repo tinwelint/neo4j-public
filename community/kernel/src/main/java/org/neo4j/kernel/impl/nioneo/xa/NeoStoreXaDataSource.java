@@ -43,7 +43,7 @@ import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.TransactionInterceptorProviders;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.api.index.old.OldIndexingService;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.core.TransactionState;
@@ -103,7 +103,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
 
     private final Config config;
     private NeoStore neoStore;
-    private final IndexingService indexingService;
+    private final OldIndexingService indexingService;
     private XaContainer xaContainer;
     private ArrayMap<Class<?>,Store> idGenerators;
 
@@ -203,7 +203,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
      */
     public NeoStoreXaDataSource( Config config, StoreFactory sf, LockManager lockManager,
                                  StringLogger stringLogger, XaFactory xaFactory, TransactionStateFactory stateFactory,
-                                 CacheAccessBackDoor cacheAccess, IndexingService indexingService,
+                                 CacheAccessBackDoor cacheAccess, OldIndexingService indexingService,
                                  TransactionInterceptorProviders providers, DependencyResolver dependencyResolver )
             throws IOException
     {

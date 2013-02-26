@@ -49,8 +49,8 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.NestingIterable;
-import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.NodePropertyUpdate;
+import org.neo4j.kernel.impl.api.index.old.OldIndexingService;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.core.TransactionState;
@@ -119,10 +119,10 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     private final TransactionState state;
     private XaConnection xaConnection;
     private final CacheAccessBackDoor cacheAccess;
-    private final IndexingService indexingService;
+    private final OldIndexingService indexingService;
 
     WriteTransaction( int identifier, XaLogicalLog log, TransactionState state, NeoStore neoStore,
-            CacheAccessBackDoor cacheAccess, IndexingService indexingService )
+            CacheAccessBackDoor cacheAccess, OldIndexingService indexingService )
     {
         super( identifier, log, state );
         this.neoStore = neoStore;
