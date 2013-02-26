@@ -20,12 +20,10 @@
 package org.neo4j.kernel.impl.api.index;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
@@ -33,7 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import org.junit.After;
 import org.junit.Before;
@@ -49,7 +46,6 @@ import org.neo4j.kernel.ThreadToStatementContextBridge;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
-import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
 public class IndexPopulationJobTest
@@ -66,8 +62,9 @@ public class IndexPopulationJobTest
         job.run();
 
         // THEN
+        verify( populator ).clear();
         verify( populator ).add( 0, nodeId, value );
-        verify( populator ).done();
+
         verifyNoMoreInteractions( populator );
     }
 
@@ -86,9 +83,10 @@ public class IndexPopulationJobTest
         job.run();
 
         // THEN
+        verify( populator ).clear();
         verify( populator ).add( anyInt(), eq( node1 ), eq( value ) );
         verify( populator ).add( anyInt(), eq( node4 ), eq( value ) );
-        verify( populator ).done();
+
         verifyNoMoreInteractions( populator );
     }
     
@@ -103,7 +101,7 @@ public class IndexPopulationJobTest
         long node3 = createNode( map( name, value3 ), FIRST );
         long changeNode = node1;
         long propertyKeyId = context.getPropertyKeyId( name );
-        NodeChangingPopulator populator = new NodeChangingPopulator( changeNode, propertyKeyId, value1, changedValue );
+        NodeChangingWriter populator = new NodeChangingWriter( changeNode, propertyKeyId, value1, changedValue );
         IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
         populator.setJob( job );
 
@@ -128,7 +126,7 @@ public class IndexPopulationJobTest
         long node2 = createNode( map( name, value2 ), FIRST );
         long node3 = createNode( map( name, value3 ), FIRST );
         long propertyKeyId = context.getPropertyKeyId( name );
-        NodeDeletingPopulator populator = new NodeDeletingPopulator( node2, propertyKeyId, value2 );
+        NodeDeletingWriter populator = new NodeDeletingWriter( node2, propertyKeyId, value2 );
         IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
         populator.setJob( job );
 
@@ -153,10 +151,10 @@ public class IndexPopulationJobTest
         job.run();
 
         // THEN
-        verify( completor ).complete( Matchers.<Callable<IndexSnapshot>>any() );
+        verify( completor ).complete( Matchers.<Runnable>any() );
     }
     
-    private class NodeChangingPopulator extends IndexPopulator.Adapter
+    private class NodeChangingWriter extends IndexWriter.Adapter
     {
         private final Set<Pair<Long, Object>> added = new HashSet<Pair<Long,Object>>();
         private IndexPopulationJob job;
@@ -165,7 +163,7 @@ public class IndexPopulationJobTest
         private final Object previousValue;
         private final long propertyKeyId;
         
-        public NodeChangingPopulator( long changedNode, long propertyKeyId, Object previousValue, Object newValue )
+        public NodeChangingWriter( long changedNode, long propertyKeyId, Object previousValue, Object newValue )
         {
             this.changedNode = changedNode;
             this.propertyKeyId = propertyKeyId;
@@ -189,7 +187,7 @@ public class IndexPopulationJobTest
         }
     }
     
-    private class NodeDeletingPopulator extends IndexPopulator.Adapter
+    private class NodeDeletingWriter extends IndexWriter.Adapter
     {
         private final Map<Long, Object> added = new HashMap<Long, Object>();
         private final Map<Long, Object> removed = new HashMap<Long, Object>();
@@ -198,7 +196,7 @@ public class IndexPopulationJobTest
         private final long propertyKeyId;
         private final Object valueToDelete;
 
-        public NodeDeletingPopulator( long nodeToDelete, long propertyKeyId, Object valueToDelete )
+        public NodeDeletingWriter( long nodeToDelete, long propertyKeyId, Object valueToDelete )
         {
             this.nodeToDelete = nodeToDelete;
             this.propertyKeyId = propertyKeyId;
@@ -232,8 +230,8 @@ public class IndexPopulationJobTest
     private final String name = "name", age = "age";
     private ThreadToStatementContextBridge ctxProvider;
     private StatementContext context;
-    private IndexPopulator populator;
-    private IndexPopulationCompletor completor;
+    private IndexWriter populator;
+    private IndexPopulationCompleter completor;
     
     @Before
     public void before() throws Exception
@@ -241,8 +239,8 @@ public class IndexPopulationJobTest
         db = new ImpermanentGraphDatabase();
         ctxProvider = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         context = ctxProvider.getCtxForReading();
-        populator = mock( IndexPopulator.class );
-        completor = mock( IndexPopulationCompletor.class );
+        populator = mock( IndexWriter.class );
+        completor = mock( IndexPopulationCompleter.class );
     }
 
     @After
@@ -251,7 +249,7 @@ public class IndexPopulationJobTest
         db.shutdown();
     }
 
-    private IndexPopulationJob newIndexPopulationJob( Label label, String propertyKey, IndexPopulator populator )
+    private IndexPopulationJob newIndexPopulationJob( Label label, String propertyKey, IndexWriter populator )
             throws LabelNotFoundKernelException, PropertyKeyNotFoundException
     {
         return new IndexPopulationJob(

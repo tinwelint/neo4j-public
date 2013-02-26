@@ -22,9 +22,7 @@ package org.neo4j.kernel.impl.api.index;
 import static org.neo4j.kernel.impl.api.index.IndexPopulationService.NO_POPULATION_SERVICE;
 
 import org.neo4j.kernel.ThreadToStatementContextBridge;
-import org.neo4j.kernel.api.IndexPopulatorMapper;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
-import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
 import org.neo4j.kernel.impl.transaction.DataSourceRegistrationListener;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
@@ -33,15 +31,13 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
- * TODO temporary name
- *
- * Used when committing for notifying schema indexes about updates made to the graph.
- * Currently in the form of {@link PropertyRecord property records}.
+ * This is the entry point for managing "schema indexes" in the database, including creating,
+ * removing and querying such indexes.
  */
-public class SchemaIndexing implements Lifecycle
+public class IndexingService implements Lifecycle
 {
     // TODO pull out an interface instead of overriding all methods
-    public static final SchemaIndexing NO_INDEXING = new SchemaIndexing( null, null, null )
+    public static final IndexingService NO_INDEXING = new IndexingService( null, null, null )
     {
         @Override
         public void start() throws Throwable
@@ -63,15 +59,15 @@ public class SchemaIndexing implements Lifecycle
     private final ThreadToStatementContextBridge ctxProvider;
     private NeoStore neoStore;
     private IndexPopulationService populationService = NO_POPULATION_SERVICE;
-    private final IndexPopulatorMapper populatorMapper;
+    private final SchemaIndexProvider provider;
     private final LifeSupport life = new LifeSupport();
     
-    public SchemaIndexing( XaDataSourceManager dataSourceManager, ThreadToStatementContextBridge ctxProvider,
-            IndexPopulatorMapper populatorMapper )
+    public IndexingService( XaDataSourceManager dataSourceManager, ThreadToStatementContextBridge ctxProvider,
+                            SchemaIndexProvider provider )
     {
         this.dataSourceManager = dataSourceManager;
         this.ctxProvider = ctxProvider;
-        this.populatorMapper = populatorMapper;
+        this.provider = provider;
     }
     
     @Override
@@ -92,7 +88,7 @@ public class SchemaIndexing implements Lifecycle
                 {
                     neoStore = ((NeoStoreXaDataSource)ds).getNeoStore();
                     populationService = life.add(
-                            new BackgroundIndexPopulationService( populatorMapper, neoStore, ctxProvider ) );
+                            new BackgroundIndexPopulationService( provider, neoStore, ctxProvider ) );
                 }
             }
         } );

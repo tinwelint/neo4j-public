@@ -21,7 +21,7 @@ package org.neo4j.kernel.impl.api.index;
 
 import static org.neo4j.helpers.Exceptions.launderedException;
 
-import java.util.concurrent.Callable;
+import java.io.IOException;
 
 import javax.transaction.TransactionManager;
 
@@ -33,18 +33,18 @@ import org.neo4j.kernel.impl.transaction.LockManager;
 import org.neo4j.kernel.impl.transaction.xaframework.LogBuffer;
 
 /**
- * After an index is populated an {@link IndexPopulationCompletor} will mark it as ONLINE
+ * After an index is populated an {@link IndexPopulationCompleter} will mark it as ONLINE
  * while holding a schema write lock.  
  */
-public class IndexPopulationCompletor
+public class IndexPopulationCompleter
 {
     private final LockManager lockManager;
     private final PersistenceManager persistenceManager;
     private final TransactionManager txManager;
     private final IndexRule index;
 
-    public IndexPopulationCompletor( IndexRule index, LockManager lockManager, PersistenceManager persistenceManager,
-            TransactionManager txManager )
+    public IndexPopulationCompleter( IndexRule index, LockManager lockManager, PersistenceManager persistenceManager,
+                                     TransactionManager txManager )
     {
         this.index = index;
         this.lockManager = lockManager;
@@ -53,12 +53,14 @@ public class IndexPopulationCompletor
     }
     
     /**
-     * Marks the index state as {@link IndexState#ONLINE}. Guarantees that no index updates will
-     * get to the index during this call.
+     * Marks the index state as {@link IndexState#ONLINE}. Guarantees that no changes will be allowed
+     * from the outside that affect the index during this call. This allows you to do final completion
+     * of the index, knowing that nothing will change under your feet while you wrap up and hand the index
+     * over to the database.
      * 
-     * @param runnable final work required on the index given the guarantees of this method.
+     * @param wrapUpTasks final work required on the index to be performed under the guarantees of this method.
      */
-    public void complete( Callable<IndexSnapshot> runnable )
+    public void complete( Runnable wrapUpTasks )
     {
         LockHolder lockHolder = null;
         boolean success = false;
@@ -67,8 +69,7 @@ public class IndexPopulationCompletor
             txManager.begin();
             lockHolder = new LockHolder( lockManager, txManager.getTransaction() );
             lockHolder.acquireSchemaWriteLock();
-            IndexSnapshot snapshot = runnable.call();
-            persistenceManager.completeIndexCreation( index, snapshot );
+            wrapUpTasks.run();
             success = true;
         }
         catch ( Exception e )
@@ -97,7 +98,7 @@ public class IndexPopulationCompletor
 
     public interface IndexSnapshot
     {
-        void write( LogBuffer target );
+        void write( LogBuffer target ) throws IOException;
     }
     
     public static final IndexSnapshot NO_SNAPSHOT = new IndexSnapshot()

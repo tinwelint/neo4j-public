@@ -82,7 +82,7 @@ public class NodePropertyUpdate
         return true;
     }
 
-    public void apply( int n, IndexPopulator indexManipulator )
+    public void apply( int n, IndexWriter indexManipulator )
     {
         switch (getUpdateMode())
         {

@@ -19,10 +19,15 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
-
-public interface IndexPopulator
+/**
+ * Used for initial population of an index.
+ */
+public interface IndexWriter
 {
+
+    /**
+     * Remove all data in the index.
+     */
     void clear();
     
     /**
@@ -44,14 +49,8 @@ public interface IndexPopulator
      * @param propertyValue property value for the entry to de-index.
      */
     void remove( int n, long nodeId, Object propertyValue );
-
-    /**
-     * Called to signal end of background index population
-     * @return 
-     */
-    IndexSnapshot done();
     
-    public static class Adapter implements IndexPopulator
+    public static class Adapter implements IndexWriter
     {
         @Override
         public void add( int n, long nodeId, Object propertyValue )
@@ -61,12 +60,6 @@ public interface IndexPopulator
         @Override
         public void remove( int n, long nodeId, Object propertyValue )
         {
-        }
-
-        @Override
-        public IndexSnapshot done()
-        {
-            return IndexPopulationCompletor.NO_SNAPSHOT;
         }
 
         @Override

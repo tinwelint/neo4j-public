@@ -26,23 +26,28 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.kernel.api.IndexPopulatorMapper;
-import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
+import org.neo4j.helpers.Service;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 
-public class InMemoryIndexPopMapper implements IndexPopulatorMapper
+@Service.Implementation( InMemoryIndexProvider.class )
+public class InMemoryIndexProvider extends SchemaIndexProvider
 {
-    private final Map<IndexDefinition, IndexPopulator> populators = new CopyOnWriteHashMap<IndexDefinition, IndexPopulator>();
-    
-    @Override
-    public IndexPopulator getPopulator( IndexDefinition index )
+    private final Map<IndexDefinition, IndexWriter> writers = new CopyOnWriteHashMap<IndexDefinition, IndexWriter>();
+
+    public InMemoryIndexProvider()
     {
-        IndexPopulator populator = new InMemoryIndexPopulator();
-        populators.put( index, populator );
+        super("in-memory");
+    }
+
+    @Override
+    public IndexWriter getWriter( IndexDefinition index )
+    {
+        IndexWriter populator = new InMemoryIndexWriter();
+        writers.put( index, populator );
         return populator;
     }
     
-    private static class InMemoryIndexPopulator implements IndexPopulator
+    private static class InMemoryIndexWriter implements IndexWriter
     {
         private final Map<Object, Set<Long>> indexData = new HashMap<Object, Set<Long>>();
 
@@ -69,12 +74,6 @@ public class InMemoryIndexPopMapper implements IndexPopulatorMapper
         {
             Collection<Long> nodes = indexData.get( propertyValue );
             nodes.remove( nodeId );
-        }
-
-        @Override
-        public IndexSnapshot done()
-        {
-            throw new UnsupportedOperationException();
         }
 
         @Override

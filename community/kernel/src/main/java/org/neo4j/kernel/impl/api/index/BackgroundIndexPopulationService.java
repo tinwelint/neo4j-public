@@ -30,7 +30,6 @@ import java.util.concurrent.ExecutorService;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
-import org.neo4j.kernel.api.IndexPopulatorMapper;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
@@ -40,7 +39,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 public class BackgroundIndexPopulationService extends LifecycleAdapter implements IndexPopulationService
 {
     private final ExecutorService populationExecutor = newFixedThreadPool( 3 ); // TODO
-    private final IndexPopulatorMapper indexManipulatorMapper;
+    private final SchemaIndexProvider indexManipulatorMapper;
     private final StatementContext readContext;
     private final NeoStore neoStore;
     
@@ -48,7 +47,7 @@ public class BackgroundIndexPopulationService extends LifecycleAdapter implement
     private final Collection<IndexPopulationJob> indexJobs = new CopyOnWriteArrayList<IndexPopulationJob>();
     private final ThreadToStatementContextBridge ctxProvider;
 
-    public BackgroundIndexPopulationService( IndexPopulatorMapper indexManipulatorMapper,
+    public BackgroundIndexPopulationService( SchemaIndexProvider indexManipulatorMapper,
                                              NeoStore neoStore,
                                              ThreadToStatementContextBridge ctxProvider )
     {
@@ -59,7 +58,7 @@ public class BackgroundIndexPopulationService extends LifecycleAdapter implement
     }
     
     @Override
-    public void indexCreated( IndexDefinition index, IndexPopulationCompletor completor )
+    public void indexCreated( IndexDefinition index, IndexPopulationCompleter completor )
     {
         String propertyKey = single( index.getPropertyKeys() );
         long labelId;
@@ -79,7 +78,7 @@ public class BackgroundIndexPopulationService extends LifecycleAdapter implement
         }
         
         // TODO task management including handling of failures during population.
-        IndexPopulator populator = indexManipulatorMapper.getPopulator( index );
+        IndexWriter populator = indexManipulatorMapper.getWriter( index );
         IndexPopulationJob job = new IndexPopulationJob( labelId, propertyKeyId, populator,
                 neoStore, ctxProvider, completor );
         populationExecutor.submit( job );

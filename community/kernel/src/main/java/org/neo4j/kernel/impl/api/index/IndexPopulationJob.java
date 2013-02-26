@@ -20,12 +20,10 @@
 package org.neo4j.kernel.impl.api.index;
 
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.neo4j.helpers.Predicate;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.api.index.IndexPopulationCompletor.IndexSnapshot;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
@@ -46,17 +44,17 @@ class IndexPopulationJob implements Runnable
 {
     private final long labelId;
     private final long propertyKeyId;
-    private final IndexPopulator populator;
+    private final IndexWriter populator;
     private final NeoStore neoStore;
     private int count;
 
     // NOTE: unbounded queue expected here
     private final Queue<NodePropertyUpdate> queue = new ConcurrentLinkedQueue<NodePropertyUpdate>();
     private final ThreadToStatementContextBridge ctxProvider;
-    private final IndexPopulationCompletor completor;
+    private final IndexPopulationCompleter completor;
 
-    public IndexPopulationJob( long labelId, long propertyKeyId, IndexPopulator populator, NeoStore neoStore,
-                               ThreadToStatementContextBridge ctxProvider, IndexPopulationCompletor completor )
+    public IndexPopulationJob( long labelId, long propertyKeyId, IndexWriter populator, NeoStore neoStore,
+                               ThreadToStatementContextBridge ctxProvider, IndexPopulationCompleter completor )
     {
         this.labelId = labelId;
         this.propertyKeyId = propertyKeyId;
@@ -73,13 +71,12 @@ class IndexPopulationJob implements Runnable
         
         indexAllNodes();
         
-        completor.complete( new Callable<IndexSnapshot>()
+        completor.complete( new Runnable()
         {
             @Override
-            public IndexSnapshot call()
+            public void run()
             {
                 populateFromQueueIfAvailable( Long.MAX_VALUE, count );
-                return populator.done();
             }
         } );
     }
@@ -117,7 +114,7 @@ class IndexPopulationJob implements Runnable
 
     /**
      * A transaction happened that produced the given updates. Let this job incorporate its data
-     * into, feeding it to the {@link IndexPopulator}.
+     * into, feeding it to the {@link IndexWriter}.
      */
     public void indexUpdates( Iterable<NodePropertyUpdate> updates )
     {

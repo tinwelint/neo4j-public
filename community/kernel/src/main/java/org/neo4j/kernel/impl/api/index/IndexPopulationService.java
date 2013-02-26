@@ -35,12 +35,12 @@ public interface IndexPopulationService
         }
         
         @Override
-        public void indexCreated( IndexDefinition index, IndexPopulationCompletor completor )
+        public void indexCreated( IndexDefinition index, IndexPopulationCompleter completor )
         {
         }
     };
     
-    void indexCreated( IndexDefinition index, IndexPopulationCompletor completor );
+    void indexCreated( IndexDefinition index, IndexPopulationCompleter completor );
 
     void indexUpdates( Iterable<NodePropertyUpdate> updates );
 }
