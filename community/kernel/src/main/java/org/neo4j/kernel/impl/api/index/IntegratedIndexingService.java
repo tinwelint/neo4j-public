@@ -51,9 +51,9 @@ public class IntegratedIndexingService extends LifecycleAdapter implements Index
     private IndexContext createContextForRule( IndexRule rule )
     {
         long ruleId = rule.getId();
-        IndexContext populatingWriter = new WritingIndexContext( provider.getOnlineWriter( ruleId ), rule );
+        IndexContext populatingWriter = new WritingIndexContext( provider.getPopulatingWriter( ruleId ), rule );
         PopulatingIndexContext populatingContext = new PopulatingIndexContext( populatingWriter, executor, store );
-        IndexContext onlineWriter = new WritingIndexContext( provider.getPopulatingWriter( ruleId ), rule );
+        IndexContext onlineWriter = new WritingIndexContext( provider.getOnlineWriter( ruleId ), rule );
         AtomicDelegatingIndexContext atomicContext = new AtomicDelegatingIndexContext( populatingContext );
         Flipper flipper = new Flipper( atomicContext, onlineWriter );
         populatingContext.setFlipper( flipper );
