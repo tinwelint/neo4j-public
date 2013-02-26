@@ -69,8 +69,7 @@ public class OldIndexingService implements Lifecycle, IndexPopulationService
     private final SchemaIndexProvider provider;
     private final LifeSupport life = new LifeSupport();
     private final Set<Long> populatingIndexes = newSetFromMap( new ConcurrentHashMap<Long, Boolean>() );
-    private final StateFlipOver flip = new IndexingServiceFlipOver( populatingIndexes, onlineService );
-    
+
     public OldIndexingService( XaDataSourceManager dataSourceManager, ThreadToStatementContextBridge ctxProvider,
                             SchemaIndexProvider provider )
     {
@@ -96,9 +95,9 @@ public class OldIndexingService implements Lifecycle, IndexPopulationService
                 if ( ds.getName().equals( NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME ) )
                 {
                     neoStore = ((NeoStoreXaDataSource)ds).getNeoStore();
-                    populationService = life.add(
-                            new BackgroundIndexPopulationService( provider, neoStore, ctxProvider, flip ) );
-                    onlineService = life.add( new OnlineIndexService( provider ) );
+//                    populationService = life.add(
+//                            new BackgroundIndexPopulationService( provider, neoStore, ctxProvider, flip ) );
+//                    onlineService = life.add( new OnlineIndexService( provider ) );
                 }
             }
         } );
