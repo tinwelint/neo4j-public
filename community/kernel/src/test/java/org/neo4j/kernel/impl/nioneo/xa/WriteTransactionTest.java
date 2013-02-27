@@ -35,7 +35,7 @@ import org.mockito.ArgumentMatcher;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.DefaultTxHook;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.index.IntegratedIndexing;
+import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.store.DefaultWindowPoolFactory;
@@ -54,7 +54,7 @@ public class WriteTransactionTest
     {
         // GIVEN
         WriteTransaction writeTransaction = new WriteTransaction( 0, log, transactionState, neoStore,
-                cacheAccessBackDoor, IntegratedIndexing.NO_INDEXING );
+                cacheAccessBackDoor, NO_INDEXING );
         writeTransaction.setCommitTxId( 1 );
 
         // WHEN
@@ -79,7 +79,7 @@ public class WriteTransactionTest
             schemaStore.updateRecord( record );
         long ruleId = first( records ).getId();
         WriteTransaction writeTransaction = new WriteTransaction( 0, log, transactionState, neoStore,
-                cacheAccessBackDoor, IntegratedIndexing.NO_INDEXING );
+                cacheAccessBackDoor, NO_INDEXING );
         writeTransaction.setCommitTxId( 1 );
 
         // WHEN
@@ -96,7 +96,7 @@ public class WriteTransactionTest
     {
         // GIVEN
         WriteTransaction writeTransaction = new WriteTransaction( 0, log, transactionState, neoStore,
-                cacheAccessBackDoor, IntegratedIndexing.NO_INDEXING );
+                cacheAccessBackDoor, NO_INDEXING );
         writeTransaction.setCommitTxId( 1 );
 
         // WHEN
@@ -158,4 +158,6 @@ public class WriteTransactionTest
             }
         };
     }
+
+    static IndexingService NO_INDEXING = mock(IndexingService.class);
 }

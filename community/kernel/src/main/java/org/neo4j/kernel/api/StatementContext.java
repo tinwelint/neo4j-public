@@ -131,7 +131,7 @@ public interface StatementContext
      * 
      * @param labelId the label id to attach the rule to.
      * @param propertyKey the property key to index.
-     * @return the created rule.
+     * @return the id of the created index.
      * @throws ConstraintViolationKernelException if a similar or conflicting rule already exists.
      */
     IndexRule addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException;
@@ -151,6 +151,13 @@ public interface StatementContext
      * @return all rule for that labelId.
      */
     Iterable<IndexRule> getIndexRules( long labelId );
+
+    /**
+     * Retrieve the state of an index.
+     * @param indexRuleId
+     * @return
+     */
+    IndexState getIndexState( long indexRuleId ) throws IndexNotFoundKernelException;
     
     /**
      * Drops a {@link IndexRule} from the database

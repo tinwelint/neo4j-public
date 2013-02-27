@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
+import org.neo4j.kernel.api.IndexState;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
@@ -111,12 +112,14 @@ public class InteractionStoppingStatementContext implements StatementContext
     @Override
     public IndexRule getIndexRule( long labelId, long propertyKey ) throws SchemaRuleNotFoundException
     {
+        assertOperationsAllowed();
         return delegate.getIndexRule( labelId, propertyKey );
     }
 
     @Override
     public void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException
     {
+        assertOperationsAllowed();
         delegate.dropIndexRule( indexRule );
     }
 
@@ -124,6 +127,12 @@ public class InteractionStoppingStatementContext implements StatementContext
     public Iterable<IndexRule> getIndexRules( long labelId )
     {
         return delegate.getIndexRules( labelId );
+    }
+
+    @Override
+    public IndexState getIndexState( long indexRuleId )
+    {
+        return null;
     }
 
     @Override
