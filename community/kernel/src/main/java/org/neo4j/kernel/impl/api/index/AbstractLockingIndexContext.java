@@ -3,9 +3,7 @@ package org.neo4j.kernel.impl.api.index;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.neo4j.kernel.impl.nioneo.store.IndexRule;
-
-public abstract class AbstractLockingIndexContext extends AbstractDelegatingIndexContext
+public abstract class AbstractLockingIndexContext<D extends IndexContext> extends AbstractDelegatingIndexContext<D>
 {
     private final ReadWriteLock lock;
 
@@ -24,17 +22,6 @@ public abstract class AbstractLockingIndexContext extends AbstractDelegatingInde
        lock.readLock().lock();
        try {
            super.create();
-       }
-       finally {
-           lock.readLock().unlock();
-       }
-   }
-
-   public void ready()
-   {
-       lock.readLock().lock();
-       try {
-           super.ready();
        }
        finally {
            lock.readLock().unlock();
@@ -62,15 +49,4 @@ public abstract class AbstractLockingIndexContext extends AbstractDelegatingInde
            lock.readLock().unlock();
        }
    }
-
-   public IndexRule getIndexRule()
-   {
-       lock.readLock().lock();
-       try {
-          return super.getIndexRule();
-       }
-       finally {
-           lock.readLock().unlock();
-       }
-   }    
 }

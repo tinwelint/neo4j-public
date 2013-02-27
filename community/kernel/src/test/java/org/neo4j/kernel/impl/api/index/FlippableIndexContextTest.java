@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.neo4j.test.OtherThreadExecutor;
 
 public class FlippableIndexContextTest
 {
@@ -39,10 +40,11 @@ public class FlippableIndexContextTest
         // GIVEN
         IndexContext actual = mock( IndexContext.class );
         IndexContext other = mock( IndexContext.class );
-        FlippableIndexContext delegate = new FlippableIndexContext( actual );
+        FlippableIndexContext delegate = new FlippableIndexContext(actual);
+        delegate.setFlipTarget( other );
 
         // WHEN
-        delegate.setDelegate( other );
+        delegate.flip();
         delegate.drop();
 
         // THEN
@@ -59,6 +61,7 @@ public class FlippableIndexContextTest
         final IndexContext actual = mock( IndexContext.class );
         final IndexContext other = mock( IndexContext.class );
         final FlippableIndexContext flippable = new FlippableIndexContext( actual );
+        flippable.setFlipTarget( other );
         final AtomicReference<IndexContext> result = new AtomicReference<IndexContext>();
 
         final CountDownLatch actualLatch = new CountDownLatch( 1 );
@@ -72,13 +75,13 @@ public class FlippableIndexContextTest
                 result.set( flippable.getDelegate() );
                 return null;
             }
-        } ).when( actual ).getIndexRule();
+        } ).when( actual ).drop();
 
         Runnable triggerActual = new Runnable() {
             @Override
             public void run()
             {
-                flippable.getIndexRule();
+                flippable.drop();
             }
         };
 
@@ -96,13 +99,13 @@ public class FlippableIndexContextTest
                 {
                     throw new RuntimeException( e );
                 }
-                flippable.setDelegate( other );
+                flippable.flip( );
             }
         };
 
         // WHEN
 
-        // trigger blocking call into AtomicDelegatingIndexContext
+        // trigger blocking call
         new Thread(triggerActual).start();
 
         // trigger changing delegate
