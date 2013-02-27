@@ -29,7 +29,6 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 public class IndexingService extends LifecycleAdapter
 {
-    // TODO force indexes on shutdown/stop ?
 
     // TODO create hierachy of filters for smarter update processing
 
@@ -49,6 +48,12 @@ public class IndexingService extends LifecycleAdapter
             throw new IllegalStateException( "You cannot run the database without providing a schema index provider, " +
                     "please make sure that a valid provider is on your classpath." );
         }
+    }
+
+    @Override
+    public void init()
+    {
+        // During initialization, this service should somehow load all indexes and set up an index cake for each index
     }
 
     public void update( Iterable<NodePropertyUpdate> updates ) {

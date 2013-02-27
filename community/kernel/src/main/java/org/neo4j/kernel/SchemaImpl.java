@@ -89,7 +89,7 @@ public class SchemaImpl implements Schema
             long labelId = context.getLabelId( index.getLabel().name() );
             long propertyKeyId = context.getPropertyKeyId( propertyKey );
             org.neo4j.kernel.api.IndexState indexState =
-                    context.getIndexState( context.getIndexRule( labelId, propertyKeyId ).getId());
+                    context.getIndexState( context.getIndexRule( labelId, propertyKeyId ) );
             switch ( indexState )
             {
                 case POPULATING:

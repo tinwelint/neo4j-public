@@ -111,9 +111,9 @@ public class ReadOnlyStatementContext implements StatementContext
     }
 
     @Override
-    public IndexState getIndexState( long indexRuleId ) throws IndexNotFoundKernelException
+    public IndexState getIndexState( IndexRule indexRule ) throws IndexNotFoundKernelException
     {
-        return delegate.getIndexState( indexRuleId );
+        return delegate.getIndexState( indexRule );
     }
 
     @Override

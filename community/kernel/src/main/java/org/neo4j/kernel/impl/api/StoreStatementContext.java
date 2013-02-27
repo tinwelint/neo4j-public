@@ -211,7 +211,7 @@ public class StoreStatementContext implements StatementContext
     {
         SchemaStore schemaStore = neoStore.getSchemaStore();
         long id = schemaStore.nextId();
-        IndexRule rule = new IndexRule( id, labelId, IndexRule.State.POPULATING, propertyKey );
+        IndexRule rule = new IndexRule( id, labelId, propertyKey );
         persistenceManager.createSchemaRule( rule );
         return rule;
     }
@@ -272,9 +272,9 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
-    public IndexState getIndexState( long indexRuleId ) throws IndexNotFoundKernelException
+    public IndexState getIndexState( IndexRule indexRule ) throws IndexNotFoundKernelException
     {
-        return indexService.getContextForRule( indexRuleId ).getState();
+        return indexService.getContextForRule( indexRule.getId() ).getState();
     }
 
     @Override

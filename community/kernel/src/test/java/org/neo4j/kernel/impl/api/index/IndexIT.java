@@ -53,7 +53,7 @@ public class IndexIT
         tx.finish();
 
         // AND WHEN the index is created
-        awaitIndexOnline( rule.getId() );
+        awaitIndexOnline( rule );
 
         // THEN
     }
@@ -122,18 +122,18 @@ public class IndexIT
     }
 
 
-    private void awaitIndexOnline( long indexId ) throws IndexNotFoundKernelException
+    private void awaitIndexOnline( IndexRule indexRule ) throws IndexNotFoundKernelException
     {
         StatementContext ctx = ctxProvider.getCtxForReading();
         long start = System.currentTimeMillis();
         while(true)
         {
-           if(ctx.getIndexState(indexId) == IndexState.ONLINE)
+           if(ctx.getIndexState(indexRule) == IndexState.ONLINE)
            {
                break;
            }
 
-           if(start < System.currentTimeMillis() + 1000 * 10)
+           if(start + 1000 * 10 < System.currentTimeMillis())
            {
                throw new RuntimeException( "Index didn't come online within a reasonable time." );
            }

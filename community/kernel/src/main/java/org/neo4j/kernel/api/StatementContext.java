@@ -154,16 +154,13 @@ public interface StatementContext
 
     /**
      * Retrieve the state of an index.
-     * @param indexRuleId
      * @return
      */
-    IndexState getIndexState( long indexRuleId ) throws IndexNotFoundKernelException;
+    IndexState getIndexState( IndexRule indexRule ) throws IndexNotFoundKernelException;
     
     /**
      * Drops a {@link IndexRule} from the database
      *
-     * @param labelId the label id to attach the rule to.
-     * @param propertyKey the property key to index.
      * @throws ConstraintViolationKernelException if the index is not found
      */
     void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException;
