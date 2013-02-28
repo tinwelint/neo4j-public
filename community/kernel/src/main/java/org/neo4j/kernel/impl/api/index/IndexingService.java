@@ -44,8 +44,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
  */
 public class IndexingService extends LifecycleAdapter
 {
-
-    // TODO create hierachy of filters for smarter update processing
+    // TODO create hierarchy of filters for smarter update processing
 
     private final JobScheduler scheduler;
     private final SchemaIndexProvider provider;
@@ -73,7 +72,7 @@ public class IndexingService extends LifecycleAdapter
         // Find all indexes that are not already online, and create them
         for ( IndexContext indexContext : indexes.values() )
         {
-            if(indexContext.getState() != IndexState.ONLINE)
+            if ( indexContext.getState() != IndexState.ONLINE )
             {
                 indexContext.create();
             }
@@ -102,7 +101,6 @@ public class IndexingService extends LifecycleAdapter
         }
         return indexContext;
     }
-
 
     /**
      * Called while the database starts up, before recovery.
@@ -138,17 +136,22 @@ public class IndexingService extends LifecycleAdapter
      */
     public void createIndex( IndexRule rule, NeoStore neoStore )
     {
-        IndexContext newIndex = createPopulatingIndexContext( rule, neoStore );
-
-        IndexContext preExisting = indexes.put( rule.getId(), newIndex );
-        assert preExisting == null;
-
-        // Trigger the creation, only if the service is online. Otherwise,
-        // creation will be triggered on start().
-        if(online)
+        IndexContext index = indexes.get( rule.getId() );
+        if ( online )
         {
-            newIndex.create();
+            assert index == null : "Index " + rule + " already exists";
+            index = createPopulatingIndexContext( rule, neoStore );
+
+            // Trigger the creation, only if the service is online. Otherwise,
+            // creation will be triggered on start().
+            index.create();
         }
+        else if ( index == null )
+        {
+            index = createPopulatingIndexContext( rule, neoStore );
+        }
+        
+        indexes.put( rule.getId(), index );
     }
 
     private IndexContext createOnlineIndexContext( IndexRule rule )
@@ -230,5 +233,10 @@ public class IndexingService extends LifecycleAdapter
         {
             return IndexState.NON_EXISTENT;
         }
+    }
+
+    public void flushAll()
+    {
+        provider.flushAll();
     }
 }

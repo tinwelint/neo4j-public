@@ -1320,6 +1320,10 @@ public abstract class InternalAbstractGraphDatabase
             {
                 return (T) neoDataSource.getIndexService();
             }
+            else if ( JobScheduler.class.isAssignableFrom( type ) )
+            {
+                return (T) jobScheduler;
+            }
             else if ( DependencyResolver.class.isAssignableFrom( type ) )
             {
                 return (T) DependencyResolverImpl.this;

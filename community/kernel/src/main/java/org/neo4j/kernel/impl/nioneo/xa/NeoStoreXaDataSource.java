@@ -270,7 +270,9 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
         {
             if ( !readOnly )
             {
+                // TODO should neoStore.setRecoveredStatus delegate to all individual stores instead?
                 neoStore.setRecoveredStatus( true );
+                neoStore.getSchemaStore().setRecovered();
                 try
                 {
                     indexingService.initIndexes(loadIndexRules(), neoStore);
@@ -278,6 +280,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
                 }
                 finally
                 {
+                    neoStore.getSchemaStore().unsetRecovered();
                     neoStore.setRecoveredStatus( false );
                 }
             }
@@ -457,6 +460,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
         public void flushAll()
         {
             neoStore.flushAll();
+            indexingService.flushAll();
         }
 
         @Override

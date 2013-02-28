@@ -99,4 +99,10 @@ public abstract class SchemaIndexProvider extends Service
     //    getReader( IndexDefinition index )
 
     public abstract IndexState getState( long indexId );
+
+    /**
+     * For persistent indexes make sure all data in the indexes are forced to disk.
+     * This method isn't allowed to return until all I/O has completed.
+     */
+    public abstract void flushAll();
 }

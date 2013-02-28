@@ -60,7 +60,11 @@ public class InMemoryIndexProvider extends SchemaIndexProvider
         return populator;
     }
 
-
+    @Override
+    public void flushAll()
+    {
+    }
+    
     private static class InMemoryIndexWriter implements IndexPopulator, IndexWriter
     {
         private final Map<Object, Set<Long>> indexData = new HashMap<Object, Set<Long>>();

@@ -20,8 +20,12 @@
 package org.neo4j.kernel.impl.api.index;
 
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.DynamicLabel.label;
 import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
 import static org.neo4j.helpers.collection.IteratorUtil.single;
@@ -43,11 +47,10 @@ import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
 
 public class IndexRestartIt
 {
-
     private GraphDatabaseAPI db;
-    private EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
+    private final EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
     private TestGraphDatabaseFactory factory;
-    private SchemaIndexProvider mockedIndexProvider = mock(SchemaIndexProvider.class);
+    private final SchemaIndexProvider mockedIndexProvider = mock(SchemaIndexProvider.class);
 
     @Test
     public void shouldHandleRestartOfPopulatedIndex() throws Exception
@@ -156,7 +159,7 @@ public class IndexRestartIt
     {
         factory = new TestGraphDatabaseFactory();
         factory.setFileSystem( fs );
-        factory.setSchemaIndexProviders( Arrays.asList( (SchemaIndexProvider) mockedIndexProvider ) );
+        factory.setSchemaIndexProviders( Arrays.asList( mockedIndexProvider ) );
     }
 
     @After
@@ -164,5 +167,4 @@ public class IndexRestartIt
     {
         db.shutdown();
     }
-
 }
