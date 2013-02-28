@@ -19,9 +19,8 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 import static org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource.LOGICAL_LOG_DEFAULT_NAME;
 
 import java.io.File;
@@ -53,7 +52,7 @@ import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.TransactionInterceptorProviders;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaConnection;
@@ -352,7 +351,7 @@ public class TestXa
                 new XaFactory( config, TxIdGenerator.DEFAULT, txManager,
                         logBufferFactory, fileSystem, new DevNullLoggingService(), RecoveryVerifier.ALWAYS_VALID,
                         LogPruneStrategies.NO_PRUNING ), TransactionStateFactory.noStateFactory( new DevNullLoggingService() ),
-                        noCacheAccess(), mock( IndexingService.class), new TransactionInterceptorProviders( Collections.<TransactionInterceptorProvider>emptyList(),
+                        noCacheAccess(), mock( SchemaIndexProvider.class), new TransactionInterceptorProviders( Collections.<TransactionInterceptorProvider>emptyList(),
                         new DependencyResolver()
 
                         {
@@ -362,6 +361,7 @@ public class TestXa
                                 return (T) config;
                             }
                         } ), null );
+        neoStoreXaDataSource.init();
         neoStoreXaDataSource.start();
         return neoStoreXaDataSource;
     }

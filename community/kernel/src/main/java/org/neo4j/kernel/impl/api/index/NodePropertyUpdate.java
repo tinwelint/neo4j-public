@@ -20,7 +20,6 @@
 package org.neo4j.kernel.impl.api.index;
 
 import org.neo4j.kernel.impl.api.UpdateMode;
-import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class NodePropertyUpdate
 {
@@ -81,23 +80,6 @@ public class NodePropertyUpdate
     {
         // TODO implement adding label id info
         return true;
-    }
-
-    public void apply( IndexWriter indexManipulator )
-    {
-        switch (getUpdateMode())
-        {
-            case ADDED:
-                indexManipulator.add( getNodeId(), getValueAfter() );
-                break;
-            case CHANGED:
-                indexManipulator.remove( getNodeId(), getValueBefore() );
-                indexManipulator.add( getNodeId(), getValueAfter() );
-                break;
-            case REMOVED:
-                indexManipulator.remove( getNodeId(), getValueBefore() );
-                break;
-        }
     }
     
     @Override

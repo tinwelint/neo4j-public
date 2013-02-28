@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -40,6 +41,7 @@ import org.neo4j.graphdb.config.Setting;
  */
 public class GraphDatabaseBuilder
 {
+
     public interface DatabaseCreator
     {
         GraphDatabaseService newDatabase( Map<String, String> config );
