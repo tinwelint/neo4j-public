@@ -21,12 +21,13 @@ package org.neo4j.kernel.impl.api.index;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.api.IndexState;
 import org.neo4j.kernel.api.SchemaIndexProvider;
+import org.neo4j.kernel.api.InternalIndexState;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 
 @Service.Implementation( InMemoryIndexProvider.class )
@@ -48,7 +49,7 @@ public class InMemoryIndexProvider extends SchemaIndexProvider
     }
 
     @Override
-    public IndexState getInitialState( long indexId )
+    public InternalIndexState getInitialState( long indexId )
     {
         return null;
     }
@@ -73,12 +74,9 @@ public class InMemoryIndexProvider extends SchemaIndexProvider
         }
 
         @Override
-        public void update( Iterable<NodePropertyUpdate> updates )
+        public void update( Iterator<NodePropertyUpdate> updates )
         {
-            for ( NodePropertyUpdate update : updates )
-            {
 
-            }
         }
 
         @Override

@@ -19,7 +19,9 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import org.neo4j.kernel.api.IndexState;
+import java.util.Iterator;
+
+import org.neo4j.kernel.api.InternalIndexState;
 
 public abstract class AbstractDelegatingIndexContext implements IndexContext
 {
@@ -32,7 +34,7 @@ public abstract class AbstractDelegatingIndexContext implements IndexContext
     }
     
     @Override
-    public void update( Iterable<NodePropertyUpdate> updates )
+    public void update( Iterator<NodePropertyUpdate> updates )
     {
         getDelegate().update( updates );
     }
@@ -44,7 +46,7 @@ public abstract class AbstractDelegatingIndexContext implements IndexContext
     }
 
     @Override
-    public IndexState getState()
+    public InternalIndexState getState()
     {
         return getDelegate().getState();
     }

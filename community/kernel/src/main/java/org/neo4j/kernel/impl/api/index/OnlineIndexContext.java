@@ -19,15 +19,22 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import org.neo4j.kernel.api.IndexState;
+import java.util.Iterator;
+
+import org.neo4j.kernel.api.InternalIndexState;
+import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class OnlineIndexContext implements IndexContext
 {
+    private final IndexRule rule;
     private final IndexWriter writer;
+    private final IndexingService.IndexStoreView storeView;
 
-    public OnlineIndexContext( IndexWriter writer )
+    public OnlineIndexContext( IndexRule rule, IndexWriter writer, IndexingService.IndexStoreView storeView )
     {
+        this.rule = rule;
         this.writer = writer;
+        this.storeView = storeView;
     }
     
     @Override
@@ -37,7 +44,7 @@ public class OnlineIndexContext implements IndexContext
     }
 
     @Override
-    public void update( Iterable<NodePropertyUpdate> updates )
+    public void update( Iterator<NodePropertyUpdate> updates )
     {
         writer.update( updates );
     }
@@ -49,9 +56,9 @@ public class OnlineIndexContext implements IndexContext
     }
 
     @Override
-    public IndexState getState()
+    public InternalIndexState getState()
     {
-        return IndexState.ONLINE;
+        return InternalIndexState.ONLINE;
     }
     
     @Override

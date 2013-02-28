@@ -19,16 +19,17 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
+import static org.neo4j.helpers.collection.IteratorUtil.asIterator;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,11 +43,14 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
+import org.neo4j.kernel.api.InternalIndexState;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.impl.nioneo.xa.NeoStoreIndexStoreView;
+import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
 public class IndexPopulationJobTest
@@ -57,7 +61,7 @@ public class IndexPopulationJobTest
         // GIVEN
         String value = "Taylor";
         long nodeId = createNode( map( name, value ), FIRST );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator, new FlippableIndexContext() );
 
         // WHEN
         job.run();
@@ -79,7 +83,7 @@ public class IndexPopulationJobTest
         createNode( map( name, value ), SECOND );
         createNode( map( age, 31 ), FIRST );
         long node4 = createNode( map( age, 35, name, value ), FIRST );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator, new FlippableIndexContext() );
 
         // WHEN
         job.run();
@@ -105,7 +109,7 @@ public class IndexPopulationJobTest
         long changeNode = node1;
         long propertyKeyId = context.getPropertyKeyId( name );
         NodeChangingWriter populator = new NodeChangingWriter( changeNode, propertyKeyId, value1, changedValue );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator, new FlippableIndexContext() );
         populator.setJob( job );
 
         // WHEN
@@ -130,7 +134,7 @@ public class IndexPopulationJobTest
         long node3 = createNode( map( name, value3 ), FIRST );
         long propertyKeyId = context.getPropertyKeyId( name );
         NodeDeletingWriter populator = new NodeDeletingWriter( node2, propertyKeyId, value2 );
-        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator, new FlippableIndexContext() );
         populator.setJob( job );
 
         // WHEN
@@ -142,7 +146,26 @@ public class IndexPopulationJobTest
         Map<Long, Object> expectedRemoved = MapUtil.<Long,Object>genericMap( node2, value2 );
         assertEquals( expectedRemoved, populator.removed ); 
     }
-    
+
+    @Test
+    public void shouldTransitionToFailedStateIfPopulationJobCrashes() throws Exception
+    {
+        // GIVEN
+        IndexPopulator failingPopulator = mock( IndexPopulator.class );
+        doThrow(new RuntimeException("BORK BORK")).when( failingPopulator ).add( anyLong(), any() );
+
+        FlippableIndexContext index = new FlippableIndexContext();
+
+        createNode( map( name, "Taylor" ), FIRST );
+        IndexPopulationJob job = newIndexPopulationJob( FIRST, name, failingPopulator, index );
+
+        // WHEN
+        job.run();
+
+        // THEN
+        assertThat( index.getState(), equalTo( InternalIndexState.FAILED) );
+    }
+
     private class NodeChangingWriter extends IndexPopulator.Adapter
     {
         private final Set<Pair<Long, Object>> added = new HashSet<Pair<Long,Object>>();
@@ -165,16 +188,17 @@ public class IndexPopulationJobTest
         {
             if ( nodeId == 2 )
             {
-                job.update( asList( new NodePropertyUpdate( changedNode, propertyKeyId, previousValue, newValue ) ) );
+                job.update( asIterator( new NodePropertyUpdate( changedNode, propertyKeyId, previousValue, newValue ) ) );
             }
             added.add( Pair.of( nodeId, propertyValue ) );
         }
 
         @Override
-        public void update(Iterable<NodePropertyUpdate> updates)
+        public void update(Iterator<NodePropertyUpdate> updates)
         {
-            for ( NodePropertyUpdate update : updates )
+            while(updates.hasNext())
             {
+                NodePropertyUpdate update = updates.next();
                 switch ( update.getUpdateMode() )
                 {
                     case ADDED:
@@ -217,16 +241,17 @@ public class IndexPopulationJobTest
         {
             if ( nodeId == 3 )
             {
-                job.update( asList( new NodePropertyUpdate( nodeToDelete, propertyKeyId, valueToDelete, null ) ) );
+                job.update( asIterator( new NodePropertyUpdate( nodeToDelete, propertyKeyId, valueToDelete, null ) ) );
             }
             added.put( nodeId, propertyValue );
         }
 
         @Override
-        public void update(Iterable<NodePropertyUpdate> updates)
+        public void update(Iterator<NodePropertyUpdate> updates)
         {
-            for ( NodePropertyUpdate update : updates )
+            while(updates.hasNext())
             {
+                NodePropertyUpdate update = updates.next();
                 switch ( update.getUpdateMode() )
                 {
                     case ADDED:
@@ -262,14 +287,12 @@ public class IndexPopulationJobTest
         db.shutdown();
     }
 
-    private IndexPopulationJob newIndexPopulationJob( Label label, String propertyKey, IndexPopulator populator )
+    private IndexPopulationJob newIndexPopulationJob( Label label, String propertyKey, IndexPopulator populator, FlippableIndexContext flipper )
             throws LabelNotFoundKernelException, PropertyKeyNotFoundException
     {
-        IndexRule indexRule = new IndexRule( 0, context.getLabelId( FIRST.name() ), context.getPropertyKeyId( name ) );
-        FlippableIndexContext flipper = new FlippableIndexContext();
-        flipper.setFlipTarget( mock( IndexContextFactory.class ) );
+        IndexRule indexRule = new IndexRule( 0, context.getLabelId( label.name() ), context.getPropertyKeyId( propertyKey ) );
         NeoStore neoStore = db.getXaDataSourceManager().getNeoStoreDataSource().getNeoStore();
-        return new IndexPopulationJob( indexRule, populator, flipper, neoStore );
+        return new IndexPopulationJob( indexRule, populator, flipper, new NeoStoreIndexStoreView( neoStore ), StringLogger.DEV_NULL );
     }
 
     private long createNode( Map<String, Object> properties, Label... labels )

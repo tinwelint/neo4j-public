@@ -22,7 +22,8 @@ package org.neo4j.kernel.impl.util;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
- * To be expanded, the idea here is to have a database-global service for running jobs, handling jobs crashing and so on.
+ * To be expanded, the idea here is to have a database-global service for thread management,
+ * handling jobs crashing and so on.
  */
 public interface JobScheduler extends Lifecycle
 {

@@ -75,12 +75,6 @@ public class NodePropertyUpdate
     {
         return updateMode;
     }
-
-    public boolean hasLabel( long labelId )
-    {
-        // TODO implement adding label id info
-        return true;
-    }
     
     @Override
     public String toString()

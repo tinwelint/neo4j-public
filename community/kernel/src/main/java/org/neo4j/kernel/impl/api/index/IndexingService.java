@@ -19,14 +19,21 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import java.util.concurrent.ConcurrentHashMap;
+import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.neo4j.helpers.Function;
+import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.IndexState;
 import org.neo4j.kernel.api.SchemaIndexProvider;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 /**
@@ -37,26 +44,61 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
  *
  * <h3>Recovery procedure</h3>
  *
- * Each index has a state, as defined in {@link org.neo4j.kernel.api.IndexState}, which is used during recovery. If
- * an index is anything but {@link org.neo4j.kernel.api.IndexState#ONLINE}, it will simply be destroyed and re-created.
+ * Each index has a state, as defined in {@link org.neo4j.kernel.api.InternalIndexState}, which is used during recovery. If
+ * an index is anything but {@link org.neo4j.kernel.api.InternalIndexState#ONLINE}, it will simply be destroyed and re-created.
  *
- * If, however, it is {@link org.neo4j.kernel.api.IndexState#ONLINE}, the index provider is required to also guarantee
+ * If, however, it is {@link org.neo4j.kernel.api.InternalIndexState#ONLINE}, the index provider is required to also guarantee
  * that the index had been flushed to disk.
  */
 public class IndexingService extends LifecycleAdapter
 {
     // TODO create hierarchy of filters for smarter update processing
 
+    /**
+     * The indexing services view of the universe.
+     */
+    public interface IndexStoreView
+    {
+        boolean nodeHasLabel( long nodeId, long label );
+
+        /**
+         * Get properties of a node, if those properties exist.
+         * @param nodeId
+         * @param propertyKeys
+         */
+        Iterator<Pair<Integer, Object>> getNodeProperties( long nodeId, Iterator<Long> propertyKeys );
+
+        /**
+         * Retrieve all nodes in the database with a given label and property, as pairs of node id and
+         * property value.
+         *
+         * @param labelId
+         * @param propertyKeyId
+         * @return
+         */
+        void visitNodesWithPropertyAndLabel( long labelId, long propertyKeyId, Visitor<Pair<Long, Object>> visitor );
+    }
+
     private final JobScheduler scheduler;
     private final SchemaIndexProvider provider;
+    private final IndexStoreView storeView;
+    private final LabelUpdateToPropertyUpdate labelUpdateToPropertyUpdate;
+    private final IndexRuleRepository indexRules;
 
-    private final ConcurrentHashMap<Long, IndexContext> indexes = new ConcurrentHashMap<Long, IndexContext>();
-    private boolean online = false;
+    private final StringLogger log;
 
-    public IndexingService( JobScheduler scheduler, SchemaIndexProvider provider )
+    private final Map<Long, IndexContext> indexes = new HashMap<Long, IndexContext>();
+
+    private boolean serviceRunning = false;
+
+    public IndexingService( JobScheduler scheduler, SchemaIndexProvider provider, IndexStoreView storeView, StringLogger log )
     {
         this.scheduler = scheduler;
         this.provider = provider;
+        this.storeView = storeView;
+        this.indexRules = new IndexRuleRepository();
+        this.labelUpdateToPropertyUpdate = new LabelUpdateToPropertyUpdate( storeView, indexRules );
+        this.log = log;
 
         if(provider == null)
         {
@@ -73,24 +115,40 @@ public class IndexingService extends LifecycleAdapter
         // Find all indexes that are not already online, and create them
         for ( IndexContext indexContext : indexes.values() )
         {
-            if ( indexContext.getState() != IndexState.ONLINE )
+            switch ( indexContext.getState() )
             {
-                indexContext.create();
+                case ONLINE:
+                    // Don't do anything, index is ok.
+                    break;
+                case POPULATING:
+                case NON_EXISTENT:
+                    // Re-create the index
+                    indexContext.create();
+                    break;
+                case FAILED:
+                    // Don't do anything, the user needs to drop the index and re-create
+                    break;
             }
         }
 
-        online = true;
+        serviceRunning = true;
     }
 
     @Override
     public void stop()
     {
-        online = false;
+        serviceRunning = false;
     }
 
-    public void update( Iterable<NodePropertyUpdate> updates ) {
+    public void update( Iterator<NodePropertyUpdate> updates ) {
+
+        Iterable<NodePropertyUpdate> iterableUpdates = asIterable( updates );
         for (IndexContext context : indexes.values())
-            context.update( updates );
+            context.update( iterableUpdates.iterator() );
+    }
+
+    public void updateLabel( Iterator<NodeLabelUpdate> updates ) {
+        update( labelUpdateToPropertyUpdate.apply(updates) );
     }
 
     public IndexContext getContextForRule( long indexId ) throws IndexNotFoundKernelException
@@ -108,14 +166,12 @@ public class IndexingService extends LifecycleAdapter
      *
      * @param indexRules Known index rules before recovery.
      */
-    public void initIndexes( Iterable<IndexRule> indexRules, NeoStore neoStore )
+    public void initIndexes( Iterable<IndexRule> indexRules )
     {
         for ( IndexRule indexRule : indexRules )
         {
             long id = indexRule.getId();
-            IndexState initialState = provider.getInitialState( id );
-            System.out.println( "init " + indexRule + " => " + initialState );
-            switch ( initialState )
+            switch ( provider.getInitialState( id ) )
             {
                 case ONLINE:
                     indexes.put( id, createOnlineIndexContext( indexRule ) );
@@ -124,7 +180,10 @@ public class IndexingService extends LifecycleAdapter
                 case NON_EXISTENT:
                     // The database was shut down during population, or a crash has occurred, or some other
                     // sad thing.
-                    indexes.put( id, createPopulatingIndexContext( indexRule, neoStore ) );
+                    indexes.put( id, createPopulatingIndexContext( indexRule, storeView ) );
+                    break;
+                case FAILED:
+                    indexes.put( id, new FailedIndexContext( provider.getPopulator( indexRule.getId() )));
                     break;
             }
         }
@@ -140,10 +199,10 @@ public class IndexingService extends LifecycleAdapter
     public void createIndex( IndexRule rule, NeoStore neoStore )
     {
         IndexContext index = indexes.get( rule.getId() );
-        if ( online )
+        if ( serviceRunning )
         {
             assert index == null : "Index " + rule + " already exists";
-            index = createPopulatingIndexContext( rule, neoStore );
+            index = createPopulatingIndexContext( rule, storeView );
 
             // Trigger the creation, only if the service is online. Otherwise,
             // creation will be triggered on start().
@@ -151,7 +210,7 @@ public class IndexingService extends LifecycleAdapter
         }
         else if ( index == null )
         {
-            index = createPopulatingIndexContext( rule, neoStore );
+            index = createPopulatingIndexContext( rule, storeView );
         }
         
         indexes.put( rule.getId(), index );
@@ -159,54 +218,58 @@ public class IndexingService extends LifecycleAdapter
 
     private IndexContext createOnlineIndexContext( IndexRule rule )
     {
-        IndexContext result = new OnlineIndexContext( provider.getWriter( rule.getId() ) );
-        result = new RuleUpdateFilterIndexContext( result, rule );
+        indexRules.add(rule);
+
+        IndexContext result = new OnlineIndexContext( rule, provider.getWriter( rule.getId() ), storeView );
+        result = new RuleUpdateFilterIndexContext( result, rule, storeView );
         result = new ServiceStateUpdatingIndexContext( rule, result );
 
         return result;
     }
 
-    private IndexContext createPopulatingIndexContext( IndexRule rule, NeoStore neoStore )
+    private IndexContext createPopulatingIndexContext( final IndexRule rule, final IndexStoreView storeView )
     {
-        final long ruleId = rule.getId();
+        indexRules.add(rule);
+
+        long ruleId = rule.getId();
         FlippableIndexContext flippableContext = new FlippableIndexContext( );
 
         // TODO: This is here because there is a circular dependency from PopulatingIndexContext to FlippableContext
-        flippableContext.setFlipTarget( eager( new PopulatingIndexContext( scheduler, rule,
-                provider.getPopulator( ruleId ), flippableContext, neoStore ) ) );
+        flippableContext.setFlipTarget(
+                new PopulatingIndexContext( scheduler, rule, provider.getPopulator( ruleId ), flippableContext, storeView, log)
+        );
         flippableContext.flip();
 
         // Prepare for flipping to online mode
-        flippableContext.setFlipTarget( new IndexContextFactory()
-        {
+        flippableContext.setFlipTarget( new DelegatingIndexContext(new Function<Object, IndexContext>(){
             @Override
-            public IndexContext create()
+            public IndexContext apply( Object o )
             {
-                return new OnlineIndexContext( provider.getWriter( ruleId ) );
+                return new OnlineIndexContext( rule, provider.getWriter( rule.getId() ), storeView );
             }
-        } );
+        }));
 
-        // TODO: Merge auto removing and rule updating?
-        IndexContext result = new RuleUpdateFilterIndexContext( flippableContext, rule );
+        IndexContext result = new RuleUpdateFilterIndexContext( flippableContext, rule, storeView );
         result = new ServiceStateUpdatingIndexContext( rule, result );
         return result;
     }
 
     class ServiceStateUpdatingIndexContext extends DelegatingIndexContext {
 
-        private final long ruleId;
+        private final IndexRule rule;
 
         ServiceStateUpdatingIndexContext( IndexRule rule, IndexContext delegate )
         {
             super( delegate );
-            this.ruleId = rule.getId();
+            this.rule = rule;
         }
 
         @Override
         public void drop()
         {
             super.drop();
-            indexes.remove( ruleId, this );
+            indexes.remove( rule.getId() );
+            indexRules.remove( rule );
         }
     }
 
