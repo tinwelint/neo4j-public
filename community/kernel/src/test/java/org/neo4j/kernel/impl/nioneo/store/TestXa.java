@@ -19,8 +19,9 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource.LOGICAL_LOG_DEFAULT_NAME;
 
 import java.io.File;
@@ -740,7 +741,7 @@ public class TestXa
         xaRes.prepare( xid );
         xaRes.commit( xid, false );
         copyClearRename( false );
-        truncateLogicalLog( 288+37 );
+        truncateLogicalLog( 318 );
         ds = newNeoStore();
         xaCon = ds.getXaConnection();
         xaRes = xaCon.getXaResource();

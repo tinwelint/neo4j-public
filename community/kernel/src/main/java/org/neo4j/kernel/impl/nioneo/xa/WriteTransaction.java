@@ -772,7 +772,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             {
                 // Being here means a new value could be on disk. Re-read and replace
                 propRecord = getPropertyStore().getRecord( propRecord.getId() );
-                addPropertyRecord( propRecord, propRecord.clone() );
+                addPropertyRecord( propRecord.clone(), propRecord );
             }
             for ( PropertyBlock block : propRecord.getPropertyBlocks() )
             {
