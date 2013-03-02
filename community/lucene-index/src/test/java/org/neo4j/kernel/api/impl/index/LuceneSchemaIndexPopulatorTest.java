@@ -21,7 +21,7 @@ package org.neo4j.kernel.api.impl.index;
 
 import static java.lang.Long.parseLong;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.kernel.api.impl.index.LuceneIndexPopulator.SINGLE_KEY;
 
@@ -31,7 +31,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.lucene.document.Document;
-import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
@@ -45,7 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.index.impl.lucene.LuceneUtil;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.api.IndexState;
+import org.neo4j.kernel.api.InternalIndexState;
 import org.neo4j.kernel.impl.api.index.IndexPopulator;
 import org.neo4j.kernel.impl.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
@@ -97,7 +96,7 @@ public class LuceneSchemaIndexPopulatorTest
         index.add( 1, "value" );
         index.add( 2, "value" );
         index.add( 3, "value" );
-        index.update( asList( remove( 2, "value" ) ) );
+        index.update( asList( remove( 2, "value" ) ).iterator() );
 
         // THEN
         assertIndexedValues(
@@ -110,7 +109,7 @@ public class LuceneSchemaIndexPopulatorTest
         // WHEN
         index.add( 1, "1" );
         index.add( 2, "2" );
-        index.update( asList( change( 1, "1", "1a" ) ) );
+        index.update( asList( change( 1, "1", "1a" ) ).iterator() );
         index.add( 3, "3" );
 
         // THEN
@@ -127,7 +126,7 @@ public class LuceneSchemaIndexPopulatorTest
         // WHEN
         index.add( 1, "1" );
         index.add( 2, "2" );
-        index.update( asList( remove( 1, "1" ), add( 1, "1a" ) ) );
+        index.update( asList( remove( 1, "1" ), add( 1, "1a" ) ).iterator() );
         index.add( 3, "3" );
 
         // THEN
@@ -144,7 +143,7 @@ public class LuceneSchemaIndexPopulatorTest
         // WHEN
         index.add( 1, "1" );
         index.add( 2, "2" );
-        index.update( asList( remove( 2, "2" ) ) );
+        index.update( asList( remove( 2, "2" ) ).iterator() );
         index.add( 3, "3" );
 
         // THEN
@@ -160,10 +159,10 @@ public class LuceneSchemaIndexPopulatorTest
         // WHEN
         index.add( 1, "1" );
         index.add( 2, "2" );
-        index.update( asList( change( 1, "1", "1a" ), change( 2, "2", "2a" ) ) );
+        index.update( asList( change( 1, "1", "1a" ), change( 2, "2", "2a" ) ).iterator() );
         index.add( 3, "3" );
         index.add( 4, "4" );
-        index.update( asList( change( 1, "1a", "1b" ), change( 4, "4", "4a" ) ) );
+        index.update( asList( change( 1, "1a", "1b" ), change( 4, "4", "4a" ) ).iterator() );
 
         // THEN
         assertIndexedValues(
@@ -278,10 +277,10 @@ public class LuceneSchemaIndexPopulatorTest
         throw new UnsupportedOperationException( value.toString() );
     }
 
-    private void switchToVerification() throws CorruptIndexException, IOException
+    private void switchToVerification() throws IOException
     {
         index.populationCompleted();
-        assertEquals( IndexState.ONLINE, provider.getInitialState( indexId ) );
+        assertEquals( InternalIndexState.ONLINE, provider.getInitialState( indexId ) );
         reader = IndexReader.open( directory );
         searcher = new IndexSearcher( reader );
     }

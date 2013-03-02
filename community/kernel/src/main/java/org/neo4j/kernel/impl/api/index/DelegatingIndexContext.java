@@ -19,18 +19,31 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import org.neo4j.helpers.Function;
+
 public class DelegatingIndexContext extends AbstractDelegatingIndexContext
 {
-    private final IndexContext delegate;
+    private IndexContext delegate;
+    private final Function<?,IndexContext> delegateFactory;
 
     public DelegatingIndexContext( IndexContext delegate )
     {
         this.delegate = delegate;
+        this.delegateFactory = null;
+    }
+
+    public DelegatingIndexContext( Function<?, IndexContext> delegateFactory )
+    {
+        this.delegateFactory = delegateFactory;
     }
 
     @Override
     protected IndexContext getDelegate()
     {
+        if(delegate == null)
+        {
+            delegate = delegateFactory.apply(null);
+        }
         return delegate;
     }
 }

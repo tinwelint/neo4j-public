@@ -19,8 +19,28 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-public class FlippableIndexContext extends AbstractLockingIndexContext
+import java.util.Iterator;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.neo4j.kernel.api.InternalIndexState;
+import org.neo4j.kernel.api.KernelException;
+
+public class FlippableIndexContext implements IndexContext
 {
+
+    private final ReadWriteLock lock;
+    private IndexContext flipTarget = null;
+    private IndexContext delegate;
+
+    public static final class FlipFailedKernelException extends KernelException
+    {
+        public FlipFailedKernelException( String message, Throwable cause )
+        {
+            super( message, cause );
+        }
+    }
+
     private static final Runnable NO_OP = new Runnable()
     {
         @Override
@@ -29,44 +49,88 @@ public class FlippableIndexContext extends AbstractLockingIndexContext
         }
     };
 
-    private IndexContextFactory flipTarget;
-    private IndexContext delegate;
-
     public FlippableIndexContext()
     {
-        this( null );
+        this(null);
     }
 
     public FlippableIndexContext( IndexContext originalDelegate )
     {
+        this.lock = new ReentrantReadWriteLock( );
         this.delegate = originalDelegate;
     }
 
-    @Override
-    public IndexContext getDelegate()
+    public void create()
     {
-        getLock().readLock().lock();
-        try
-        {
-            return delegate;
+        lock.readLock().lock();
+        try {
+            delegate.create();
         }
-        finally
-        {
-            getLock().readLock().unlock();
+        finally {
+            lock.readLock().unlock();
         }
     }
 
-    public void setFlipTarget( IndexContextFactory flipTarget )
+    public void update( Iterator<NodePropertyUpdate> updates )
     {
-        getLock().writeLock().lock();
-        try
-        {
+        lock.readLock().lock();
+        try {
+            delegate.update( updates );
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public void drop()
+    {
+        lock.readLock().lock();
+        try {
+            delegate.drop();
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public InternalIndexState getState()
+    {
+        lock.readLock().lock();
+        try {
+            return delegate.getState();
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public void force()
+    {
+        lock.readLock().lock();
+        try {
+            delegate.force();
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public void setFlipTarget( IndexContext flipTarget )
+    {
+        lock.writeLock().lock();
+        try {
             this.flipTarget = flipTarget;
         }
-        finally
-        {
-            getLock().writeLock().unlock();
+        finally {
+            lock.writeLock().unlock();
         }
+    }
+
+    public IndexContext getDelegate()
+    {
+        return delegate;
     }
 
     public void flip()
@@ -74,17 +138,46 @@ public class FlippableIndexContext extends AbstractLockingIndexContext
         flip( NO_OP );
     }
 
+
+    /**
+     * Flips the context to the predefined ({@link #setFlipTarget(IndexContext) flip target}.
+     *
+     * @param actionDuringFlip
+     * @throws FlipFailedKernelException if the actionDuringFlip failed
+     */
     public void flip( Runnable actionDuringFlip )
     {
-        getLock().writeLock().lock();
-        try
-        {
+        lock.writeLock().lock();
+        try {
             actionDuringFlip.run();
-            this.delegate = flipTarget.create();
         }
-        finally
+        finally {
+            this.delegate = flipTarget;
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Flips the context to the predefined ({@link #setFlipTarget(IndexContext) flip target}, *unless* there is
+     * a failure when running the actionDuringFlip action. In that case, it will transition to the failure target.
+     *
+     * @param actionDuringFlip
+     * @param failureTarget
+     * @throws FlipFailedKernelException if the actionDuringFlip failed
+     */
+    public void flip( Runnable actionDuringFlip, IndexContext failureTarget ) throws FlipFailedKernelException
+    {
+        lock.writeLock().lock();
+        try {
+            actionDuringFlip.run();
+            this.delegate = flipTarget;
+        } catch( RuntimeException e )
         {
-            getLock().writeLock().unlock();
+            this.delegate = failureTarget;
+            throw new FlipFailedKernelException("Failed to transition index to new context, see nested exception.", e);
+        }
+        finally {
+            lock.writeLock().unlock();
         }
     }
 }

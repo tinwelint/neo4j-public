@@ -570,6 +570,27 @@ public abstract class IteratorUtil
     {
         return new LinesOfFileIterator( file );
     }
+
+    public static <T> Iterator<T> asIterator( final T ... items )
+    {
+        return new PrefetchingIterator<T>()
+        {
+            private int index;
+
+            @Override
+            protected T fetchNextOrNull()
+            {
+                try
+                {
+                    return index < items.length ? items[index] : null;
+                }
+                finally
+                {
+                    index++;
+                }
+            }
+        };
+    }
     
     public static <T> void streamToFile( Iterable<T> iterable, File file, String encoding ) throws IOException
     {
@@ -617,7 +638,7 @@ public abstract class IteratorUtil
                 return new PrefetchingIterator<Long>()
                 {
                     private int index;
-                    
+
                     @Override
                     protected Long fetchNextOrNull()
                     {
@@ -633,5 +654,30 @@ public abstract class IteratorUtil
                 };
             }
         };
+    }
+
+    private static final Iterator emptyIterator = new Iterator()
+    {
+        @Override
+        public boolean hasNext()
+        {
+            return false;
+        }
+
+        @Override
+        public Object next()
+        {
+            return null;
+        }
+
+        @Override
+        public void remove()
+        {
+        }
+    };
+
+    public static Iterator emptyIterator()
+    {
+        return emptyIterator;
     }
 }

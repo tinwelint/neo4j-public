@@ -38,6 +38,7 @@ import org.neo4j.kernel.impl.util.StringLogger;
  */
 public class NodeStore extends AbstractStore implements Store, RecordStore<NodeRecord>
 {
+
     public static abstract class Configuration
         extends AbstractStore.Configuration
     {
@@ -141,20 +142,20 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
         return forceGetRecord( id );
     }
 
-    public void updateRecord( NodeRecord record, boolean recovered )
-    {
-        assert recovered;
-        setRecovered();
-        try
-        {
-            updateRecord( record );
-            registerIdFromUpdateRecord( record.getId() );
-        }
-        finally
-        {
-            unsetRecovered();
-        }
-    }
+//    public void updateRecord( NodeRecord record, boolean recovered )
+//    {
+//        assert recovered;
+//        setRecovered();
+//        try
+//        {
+//            updateRecord( record );
+//            registerIdFromUpdateRecord( record.getId() );
+//        }
+//        finally
+//        {
+//            unsetRecovered();
+//        }
+//    }
 
     @Override
     public void forceUpdateRecord( NodeRecord record )
@@ -343,16 +344,21 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
             return getDynamicLabelsArray( node.getDynamicLabelRecords() );
         }
     }
+
+    public long[] getLabelsForNode( long nodeId )
+    {
+        return getLabelsForNode( forceGetRaw( nodeId ) );
+    }
     
     @Override
-    protected void setRecovered()
+    public void setRecovered()
     {
         dynamicLabelStore.setRecovered();
         super.setRecovered();
     }
     
     @Override
-    protected void unsetRecovered()
+    public void unsetRecovered()
     {
         dynamicLabelStore.unsetRecovered();
         super.unsetRecovered();

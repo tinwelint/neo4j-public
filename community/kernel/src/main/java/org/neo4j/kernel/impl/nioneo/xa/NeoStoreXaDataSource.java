@@ -239,7 +239,6 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
     @Override
     public void init()
     {
-        indexingService = life.add( new IndexingService( scheduler, indexProvider ) );
         life.init();
     }
 
@@ -263,6 +262,9 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
         }
         neoStore = storeFactory.newNeoStore( store );
 
+        indexingService = life.add( new IndexingService( scheduler, indexProvider,
+                new NeoStoreIndexStoreView(neoStore), msgLog ) );
+
         xaContainer = xaFactory.newXaContainer(this, config.get( Configuration.logical_log ),
                 new CommandFactory( neoStore, indexingService ), tf, stateFactory, providers  );
 
@@ -273,14 +275,18 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
                 // TODO should neoStore.setRecoveredStatus delegate to all individual stores instead?
                 neoStore.setRecoveredStatus( true );
                 neoStore.getSchemaStore().setRecovered();
+                neoStore.getNodeStore().setRecovered();
+                neoStore.getPropertyStore().setRecovered();
                 try
                 {
-                    indexingService.initIndexes(loadIndexRules(), neoStore);
+                    indexingService.initIndexes(loadIndexRules());
                     xaContainer.openLogicalLog();
                 }
                 finally
                 {
                     neoStore.getSchemaStore().unsetRecovered();
+                    neoStore.getNodeStore().unsetRecovered();
+                    neoStore.getPropertyStore().unsetRecovered();
                     neoStore.setRecoveredStatus( false );
                 }
             }

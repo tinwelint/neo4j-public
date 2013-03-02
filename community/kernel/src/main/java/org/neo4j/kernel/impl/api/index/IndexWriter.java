@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import java.util.Iterator;
+
 /**
  * Used for online operation of an index.
  */
@@ -33,7 +35,7 @@ public interface IndexWriter
      * Apply a set of changes to this index. This method will only ever be called by one thread at a time.
      * @param updates
      */
-    void update(Iterable<NodePropertyUpdate> updates);
+    void update(Iterator<NodePropertyUpdate> updates);
 
     /**
      * Forces this index to disk.
@@ -49,7 +51,7 @@ public interface IndexWriter
         }
 
         @Override
-        public void update(Iterable<NodePropertyUpdate> updates)
+        public void update(Iterator<NodePropertyUpdate> updates)
         {
         }
 

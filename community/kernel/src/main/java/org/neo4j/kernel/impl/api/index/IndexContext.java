@@ -19,17 +19,19 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import org.neo4j.kernel.api.IndexState;
+import java.util.Iterator;
+
+import org.neo4j.kernel.api.InternalIndexState;
 
 public interface IndexContext
 {
     void create();
     
-    void update( Iterable<NodePropertyUpdate> updates );
-    
+    void update( Iterator<NodePropertyUpdate> updates );
+
     void drop();
 
-    IndexState getState();
+    InternalIndexState getState();
 
     void force();
     
@@ -43,7 +45,7 @@ public interface IndexContext
         }
 
         @Override
-        public void update( Iterable<NodePropertyUpdate> updates )
+        public void update( Iterator<NodePropertyUpdate> updates )
         {
         }
 
@@ -53,7 +55,7 @@ public interface IndexContext
         }
 
         @Override
-        public IndexState getState()
+        public InternalIndexState getState()
         {
             throw new UnsupportedOperationException(  );
         }

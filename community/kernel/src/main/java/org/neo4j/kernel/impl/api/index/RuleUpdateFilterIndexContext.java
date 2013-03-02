@@ -19,32 +19,38 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import java.util.Iterator;
+
 import org.neo4j.helpers.Predicate;
-import org.neo4j.helpers.collection.FilteringIterable;
+import org.neo4j.helpers.collection.FilteringIterator;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class RuleUpdateFilterIndexContext extends DelegatingIndexContext
 {
     private final IndexRule rule;
+    private final IndexingService.IndexStoreView universe;
 
     private final Predicate<NodePropertyUpdate> ruleMatchingUpdates = new Predicate<NodePropertyUpdate>()
     {
         @Override
         public boolean accept( NodePropertyUpdate item )
         {
-            return item.getPropertyKeyId() == rule.getPropertyKey() && item.hasLabel( rule.getLabel() );
+
+            return item.getPropertyKeyId() == rule.getPropertyKey() && universe.nodeHasLabel( item.getNodeId(),
+                    rule.getLabel() );
         }
     };
 
-    public RuleUpdateFilterIndexContext( IndexContext delegate, IndexRule rule )
+    public RuleUpdateFilterIndexContext( IndexContext delegate, IndexRule rule, IndexingService.IndexStoreView universe)
     {
         super( delegate );
         this.rule = rule;
+        this.universe = universe;
     }
 
     @Override
-    public void update( Iterable<NodePropertyUpdate> updates )
+    public void update( Iterator<NodePropertyUpdate> updates )
     {
-        super.update( new FilteringIterable<NodePropertyUpdate>( updates, ruleMatchingUpdates ) );
+        super.update( new FilteringIterator<NodePropertyUpdate>( updates, ruleMatchingUpdates ) );
     }
 }

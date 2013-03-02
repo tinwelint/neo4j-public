@@ -98,6 +98,10 @@ public abstract class Command extends XaCommand
     
     public abstract void accept( CommandRecordVisitor visitor );
 
+    // Force subclasses to implement toString
+    @Override
+    public abstract String toString();
+
     @Override
     public void setRecovered()
     {
@@ -110,10 +114,6 @@ public abstract class Command extends XaCommand
         return keyHash;
     }
 
-    // Force implementors to implement toString
-    @Override
-    public abstract String toString();
-
     long getKey()
     {
         return key;
@@ -123,16 +123,6 @@ public abstract class Command extends XaCommand
     {
         return mode;
     }
-
-//    boolean isCreated()
-//    {
-//        return record.isCreated();
-//    }
-//
-//    boolean isDeleted()
-//    {
-//        return !record.inUse();
-//    }
     
     @Override
     public boolean equals( Object o )
@@ -351,26 +341,30 @@ public abstract class Command extends XaCommand
 
     static class NodeCommand extends Command
     {
-        private final NodeRecord record;
+        private final NodeRecord before;
+        private final NodeRecord after;
         private final NodeStore store;
 
-        NodeCommand( NodeStore store, NodeRecord record )
+        NodeCommand( NodeStore store, NodeRecord before, NodeRecord after )
         {
-            super( record.getId(), Mode.fromRecordState( record.isCreated(), record.inUse() ) );
-            this.record = record;
+            super( after.getId(), Mode.fromRecordState( after.isCreated(), after.inUse() ) );
+            assert before != null : "Before can't be null";
+
+            this.before = before;
+            this.after = after;
             this.store = store;
         }
         
         @Override
         public void accept( CommandRecordVisitor visitor )
         {
-            visitor.visitNode( record );
+            visitor.visitNode( after );
         }
 
         @Override
         public String toString()
         {
-            return record.toString();
+            return after.toString();
         }
 
         @Override
@@ -382,31 +376,34 @@ public abstract class Command extends XaCommand
         @Override
         public void execute()
         {
-            if ( isRecovered() )
-            {
-                store.updateRecord( record, true );
-            }
-            else
-            {
-                store.updateRecord( record );
-            }
-            
+            store.updateRecord( after );
+
             // Dynamic labels
-            store.updateDynamicLabelRecords( record.getDynamicLabelRecords() );
+            store.updateDynamicLabelRecords( after.getDynamicLabelRecords() );
         }
 
         @Override
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
-                : Record.NOT_IN_USE.byteValue();
             buffer.put( NODE_COMMAND );
-            buffer.putLong( record.getId() );
+            buffer.putLong( getKey() ); // 8
+
+            // Before
+            writeRecord( before, buffer );
+
+            // After
+            writeRecord( after, buffer );
+        }
+
+        private void writeRecord( NodeRecord record, LogBuffer buffer ) throws IOException
+        {
+            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
+                    : Record.NOT_IN_USE.byteValue();
             buffer.put( inUse );
             if ( record.inUse() )
             {
                 buffer.putLong( record.getNextRel() ).putLong( record.getNextProp() );
-                
+
                 // labels
                 buffer.putLong( record.getLabelField() );
                 writeDynamicRecords( buffer, record.getDynamicLabelRecords() );
@@ -417,9 +414,31 @@ public abstract class Command extends XaCommand
             ReadableByteChannel byteChannel, ByteBuffer buffer )
             throws IOException
         {
-            if ( !readAndFlip( byteChannel, buffer, 9 ) )
+            if ( !readAndFlip( byteChannel, buffer, 8 ) )
                 return null;
             long id = buffer.getLong();
+
+            NodeRecord before = readRecord( byteChannel, buffer, id );
+            if ( before == null )
+                return null;
+
+            NodeRecord after  = readRecord( byteChannel, buffer, id );
+            if ( after == null )
+                return null;
+
+            // Track creation
+            if( !before.inUse() && after.inUse() )
+            {
+                after.setCreated();
+            }
+
+            return new NodeCommand( neoStore == null ? null : neoStore.getNodeStore(), before, after );
+        }
+
+        private static NodeRecord readRecord( ReadableByteChannel byteChannel, ByteBuffer buffer, long id ) throws IOException
+        {
+            if ( !readAndFlip( byteChannel, buffer, 1 ) )
+                return null;
             byte inUseFlag = buffer.get();
             boolean inUse = false;
             if ( inUseFlag == Record.IN_USE.byteValue() )
@@ -436,7 +455,7 @@ public abstract class Command extends XaCommand
                 if ( !readAndFlip( byteChannel, buffer, 8*3 ) )
                     return null;
                 record = new NodeRecord( id, buffer.getLong(), buffer.getLong() );
-                
+
                 // labels
                 long labelField = buffer.getLong();
                 Collection<DynamicRecord> dynamicLabelRecords = new ArrayList<DynamicRecord>();
@@ -447,7 +466,17 @@ public abstract class Command extends XaCommand
                 record = new NodeRecord( id, Record.NO_NEXT_RELATIONSHIP.intValue(),
                         Record.NO_NEXT_PROPERTY.intValue() );
             record.setInUse( inUse );
-            return new NodeCommand( neoStore == null ? null : neoStore.getNodeStore(), record );
+            return record;
+        }
+
+        public NodeRecord getBefore()
+        {
+            return before;
+        }
+
+        public NodeRecord getAfter()
+        {
+            return after;
         }
     }
 
@@ -756,6 +785,14 @@ public abstract class Command extends XaCommand
         private final PropertyRecord before;
         private final PropertyRecord after;
 
+        /**
+         * Takes both the "before" and "after" records, that is, the record as it looked before it was changed,
+         * and the record as we want it to look. The reason for that is to allow us to infer the logical change,
+         * which we use to produce logical {@link org.neo4j.kernel.impl.api.index.NodePropertyUpdate}s.
+         * @param store
+         * @param before
+         * @param after
+         */
         // TODO as optimization the deserialized key/values could be passed in here
         // so that the cost of deserializing them only applies in recovery/HA
         PropertyCommand( PropertyStore store, PropertyRecord before, PropertyRecord after )
@@ -806,14 +843,7 @@ public abstract class Command extends XaCommand
         @Override
         public void execute()
         {
-            if ( isRecovered() )
-            {
-                store.updateRecord( after, true );
-            }
-            else
-            {
-                store.updateRecord( after );
-            }
+            store.updateRecord( after );
         }
 
         public long getNodeId()

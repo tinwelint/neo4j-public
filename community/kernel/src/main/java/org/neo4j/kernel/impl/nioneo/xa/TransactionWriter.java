@@ -113,19 +113,19 @@ public class TransactionWriter
     public void create( NodeRecord node ) throws IOException
     {
         node.setCreated();
-        update( node );
+        update( new NodeRecord( node.getId(), node.getNextRel(), node.getNextProp() ), node );
     }
 
-    public void update( NodeRecord node ) throws IOException
+    public void update( NodeRecord before, NodeRecord node ) throws IOException
     {
         node.setInUse( true );
-        add( node );
+        add( before, node );
     }
 
-    public void delete( NodeRecord node ) throws IOException
+    public void delete( NodeRecord before, NodeRecord node ) throws IOException
     {
         node.setInUse( false );
-        add( node );
+        add( before, node );
     }
 
     public void create( RelationshipRecord relationship ) throws IOException
@@ -166,9 +166,9 @@ public class TransactionWriter
 
     // Internals
 
-    public void add( NodeRecord node ) throws IOException
+    public void add( NodeRecord before, NodeRecord node ) throws IOException
     {
-        write( new Command.NodeCommand( null, node ) );
+        write( new Command.NodeCommand( null, before, node ) );
     }
 
     public void add( RelationshipRecord relationship ) throws IOException

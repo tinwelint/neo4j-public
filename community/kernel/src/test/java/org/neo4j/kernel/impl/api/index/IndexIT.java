@@ -31,7 +31,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
 import org.neo4j.kernel.api.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.IndexState;
+import org.neo4j.kernel.api.InternalIndexState;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.test.ImpermanentGraphDatabase;
@@ -52,10 +52,8 @@ public class IndexIT
         tx.success();
         tx.finish();
 
-        // AND WHEN the index is created
-        awaitIndexOnline( rule );
-
         // THEN
+        awaitIndexOnline( rule );
     }
 
     @Test
@@ -119,14 +117,13 @@ public class IndexIT
         assertEquals( asSet(), asSet( ctxProvider.getCtxForReading().getIndexRules( labelId ) ) );
     }
 
-
     private void awaitIndexOnline( IndexRule indexRule ) throws IndexNotFoundKernelException
     {
         StatementContext ctx = ctxProvider.getCtxForReading();
         long start = System.currentTimeMillis();
         while(true)
         {
-           if(ctx.getIndexState(indexRule) == IndexState.ONLINE)
+           if(ctx.getIndexState(indexRule) == InternalIndexState.ONLINE)
            {
                break;
            }

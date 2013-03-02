@@ -177,11 +177,11 @@ public abstract class GraphStoreFixture implements TestRule
             }
         }
 
-        public void update( NodeRecord node )
+        public void update( NodeRecord before, NodeRecord node )
         {
             try
             {
-                writer.update( node );
+                writer.update( before, node );
             }
             catch ( IOException e )
             {
@@ -189,11 +189,11 @@ public abstract class GraphStoreFixture implements TestRule
             }
         }
 
-        public void delete( NodeRecord node )
+        public void delete( NodeRecord before, NodeRecord node )
         {
             try
             {
-                writer.delete( node );
+                writer.delete( before, node );
             }
             catch ( IOException e )
             {

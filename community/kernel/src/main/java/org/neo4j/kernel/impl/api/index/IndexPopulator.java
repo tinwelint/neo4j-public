@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import java.util.Iterator;
+
 /**
  * Used for initial population of an index.
  */
@@ -48,7 +50,7 @@ public interface IndexPopulator
      * Apply a set of changes to this index, generally this will be a set of changes from a transaction.
      * @param updates
      */
-    void update( Iterable<NodePropertyUpdate> updates );
+    void update( Iterator<NodePropertyUpdate> updates );
     
     /**
      * Complete the creation of this index. If this is a persisted index, implementors of this
@@ -73,7 +75,7 @@ public interface IndexPopulator
         }
 
         @Override
-        public void update( Iterable<NodePropertyUpdate> updates )
+        public void update( Iterator<NodePropertyUpdate> updates )
         {
         }
 

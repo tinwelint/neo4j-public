@@ -33,8 +33,6 @@ import org.neo4j.helpers.UTF8;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.index.NodePropertyUpdate;
-import org.neo4j.kernel.impl.api.index.PropertyPhysicalToLogicalConverter;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPoolFactory;
 import org.neo4j.kernel.impl.util.StringLogger;
 
@@ -64,7 +62,6 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
     private DynamicStringStore stringPropertyStore;
     private PropertyIndexStore propertyIndexStore;
     private DynamicArrayStore arrayPropertyStore;
-    private final PropertyPhysicalToLogicalConverter physicalToLogicalConverter;
 
     public PropertyStore(File fileName, Config configuration,
                          IdGeneratorFactory idGeneratorFactory, WindowPoolFactory windowPoolFactory,
@@ -77,7 +74,6 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
         this.stringPropertyStore = stringPropertyStore;
         this.propertyIndexStore = propertyIndexStore;
         this.arrayPropertyStore = arrayPropertyStore;
-        this.physicalToLogicalConverter = new PropertyPhysicalToLogicalConverter( this );
     }
 
     @Override
@@ -97,7 +93,7 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
     }
 
     @Override
-    protected void setRecovered()
+    public void setRecovered()
     {
         super.setRecovered();
         stringPropertyStore.setRecovered();
@@ -106,7 +102,7 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
     }
 
     @Override
-    protected void unsetRecovered()
+    public void unsetRecovered()
     {
         super.unsetRecovered();
         stringPropertyStore.unsetRecovered();
@@ -320,8 +316,6 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
      * This will add the value records without checking if they are already
      * in the block - so make sure to call this after checking isHeavy() or
      * you will end up with duplicates.
-     * 
-     * @param superHeavy will also make referenced records heavy.
      */
     public void makeHeavy( PropertyBlock block )
     {
@@ -704,10 +698,5 @@ public class PropertyStore extends AbstractStore implements Store, RecordStore<P
             nextProp = propRecord.getNextProp();
         }
         return toReturn;
-    }
-    
-    public Iterable<NodePropertyUpdate> toLogicalUpdates( PropertyRecord before, PropertyRecord after )
-    {
-        return physicalToLogicalConverter.apply( Pair.of( before, after ) );
     }
 }

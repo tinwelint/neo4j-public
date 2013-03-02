@@ -31,6 +31,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.helpers.Function;
 import org.neo4j.kernel.api.IndexNotFoundKernelException;
+import org.neo4j.kernel.api.InternalIndexState;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.SchemaRuleNotFoundException;
@@ -88,7 +89,7 @@ public class SchemaImpl implements Schema
         {
             long labelId = context.getLabelId( index.getLabel().name() );
             long propertyKeyId = context.getPropertyKeyId( propertyKey );
-            org.neo4j.kernel.api.IndexState indexState =
+            InternalIndexState indexState =
                     context.getIndexState( context.getIndexRule( labelId, propertyKeyId ) );
             switch ( indexState )
             {
@@ -96,6 +97,8 @@ public class SchemaImpl implements Schema
                     return IndexState.POPULATING;
                 case ONLINE:
                     return IndexState.ONLINE;
+                case FAILED:
+                    return IndexState.FAILED;
                 case NON_EXISTENT:
                     throw new NotFoundException( format( "No index for label %s on property %s",
                             index.getLabel().name(), propertyKey ) );
