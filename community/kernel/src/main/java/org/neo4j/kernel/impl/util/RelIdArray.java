@@ -30,6 +30,15 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.helpers.Enc128;
 import org.neo4j.kernel.impl.cache.SizeOf;
 
+/**
+ * About the state of the {@link ByteBuffer}s that store the ids in here:
+ * 
+ * A buffer that is currently assigned to the fields has:
+ * + its position where to write new ids.
+ * 
+ * @author Mattias
+ *
+ */
 public class RelIdArray implements SizeOf
 {
     private static final Enc128 enc128 = new Enc128();
@@ -92,8 +101,6 @@ public class RelIdArray implements SizeOf
     private final int type;
     private ByteBuffer outIds;
     private ByteBuffer inIds;
-//    private IdBlock lastOutBlock;
-//    private IdBlock lastInBlock;
     
     public RelIdArray( int type )
     {
@@ -143,18 +150,39 @@ public class RelIdArray implements SizeOf
             direction.setLastBlock( this, newLastBlock );
             lastBlock = newLastBlock;
         }
-        add( lastBlock, id );
+        add( lastBlock, id, direction );
     }
     
-    private void add( ByteBuffer buffer, long id )
+    private void add( ByteBuffer buffer, long id, DirectionWrapper direction )
     {
+        buffer = ensureBufferSpace( buffer, 1, direction );
         enc128.encode( buffer, id );
     }
     
-    private void addAll( ByteBuffer target, ByteBuffer source )
+    private int remainingToWriter( ByteBuffer buffer )
     {
-        // TODO source position?
-        target.put( source );
+        return buffer.capacity()-buffer.position();
+    }
+    
+    private ByteBuffer ensureBufferSpace( ByteBuffer buffer, int bytesToAdd, DirectionWrapper direction )
+    {
+        int remaining = remainingToWriter( buffer );
+        if ( bytesToAdd > remaining )
+        {
+            int candidateSize = buffer.capacity()*3;
+            if ( candidateSize < remaining+bytesToAdd )
+                candidateSize = (remaining+bytesToAdd)*2;
+            
+            buffer = copy( buffer, candidateSize );
+            direction.setLastBlock( this, buffer );
+        }
+        return buffer;
+    }
+
+    private void addAll( ByteBuffer target, ByteBuffer source, DirectionWrapper direction )
+    {
+        target = ensureBufferSpace( target, source.capacity(), direction );
+        target.put( newBufferForReading( source ) );
     }
 
     public RelIdArray addAll( RelIdArray source )
@@ -188,19 +216,20 @@ public class RelIdArray implements SizeOf
                 new RelIdArray( type, shrunkOut, shrunkIn );
     }
     
-    private ByteBuffer shrink( ByteBuffer buffer )
+    protected ByteBuffer shrink( ByteBuffer buffer )
     {
-        if ( buffer.position() == buffer.capacity() )
+        if ( buffer == null || buffer.position() == buffer.capacity() )
             return buffer;
         
-        return copy( buffer );
+        return copy( buffer, buffer.position() );
     }
 
-    private ByteBuffer copy( ByteBuffer buffer )
+    private ByteBuffer copy( ByteBuffer buffer, int newSize )
     {
-        ByteBuffer newBuffer = ByteBuffer.allocate( buffer.position() );
-        buffer.position( 0 );
-        newBuffer.put( buffer );
+        ByteBuffer newBuffer = ByteBuffer.allocate( newSize );
+        ByteBuffer reader = buffer.duplicate();
+        reader.flip();
+        newBuffer.put( reader );
         return newBuffer;
     }
     
@@ -227,11 +256,11 @@ public class RelIdArray implements SizeOf
         {
             if ( toBlock == null )
             {
-                direction.setLastBlock( this, copy( fromBlock ) );
+                direction.setLastBlock( this, copy( fromBlock, fromBlock.position() ) );
             }
             else
             {
-                addAll( toBlock, fromBlock );
+                addAll( toBlock, fromBlock, direction );
             }
         }
     }
@@ -451,109 +480,6 @@ public class RelIdArray implements SizeOf
 //        
 //        abstract long getHighBits();
 //    }
-//    
-//    private static class LowIdBlock extends IdBlock
-//    {
-//        @Override
-//        void setPrev( IdBlock prev )
-//        {
-//            throw new UnsupportedOperationException();
-//        }
-//        
-//        @Override
-//        IdBlock upgradeIfNeeded()
-//        {
-//            IdBlock highBlock = new HighIdBlock( 0 );
-//            highBlock.ids = ((IdBlock)this).ids;
-//            return highBlock;
-//        }
-//
-//        @Override
-//        long transform( int id )
-//        {
-//            return (long)(id&0xFFFFFFFFL);
-//        }
-//        
-//        @Override
-//        protected IdBlock copyInstance()
-//        {
-//            return new LowIdBlock();
-//        }
-//        
-//        @Override
-//        long getHighBits()
-//        {
-//            return 0;
-//        }
-//    }
-//    
-//    private static class HighIdBlock extends IdBlock
-//    {
-//        private final long highBits;
-//        private IdBlock prev;
-//
-//        HighIdBlock( long highBits )
-//        {
-//            this.highBits = highBits;
-//        }
-//        
-//        public int size()
-//        {
-//            int size = super.size() + 8 + SizeOfs.REFERENCE_SIZE;
-//            if ( prev != null )
-//            {
-//                size += prev.size();
-//            }
-//            return size;
-//        }
-//        
-//        @Override
-//        IdBlock upgradeIfNeeded()
-//        {
-//            return this;
-//        }
-//        
-//        @Override
-//        IdBlock copy()
-//        {
-//            IdBlock copy = super.copy();
-//            if ( prev != null )
-//            {
-//                copy.setPrev( prev.copy() );
-//            }
-//            return copy;
-//        }
-//
-//        @Override
-//        IdBlock getPrev()
-//        {
-//            return prev;
-//        }
-//
-//        @Override
-//        void setPrev( IdBlock prev )
-//        {
-//            this.prev = prev;
-//        }
-//
-//        @Override
-//        long transform( int id )
-//        {
-//            return (((long)(id&0xFFFFFFFFL))|(highBits));
-//        }
-//        
-//        @Override
-//        protected IdBlock copyInstance()
-//        {
-//            return new HighIdBlock( highBits );
-//        }
-//        
-//        @Override
-//        long getHighBits()
-//        {
-//            return highBits;
-//        }
-//    }
     
     private static class IteratorState
     {
@@ -561,7 +487,7 @@ public class RelIdArray implements SizeOf
         
         public IteratorState( ByteBuffer block, int relativePosition )
         {
-            this.block = block;
+            this.block = newBufferForReading( block );
             // TODO use relativePosition?
         }
         
@@ -582,6 +508,16 @@ public class RelIdArray implements SizeOf
         {
             this.block = lastBlock;
         }
+    }
+    
+    private static ByteBuffer newBufferForReading( ByteBuffer buffer )
+    {
+        if ( buffer == null )
+            return buffer;
+        ByteBuffer result = buffer.duplicate();
+        result.position( 0 );
+        result.limit( buffer.position() );
+        return result;
     }
     
     public static class RelIdIteratorImpl implements RelIdIterator
@@ -682,32 +618,15 @@ public class RelIdArray implements SizeOf
             nextElement = -1;
             return false;
         }
-
-        protected boolean nextBlock()
-        {
-            // Try next block in the chain
-            if ( currentState != null && currentState.nextBlock() )
-            {
-                return true;
-            }
-            
-            // It's ok to return null here... which will result in hasNext
-            // returning false. IntArrayIterator will try to get more relationships
-            // and call hasNext again.
-            return findNextBlock();
-        }
         
-        /* (non-Javadoc)
-         * @see org.neo4j.kernel.impl.util.RelIdIterator#doAnotherRound()
-         */
         @Override
         public void doAnotherRound()
         {
             directionPosition = -1;
-            findNextBlock();
+            nextBlock();
         }
 
-        protected boolean findNextBlock()
+        protected boolean nextBlock()
         {
             while ( directionPosition+1 < directions.length )
             {
@@ -718,7 +637,7 @@ public class RelIdArray implements SizeOf
                     currentState = nextState;
                     return true;
                 }
-                IdBlock block = currentDirection.getLastBlock( ids );
+                ByteBuffer block = currentDirection.getLastBlock( ids );
                 if ( block != null )
                 {
                     currentState = new IteratorState( block, 0 );
@@ -729,9 +648,6 @@ public class RelIdArray implements SizeOf
             return false;
         }
         
-        /* (non-Javadoc)
-         * @see org.neo4j.kernel.impl.util.RelIdIterator#next()
-         */
         @Override
         public long next()
         {
@@ -769,8 +685,8 @@ public class RelIdArray implements SizeOf
             if ( src != null )
             {
                 newArray = src.newSimilarInstance();
-                newArray.addAll( src );
-                evictExcluded( newArray, remove );
+                newArray = newArray.addAll( src );
+                newArray.removeAll( remove );
             }
             else
             {
@@ -792,33 +708,28 @@ public class RelIdArray implements SizeOf
         }
     }
 
-    private static void evictExcluded( RelIdArray ids, Collection<Long> excluded )
+    private void removeAll( Collection<Long> excluded )
     {
-        for ( RelIdIteratorImpl iterator = (RelIdIteratorImpl) DirectionWrapper.BOTH.iterator( ids ); iterator.hasNext(); )
+        removeAll( excluded, DirectionWrapper.OUTGOING );
+        removeAll( excluded, DirectionWrapper.INCOMING );
+        removeAll( excluded, DirectionWrapper.BOTH );
+    }
+
+    private void removeAll( Collection<Long> excluded, DirectionWrapper direction )
+    {
+        ByteBuffer buffer = direction.getLastBlock( this );
+        if ( buffer == null )
+            return;
+        
+        ByteBuffer newBuffer = ByteBuffer.allocate( buffer.capacity() );
+        for ( RelIdIteratorImpl iterator = (RelIdIteratorImpl) direction.iterator( this ); iterator.hasNext(); )
         {
             long value = iterator.next();
-            if ( excluded.contains( value ) )
-            {
-                boolean swapSuccessful = false;
-                IteratorState state = iterator.currentState;
-                IdBlock block = state.block;
-                for ( int j = block.length() - 1; j >= state.relativePosition; j--)
-                {
-                    long backValue = block.get( j );
-                    block.ids[0] = block.ids[0]-1;
-                    if ( !excluded.contains( backValue) )
-                    {
-                        block.set( backValue, state.relativePosition-1 );
-                        swapSuccessful = true;
-                        break;
-                    }
-                }
-                if ( !swapSuccessful ) // all elements from pos in remove
-                {
-                    block.ids[0] = block.ids[0]-1;
-                }
-            }
+            if ( !excluded.contains( value ) )
+                add( newBuffer, value, iterator.currentDirection );
         }
+        newBuffer = copy( newBuffer, newBuffer.position() );
+        direction.setLastBlock( this, newBuffer );
     }
 
     /**
@@ -830,7 +741,6 @@ public class RelIdArray implements SizeOf
      */
     public boolean couldBeNeedingUpdate()
     {
-        return (lastOutBlock != null && lastOutBlock.getPrev() != null) ||
-                (lastInBlock != null && lastInBlock.getPrev() != null);
+        return false;
     }
 }

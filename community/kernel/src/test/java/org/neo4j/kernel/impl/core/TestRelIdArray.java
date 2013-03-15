@@ -22,12 +22,12 @@ package org.neo4j.kernel.impl.core;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper.BOTH;
 import static org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper.INCOMING;
 import static org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper.OUTGOING;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -56,7 +56,7 @@ public class TestRelIdArray
         assertEquals( 1L, itr.next() );
         assertTrue( itr.hasNext() );
         assertEquals( 2L, itr.next() );
-        assertFalse( itr.hasNext() );
+        assertFalse( "Should have no more", itr.hasNext() );
         assertFalse( itr.hasNext() );
         
         // Iterate INCOMING
@@ -95,7 +95,7 @@ public class TestRelIdArray
         remove.add( 6L );
         List<Long> allIds = asList( RelIdArray.from( source, add, remove ) );
         Collections.sort( allIds );
-        assertEquals( Arrays.asList( 1L, 3L, 4L, 5L, 7L ), allIds );
+        assertEquals( asSet( 1L, 3L, 4L, 5L, 7L ), asSet( allIds ) );
     }
     
     @Test
@@ -115,12 +115,13 @@ public class TestRelIdArray
         array.add( verySmall, OUTGOING );
         array.add( verySmall+1, OUTGOING );
         
-        Collection<Long> allIds = new HashSet<Long>( asList( array ) );
-        assertEquals( new HashSet<Long>( Arrays.asList(
+        assertEquals( asSet(
                 justUnderIntMax, justUnderIntMax+1,
                 justOverIntMax, justOverIntMax+1,
                 aBitOverIntMax, aBitOverIntMax+1,
-                verySmall, verySmall+1 ) ), allIds );
+                verySmall, verySmall+1 ),
+                
+                asSet( asList( array ) ) );
     }
     
     @Test
@@ -139,8 +140,7 @@ public class TestRelIdArray
         all.addAll( array1 );
         all.addAll( array2 );
         
-        assertEquals( new HashSet<Long>( Arrays.asList(
-                0L, 1L, justOverIntMax, justOverIntMax+1 ) ), new HashSet<Long>( asList( all ) ) );
+        assertEquals( asSet( 0L, 1L, justOverIntMax, justOverIntMax+1 ), asSet( asList( all ) ) );
     }
     
     private List<Long> asList( RelIdArray ids )

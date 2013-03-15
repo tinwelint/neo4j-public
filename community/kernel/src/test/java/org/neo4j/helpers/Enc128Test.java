@@ -73,7 +73,7 @@ public class Enc128Test
     {
         int idCount = 10_000_000;
         ByteBuffer buffer = ByteBuffer.allocate( idCount*4 );
-        for ( int i = 0; i < 1000; i++ )
+        for ( int i = 0; i < 10; i++ )
             timeEncodeDecode( buffer, 10_000_000, 100000 );
     }
 

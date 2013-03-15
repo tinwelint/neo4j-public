@@ -19,9 +19,11 @@
  */
 package org.neo4j.kernel.impl.util;
 
+import java.nio.ByteBuffer;
+
 public class RelIdArrayWithLoops extends RelIdArray
 {
-    private IdBlock lastLoopBlock;
+    private ByteBuffer lastLoopBlock;
     
     public RelIdArrayWithLoops( int type )
     {
@@ -40,20 +42,20 @@ public class RelIdArrayWithLoops extends RelIdArray
         lastLoopBlock = from.getLastLoopBlock();
     }
     
-    protected RelIdArrayWithLoops( int type, IdBlock out, IdBlock in, IdBlock loop )
+    protected RelIdArrayWithLoops( int type, ByteBuffer out, ByteBuffer in, ByteBuffer loop )
     {
         super( type, out, in );
         this.lastLoopBlock = loop;
     }
 
     @Override
-    protected IdBlock getLastLoopBlock()
+    protected ByteBuffer getLastLoopBlock()
     {
         return this.lastLoopBlock;
     }
 
     @Override
-    protected void setLastLoopBlock( IdBlock block )
+    protected void setLastLoopBlock( ByteBuffer block )
     {
         this.lastLoopBlock = block;
     }
@@ -83,6 +85,7 @@ public class RelIdArrayWithLoops extends RelIdArray
         return this;
     }
 
+    @Override
     public RelIdArray newSimilarInstance()
     {
         return new RelIdArrayWithLoops( getType() );
@@ -97,12 +100,12 @@ public class RelIdArrayWithLoops extends RelIdArray
     @Override
     public RelIdArray shrink()
     {
-        IdBlock lastOutBlock = DirectionWrapper.OUTGOING.getLastBlock( this );
-        IdBlock lastInBlock = DirectionWrapper.INCOMING.getLastBlock( this );
-        IdBlock shrunkOut = lastOutBlock != null ? lastOutBlock.shrink() : null;
-        IdBlock shrunkIn = lastInBlock != null ? lastInBlock.shrink() : null;
-        IdBlock shrunkLoop = lastLoopBlock != null ? lastLoopBlock.shrink() : null;
-        return shrunkOut == lastOutBlock && shrunkIn == lastInBlock && shrunkLoop == lastLoopBlock ? this : 
+        ByteBuffer outBuffer = DirectionWrapper.OUTGOING.getLastBlock( this );
+        ByteBuffer shrunkOut = shrink( outBuffer );
+        ByteBuffer inBuffer = DirectionWrapper.INCOMING.getLastBlock( this );
+        ByteBuffer shrunkIn = shrink( inBuffer );
+        ByteBuffer shrunkLoop = shrink( lastLoopBlock );
+        return shrunkOut == outBuffer && shrunkIn == inBuffer && shrunkLoop == lastLoopBlock ? this : 
                 new RelIdArrayWithLoops( getType(), shrunkOut, shrunkIn, shrunkLoop );
     }
 }
