@@ -19,10 +19,7 @@
  */
 package org.neo4j.kernel.impl.util;
 
-import static org.neo4j.kernel.impl.cache.SizeOfs.withArrayOverhead;
-import static org.neo4j.kernel.impl.cache.SizeOfs.withObjectOverhead;
-import static org.neo4j.kernel.impl.cache.SizeOfs.withReference;
-
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 
@@ -30,6 +27,19 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.impl.cache.SizeOfObject;
 import org.neo4j.kernel.impl.cache.SizeOfs;
 
+import static org.neo4j.kernel.impl.cache.SizeOfs.withArrayOverhead;
+import static org.neo4j.kernel.impl.cache.SizeOfs.withObjectOverhead;
+import static org.neo4j.kernel.impl.cache.SizeOfs.withReference;
+
+/**
+ * About the state of the {@link ByteBuffer}s that store the ids in here:
+ * 
+ * A buffer that is currently assigned to the fields has:
+ * + its position where to write new ids.
+ * 
+ * @author Mattias
+ *
+ */
 public class RelIdArray implements SizeOfObject
 {
     private static final DirectionWrapper[] DIRECTIONS_FOR_OUTGOING =
@@ -56,10 +66,12 @@ public class RelIdArray implements SizeOfObject
                 return false;
             }
             
+            @Override
             public void doAnotherRound()
             {
             }
             
+            @Override
             public RelIdIterator updateSource( RelIdArray newSource, DirectionWrapper direction )
             {
                 return direction.iterator( newSource );
@@ -94,6 +106,7 @@ public class RelIdArray implements SizeOfObject
         this.type = type;
     }
     
+    @Override
     public int sizeOfObjectInBytesIncludingOverhead()
     {
         return withObjectOverhead( 8 /*type (padded)*/ + sizeOfBlockWithReference( lastOutBlock ) + sizeOfBlockWithReference( lastInBlock ) ); 
@@ -394,6 +407,7 @@ public class RelIdArray implements SizeOfObject
             return copy;
         }
         
+        @Override
         public int sizeOfObjectInBytesIncludingOverhead()
         {
             return withObjectOverhead( withReference( withArrayOverhead( 4*ids.length ) ) );
@@ -497,7 +511,7 @@ public class RelIdArray implements SizeOfObject
         @Override
         long transform( int id )
         {
-            return (long)(id&0xFFFFFFFFL);
+            return id&0xFFFFFFFFL;
         }
         
         @Override
@@ -523,6 +537,7 @@ public class RelIdArray implements SizeOfObject
             this.highBits = highBits;
         }
         
+        @Override
         public int sizeOfObjectInBytesIncludingOverhead()
         {
             int size = super.sizeOfObjectInBytesIncludingOverhead() + 8 + SizeOfs.REFERENCE_SIZE;
@@ -565,7 +580,7 @@ public class RelIdArray implements SizeOfObject
         @Override
         long transform( int id )
         {
-            return (((long)(id&0xFFFFFFFFL))|(highBits));
+            return ((id&0xFFFFFFFFL)|(highBits));
         }
         
         @Override
