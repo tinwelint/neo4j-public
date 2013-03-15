@@ -19,19 +19,21 @@
  */
 package org.neo4j.kernel.impl.util;
 
-import static org.neo4j.kernel.impl.cache.SizeOfs.withArrayOverhead;
 import static org.neo4j.kernel.impl.cache.SizeOfs.withObjectOverhead;
 import static org.neo4j.kernel.impl.cache.SizeOfs.withReference;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 
 import org.neo4j.graphdb.Direction;
+import org.neo4j.helpers.Enc128;
 import org.neo4j.kernel.impl.cache.SizeOf;
-import org.neo4j.kernel.impl.cache.SizeOfs;
 
 public class RelIdArray implements SizeOf
 {
+    private static final Enc128 enc128 = new Enc128();
+    
     private static final DirectionWrapper[] DIRECTIONS_FOR_OUTGOING =
             new DirectionWrapper[] { DirectionWrapper.OUTGOING, DirectionWrapper.BOTH };
     private static final DirectionWrapper[] DIRECTIONS_FOR_INCOMING =
@@ -56,10 +58,12 @@ public class RelIdArray implements SizeOf
                 return false;
             }
             
+            @Override
             public void doAnotherRound()
             {
             }
             
+            @Override
             public RelIdIterator updateSource( RelIdArray newSource, DirectionWrapper direction )
             {
                 return direction.iterator( newSource );
@@ -86,22 +90,25 @@ public class RelIdArray implements SizeOf
     public static final RelIdArray EMPTY = new EmptyRelIdArray( -1 );
     
     private final int type;
-    private IdBlock lastOutBlock;
-    private IdBlock lastInBlock;
+    private ByteBuffer outIds;
+    private ByteBuffer inIds;
+//    private IdBlock lastOutBlock;
+//    private IdBlock lastInBlock;
     
     public RelIdArray( int type )
     {
         this.type = type;
     }
     
+    @Override
     public int size()
     {
-        return withObjectOverhead( 8 /*type (padded)*/ + sizeOfBlockWithReference( lastOutBlock ) + sizeOfBlockWithReference( lastInBlock ) ); 
+        return withObjectOverhead( 8 /*type (padded)*/ + sizeOfBlockWithReference( outIds ) + sizeOfBlockWithReference( inIds ) ); 
     }
     
-    static int sizeOfBlockWithReference( IdBlock block )
+    static int sizeOfBlockWithReference( ByteBuffer ids )
     {
-        return withReference( block != null ? block.size() : 0 );
+        return withReference( ids != null ? withObjectOverhead( ids.capacity() ) : 0 );
     }
 
     public int getType()
@@ -112,15 +119,15 @@ public class RelIdArray implements SizeOf
     protected RelIdArray( RelIdArray from )
     {
         this( from.type );
-        this.lastOutBlock = from.lastOutBlock;
-        this.lastInBlock = from.lastInBlock;
+        this.outIds = from.outIds;
+        this.inIds = from.inIds;
     }
     
-    protected RelIdArray( int type, IdBlock out, IdBlock in )
+    protected RelIdArray( int type, ByteBuffer out, ByteBuffer in )
     {
         this( type );
-        this.lastOutBlock = out;
-        this.lastInBlock = in;
+        this.outIds = out;
+        this.inIds = in;
     }
     
     /*
@@ -128,32 +135,28 @@ public class RelIdArray implements SizeOf
      */
     public void add( long id, DirectionWrapper direction )
     {
-        IdBlock lastBlock = direction.getLastBlock( this );
-        long highBits = id&0xFFFFFFFF00000000L;
-        if ( lastBlock == null || lastBlock.getHighBits() != highBits )
+        ByteBuffer lastBlock = direction.getLastBlock( this );
+        if ( lastBlock == null )
         {
-            IdBlock newLastBlock = null;
-            if ( highBits == 0 && lastBlock == null )
-            {
-                newLastBlock = new LowIdBlock();
-            }
-            else
-            {
-                // TODO: instead of always creating a new id block when high bits change
-                // traverse back and try find a fit
-                newLastBlock = new HighIdBlock( highBits );
-                if ( lastBlock != null )
-                {
-                    lastBlock = lastBlock.upgradeIfNeeded();
-                    newLastBlock.setPrev( lastBlock );
-                }
-            }
+            ByteBuffer newLastBlock = null;
+            newLastBlock = ByteBuffer.allocate( 20 );
             direction.setLastBlock( this, newLastBlock );
             lastBlock = newLastBlock;
         }
-        lastBlock.add( (int) id );
+        add( lastBlock, id );
     }
     
+    private void add( ByteBuffer buffer, long id )
+    {
+        enc128.encode( buffer, id );
+    }
+    
+    private void addAll( ByteBuffer target, ByteBuffer source )
+    {
+        // TODO source position?
+        target.put( source );
+    }
+
     public RelIdArray addAll( RelIdArray source )
     {
         if ( source == null )
@@ -172,20 +175,36 @@ public class RelIdArray implements SizeOf
         return this;
     }
     
-    protected IdBlock getLastLoopBlock()
+    protected ByteBuffer getLastLoopBlock()
     {
         return null;
     }
     
     public RelIdArray shrink()
     {
-        IdBlock shrunkOut = lastOutBlock != null ? lastOutBlock.shrink() : null;
-        IdBlock shrunkIn = lastInBlock != null ? lastInBlock.shrink() : null;
-        return shrunkOut == lastOutBlock && shrunkIn == lastInBlock ? this : 
+        ByteBuffer shrunkOut = shrink( outIds );
+        ByteBuffer shrunkIn = shrink( inIds );
+        return shrunkOut == outIds && shrunkIn == inIds ? this : 
                 new RelIdArray( type, shrunkOut, shrunkIn );
     }
     
-    protected void setLastLoopBlock( IdBlock block )
+    private ByteBuffer shrink( ByteBuffer buffer )
+    {
+        if ( buffer.position() == buffer.capacity() )
+            return buffer;
+        
+        return copy( buffer );
+    }
+
+    private ByteBuffer copy( ByteBuffer buffer )
+    {
+        ByteBuffer newBuffer = ByteBuffer.allocate( buffer.position() );
+        buffer.position( 0 );
+        newBuffer.put( buffer );
+        return newBuffer;
+    }
+    
+    protected void setLastLoopBlock( ByteBuffer block )
     {
         throw new UnsupportedOperationException( "Should've upgraded to RelIdArrayWithLoops before this" );
     }
@@ -202,67 +221,24 @@ public class RelIdArray implements SizeOf
     
     protected void append( RelIdArray source, DirectionWrapper direction )
     {
-        IdBlock toBlock = direction.getLastBlock( this );
-        IdBlock fromBlock = direction.getLastBlock( source );
+        ByteBuffer toBlock = direction.getLastBlock( this );
+        ByteBuffer fromBlock = direction.getLastBlock( source );
         if ( fromBlock != null )
         {
             if ( toBlock == null )
             {
-                direction.setLastBlock( this, fromBlock.copy() );
-            }
-            else if ( toBlock.getHighBits() == fromBlock.getHighBits() )
-            {
-                toBlock.addAll( fromBlock );
-                if ( fromBlock.getPrev() != null )
-                {
-                    boolean isTheOnlyOne = toBlock.getPrev() == null;
-                    IdBlock last = last( toBlock );
-                    last.setPrev( fromBlock.getPrev().copy() );
-                    if ( isTheOnlyOne )
-                    {
-                        direction.setLastBlock( this, last );
-                    }
-                }
+                direction.setLastBlock( this, copy( fromBlock ) );
             }
             else
             {
-                boolean isTheOnlyOne = toBlock.getPrev() == null;
-                IdBlock last = last( toBlock );
-                last.setPrev( fromBlock.copy() );
-                if ( isTheOnlyOne )
-                {
-                    direction.setLastBlock( this, last );
-                }
+                addAll( toBlock, fromBlock );
             }
-        }
-    }
-    
-    /**
-     * Also upgrade along the way if necessary
-     */
-    private static IdBlock last( IdBlock block )
-    {
-        IdBlock previousInLoop = null;
-        while ( true )
-        {
-            block = block.upgradeIfNeeded();
-            if ( previousInLoop != null )
-            {
-                previousInLoop.setPrev( block );
-            }
-            IdBlock prev = block.getPrev();
-            if ( prev == null )
-            {
-                return block;
-            }
-            previousInLoop = block;
-            block = prev;
         }
     }
     
     public boolean isEmpty()
     {
-        return lastOutBlock == null && lastInBlock == null && getLastLoopBlock() == null ;
+        return outIds == null && inIds == null && getLastLoopBlock() == null;
     }
     
     public RelIdIterator iterator( DirectionWrapper direction )
@@ -275,8 +251,6 @@ public class RelIdArray implements SizeOf
         return new RelIdArray( type );
     }
     
-    public static final IdBlock EMPTY_BLOCK = new LowIdBlock();
-    
     public static enum DirectionWrapper
     {
         OUTGOING( Direction.OUTGOING )
@@ -288,15 +262,15 @@ public class RelIdArray implements SizeOf
             }
 
             @Override
-            IdBlock getLastBlock( RelIdArray ids )
+            ByteBuffer getLastBlock( RelIdArray ids )
             {
-                return ids.lastOutBlock;
+                return ids.outIds;
             }
 
             @Override
-            void setLastBlock( RelIdArray ids, IdBlock block )
+            void setLastBlock( RelIdArray ids, ByteBuffer buffer )
             {
-                ids.lastOutBlock = block;
+                ids.outIds = buffer;
             }
         },
         INCOMING( Direction.INCOMING )
@@ -308,15 +282,15 @@ public class RelIdArray implements SizeOf
             }
 
             @Override
-            IdBlock getLastBlock( RelIdArray ids )
+            ByteBuffer getLastBlock( RelIdArray ids )
             {
-                return ids.lastInBlock;
+                return ids.inIds;
             }
 
             @Override
-            void setLastBlock( RelIdArray ids, IdBlock block )
+            void setLastBlock( RelIdArray ids, ByteBuffer buffer )
             {
-                ids.lastInBlock = block;
+                ids.inIds = buffer;
             }
         },
         BOTH( Direction.BOTH )
@@ -328,13 +302,13 @@ public class RelIdArray implements SizeOf
             }
 
             @Override
-            IdBlock getLastBlock( RelIdArray ids )
+            ByteBuffer getLastBlock( RelIdArray ids )
             {
                 return ids.getLastLoopBlock();
             }
 
             @Override
-            void setLastBlock( RelIdArray ids, IdBlock block )
+            void setLastBlock( RelIdArray ids, ByteBuffer block )
             {
                 ids.setLastLoopBlock( block );
             }
@@ -352,12 +326,12 @@ public class RelIdArray implements SizeOf
         /*
          * Only used during add
          */
-        abstract IdBlock getLastBlock( RelIdArray ids );
+        abstract ByteBuffer getLastBlock( RelIdArray ids );
         
         /*
          * Only used during add
          */
-        abstract void setLastBlock( RelIdArray ids, IdBlock block );
+        abstract void setLastBlock( RelIdArray ids, ByteBuffer buffer );
         
         public Direction direction()
         {
@@ -376,238 +350,224 @@ public class RelIdArray implements SizeOf
         }
     }
     
-    public static abstract class IdBlock implements SizeOf
-    {
-        // First element is the actual length w/o the slack
-        private int[] ids = new int[3];
-        
-        /**
-         * @return a copy of itself. The copy is also shrunk so that there's no
-         * slack in the id array.
-         */
-        IdBlock copy()
-        {
-            IdBlock copy = copyInstance();
-            int length = length();
-            copy.ids = new int[length+1];
-            System.arraycopy( ids, 0, copy.ids, 0, length+1 );
-            return copy;
-        }
-        
-        public int size()
-        {
-            return withObjectOverhead( withReference( withArrayOverhead( 4*ids.length ) ) );
-        }
-        
-        /**
-         * @return a shrunk version of itself. It returns itself if there is
-         * no need to shrink it or a {@link #copy()} if there is slack in the array.
-         */
-        IdBlock shrink()
-        {
-            return length() == ids.length-1 ? this : copy();
-        }
-        
-        /**
-         * Upgrades to a {@link HighIdBlock} if this is a {@link LowIdBlock}.
-         */
-        abstract IdBlock upgradeIfNeeded();
-        
-        int length()
-        {
-            return ids[0];
-        }
-
-        IdBlock getPrev()
-        {
-            return null;
-        }
-        
-        abstract void setPrev( IdBlock prev );
-        
-        protected abstract IdBlock copyInstance();
-
-        // Assume id has same high bits
-        void add( int id )
-        {
-            int length = ensureSpace( 1 );
-            ids[length+1] = id;
-            ids[0] = length+1;
-        }
-        
-        int ensureSpace( int delta )
-        {
-            int length = length();
-            int newLength = length+delta;
-            if ( newLength >= ids.length-1 )
-            {
-                int calculatedLength = ids.length*2;
-                if ( newLength > calculatedLength )
-                {
-                    calculatedLength = newLength*2;
-                }
-                int[] newIds = new int[calculatedLength];
-                System.arraycopy( ids, 0, newIds, 0, length+1 );
-                ids = newIds;
-            }
-            return length;
-        }
-        
-        void addAll( IdBlock block )
-        {
-            int otherBlockLength = block.length();
-            int length = ensureSpace( otherBlockLength+1 );
-            System.arraycopy( block.ids, 1, ids, length+1, otherBlockLength );
-            ids[0] = otherBlockLength+length;
-        }
-        
-        long get( int index )
-        {
-            assert index >= 0 && index < length();
-            return transform( ids[index+1] );
-        }
-        
-        abstract long transform( int id );
-        
-        void set( long id, int index )
-        {
-            // Assume same high bits
-            ids[index+1] = (int) id;
-        }
-        
-        abstract long getHighBits();
-    }
-    
-    private static class LowIdBlock extends IdBlock
-    {
-        @Override
-        void setPrev( IdBlock prev )
-        {
-            throw new UnsupportedOperationException();
-        }
-        
-        @Override
-        IdBlock upgradeIfNeeded()
-        {
-            IdBlock highBlock = new HighIdBlock( 0 );
-            highBlock.ids = ((IdBlock)this).ids;
-            return highBlock;
-        }
-
-        @Override
-        long transform( int id )
-        {
-            return (long)(id&0xFFFFFFFFL);
-        }
-        
-        @Override
-        protected IdBlock copyInstance()
-        {
-            return new LowIdBlock();
-        }
-        
-        @Override
-        long getHighBits()
-        {
-            return 0;
-        }
-    }
-    
-    private static class HighIdBlock extends IdBlock
-    {
-        private final long highBits;
-        private IdBlock prev;
-
-        HighIdBlock( long highBits )
-        {
-            this.highBits = highBits;
-        }
-        
-        public int size()
-        {
-            int size = super.size() + 8 + SizeOfs.REFERENCE_SIZE;
-            if ( prev != null )
-            {
-                size += prev.size();
-            }
-            return size;
-        }
-        
-        @Override
-        IdBlock upgradeIfNeeded()
-        {
-            return this;
-        }
-        
-        @Override
-        IdBlock copy()
-        {
-            IdBlock copy = super.copy();
-            if ( prev != null )
-            {
-                copy.setPrev( prev.copy() );
-            }
-            return copy;
-        }
-
-        @Override
-        IdBlock getPrev()
-        {
-            return prev;
-        }
-
-        @Override
-        void setPrev( IdBlock prev )
-        {
-            this.prev = prev;
-        }
-
-        @Override
-        long transform( int id )
-        {
-            return (((long)(id&0xFFFFFFFFL))|(highBits));
-        }
-        
-        @Override
-        protected IdBlock copyInstance()
-        {
-            return new HighIdBlock( highBits );
-        }
-        
-        @Override
-        long getHighBits()
-        {
-            return highBits;
-        }
-    }
+//    public static abstract class IdBlock implements SizeOf
+//    {
+//        // First element is the actual length w/o the slack
+//        private int[] ids = new int[3];
+//        
+//        /**
+//         * @return a copy of itself. The copy is also shrunk so that there's no
+//         * slack in the id array.
+//         */
+//        IdBlock copy()
+//        {
+//            IdBlock copy = copyInstance();
+//            int length = length();
+//            copy.ids = new int[length+1];
+//            System.arraycopy( ids, 0, copy.ids, 0, length+1 );
+//            return copy;
+//        }
+//        
+//        public int size()
+//        {
+//            return withObjectOverhead( withReference( withArrayOverhead( 4*ids.length ) ) );
+//        }
+//        
+//        /**
+//         * @return a shrunk version of itself. It returns itself if there is
+//         * no need to shrink it or a {@link #copy()} if there is slack in the array.
+//         */
+//        IdBlock shrink()
+//        {
+//            return length() == ids.length-1 ? this : copy();
+//        }
+//        
+//        /**
+//         * Upgrades to a {@link HighIdBlock} if this is a {@link LowIdBlock}.
+//         */
+//        abstract IdBlock upgradeIfNeeded();
+//        
+//        int length()
+//        {
+//            return ids[0];
+//        }
+//
+//        IdBlock getPrev()
+//        {
+//            return null;
+//        }
+//        
+//        abstract void setPrev( IdBlock prev );
+//        
+//        protected abstract IdBlock copyInstance();
+//
+//        // Assume id has same high bits
+//        void add( int id )
+//        {
+//            int length = ensureSpace( 1 );
+//            ids[length+1] = id;
+//            ids[0] = length+1;
+//        }
+//        
+//        int ensureSpace( int delta )
+//        {
+//            int length = length();
+//            int newLength = length+delta;
+//            if ( newLength >= ids.length-1 )
+//            {
+//                int calculatedLength = ids.length*2;
+//                if ( newLength > calculatedLength )
+//                {
+//                    calculatedLength = newLength*2;
+//                }
+//                int[] newIds = new int[calculatedLength];
+//                System.arraycopy( ids, 0, newIds, 0, length+1 );
+//                ids = newIds;
+//            }
+//            return length;
+//        }
+//        
+//        void addAll( IdBlock block )
+//        {
+//            int otherBlockLength = block.length();
+//            int length = ensureSpace( otherBlockLength+1 );
+//            System.arraycopy( block.ids, 1, ids, length+1, otherBlockLength );
+//            ids[0] = otherBlockLength+length;
+//        }
+//        
+//        long get( int index )
+//        {
+//            assert index >= 0 && index < length();
+//            return transform( ids[index+1] );
+//        }
+//        
+//        abstract long transform( int id );
+//        
+//        void set( long id, int index )
+//        {
+//            // Assume same high bits
+//            ids[index+1] = (int) id;
+//        }
+//        
+//        abstract long getHighBits();
+//    }
+//    
+//    private static class LowIdBlock extends IdBlock
+//    {
+//        @Override
+//        void setPrev( IdBlock prev )
+//        {
+//            throw new UnsupportedOperationException();
+//        }
+//        
+//        @Override
+//        IdBlock upgradeIfNeeded()
+//        {
+//            IdBlock highBlock = new HighIdBlock( 0 );
+//            highBlock.ids = ((IdBlock)this).ids;
+//            return highBlock;
+//        }
+//
+//        @Override
+//        long transform( int id )
+//        {
+//            return (long)(id&0xFFFFFFFFL);
+//        }
+//        
+//        @Override
+//        protected IdBlock copyInstance()
+//        {
+//            return new LowIdBlock();
+//        }
+//        
+//        @Override
+//        long getHighBits()
+//        {
+//            return 0;
+//        }
+//    }
+//    
+//    private static class HighIdBlock extends IdBlock
+//    {
+//        private final long highBits;
+//        private IdBlock prev;
+//
+//        HighIdBlock( long highBits )
+//        {
+//            this.highBits = highBits;
+//        }
+//        
+//        public int size()
+//        {
+//            int size = super.size() + 8 + SizeOfs.REFERENCE_SIZE;
+//            if ( prev != null )
+//            {
+//                size += prev.size();
+//            }
+//            return size;
+//        }
+//        
+//        @Override
+//        IdBlock upgradeIfNeeded()
+//        {
+//            return this;
+//        }
+//        
+//        @Override
+//        IdBlock copy()
+//        {
+//            IdBlock copy = super.copy();
+//            if ( prev != null )
+//            {
+//                copy.setPrev( prev.copy() );
+//            }
+//            return copy;
+//        }
+//
+//        @Override
+//        IdBlock getPrev()
+//        {
+//            return prev;
+//        }
+//
+//        @Override
+//        void setPrev( IdBlock prev )
+//        {
+//            this.prev = prev;
+//        }
+//
+//        @Override
+//        long transform( int id )
+//        {
+//            return (((long)(id&0xFFFFFFFFL))|(highBits));
+//        }
+//        
+//        @Override
+//        protected IdBlock copyInstance()
+//        {
+//            return new HighIdBlock( highBits );
+//        }
+//        
+//        @Override
+//        long getHighBits()
+//        {
+//            return highBits;
+//        }
+//    }
     
     private static class IteratorState
     {
-        private int blockIndex;
-        private IdBlock block;
-        private int relativePosition;
+        private ByteBuffer block;
         
-        public IteratorState( IdBlock block, int relativePosition )
+        public IteratorState( ByteBuffer block, int relativePosition )
         {
             this.block = block;
-            this.relativePosition = relativePosition;
-        }
-        
-        boolean nextBlock()
-        {
-            if ( block.getPrev() != null )
-            {
-                block = block.getPrev();
-                relativePosition = 0;
-                blockIndex++;
-                return true;
-            }
-            return false;
+            // TODO use relativePosition?
         }
         
         boolean hasNext()
         {
-            return relativePosition < block.length();
+            return block.hasRemaining();
         }
         
         /*
@@ -615,15 +575,11 @@ public class RelIdArray implements SizeOf
          */
         long next()
         {
-            return block.get( relativePosition++ );
+            return enc128.decode( block );
         }
 
-        public void update( IdBlock lastBlock )
+        public void update( ByteBuffer lastBlock )
         {
-            for ( int i = 0; i < blockIndex; i++ )
-            {
-                lastBlock = lastBlock.getPrev();
-            }
             this.block = lastBlock;
         }
     }
@@ -649,7 +605,7 @@ public class RelIdArray implements SizeOf
             // Find the initial block which isn't null. There can be directions
             // which have a null block currently, but could potentially be set
             // after the next getMoreRelationships.
-            IdBlock block = null;
+            ByteBuffer block = null;
             while ( block == null && directionPosition+1 < directions.length )
             {
                 currentDirection = directions[++directionPosition];

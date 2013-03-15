@@ -35,7 +35,6 @@ import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.CypherResultRepresentation;
 import org.neo4j.server.rest.repr.InputFormat;
 import org.neo4j.server.rest.repr.OutputFormat;
-import org.neo4j.server.rest.repr.ValueRepresentation;
 
 @Path("/cypher")
 public class CypherService
@@ -46,9 +45,9 @@ public class CypherService
     private static final String INCLUDE_PLAN_PARAM = "includePlan";
     private static final String PROFILE_PARAM = "profile";
 
-    private CypherExecutor cypherExecutor;
-    private OutputFormat output;
-    private InputFormat input;
+    private final CypherExecutor cypherExecutor;
+    private final OutputFormat output;
+    private final InputFormat input;
 
     public CypherService( @Context CypherExecutor cypherExecutor, @Context InputFormat input,
                           @Context OutputFormat output )
