@@ -31,7 +31,7 @@ public class Enc128
      */
     public int encode( ByteBuffer target, long value )
     {
-        assert value >= 0;
+        assert value >= 0 : "Invalid value " + value;
         
         int startPosition = target.position();
         while ( true )
