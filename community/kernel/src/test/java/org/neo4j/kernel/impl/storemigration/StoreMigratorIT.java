@@ -93,6 +93,7 @@ public class StoreMigratorIT
         verifier.verifyRelationships();
         verifier.verifyNodeIdsReused();
         verifier.verifyRelationshipIdsReused();
+        verifier.verifyLegacyIndex();
 
         database.shutdown();
 
@@ -203,9 +204,15 @@ public class StoreMigratorIT
     {
         assertEquals( 1317392957120L, neoStore.getCreationTime() );
         assertEquals( -472309512128245482l, neoStore.getRandomNumber() );
+//<<<<<<< HEAD
         assertEquals( 3l, neoStore.getVersion() );
         assertEquals( ALL_STORES_VERSION, versionLongToString( neoStore.getStoreVersion() ) );
         assertEquals( 1007l, neoStore.getLastCommittedTx() );
+//=======
+//        assertEquals( 1l, neoStore.getVersion() );
+//        assertEquals( CommonAbstractStore.ALL_STORES_VERSION, NeoStore.versionLongToString( neoStore.getStoreVersion() ) );
+//        assertEquals( 1004l, neoStore.getLastCommittedTx() );
+//>>>>>>> 2.0-maint
     }
 
     private static class DatabaseContentVerifier
@@ -308,6 +315,18 @@ public class StoreMigratorIT
             finally
             {
                 transaction.finish();
+            }
+        }
+
+        public void verifyLegacyIndex()
+        {
+            try ( Transaction tx = database.beginTx() )
+            {
+                String[] nodeIndexes = database.index().nodeIndexNames();
+                String[] relationshipIndexes = database.index().relationshipIndexNames();
+                assertArrayEquals( new String[] { "nodekey" }, nodeIndexes );
+                assertArrayEquals( new String[] { "relkey" }, relationshipIndexes );
+                tx.success();
             }
         }
     }
