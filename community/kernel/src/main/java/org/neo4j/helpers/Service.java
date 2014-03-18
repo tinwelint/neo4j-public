@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -209,7 +209,7 @@ public abstract class Service
     }
 
     /**
-     * Load the Service implementation with the specified key.
+     * Load the Service implementation with the specified key. This method should never return null.
      *
      * @param <T>  the type of the Service
      * @param type the type of the Service to load
@@ -301,6 +301,7 @@ public abstract class Service
     {
         return new Iterable<T>()
         {
+            @Override
             public Iterator<T> iterator()
             {
                 return new PrefetchingIterator<T>()
@@ -395,6 +396,7 @@ public abstract class Service
         }
         return filterExceptions( new Iterable<T>()
         {
+            @Override
             public Iterator<T> iterator()
             {
                 try

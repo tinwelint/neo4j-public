@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,31 +19,14 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import static org.apache.lucene.search.NumericRangeQuery.newIntRange;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.index.Neo4jTestCase.assertContains;
-import static org.neo4j.index.Neo4jTestCase.assertContainsInOrder;
-import static org.neo4j.index.impl.lucene.Contains.contains;
-import static org.neo4j.index.impl.lucene.IsEmpty.isEmpty;
-import static org.neo4j.index.lucene.QueryContext.numericRange;
-import static org.neo4j.index.lucene.ValueContext.numeric;
-
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser.Operator;
 import org.apache.lucene.search.BooleanClause.Occur;
@@ -52,6 +35,7 @@ import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermQuery;
+import org.hamcrest.CoreMatchers;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.Direction;
@@ -61,6 +45,7 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
@@ -70,8 +55,22 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.index.lucene.QueryContext;
 import org.neo4j.index.lucene.ValueContext;
-import org.neo4j.kernel.InternalAbstractGraphDatabase;
-import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.index.IndexStore;
+
+import static org.apache.lucene.search.NumericRangeQuery.newIntRange;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.Assert.*;
+import static org.neo4j.helpers.collection.IteratorUtil.asSet;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.index.Neo4jTestCase.assertContains;
+import static org.neo4j.index.Neo4jTestCase.assertContainsInOrder;
+import static org.neo4j.index.impl.lucene.Contains.contains;
+import static org.neo4j.index.impl.lucene.IsEmpty.isEmpty;
+import static org.neo4j.index.impl.lucene.LuceneIndexImplementation.EXACT_CONFIG;
+import static org.neo4j.index.lucene.QueryContext.numericRange;
+import static org.neo4j.index.lucene.ValueContext.numeric;
 
 public class TestLuceneIndex extends AbstractLuceneIndexTest
 {
@@ -125,13 +124,6 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     }
 
     @Test
-    public void testStartupInExistingDirectory() {
-        InternalAbstractGraphDatabase graphDatabase = new ImpermanentGraphDatabase();
-        Index<Node> index = graphDatabase.index().forNodes("nodes");
-        assertNotNull(index);
-    }
-
-    @Test
     public void makeSureAdditionsCanBeReadNodeExact()
     {
         makeSureAdditionsCanBeRead( nodeIndex( LuceneIndexImplementation.EXACT_CONFIG ),
@@ -141,21 +133,21 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     @Test
     public void makeSureAdditionsCanBeReadNodeFulltext()
     {
-        makeSureAdditionsCanBeRead( nodeIndex( 
+        makeSureAdditionsCanBeRead( nodeIndex(
                 LuceneIndexImplementation.FULLTEXT_CONFIG ), NODE_CREATOR );
     }
 
     @Test
     public void makeSureAdditionsCanBeReadRelationshipExact()
     {
-        makeSureAdditionsCanBeRead( relationshipIndex( 
+        makeSureAdditionsCanBeRead( relationshipIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ), RELATIONSHIP_CREATOR );
     }
 
     @Test
     public void makeSureAdditionsCanBeReadRelationshipFulltext()
     {
-        makeSureAdditionsCanBeRead( relationshipIndex( 
+        makeSureAdditionsCanBeRead( relationshipIndex(
                 LuceneIndexImplementation.FULLTEXT_CONFIG ), RELATIONSHIP_CREATOR );
     }
 
@@ -414,11 +406,14 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         assertContains( index.query( "name", "Mattias*" ), entity1 );
 
         commitTx();
+
+        beginTx();
         assertThat( index.get( name, mattias ), contains( entity1 ) );
         assertThat( index.query( name, "\"" + mattias + "\"" ), contains( entity1 ) );
         assertThat( index.query( "name:\"" + mattias + "\"" ), contains( entity1 ) );
         assertEquals( entity1, index.get( name, mattias ).getSingle() );
         assertThat( index.query( "name", "Mattias*" ), contains( entity1 ) );
+        commitTx();
 
         beginTx();
         index.add( entity2, title, hacker );
@@ -430,11 +425,14 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
                 hacker + "\"" ), entity1, entity2 );
 
         commitTx();
+
+        beginTx();
         assertThat( index.get( name, mattias ), contains( entity1 ) );
         assertThat( index.get( title, hacker ), contains( entity1, entity2 ) );
         assertThat( index.query( "name:\"" + mattias + "\" OR title:\"" + hacker + "\"" ), contains( entity1, entity2 ) );
         assertThat( index.query( "name:\"" + mattias + "\" AND title:\"" +
                 hacker + "\"" ), contains( entity1 ) );
+        commitTx();
 
         beginTx();
         index.remove( entity2, title, hacker );
@@ -445,10 +443,13 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
                 hacker + "\"" ), entity1 );
 
         commitTx();
+
+        beginTx();
         assertThat( index.get( name, mattias ), contains( entity1 ) );
         assertThat( index.get( title, hacker ), contains( entity1 ) );
         assertThat( index.query( "name:\"" + mattias + "\" OR title:\"" +
                 hacker + "\"" ), contains( entity1 ) );
+        commitTx();
 
         beginTx();
         index.remove( entity1, title, hacker );
@@ -460,14 +461,14 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     @Test
     public void doSomeRandomUseCaseTestingWithExactNodeIndex()
     {
-        doSomeRandomUseCaseTestingWithExactIndex( nodeIndex( 
+        doSomeRandomUseCaseTestingWithExactIndex( nodeIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ), NODE_CREATOR );
     }
 
     @Test
     public void doSomeRandomUseCaseTestingWithExactRelationshipIndex()
     {
-        doSomeRandomUseCaseTestingWithExactIndex( relationshipIndex( 
+        doSomeRandomUseCaseTestingWithExactIndex( relationshipIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ), RELATIONSHIP_CREATOR );
     }
 
@@ -501,21 +502,21 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     @Test
     public void doSomeRandomTestingWithNodeFulltextInde()
     {
-        doSomeRandomTestingWithFulltextIndex( nodeIndex( 
+        doSomeRandomTestingWithFulltextIndex( nodeIndex(
                 LuceneIndexImplementation.FULLTEXT_CONFIG ), NODE_CREATOR );
     }
 
     @Test
     public void doSomeRandomTestingWithRelationshipFulltextInde()
     {
-        doSomeRandomTestingWithFulltextIndex( relationshipIndex( 
+        doSomeRandomTestingWithFulltextIndex( relationshipIndex(
                 LuceneIndexImplementation.FULLTEXT_CONFIG ), RELATIONSHIP_CREATOR );
     }
 
     @Test
     public void testNodeLocalRelationshipIndex()
     {
-        RelationshipIndex index = relationshipIndex( 
+        RelationshipIndex index = relationshipIndex(
                 LuceneIndexImplementation.EXACT_CONFIG );
 
         RelationshipType type = DynamicRelationshipType.withName( "YO" );
@@ -762,8 +763,10 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         nodeIndex( LuceneIndexImplementation.FULLTEXT_CONFIG );
         assertTrue( graphDb.index().existsForNodes( currentIndexName() ) );
         rollbackTx();
+        beginTx();
         assertTrue( graphDb.index().existsForNodes( currentIndexName() ) );
         nodeIndex( LuceneIndexImplementation.EXACT_CONFIG );
+        rollbackTx();
     }
 
     @Test
@@ -790,7 +793,7 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     public void makeSureFulltextIndexCanBeCaseSensitive()
     {
         Index<Node> index = nodeIndex( MapUtil.stringMap(
-                new HashMap<String, String>( LuceneIndexImplementation.FULLTEXT_CONFIG ),
+                new HashMap<>( LuceneIndexImplementation.FULLTEXT_CONFIG ),
                         "to_lower_case", "false" ) );
         Node node = graphDb.createNode();
         String key = "name";
@@ -855,7 +858,7 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     }
 
     @Test
-    public void testStringQueryVsQueryObject() throws IOException
+    public void testStringQueryVsQueryObject()
     {
         Index<Node> index = nodeIndex( LuceneIndexImplementation.FULLTEXT_CONFIG );
         Node node = graphDb.createNode();
@@ -985,14 +988,14 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         Map<String, String> config = MapUtil.stringMap( IndexManager.PROVIDER, "lucene", "type", "fulltext" );
         String name = currentIndexName();
         nodeIndex( name, config );
-        nodeIndex( name, MapUtil.stringMap( new HashMap<String, String>( config ), "to_lower_case", "true" ) );
+        nodeIndex( name, MapUtil.stringMap( new HashMap<>( config ), "to_lower_case", "true" ) );
         try
         {
-            nodeIndex( name, MapUtil.stringMap( new HashMap<String, String>( config ), "to_lower_case", "false" ) );
+            nodeIndex( name, MapUtil.stringMap( new HashMap<>( config ), "to_lower_case", "false" ) );
             fail( "Shouldn't be able to get index with these kinds of differences in config" );
         }
         catch ( IllegalArgumentException e ) { /* */ }
-        nodeIndex( name, MapUtil.stringMap( new HashMap<String, String>( config ), "whatever", "something" ) );
+        nodeIndex( name, MapUtil.stringMap( new HashMap<>( config ), "whatever", "something" ) );
     }
 
     @Test
@@ -1108,14 +1111,14 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     @Test
     public void testRemoveWithoutKeyNodes() throws Exception
     {
-        testRemoveWithoutKey( NODE_CREATOR, nodeIndex( 
+        testRemoveWithoutKey( NODE_CREATOR, nodeIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ) );
     }
 
     @Test
     public void testRemoveWithoutKeyRelationships() throws Exception
     {
-        testRemoveWithoutKey( RELATIONSHIP_CREATOR, relationshipIndex( 
+        testRemoveWithoutKey( RELATIONSHIP_CREATOR, relationshipIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ) );
     }
 
@@ -1154,14 +1157,14 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
     @Test
     public void testRemoveWithoutKeyValueNodes() throws Exception
     {
-        testRemoveWithoutKeyValue( NODE_CREATOR, nodeIndex( 
+        testRemoveWithoutKeyValue( NODE_CREATOR, nodeIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ) );
     }
 
     @Test
     public void testRemoveWithoutKeyValueRelationships() throws Exception
     {
-        testRemoveWithoutKeyValue( RELATIONSHIP_CREATOR, relationshipIndex( 
+        testRemoveWithoutKeyValue( RELATIONSHIP_CREATOR, relationshipIndex(
                 LuceneIndexImplementation.EXACT_CONFIG ) );
     }
 
@@ -1424,7 +1427,7 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         assertContains( index.query( "name", "\"Thomas Anderson\"" ), node );
         assertContains( index.query( "name", "\"thoMas ANDerson\"" ), node );
     }
-    
+
     @Test
     public void notAbleToRemoveWithForbiddenKey() throws Exception
     {
@@ -1510,11 +1513,12 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         t2.commit();
         assertNotNull( futurePut.get() );
         t1.commit();
+        t1.close();
+        t2.close();
 
+        Transaction transaction = graphDb.beginTx();
         assertEquals( node, index.get( key, value ).getSingle() );
-        
-        t1.shutdown();
-        t2.shutdown();
+        transaction.finish();
     }
 
     @Test
@@ -1536,12 +1540,13 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         t2.commit();
         assertNull( futurePut.get() );
         t1.commit();
+        t1.close();
+        t2.close();
 
+        Transaction transaction = graphDb.beginTx();
         assertEquals( node, index.get( key, value ).getSingle() );
         assertEquals( node, index.get( key, otherValue ).getSingle() );
-
-        t1.shutdown();
-        t2.shutdown();
+        transaction.finish();
     }
 
     @Test
@@ -1562,12 +1567,13 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         assertNull( t1.putIfAbsent( node, otherKey, value ).get() );
         t2.commit();
         t1.commit();
+        t1.close();
+        t2.close();
 
+        Transaction transaction = graphDb.beginTx();
         assertEquals( node, index.get( key, value ).getSingle() );
         assertEquals( node, index.get( otherKey, value ).getSingle() );
-
-        t1.shutdown();
-        t2.shutdown();
+        transaction.finish();
     }
 
     @Test
@@ -1591,8 +1597,8 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
 
         otherThread.commit();
         commitTx();
-        
-        otherThread.shutdown();
+
+        otherThread.close();
     }
 
     @Test
@@ -1623,6 +1629,7 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         assertEquals( unique, factory.getOrCreate( key, value ) );
         assertEquals( "initialized more than once", 0, unique.getProperty( property ) );
         assertEquals( unique, index.get( key, value ).getSingle() );
+        finishTx( false );
     }
 
     @Test
@@ -1654,6 +1661,8 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         assertEquals( unique, factory.getOrCreate( key, value ) );
         assertEquals( unique, root.getSingleRelationship( type, Direction.BOTH ) );
         assertEquals( unique, index.get( key, value ).getSingle() );
+
+        finishTx( false );
     }
 
     @Test
@@ -1678,9 +1687,9 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         t1.commit();
 
         assertEquals( node, index.get( key, value ).getSingle() );
-        
-        t1.shutdown();
-        t2.shutdown();
+
+        t1.close();
+        t2.close();
     }
 
     @Test
@@ -1690,7 +1699,7 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         Node node = graphDb.createNode();
         index.add( node, "name", "Mattias" );
     }
-    
+
     @Test
     public void numericValueForGetInExactIndex() throws Exception
     {
@@ -1704,7 +1713,7 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         Index<Node> index = nodeIndex( LuceneIndexImplementation.FULLTEXT_CONFIG );
         numericValueForGet( index );
     }
-    
+
     private void numericValueForGet( Index<Node> index )
     {
         Node node = graphDb.createNode();
@@ -1714,20 +1723,59 @@ public class TestLuceneIndex extends AbstractLuceneIndexTest
         restartTx();
         assertEquals( node, index.get( "name", ValueContext.numeric( id ) ).getSingle() );
     }
-    
+
     @Test
     public void combinedNumericalQuery() throws Exception
     {
         Index<Node> index = nodeIndex( LuceneIndexImplementation.EXACT_CONFIG );
-        
+
         Node node = graphDb.createNode();
         index.add( node, "start", ValueContext.numeric( 10 ) );
         index.add( node, "end", ValueContext.numeric( 20 ) );
         restartTx();
-        
+
         BooleanQuery q = new BooleanQuery();
         q.add( LuceneUtil.rangeQuery( "start", 9, null, true, true ), Occur.MUST );
         q.add( LuceneUtil.rangeQuery( "end", null, 30, true, true ), Occur.MUST );
         assertContains( index.query( q ), node );
+    }
+
+    @Test
+    public void failureToCreateAnIndexShouldNotLeaveConfiguratiobBehind() throws Exception
+    {
+        // WHEN
+        try
+        {
+            // StandardAnalyzer is invalid since it has no publi no-arg constructor
+            nodeIndex( stringMap( "analyzer", StandardAnalyzer.class.getName() ) );
+            fail( "Should have failed" );
+        }
+        catch ( RuntimeException e )
+        {
+            assertThat( e.getMessage(), CoreMatchers.containsString( StandardAnalyzer.class.getName() ) );
+        }
+
+        // THEN - assert that there's no index config about this index left behind
+        assertFalse( "There should be no index config for index '" + currentIndexName() + "' left behind",
+                ((GraphDatabaseAPI)graphDb).getDependencyResolver().resolveDependency( IndexStore.class ).has(
+                        Node.class, currentIndexName() ) );
+    }
+
+    @Test
+    public void shouldBeAbleToQueryAllMatchingDocsAfterRemovingWithWildcard() throws Exception
+    {
+        // GIVEN
+        Index<Node> index = nodeIndex( EXACT_CONFIG );
+        Node node1 = graphDb.createNode();
+        index.add( node1, "name", "Mattias" );
+        finishTx( true );
+        beginTx();
+
+        // WHEN
+        index.remove( node1, "name" );
+        Set<Node> nodes = asSet( (Iterable<Node>) index.query( "*:*" ) );
+
+        // THEN
+        assertEquals( asSet(), nodes );
     }
 }

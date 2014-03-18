@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -111,8 +111,10 @@ public class StoreRecoverer
         // used
         // as a component of the database, rather than something that is bolted
         // on outside it like this.
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dataDir.getCanonicalPath() )
-                .setConfig( params ).newGraphDatabase();
+
+        GraphDatabaseService db =
+                new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dataDir.getCanonicalPath() )
+                    .setConfig( params ).newGraphDatabase();
 
         db.shutdown();
     }

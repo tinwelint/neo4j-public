@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,27 +25,31 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.Collection;
 import java.util.List;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import org.neo4j.kernel.impl.util.StringLogger;
+import org.slf4j.impl.StaticLoggerBinder;
+
 import org.neo4j.cluster.BindingListener;
 import org.neo4j.cluster.ClusterSettings;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.MultiPaxosServerFactory;
 import org.neo4j.cluster.NetworkedServerFactory;
 import org.neo4j.cluster.ProtocolServer;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcast;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastListener;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastSerializer;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.cluster.protocol.cluster.Cluster;
 import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.protocol.cluster.ClusterContext;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
 import org.neo4j.cluster.protocol.cluster.ClusterMessage;
-import org.neo4j.cluster.protocol.election.Election;
 import org.neo4j.cluster.protocol.election.ServerIdElectionCredentialsProvider;
 import org.neo4j.cluster.protocol.heartbeat.Heartbeat;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatContext;
@@ -57,7 +61,6 @@ import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.logging.LogbackService;
-import org.slf4j.impl.StaticLoggerBinder;
 
 /**
  * Multi Paxos test server
@@ -66,7 +69,6 @@ public class MultiPaxosServer
 {
     private AtomicBroadcastSerializer broadcastSerializer;
     private ProtocolServer server;
-    private Election election;
 
     public static void main( String[] args )
             throws IOException, InvocationTargetException, IllegalAccessException
@@ -80,7 +82,7 @@ public class MultiPaxosServer
     public void start()
             throws IOException
     {
-        broadcastSerializer = new AtomicBroadcastSerializer();
+        broadcastSerializer = new AtomicBroadcastSerializer(new ObjectStreamFactory(), new ObjectStreamFactory());
         final LifeSupport life = new LifeSupport();
         try
         {
@@ -88,9 +90,9 @@ public class MultiPaxosServer
                     .timeout( HeartbeatMessage.sendHeartbeat, 200 );
 
             NetworkedServerFactory serverFactory = new NetworkedServerFactory( life,
-                    new MultiPaxosServerFactory( new ClusterConfiguration( "default" ),
+                    new MultiPaxosServerFactory( new ClusterConfiguration( "default", StringLogger.SYSTEM ),
                             new LogbackService( null, null ) ),
-                    timeoutStrategy, new LogbackService( null, null ) );
+                    timeoutStrategy, new LogbackService( null, null ), new ObjectStreamFactory(), new ObjectStreamFactory() );
 
             ServerIdElectionCredentialsProvider electionCredentialsProvider = new ServerIdElectionCredentialsProvider();
             server = serverFactory.newNetworkedServer(
@@ -117,15 +119,15 @@ public class MultiPaxosServer
                 }
 
                 @Override
-                public void joinedCluster( URI member )
+                public void joinedCluster( InstanceId instanceId, URI member )
                 {
-                    System.out.println( "Joined cluster:" + member );
+                    System.out.println( "Joined cluster:" + instanceId + " (at URI " + member +")" );
                 }
 
                 @Override
-                public void leftCluster( URI member )
+                public void leftCluster( InstanceId instanceId )
                 {
-                    System.out.println( "Left cluster:" + member );
+                    System.out.println( "Left cluster:" + instanceId );
                 }
 
                 @Override
@@ -135,9 +137,15 @@ public class MultiPaxosServer
                 }
 
                 @Override
-                public void elected( String role, URI electedMember )
+                public void elected( String role, InstanceId instanceId, URI electedMember )
                 {
-                    System.out.println( electedMember + " was elected as " + role );
+                    System.out.println( instanceId + " at URI " + electedMember + " was elected as " + role );
+                }
+
+                @Override
+                public void unelected( String role, InstanceId instanceId, URI electedMember )
+                {
+                    System.out.println( instanceId + " at URI " + electedMember + " was removed from " + role );
                 }
             } );
 
@@ -145,19 +153,17 @@ public class MultiPaxosServer
             heartbeat.addHeartbeatListener( new HeartbeatListener()
             {
                 @Override
-                public void failed( URI server )
+                public void failed( InstanceId server )
                 {
                     System.out.println( server + " failed" );
                 }
 
                 @Override
-                public void alive( URI server )
+                public void alive( InstanceId server )
                 {
                     System.out.println( server + " alive" );
                 }
             } );
-
-            election = server.newClient( Election.class );
 
             broadcast = server.newClient( AtomicBroadcast.class );
             broadcast.addAtomicBroadcastListener( new AtomicBroadcastListener()
@@ -194,7 +200,7 @@ public class MultiPaxosServer
                     System.arraycopy( arguments, 1, realArgs, 0, realArgs.length );
                     try
                     {
-                        method.invoke( this, realArgs );
+                        method.invoke( this, (Object[])realArgs );
                     }
                     catch ( IllegalAccessException e )
                     {
@@ -220,18 +226,6 @@ public class MultiPaxosServer
         }
     }
 
-    public void demote( String nodeUri )
-            throws URISyntaxException
-    {
-        election.demote( new URI( nodeUri ) );
-    }
-
-    public void promote( String nodeUri, String role )
-            throws URISyntaxException
-    {
-        election.promote( new URI( nodeUri ), role );
-    }
-
     public void logging( String name, String level )
     {
         LoggerContext loggerContext = (LoggerContext) StaticLoggerBinder.getSingleton().getLoggerFactory();
@@ -247,11 +241,11 @@ public class MultiPaxosServer
 
     public void config()
     {
-        ClusterConfiguration configuration = ((ClusterContext) server.getConnectedStateMachines()
+        ClusterConfiguration configuration = ((ClusterContext) server.getStateMachines()
                 .getStateMachine( ClusterMessage.class )
                 .getContext()).getConfiguration();
 
-        List<URI> failed = ((HeartbeatContext) server.getConnectedStateMachines().getStateMachine( HeartbeatMessage
+        Collection<InstanceId> failed = ((HeartbeatContext) server.getStateMachines().getStateMachine( HeartbeatMessage
                 .class ).getContext()).getFailed();
         System.out.println( configuration + " Failed:" + failed );
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -180,9 +180,12 @@ public class TestLoopRelationships extends AbstractNeo4jTestCase
         assertEquals( singleRelationship, node.getSingleRelationship( TEST, Direction.INCOMING ) );
         assertEquals( singleRelationship, node.getSingleRelationship( TEST, Direction.BOTH ) );
         commit();
+
+        newTransaction();
         assertEquals( singleRelationship, node.getSingleRelationship( TEST, Direction.OUTGOING ) );
         assertEquals( singleRelationship, node.getSingleRelationship( TEST, Direction.INCOMING ) );
         assertEquals( singleRelationship, node.getSingleRelationship( TEST, Direction.BOTH ) );
+        finish();
     }
     
     @Test
@@ -216,7 +219,7 @@ public class TestLoopRelationships extends AbstractNeo4jTestCase
             assertEquals( asList( node, node ), asList( relationship.getNodes() ) );
             try
             {
-                relationship.getOtherNode( getGraphDb().getReferenceNode() );
+                relationship.getOtherNode( getGraphDb().createNode() );
                 fail( "Should throw exception if another node is passed into loop.getOtherNode" );
             }
             catch ( NotFoundException e )
@@ -261,6 +264,14 @@ public class TestLoopRelationships extends AbstractNeo4jTestCase
                         i, relationships );
             }
         }
+    }
+
+    private String print( Relationship[] relationships )
+    {
+        StringBuilder b = new StringBuilder();
+        for ( Relationship rel : relationships )
+            b.append( rel.getStartNode() + "--" + rel + "->" + rel.getEndNode() );
+        return b.toString();
     }
 
     private static Iterable<boolean[]> permutations( final int size )

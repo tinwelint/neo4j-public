@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -103,12 +103,10 @@ public class LuceneIndexImplementation implements IndexImplementation
                 type = "exact";
                 result.put( KEY_TYPE, type );
             }
-            if ( type.equals( "fulltext" ) )
+            if ( type.equals( "fulltext" ) &&
+                 !result.containsKey( LuceneIndexImplementation.KEY_TO_LOWER_CASE ) )
             {
-                if ( !result.containsKey( LuceneIndexImplementation.KEY_TO_LOWER_CASE ) )
-                {
-                    result.put( KEY_TO_LOWER_CASE, "true" );
-                }
+                result.put( KEY_TO_LOWER_CASE, "true" );
             }
         }
         return result;

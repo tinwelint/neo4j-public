@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,9 +22,9 @@ package org.neo4j.ha;
 import java.io.File;
 
 import org.junit.Ignore;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
-@Ignore
+@Ignore("Not a test")
 public class CreateEmptyDb
 {
     public static void main( String[] args )
@@ -34,7 +34,7 @@ public class CreateEmptyDb
 
     public static void at( String storeDir )
     {
-        new EmbeddedGraphDatabase( storeDir ).shutdown();
+        new GraphDatabaseFactory().newEmbeddedDatabase( storeDir ).shutdown();
     }
 
     public static void at( File storeDir )

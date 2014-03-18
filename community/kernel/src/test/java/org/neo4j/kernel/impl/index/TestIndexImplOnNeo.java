@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,33 +19,33 @@
  */
 package org.neo4j.kernel.impl.index;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.neo4j.graphdb.index.IndexManager.PROVIDER;
-import static org.neo4j.helpers.collection.IteratorUtil.count;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-
 import java.util.Map;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.Index;
+import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+
+import static org.junit.Assert.*;
+import static org.neo4j.graphdb.index.IndexManager.PROVIDER;
+import static org.neo4j.helpers.collection.IteratorUtil.count;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class TestIndexImplOnNeo
 {
-    private final EphemeralFileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     private GraphDatabaseService db;
 
     @Before
     public void createDb() throws Exception
     {
-        db = new TestGraphDatabaseFactory().setFileSystem( fileSystem ).newImpermanentDatabase( "mydb" );
+        db = new TestGraphDatabaseFactory().setFileSystem( fs.get() ).newImpermanentDatabase( "mydb" );
     }
     
     private void restartDb() throws Exception
@@ -64,20 +64,42 @@ public class TestIndexImplOnNeo
     public void createIndexWithProviderThatUsesNeoAsDataSource() throws Exception
     {
         String indexName = "inneo";
-        assertFalse( db.index().existsForNodes( indexName ) );
+        assertFalse( indexExists( indexName ) );
         Map<String, String> config = stringMap( PROVIDER, "test-dummy-neo-index",
                 "config1", "A value", "another config", "Another value" );
-        Index<Node> index = db.index().forNodes( indexName, config );
-        assertTrue( db.index().existsForNodes( indexName ) );
+
+        Transaction transaction = db.beginTx();
+        Index<Node> index;
+        try
+        {
+            index = db.index().forNodes( indexName, config );
+            transaction.success();
+        }
+        finally
+        {
+            transaction.finish();
+        }
+
+        assertTrue( indexExists( indexName ) );
         assertEquals( config, db.index().getConfiguration( index ) );
-        
-        // Querying for "refnode" always returns the reference node for this dummy index.
-        assertEquals( db.getReferenceNode(), index.get( "key", "refnode" ).getSingle() );
-        // Querying for something other than "refnode" returns null for this dummy index.
+
         assertEquals( 0, count( (Iterable<Node>) index.get( "key", "something else" ) ) );
         
         restartDb();
-        assertTrue( db.index().existsForNodes( indexName ) );
+        assertTrue( indexExists( indexName ) );
         assertEquals( config, db.index().getConfiguration( index ) );
+    }
+
+    private boolean indexExists( String indexName )
+    {
+        Transaction transaction = db.beginTx();
+        try
+        {
+            return db.index().existsForNodes( indexName );
+        }
+        finally
+        {
+            transaction.finish();
+        }
     }
 }

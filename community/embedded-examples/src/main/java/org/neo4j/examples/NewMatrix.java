@@ -19,6 +19,7 @@
 package org.neo4j.examples;
 
 import java.io.File;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -30,7 +31,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
-import org.neo4j.kernel.Traversal;
 
 public class NewMatrix
 {
@@ -69,8 +69,7 @@ public class NewMatrix
 
     public void createNodespace()
     {
-        Transaction tx = graphDb.beginTx();
-        try
+        try ( Transaction tx = graphDb.beginTx() )
         {
             // Create matrix node
             Node matrix = graphDb.createNode();
@@ -81,7 +80,7 @@ public class NewMatrix
             thomas.setProperty( "name", "Thomas Anderson" );
             thomas.setProperty( "age", 29 );
 
-            // connect Neo/Thomas to the reference node
+            // connect Neo/Thomas to the matrix node
             matrix.createRelationshipTo( thomas, RelTypes.NEO_NODE );
 
             Node trinity = graphDb.createNode();
@@ -115,10 +114,6 @@ public class NewMatrix
 
             tx.success();
         }
-        finally
-        {
-            tx.finish();
-        }
     }
 
     /**
@@ -135,28 +130,31 @@ public class NewMatrix
 
     public String printNeoFriends()
     {
-        Node neoNode = getNeoNode();
-        // START SNIPPET: friends-usage
-        int numberOfFriends = 0;
-        String output = neoNode.getProperty( "name" ) + "'s friends:\n";
-        Traverser friendsTraverser = getFriends( neoNode );
-        for ( Path friendPath : friendsTraverser )
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            output += "At depth " + friendPath.length() + " => "
-                      + friendPath.endNode()
-                              .getProperty( "name" ) + "\n";
-            numberOfFriends++;
+            Node neoNode = getNeoNode();
+            // START SNIPPET: friends-usage
+            int numberOfFriends = 0;
+            String output = neoNode.getProperty( "name" ) + "'s friends:\n";
+            Traverser friendsTraverser = getFriends( neoNode );
+            for ( Path friendPath : friendsTraverser )
+            {
+                output += "At depth " + friendPath.length() + " => "
+                          + friendPath.endNode()
+                                  .getProperty( "name" ) + "\n";
+                numberOfFriends++;
+            }
+            output += "Number of friends found: " + numberOfFriends + "\n";
+            // END SNIPPET: friends-usage
+            return output;
         }
-        output += "Number of friends found: " + numberOfFriends + "\n";
-        // END SNIPPET: friends-usage
-        return output;
     }
 
     // START SNIPPET: get-friends
-    private static Traverser getFriends(
+    private Traverser getFriends(
             final Node person )
     {
-        TraversalDescription td = Traversal.description()
+        TraversalDescription td = graphDb.traversalDescription()
                 .breadthFirst()
                 .relationships( RelTypes.KNOWS, Direction.OUTGOING )
                 .evaluator( Evaluators.excludeStartPosition() );
@@ -166,26 +164,29 @@ public class NewMatrix
 
     public String printMatrixHackers()
     {
-        // START SNIPPET: find--hackers-usage
-        String output = "Hackers:\n";
-        int numberOfHackers = 0;
-        Traverser traverser = findHackers( getNeoNode() );
-        for ( Path hackerPath : traverser )
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            output += "At depth " + hackerPath.length() + " => "
-                      + hackerPath.endNode()
-                              .getProperty( "name" ) + "\n";
-            numberOfHackers++;
+            // START SNIPPET: find--hackers-usage
+            String output = "Hackers:\n";
+            int numberOfHackers = 0;
+            Traverser traverser = findHackers( getNeoNode() );
+            for ( Path hackerPath : traverser )
+            {
+                output += "At depth " + hackerPath.length() + " => "
+                          + hackerPath.endNode()
+                                  .getProperty( "name" ) + "\n";
+                numberOfHackers++;
+            }
+            output += "Number of hackers found: " + numberOfHackers + "\n";
+            // END SNIPPET: find--hackers-usage
+            return output;
         }
-        output += "Number of hackers found: " + numberOfHackers + "\n";
-        // END SNIPPET: find--hackers-usage
-        return output;
     }
 
     // START SNIPPET: find-hackers
-    private static Traverser findHackers( final Node startNode )
+    private Traverser findHackers( final Node startNode )
     {
-        TraversalDescription td = Traversal.description()
+        TraversalDescription td = graphDb.traversalDescription()
                 .breadthFirst()
                 .relationships( RelTypes.CODED_BY, Direction.OUTGOING )
                 .relationships( RelTypes.KNOWS, Direction.OUTGOING )

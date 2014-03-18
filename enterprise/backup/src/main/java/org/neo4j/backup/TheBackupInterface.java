@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@ package org.neo4j.backup;
 
 import org.neo4j.com.Response;
 import org.neo4j.com.RequestContext;
-import org.neo4j.com.StoreWriter;
+import org.neo4j.com.storecopy.StoreWriter;
 
 public interface TheBackupInterface
 {

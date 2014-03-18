@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,7 +51,7 @@ public abstract class BaseSpringTransactionImpl
 
     private TransactionManager getTxManager()
     {
-        return neo4j.getTxManager();
+        return neo4j.getDependencyResolver().resolveDependency( TransactionManager.class );
     }
 
     public void begin() throws NotSupportedException, SystemException
@@ -63,7 +63,7 @@ public abstract class BaseSpringTransactionImpl
         HeuristicRollbackException, SecurityException, IllegalStateException,
         SystemException
     {
-        getTxManager().commit();
+        getTransaction().commit();
     }
 
     public int getStatus() throws SystemException
@@ -85,12 +85,12 @@ public abstract class BaseSpringTransactionImpl
     public void rollback() throws IllegalStateException, SecurityException,
         SystemException
     {
-        getTxManager().rollback();
+        getTransaction().rollback();
     }
 
     public void setRollbackOnly() throws IllegalStateException, SystemException
     {
-        getTxManager().setRollbackOnly();
+        getTransaction().setRollbackOnly();
     }
 
     public void setTransactionTimeout( int sec ) throws SystemException

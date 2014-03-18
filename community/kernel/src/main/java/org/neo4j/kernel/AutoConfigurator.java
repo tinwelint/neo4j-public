@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,55 +25,74 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 
+import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
+import org.neo4j.kernel.logging.ConsoleLogger;
+
+/**
+ * @deprecated This will be moved to internal packages in the next major release.
+ */
+@Deprecated
 public class AutoConfigurator
 {
     private final int totalPhysicalMemMb;
     private final int maxVmUsageMb;
     private final File dbPath;
     private final boolean useMemoryMapped;
+    private final ConsoleLogger logger;
     private final FileSystemAbstraction fs;
 
-    public AutoConfigurator( FileSystemAbstraction fs, File dbPath, boolean useMemoryMapped, boolean dump )
+    public AutoConfigurator( FileSystemAbstraction fs, File dbPath, boolean useMemoryMapped, ConsoleLogger logger )
     {
+        this( fs, dbPath, useMemoryMapped, physicalMemory(), Runtime.getRuntime().maxMemory(), logger );
+    }
+
+    AutoConfigurator( FileSystemAbstraction fs, File dbPath, boolean useMemoryMapped, long physicalMemory, long vmMemory,
+                      ConsoleLogger logger )
+    {
+        if (physicalMemory < vmMemory)
+        {
+            logger.log( "WARNING! Physical memory("+(physicalMemory/(1024*1000))+"MB) is less than assigned JVM memory("+(vmMemory/(1024*1000))+"MB). Continuing but with available JVM memory set to available physical memory" );
+            vmMemory = physicalMemory;
+        }
+
         this.fs = fs;
         this.dbPath = dbPath;
         this.useMemoryMapped = useMemoryMapped;
-        long mem = physicalMemory();
-        if ( mem != -1 )
+        this.logger = logger;
+        if ( physicalMemory != -1 )
         {
-            totalPhysicalMemMb = (int) (mem / 1024 / 1024 );
+            totalPhysicalMemMb = (int) (physicalMemory / 1024 / 1024);
         }
         else
         {
             totalPhysicalMemMb = -1;
         }
-        mem = Runtime.getRuntime().maxMemory();
-        maxVmUsageMb = (int) ( mem / 1024 / 1024 );
-        if ( dump )
-        {
-            System.out.println( getNiceMemoryInformation() );
-        }
+        maxVmUsageMb = (int) (vmMemory / 1024 / 1024);
     }
 
-    public static long physicalMemory()
+    private static long physicalMemory()
     {
         OperatingSystemMXBean osBean =
-            ManagementFactory.getOperatingSystemMXBean();
-        long mem = -1;
+                ManagementFactory.getOperatingSystemMXBean();
+        long mem;
         try
         {
             Class<?> beanClass =
-                Thread.currentThread().getContextClassLoader().loadClass( "com.sun.management.OperatingSystemMXBean" );
+                    Thread.currentThread().getContextClassLoader()
+                          .loadClass( "com.sun.management.OperatingSystemMXBean" );
             Method method = beanClass.getMethod( "getTotalPhysicalMemorySize" );
             mem = (Long) method.invoke( osBean );
         }
         catch ( Exception e )
-        { // ok we tried but probably 1.5 JVM or other class library implementation
+        {
+            // ok we tried but probably 1.5 JVM or other class library implementation
+            mem = -1; // Be explicit about how this error is handled.
         }
         catch ( LinkageError e )
-        { // ok we tried but probably 1.5 JVM or other class library implementation
+        {
+            // ok we tried but probably 1.5 JVM or other class library implementation
+            mem = -1; // Be explicit about how this error is handled.
         }
         return mem;
     }
@@ -83,16 +102,16 @@ public class AutoConfigurator
         return "Physical mem: " + totalPhysicalMemMb + "MB, Heap size: " + maxVmUsageMb + "MB";
     }
 
-    public Map<String,String> configure( )
+    public Map<String, String> configure()
     {
-        Map<String,String> autoConfiguredConfig = new HashMap<String,String>();
+        Map<String, String> autoConfiguredConfig = new HashMap<String, String>();
         if ( totalPhysicalMemMb > 0 )
         {
             if ( useMemoryMapped )
             {
-                int availableMem = (totalPhysicalMemMb - maxVmUsageMb );
+                int availableMem = (totalPhysicalMemMb - maxVmUsageMb);
                 // leave 15% for OS and other progs
-                availableMem -= (int) ( availableMem * 0.15f );
+                availableMem -= (int) (availableMem * 0.15f);
                 assignMemory( autoConfiguredConfig, availableMem );
             }
             else
@@ -104,17 +123,16 @@ public class AutoConfigurator
         return autoConfiguredConfig;
     }
 
-    private int calculate( int memLeft, int storeSize, float use, float expand,
-            boolean canExpand )
+    private int calculate( int memLeft, int storeSize, float use, float expand, boolean canExpand )
     {
         int size;
         if ( storeSize > (memLeft * use) )
         {
             size = (int) (memLeft * use);
         }
-        else if ( canExpand  )
+        else if ( canExpand )
         {
-            if ( (storeSize * expand * 5 <  memLeft * use ) )
+            if ( storeSize * expand * 5 < memLeft * use )
             {
                 size = (int) (memLeft * use / 5);
             }
@@ -136,10 +154,9 @@ public class AutoConfigurator
         int relStore = getFileSizeMb( "relationshipstore.db" );
         int propStore = getFileSizeMb( "propertystore.db" );
         int stringStore = getFileSizeMb( "propertystore.db.strings" );
-        int arrayStore = getFileSizeMb( "propertyStore.db.arrays" );
+        int arrayStore = getFileSizeMb( "propertystore.db.arrays" );
 
-        int totalSize =
-            nodeStore + relStore + propStore + stringStore + arrayStore;
+        int totalSize = nodeStore + relStore + propStore + stringStore + arrayStore;
         boolean expand = false;
         if ( totalSize * 1.15f < availableMem )
         {
@@ -164,8 +181,7 @@ public class AutoConfigurator
         configPut( config, "propertystore.db.arrays", arrayStore );
     }
 
-    private void configPut( Map<String, String> config, String store,
-            int size )
+    private void configPut( Map<String, String> config, String store, int size )
     {
         // Don't overwrite explicit config
         String key = "neostore." + store + ".mapped_memory";
@@ -174,8 +190,8 @@ public class AutoConfigurator
 
     private int getFileSizeMb( String file )
     {
-        long length = fs.getFileSize( new File(dbPath, "neostore." + file ));
-        int mb = (int) ( length / 1024 / 1024 );
+        long length = fs.getFileSize( new File( dbPath, "neostore." + file ) );
+        int mb = (int) (length / 1024 / 1024);
         if ( mb > 0 )
         {
             return mb;

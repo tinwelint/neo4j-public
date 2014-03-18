@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,13 +28,14 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.server.database.Database;
+import org.neo4j.server.rest.repr.RepresentationWriteHandler;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 @Path( "/relationship/types" )
 public class DatabaseMetadataService
 {
-
     private final Database database;
+    private RepresentationWriteHandler representationWriteHandler = RepresentationWriteHandler.DO_NOTHING;
 
     public DatabaseMetadataService( @Context Database database )
     {
@@ -45,11 +46,18 @@ public class DatabaseMetadataService
     @Produces( MediaType.APPLICATION_JSON )
     public Response getRelationshipTypes()
     {
-        Iterable<RelationshipType> relationshipTypes = GlobalGraphOperations.at( database.getGraph() ).getAllRelationshipTypes();
-        return Response.ok()
-                .type( MediaType.APPLICATION_JSON )
-                .entity( generateJsonRepresentation( relationshipTypes ) )
-                .build();
+        try
+        {
+            Iterable<RelationshipType> relationshipTypes = GlobalGraphOperations.at( database.getGraph() ).getAllRelationshipTypes();
+            return Response.ok()
+                    .type( MediaType.APPLICATION_JSON )
+                    .entity( generateJsonRepresentation( relationshipTypes ) )
+                    .build();
+        }
+        finally
+        {
+            representationWriteHandler.onRepresentationFinal();
+        }
     }
 
     private String generateJsonRepresentation( Iterable<RelationshipType> relationshipTypes )
@@ -65,5 +73,10 @@ public class DatabaseMetadataService
         sb.append( "]" );
         return sb.toString()
                 .replaceAll( ",]", "]" );
+    }
+
+    public void setRepresentationWriteHandler( RepresentationWriteHandler representationWriteHandler )
+    {
+        this.representationWriteHandler = representationWriteHandler;
     }
 }

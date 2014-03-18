@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@ package org.neo4j.kernel.impl.transaction.xaframework;
 
 public interface RecoveryVerifier
 {
-    public static final RecoveryVerifier ALWAYS_VALID = new RecoveryVerifier()
+    RecoveryVerifier ALWAYS_VALID = new RecoveryVerifier()
     {
         @Override
         public boolean isValid( TransactionInfo txInfo )

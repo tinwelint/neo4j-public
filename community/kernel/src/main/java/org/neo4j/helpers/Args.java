@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -178,7 +178,7 @@ public class Args
 
     private static boolean isOption( String arg )
     {
-        return arg.startsWith( "-" );
+        return arg.startsWith( "-" ) && arg.length() > 1;
     }
 
     private static String stripOption( String arg )
@@ -214,7 +214,7 @@ public class Args
                     int nextIndex = i+1;
                     String value = nextIndex < args.length ?
                         args[ nextIndex ] : null;
-                    value = value == null || isOption( value ) ? null : value;
+                    value = ( value == null || isOption( value ) ) ? null : value;
                     if ( value != null )
                     {
                         i = nextIndex;

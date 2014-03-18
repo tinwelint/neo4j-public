@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,18 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-import static org.neo4j.helpers.Settings.setting;
-
 import java.io.File;
 import java.nio.channels.FileChannel;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPool;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPoolFactory;
 import org.neo4j.kernel.impl.util.StringLogger;
+
+import static org.neo4j.helpers.Settings.setting;
 
 public class DefaultWindowPoolFactory implements WindowPoolFactory
 {
@@ -39,9 +41,9 @@ public class DefaultWindowPoolFactory implements WindowPoolFactory
 
         return new PersistenceWindowPool( storageFileName, recordSize, fileChannel,
                 calculateMappedMemory( configuration, storageFileName ),
-                GraphDatabaseSettings.UseMemoryMappedBuffers.shouldMemoryMap( configuration.get( CommonAbstractStore
-                        .Configuration.use_memory_mapped_buffers )),
-                        isReadOnly( configuration ) && !isBackupSlave( configuration ), log );
+                configuration.get( CommonAbstractStore.Configuration.use_memory_mapped_buffers ),
+                isReadOnly( configuration ) && !isBackupSlave( configuration ),
+                new ConcurrentHashMap<Long, PersistenceRow>(), BrickElementFactory.DEFAULT, log );
     }
 
     private boolean isBackupSlave( Config configuration )
@@ -66,12 +68,17 @@ public class DefaultWindowPoolFactory implements WindowPoolFactory
      */
     private long calculateMappedMemory( Config config, File storageFileName )
     {
-        String realName = storageFileName.getName();
-
-        Long mem = config.get( setting( realName + ".mapped_memory", Settings.BYTES, Settings.NO_DEFAULT ));
+        Long mem = config.get( memoryMappingSetting( storageFileName.getName() ) );
         if ( mem == null )
+        {
             mem = 0L;
+        }
 
         return mem;
+    }
+
+    public static Setting<Long> memoryMappingSetting( String fileName )
+    {
+        return setting( fileName + ".mapped_memory", Settings.BYTES, Settings.NO_DEFAULT );
     }
 }

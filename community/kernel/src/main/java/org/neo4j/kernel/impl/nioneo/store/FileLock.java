@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,16 +25,17 @@ import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.StoreLocker;
 
 public abstract class FileLock
 {
-    private static FileLock wrapOrNull( final java.nio.channels.FileLock lock )
+    private static FileLock wrapFileChannelLock( FileChannel channel ) throws IOException
     {
+        final java.nio.channels.FileLock lock = channel.tryLock();
         if ( lock == null )
         {
-            return null;
+            throw new IOException( "Unable to lock " + channel );
         }
 
         return new FileLock()
@@ -50,7 +51,7 @@ public abstract class FileLock
     public static FileLock getOsSpecificFileLock( File fileName, FileChannel channel )
             throws IOException
     {
-        if ( GraphDatabaseSetting.osIsWindows() )
+        if ( Settings.osIsWindows() )
         {
             /*
              * We need to grab only one lock for the whole store. Even though every store will try to grab one
@@ -68,19 +69,28 @@ public abstract class FileLock
         }
         else if ( fileName.getName().equals( NeoStore.DEFAULT_NAME ) )
         {
-            FileLock regular = wrapOrNull( channel.tryLock() );
-            if ( regular == null ) return null;
-            FileLock extra = getLockFileBasedFileLock( fileName.getParentFile() );
-            if ( extra == null )
+            // Lock the file
+            FileLock regular = wrapFileChannelLock( channel );
+            
+            // Lock the parent as well
+            boolean success = false;
+            try
             {
-                regular.release();
-                return null;
+                FileLock extra = getLockFileBasedFileLock( fileName.getParentFile() );
+                success = true;
+                return new DoubleFileLock( regular, extra );
             }
-            return new DoubleFileLock( regular, extra );
+            finally
+            {
+                if ( !success )
+                {   // The parent lock failed, so unlock the regular too
+                    regular.release();
+                }
+            }
         }
         else
         {
-            return wrapOrNull( channel.tryLock() );
+            return wrapFileChannelLock( channel );
         }
     }
 
@@ -107,7 +117,8 @@ public abstract class FileLock
         if ( fileChannelLock == null )
         {
             fileChannel.close();
-            return null;
+            throw new IOException( "Couldn't lock lock file " + lockFile.getAbsolutePath()  +
+                    " because another process already holds the lock." );
         }
         return new WindowsFileLock( lockFile, fileChannel, fileChannelLock );
     }
@@ -148,7 +159,6 @@ public abstract class FileLock
         private final java.nio.channels.FileLock fileChannelLock;
 
         public WindowsFileLock( File lockFile, FileChannel fileChannel, java.nio.channels.FileLock lock )
-                throws IOException
         {
             this.lockFile = lockFile;
             this.fileChannel = fileChannel;

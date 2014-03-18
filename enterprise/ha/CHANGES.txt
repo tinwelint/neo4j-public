@@ -1,4 +1,61 @@
-1.9.M05 (2013-02-12)
+2.0.2
+-----
+o Fixes potential deadlock when concurrently shutting down the database and role switching
+
+2.0.1
+-----
+o HA Backup now properly resolves the master URI, solving a bug where ha:// backups not running
+  from the current master would in some cases fail
+o Index delete now propagates properly across all cluster nodes
+o Slaves now retry switching, making possible overcoming temporary failures
+o Remote transaction initialization is now explicitly marked and tracked, solving
+  transaction leakage and reuse problems
+o HA instances no longer require a snapshot on cluster join
+o HA instances now properly switch to PENDING state when losing quorum
+o Fixes save deadlock problem
+o Transactions now happen in the context of a master epoch, to solve issues
+  with transactions wrongly propagating between masters
+o Introduces monitoring for remote calls between cluster instances
+
+2.0.0-RC1
+---------
+o The GCResistantCache is now called the HighPerformanceCache. The configuration for enabling it has changed from
+  'gcr' to 'hpc', although the old setting will remaing functional until the next major release.
+
+2.0.0.M06
+---------
+o Constraints can now be created in a running HA cluster
+
+1.9.5 (2013-11-11)
+------------------
+o Removed all usage of getHostName() that might lead to problems on instances with improperly
+  configured DNS
+o The master instance will now always send out masterIsAvailable messages in response to
+  masterIsElected, ensuring that instances in PENDING state will transition eventually to
+  SLAVE
+o Master instance now properly blocks transactions from starting after shutdown has started and
+  waits on a timeout for running transactions to finish and be pushed to slaves before stopping
+  completely. 
+
+1.9.3
+-----
+o Fix for wrong snapshot processing on cluster join, leading to failure to switch to Slave
+o Fix in SlaveIdGenerator which could lead to records being marked as not in use
+o Important cluster events are now properly included in the console
+
+1.9.1 (2013-06-24)
+------------------
+o Access guard is now raised during recovery
+o Properly throttle push notifications from the master, preventing an exhaustion of resources
+  and accompanying failures to pull from slaves
+o Slaves will now not participate in elections if not eligible (e.g. when copying the store)
+
+1.9.RC1 (2013-04-15)
+--------------------
+o Introduction of pseudo quorum writes. If half or more of the instances are unreachable, the instance will stop
+  accepting write requests and all transactions will timeout.
+
+1.9.M05 (2013-03-05)
 --------------------
 o Slave only mode is now available
 o HA server will now bind by default to all interfaces (0.0.0.0)

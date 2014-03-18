@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,42 +19,30 @@
  */
 package org.neo4j.cluster.client;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import org.neo4j.cluster.BindingListener;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.ProtocolServer;
 import org.neo4j.cluster.protocol.cluster.Cluster;
 import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.HostnamePort;
-import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
+
+import static java.lang.String.format;
 
 /**
  * This service starts quite late, and is available for the instance to join as a member in the cluster.
@@ -66,39 +54,32 @@ public class ClusterJoin
 {
     public interface Configuration
     {
-        boolean isDiscoveryEnabled();
-
         List<HostnamePort> getInitialHosts();
-
-        String getDiscoveryUrl();
 
         String getClusterName();
 
         boolean isAllowedToCreateCluster();
+
+        long getClusterJoinTimeout();
     }
 
     private final Configuration config;
     private final ProtocolServer protocolServer;
     private final StringLogger logger;
-    private URI clustersUri;
-    private Clusters clusters;
+    private final ConsoleLogger console;
     private Cluster cluster;
-    private URI serverId;
-    private DocumentBuilder builder;
-    private Transformer transformer;
 
     public ClusterJoin( Configuration config, ProtocolServer protocolServer, Logging logger )
     {
         this.config = config;
         this.protocolServer = protocolServer;
-        this.logger = logger.getLogger( getClass() );
+        this.logger = logger.getMessagesLog( getClass() );
+        this.console = logger.getConsoleLog( getClass() );
     }
 
     @Override
     public void init() throws Throwable
     {
-        builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        transformer = TransformerFactory.newInstance().newTransformer();
         cluster = protocolServer.newClient( Cluster.class );
     }
 
@@ -106,17 +87,8 @@ public class ClusterJoin
     public void start() throws Throwable
     {
         cluster = protocolServer.newClient( Cluster.class );
-        acquireServerId();
 
-        // Now that we have our own id, do cluster join
-        if ( config.isDiscoveryEnabled() )
-        {
-            clusterDiscovery();
-        }
-        else
-        {
-            clusterByConfig();
-        }
+        joinByConfig();
     }
 
     @Override
@@ -138,7 +110,7 @@ public class ClusterJoin
 
         try
         {
-            if ( !semaphore.tryAcquire( 5, TimeUnit.SECONDS ) )
+            if ( !semaphore.tryAcquire( 60, TimeUnit.SECONDS ) )
             {
                 logger.info( "Unable to leave cluster, timeout" );
             }
@@ -150,204 +122,7 @@ public class ClusterJoin
         }
     }
 
-    private void acquireServerId() throws RuntimeException
-    {
-        final Semaphore semaphore = new Semaphore( 0 );
-
-        protocolServer.addBindingListener( new BindingListener()
-        {
-            @Override
-            public void listeningAt( URI me )
-            {
-                serverId = me;
-                semaphore.release();
-                protocolServer.removeBindingListener( this );
-            }
-        } );
-        try
-        {
-            if ( !semaphore.tryAcquire( 1, TimeUnit.MINUTES ) )
-            {
-                throw new RuntimeException( "Unable to acquire server id, timed out" );
-            }
-        }
-        catch ( InterruptedException e )
-        {
-            Thread.interrupted();
-            throw new RuntimeException( "Unable to acquire server id, interrupted", e );
-        }
-    }
-
-    private void clusterDiscovery() throws URISyntaxException, ParserConfigurationException, SAXException, IOException
-    {
-        determineUri();
-
-        readClustersXml();
-
-        // Now try to join or create cluster
-        if ( clusters != null )
-        {
-            Clusters.Cluster clusterConfig = clusters.getCluster( config.getClusterName() );
-            if ( clusterConfig != null )
-            {
-                URI[] memberURIs = Iterables.toArray(URI.class,
-                        Iterables.filter( new Predicate<URI>()
-                        {
-                            @Override
-                            public boolean accept( URI uri )
-                            {
-                                return !uri.equals( serverId );
-                            }
-                        },
-                        Iterables.map(new Function<Clusters.Member, URI>()
-                        {
-                            @Override
-                            public URI apply( Clusters.Member member)
-                            {
-                                return URI.create( "cluster://" + member.getHost() );
-                            }
-                        }, clusterConfig.getMembers())));
-
-                Future<ClusterConfiguration> config = cluster.join( this.config.getClusterName(), memberURIs );
-                try
-                {
-                    logger.debug( "Joined cluster:" + config.get() );
-
-                    try
-                    {
-                        updateMyInfo();
-                    }
-                    catch ( TransformerException e )
-                    {
-                        throw new RuntimeException( e );
-                    }
-
-                    return;
-                }
-                catch ( InterruptedException e )
-                {
-                    e.printStackTrace();
-                }
-                catch ( ExecutionException e )
-                {
-                    logger.debug( "Could not join cluster " + this.config.getClusterName() );
-                }
-            }
-
-            if ( config.isAllowedToCreateCluster() )
-            {
-                // Could not find cluster or not join nodes in cluster - create it!
-                if ( clusterConfig == null )
-                {
-                    clusterConfig = new Clusters.Cluster( config.getClusterName() );
-                    clusters.getClusters().add( clusterConfig );
-                }
-
-                cluster.create( clusterConfig.getName() );
-
-                if ( clusterConfig.getByUri( serverId ) == null )
-                {
-                    clusterConfig.getMembers().add( new Clusters.Member( serverId.toString() ) );
-
-                    try
-                    {
-                        updateMyInfo();
-                    }
-                    catch ( TransformerException e )
-                    {
-                        logger.warn( "Could not update cluster discovery file:" + clustersUri, e );
-                    }
-                }
-            }
-            else
-            {
-                logger.warn( "Could not join cluster, and is not allowed to create one" );
-            }
-        }
-    }
-
-    private void determineUri() throws URISyntaxException
-    {
-        String clusterUrlString = config.getDiscoveryUrl();
-        if ( clusterUrlString != null )
-        {
-            if ( clusterUrlString.startsWith( "/" ) )
-            {
-                clustersUri = Thread.currentThread().getContextClassLoader().getResource( clusterUrlString ).toURI();
-            }
-            else
-            {
-                clustersUri = new URI( clusterUrlString );
-            }
-        }
-        else
-        {
-            URL classpathURL = Thread.currentThread().getContextClassLoader().getResource( "clusters.xml" );
-            if ( classpathURL != null )
-            {
-                clustersUri = classpathURL.toURI();
-            }
-        }
-    }
-
-    private void readClustersXml() throws SAXException, IOException
-    {
-        if ( clustersUri.getScheme().equals( "file" ) )
-        {
-            File file = new File( clustersUri );
-            if ( file.exists() )
-            {
-                Document doc = builder.parse( file );
-                clusters = new ClustersXMLSerializer( builder ).read( doc );
-                clusters.setTimestamp( file.lastModified() );
-            }
-        }
-    }
-
-    private void updateMyInfo() throws TransformerException, IOException, SAXException
-    {
-        Clusters.Cluster cluster = clusters.getCluster( config.getClusterName() );
-
-        if ( cluster == null )
-        {
-            clusters.getClusters().add( cluster = new Clusters.Cluster( config.getClusterName() ) );
-        }
-
-        if ( cluster.contains( serverId ) )
-        {
-            // Do nothing
-        }
-        else
-        {
-            // Add myself to list
-            cluster.getMembers().add( new Clusters.Member( serverId.getHost() + (serverId.getPort() == -1 ? "" : ":" +
-                    serverId.getPort()) ) );
-
-            Document document = new ClustersXMLSerializer( builder ).write( clusters );
-
-            // Save new version
-            if ( clustersUri.getScheme().equals( "file" ) )
-            {
-                File clustersFile = new File( clustersUri );
-                if ( clustersFile.lastModified() != clusters.getTimestamp() )
-                {
-                    readClustersXml(); // Re-read XML file
-                    updateMyInfo(); // Try again
-                    return;
-                }
-
-                // Save new version
-                transformer.transform( new DOMSource( document ), new StreamResult( clustersFile ) );
-                clusters.setTimestamp( clustersFile.lastModified() );
-            }
-            else
-            {
-                // TODO Implement HTTP version
-            }
-        }
-    }
-
-    private void clusterByConfig()
+    private void joinByConfig() throws TimeoutException
     {
         List<HostnamePort> hosts = config.getInitialHosts();
 
@@ -355,64 +130,89 @@ public class ClusterJoin
 
         if ( hosts == null || hosts.size() == 0 )
         {
-            logger.info( "No cluster hosts specified. Creating cluster " + config.getClusterName() );
+            console.log( "No cluster hosts specified. Creating cluster " + config.getClusterName() );
             cluster.create( config.getClusterName() );
         }
         else
         {
             URI[] memberURIs = Iterables.toArray(URI.class,
-                    Iterables.filter( new Predicate<URI>()
-                    {
-                        @Override
-                        public boolean accept( URI uri )
-                        {
-                            return !serverId.equals( uri );
-                        }
-                    },
                     Iterables.map( new Function<HostnamePort, URI>()
                     {
                         @Override
-                        public URI apply( HostnamePort member)
+                        public URI apply( HostnamePort member )
                         {
                             return URI.create( "cluster://" + resolvePortOnlyHost( member ) );
                         }
-                    }, hosts)));
+                    }, hosts));
 
             while( true )
             {
+                console.log( "Attempting to join cluster of " + hosts.toString() );
+                Future<ClusterConfiguration> clusterConfig =
+                        cluster.join( this.config.getClusterName(), memberURIs );
 
-                for ( HostnamePort host : hosts )
+                if (config.getClusterJoinTimeout() > 0)
                 {
-                    if ( serverId.toString().endsWith( host.toString() ) )
-                    {
-                        continue; // Don't try to join myself
-                    }
-
-                    logger.debug( "Attempting to join " + hosts.toString() );
-                    Future<ClusterConfiguration> clusterConfig =
-                            cluster.join( this.config.getClusterName(), memberURIs );
                     try
                     {
-                        logger.debug( "Joined cluster:" + clusterConfig.get() );
+                        console.log( "Joined cluster:" + clusterConfig.get(config.getClusterJoinTimeout(), TimeUnit.MILLISECONDS ));
                         return;
                     }
                     catch ( InterruptedException e )
                     {
-                        e.printStackTrace();
+                        console.log( "Could not join cluster, interrupted. Retrying..." );
                     }
                     catch ( ExecutionException e )
                     {
                         logger.debug( "Could not join cluster " + this.config.getClusterName() );
+                        if ( e.getCause() instanceof IllegalStateException )
+                        {
+                            throw ((IllegalStateException) e.getCause());
+                        }
+
+                        if ( config.isAllowedToCreateCluster() )
+                        {
+                            // Failed to join cluster, create new one
+                            console.log( "Could not join cluster of " + hosts.toString() );
+                            console.log( format( "Creating new cluster with name [%s]...", config.getClusterName() ) );
+                            cluster.create( config.getClusterName() );
+                            break;
+                        }
+
+                        console.log( "Could not join cluster, timed out. Retrying..." );
+                    }
+                } else
+                {
+
+                    try
+                    {
+                        console.log( "Joined cluster:" + clusterConfig.get() );
+                        return;
+                    }
+                    catch ( InterruptedException e )
+                    {
+                        console.log( "Could not join cluster, interrupted. Retrying..." );
+                    }
+                    catch ( ExecutionException e )
+                    {
+                        logger.debug( "Could not join cluster " + this.config.getClusterName() );
+                        if ( e.getCause() instanceof IllegalStateException )
+                        {
+                            throw ((IllegalStateException) e.getCause());
+                        }
+
+                        if ( config.isAllowedToCreateCluster() )
+                        {
+                            // Failed to join cluster, create new one
+                            console.log( "Could not join cluster of " + hosts.toString() );
+                            console.log( format( "Creating new cluster with name [%s]...", config.getClusterName() ) );
+                            cluster.create( config.getClusterName() );
+                            break;
+                        }
+
+                        console.log( "Could not join cluster, timed out. Retrying..." );
                     }
                 }
-
-                if ( config.isAllowedToCreateCluster() )
-                {
-                    // Failed to join cluster, create new one
-                    cluster.create( config.getClusterName() );
-                    break;
-                }
-                // else retry the list from the top
             }
         }
     }
@@ -439,16 +239,16 @@ public class ClusterJoin
         }
 
         @Override
-        public void joinedCluster( URI member )
+        public void joinedCluster( InstanceId member, URI uri )
         {
             for ( HostnamePort host : initialHosts )
             {
-                if ( host.matches( member ) )
+                if ( host.matches( uri ) )
                 {
                     return;
                 }
             }
-            logger.warn( "Member " + member + " joined cluster but was not part of initial hosts (" +
+            logger.info( "Member " + member + "("+uri+") joined cluster but was not part of initial hosts (" +
                     initialHosts + ")" );
         }
 

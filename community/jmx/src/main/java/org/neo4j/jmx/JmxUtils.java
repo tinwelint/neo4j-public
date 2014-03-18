@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,7 @@
  */
 package org.neo4j.jmx;
 
-import static java.lang.String.format;
-
 import java.lang.management.ManagementFactory;
-
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanException;
@@ -31,18 +28,26 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.jmx.impl.JmxKernelExtension;
 import org.neo4j.kernel.GraphDatabaseAPI;
 
+import static java.lang.String.format;
+
 public class JmxUtils
 {
-
     private static final MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
 
-    public static ObjectName getObjectName( GraphDatabaseAPI database, String name )
+    public static ObjectName getObjectName( GraphDatabaseService db, String name )
     {
-        ObjectName neoQuery = database.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
+        if(!(db instanceof GraphDatabaseAPI))
+        {
+            throw new IllegalArgumentException( "Can only resolve object names for embedded Neo4j database " +
+                    "instances, eg. instances created by GraphDatabaseFactory or HighlyAvailableGraphDatabaseFactory." );
+        }
+        ObjectName neoQuery = ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency( JmxKernelExtension.class )
                 .getSingleManagementBean( Kernel.class ).getMBeanQuery();
+
         String instance = neoQuery.getKeyProperty( "instance" );
         String domain = neoQuery.getDomain();
         try
@@ -55,6 +60,7 @@ public class JmxUtils
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T getAttribute( ObjectName objectName, String attribute )
     {
         try
@@ -79,6 +85,7 @@ public class JmxUtils
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T invoke( ObjectName objectName, String attribute, Object[] params, String[] signatur )
     {
         try

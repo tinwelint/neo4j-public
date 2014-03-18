@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.configuration.ConfigurationMigrator;
 import org.neo4j.kernel.impl.util.StringLogger;
 
 /**
@@ -35,14 +34,14 @@ import org.neo4j.kernel.impl.util.StringLogger;
  */
 public class EnterpriseConfigurationMigratorTest
 {
-    ConfigurationMigrator migrator = new EnterpriseConfigurationMigrator();
+    EnterpriseConfigurationMigrator migrator = new EnterpriseConfigurationMigrator();
     
     @Test
     public void testOnlineBackupMigration()
         throws Exception
     {
         Map<String, String> original = MapUtil.stringMap( "enable_online_backup", "true" );
-        Map<String, String> migrated = migrator.apply( original, StringLogger.SYSTEM );
+        Map<String, String> migrated = migrator.apply( original, StringLogger.DEV_NULL );
         Assert.assertThat( migrated.containsKey( "enable_online_backup" ), is( false ) );
         Assert.assertThat( migrated.get( "online_backup_enabled" ), is( "true" ) );
         Assert.assertThat( migrated.get( "online_backup_server" ), is( OnlineBackupSettings.online_backup_server.getDefaultValue() ) );
@@ -53,10 +52,10 @@ public class EnterpriseConfigurationMigratorTest
         throws Exception
     {
         Map<String, String> original = MapUtil.stringMap( "enable_online_backup", "port=123" );
-        Map<String, String> migrated = migrator.apply( original, StringLogger.SYSTEM );
+        Map<String, String> migrated = migrator.apply( original, StringLogger.DEV_NULL );
         Assert.assertThat( migrated.containsKey( "enable_online_backup" ), is( false ) );
         Assert.assertThat( migrated.get( "online_backup_enabled" ), is( "true" ) );
-        Assert.assertThat( migrated.get( "online_backup_server" ), is( ":123" ) );
+        Assert.assertThat( migrated.get( "online_backup_server" ), is( "0.0.0.0:123" ) );
     }
 
     @Test
@@ -64,7 +63,7 @@ public class EnterpriseConfigurationMigratorTest
         throws Exception
     {
         Map<String, String> original = MapUtil.stringMap( "ha.machine_id", "123" );
-        Map<String, String> migrated = migrator.apply( original, StringLogger.SYSTEM );
+        Map<String, String> migrated = migrator.apply( original, StringLogger.DEV_NULL );
         Assert.assertThat( migrated.containsKey( "ha.machine_id" ), is( false ) );
         Assert.assertThat( migrated.get( "ha.server_id" ), is( "123" ) );
     }

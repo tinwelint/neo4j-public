@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,20 @@
  */
 package org.neo4j.consistency.repair;
 
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.impl.nioneo.store.Record.NO_NEXT_PROPERTY;
-
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.Test;
-import org.junit.internal.matchers.TypeSafeMatcher;
+
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.RecordStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
+
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import static org.neo4j.kernel.impl.nioneo.store.Record.NO_NEXT_PROPERTY;
 
 public class OwningNodeRelationshipChainTest
 {
@@ -55,9 +57,9 @@ public class OwningNodeRelationshipChainTest
         @SuppressWarnings("unchecked")
         RecordStore<NodeRecord> recordStore = mock( RecordStore.class );
         when( recordStore.forceGetRecord( node1 ) ).thenReturn(
-                new NodeRecord( node1, node1Rel, NO_NEXT_PROPERTY.intValue() ) );
+                new NodeRecord( node1, false, node1Rel, NO_NEXT_PROPERTY.intValue() ) );
         when( recordStore.forceGetRecord( node2 ) ).thenReturn(
-                new NodeRecord( node2, node2Rel, NO_NEXT_PROPERTY.intValue() ) );
+                new NodeRecord( node2, false, node2Rel, NO_NEXT_PROPERTY.intValue() ) );
 
         RelationshipChainExplorer relationshipChainExplorer = mock( RelationshipChainExplorer.class );
         when( relationshipChainExplorer.followChainFromNode( node1, node1Rel ) ).thenReturn( node1RelChain );

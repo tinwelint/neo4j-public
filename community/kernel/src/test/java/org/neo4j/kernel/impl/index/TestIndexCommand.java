@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,14 @@
  */
 package org.neo4j.kernel.impl.index;
 
+import static java.io.File.createTempFile;
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.impl.index.IndexCommand.readCommand;
+import static org.neo4j.kernel.impl.util.FileUtils.copyFile;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -31,18 +36,20 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.impl.transaction.xaframework.DefaultLogBufferFactory;
+import org.neo4j.kernel.impl.transaction.xaframework.DirectMappedLogBuffer;
 import org.neo4j.kernel.impl.transaction.xaframework.LogBuffer;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommand;
+import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.test.TargetDirectory;
 
-import static java.io.File.*;
-import static org.junit.Assert.*;
-import static org.neo4j.helpers.collection.MapUtil.*;
-import static org.neo4j.kernel.impl.index.IndexCommand.*;
 
 public class TestIndexCommand
 {
@@ -58,10 +65,11 @@ public class TestIndexCommand
     private static final String STRING_VALUE_1 = "Mattias";
     private static final String STRING_VALUE_2 = "Blabla";
     private static final int INT_VALUE = 345;
-    private static final Map<String, String> SOME_CONFIG =
-            stringMap( "type", "exact", "provider", "lucene" );
-    private static final byte[] BUFFER = new byte[5000];
+    private static final Map<String, String> SOME_CONFIG = stringMap( "type", "exact", "provider", "lucene" );
     
+    @Rule
+    public TargetDirectory.TestDirectory directory = TargetDirectory.forTest( TestIndexCommand.class ).testDirectory();
+
     @Test
     public void testWriteReadTruncate() throws Exception
     {
@@ -88,6 +96,7 @@ public class TestIndexCommand
                 File copy = copyAndTruncateFile( writtenCommands.first(), p );
                 List<XaCommand> readTruncatedCommands = readCommandsFromFile( copy );
                 assertEquals( i, readTruncatedCommands.size() );
+                FileUtils.deleteFile( copy );
             }
         }
         
@@ -96,22 +105,18 @@ public class TestIndexCommand
 
     private File copyAndTruncateFile( File file, long fileSize ) throws IOException
     {
-        File copy = copyFile( file );
+        File copy = createTempFile( "index", "copy", directory.directory() );
+        copyFile( file, copy );
         RandomAccessFile raFile = new RandomAccessFile( copy, "rw" );
-        raFile.getChannel().truncate( fileSize );
-        raFile.close();
+        try
+        {
+            raFile.getChannel().truncate( fileSize );
+        }
+        finally
+        {
+            raFile.close();
+        }
         return copy;
-    }
-
-    private File copyFile( File file ) throws IOException
-    {
-        File result = createTempFile( "index", "copy" );
-        result.delete();
-        FileInputStream in = new FileInputStream( file );
-        int read = in.read( BUFFER );
-        FileOutputStream out = new FileOutputStream( result );
-        out.write( BUFFER, 0, read );
-        return result;
     }
 
     private List<XaCommand> createSomeCommands()
@@ -130,35 +135,57 @@ public class TestIndexCommand
 
     private List<XaCommand> readCommandsFromFile( File file ) throws IOException
     {
-        ReadableByteChannel reader = new FileInputStream( file ).getChannel();
-        ByteBuffer buffer = ByteBuffer.allocate( 10000 );
-        List<XaCommand> commands = new ArrayList<XaCommand>();
-        while ( true )
+        FileInputStream in = null;
+        ReadableByteChannel reader = null;
+        List<XaCommand> commands;
+        try
         {
-            XaCommand command = readCommand( reader, buffer );
-            if ( command == null )
+            in = new FileInputStream( file );
+            reader = in.getChannel();
+            ByteBuffer buffer = ByteBuffer.allocate( 10000 );
+            commands = new ArrayList<XaCommand>();
+            while ( true )
             {
-                break;
+                XaCommand command = readCommand( reader, buffer );
+                if ( command == null )
+                {
+                    break;
+                }
+                commands.add( command );
             }
-            commands.add( command );
         }
-        reader.close();
+        finally
+        {
+            if ( in != null )
+                in.close();
+            if ( reader != null )
+                reader.close();
+        }
         return commands;
     }
 
     private Pair<File, List<Long>> writeCommandsToFile( List<XaCommand> commands ) throws IOException
     {
         File file = createTempFile( "index", "command" );
-        FileChannel fileChannel = new RandomAccessFile( file, "rw" ).getChannel();
-        LogBuffer writeBuffer = new DefaultLogBufferFactory().create( fileChannel );
-        List<Long> startPositions = new ArrayList<Long>();
-        for ( XaCommand command : commands )
+        RandomAccessFile randomAccessFile = new RandomAccessFile( file, "rw" );
+        List<Long> startPositions;
+        try
         {
-            startPositions.add( writeBuffer.getFileChannelPosition() );
-            command.writeToFile( writeBuffer );
+            FileChannel fileChannel = randomAccessFile.getChannel();
+            LogBuffer writeBuffer = new DirectMappedLogBuffer( fileChannel, new Monitors().newMonitor( ByteCounterMonitor.class ) );
+            startPositions = new ArrayList<Long>();
+            for ( XaCommand command : commands )
+            {
+                startPositions.add( writeBuffer.getFileChannelPosition() );
+                command.writeToFile( writeBuffer );
+            }
+            writeBuffer.force();
+            fileChannel.close();
         }
-        writeBuffer.force();
-        fileChannel.close();
+        finally
+        {
+            randomAccessFile.close();
+        }
         return Pair.of( file, startPositions );
     }
 }

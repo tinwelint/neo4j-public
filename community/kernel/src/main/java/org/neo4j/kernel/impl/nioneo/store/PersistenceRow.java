@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import java.nio.channels.FileChannel;
  * required record/block and it would be non efficient to create a large new
  * window to perform the required operation.
  */
-class PersistenceRow extends LockableWindow
+public class PersistenceRow extends LockableWindow
 {
     private State bufferState = State.EMPTY;
     private int recordSize = -1;
@@ -164,26 +164,43 @@ class PersistenceRow extends LockableWindow
                 + position + "] @[" + position * recordSize + "]", e );
         }
     }
-    
+
+    @Override
+    synchronized void setClean()
+    {
+        super.setClean();
+        bufferState = State.CLEAN;
+    }
+
     private void writeContents()
     {
-        ByteBuffer byteBuffer = buffer.getBuffer();
         if ( isDirty() )
         {
+            ByteBuffer byteBuffer = buffer.getBuffer().duplicate();
             byteBuffer.clear();
             try
             {
-                int count = getFileChannel().write( byteBuffer,
-                    position * recordSize );
-                assert count == recordSize;
+                int written = 0;
+
+                while ( byteBuffer.hasRemaining() )
+                {
+                    int writtenThisTime = getFileChannel().write( byteBuffer, position * recordSize + written );
+
+                    if ( writtenThisTime == 0 )
+                    {
+                        throw new IOException( "Unable to write to disk, reported bytes written was 0" );
+                    }
+
+                    written += writtenThisTime;
+                }
             }
             catch ( IOException e )
             {
                 throw new UnderlyingStorageException( "Unable to write record["
-                    + position + "] @[" + position * recordSize + "]", e );
+                        + position + "] @[" + position * recordSize + "]", e );
             }
+            setClean();
         }
-        byteBuffer.clear();
     }
 
     @Override

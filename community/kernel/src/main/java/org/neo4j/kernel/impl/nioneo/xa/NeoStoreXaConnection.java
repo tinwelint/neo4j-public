@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.kernel.impl.index.IndexXaConnection;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
-import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeStore;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeTokenStore;
 import org.neo4j.kernel.impl.transaction.xaframework.XaConnection;
 import org.neo4j.kernel.impl.transaction.xaframework.XaConnectionHelpImpl;
 import org.neo4j.kernel.impl.transaction.xaframework.XaResourceHelpImpl;
@@ -60,30 +60,38 @@ public class NeoStoreXaConnection extends XaConnectionHelpImpl
             neoStore.getStorageFileName(), xaRm, branchId );
     }
 
+    @Override
     public XAResource getXaResource()
     {
         return this.xaResource;
     }
     
-    public WriteTransaction getWriteTransaction()
+    @Override
+    public NeoStoreTransaction getTransaction()
+    {
+        try
+        {
+            return (NeoStoreTransaction) super.getTransaction();
+        }
+        catch ( XAException e )
+        {
+            throw new TransactionFailureException( "Unable to create transaction.", e );
+        }
+    }
+    
+    @Override
+    public NeoStoreTransaction createTransaction()
     {
         // Is only called once per write transaction so no need
         // to cache the transaction here.
         try
         {
-            return (WriteTransaction) getTransaction();
+            return (NeoStoreTransaction) super.createTransaction();
         }
         catch ( XAException e )
         {
-            throw new TransactionFailureException( 
-                "Unable to get transaction.", e );
+            throw new TransactionFailureException( "Unable to create transaction.", e );
         }
-    }
-    
-    @Override
-    public void destroy()
-    {
-        super.destroy();
     }
 
     private static class NeoStoreXaResource extends XaResourceHelpImpl
@@ -97,6 +105,7 @@ public class NeoStoreXaConnection extends XaConnectionHelpImpl
             this.identifier = identifier;
         }
 
+        @Override
         public boolean isSameRM( XAResource xares )
         {
             if ( xares instanceof NeoStoreXaResource )
@@ -114,7 +123,7 @@ public class NeoStoreXaConnection extends XaConnectionHelpImpl
         return neoStore.getPropertyStore();
     }
 
-    public RelationshipTypeStore getRelationshipTypeStore()
+    public RelationshipTypeTokenStore getRelationshipTypeStore()
     {
         return neoStore.getRelationshipTypeStore();
     }

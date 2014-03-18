@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,6 +38,11 @@ import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
 import org.neo4j.kernel.impl.storemigration.monitoring.VisibleMigrationProgressMonitor;
 import org.neo4j.kernel.impl.util.StringLogger;
 
+/**
+ * Stand alone tool for migrating/upgrading a neo4j database from one version to the next.
+ * 
+ * @see StoreMigrator
+ */
 public class StoreMigrationTool
 {
     public static void main( String[] args ) throws IOException
@@ -50,7 +55,8 @@ public class StoreMigrationTool
 
     private void run( String legacyStoreDirectory, String targetStoreDirectory, StringLogger log ) throws IOException
     {
-        LegacyStore legacyStore = new LegacyStore( new File( new File( legacyStoreDirectory ), NeoStore.DEFAULT_NAME ), log );
+        LegacyStore legacyStore = new LegacyStore( new DefaultFileSystemAbstraction(),
+                new File( new File( legacyStoreDirectory ), NeoStore.DEFAULT_NAME ) );
 
         Map<String, String> config = new HashMap<String, String>();
 
@@ -83,7 +89,8 @@ public class StoreMigrationTool
 
         neoStore.close();
 
-        GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabase( targetStoreDirectoryFile.getPath() );
+        GraphDatabaseService database =
+                new GraphDatabaseFactory().newEmbeddedDatabase( targetStoreDirectoryFile.getPath() );
         database.shutdown();
     }
 }

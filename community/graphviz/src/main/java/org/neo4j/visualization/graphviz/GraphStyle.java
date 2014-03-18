@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,7 +42,7 @@ public class GraphStyle
 	 * @param edgeStyle
 	 *            the relationship style to use.
 	 */
-    protected GraphStyle( NodeStyle nodeStyle, RelationshipStyle edgeStyle )
+    public GraphStyle( NodeStyle nodeStyle, RelationshipStyle edgeStyle )
 	{
         this.configuration = null;
 		this.nodeStyle = nodeStyle;

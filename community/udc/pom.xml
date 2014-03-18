@@ -3,29 +3,31 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>1.9-SNAPSHOT</version>
+    <version>2.1-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.neo4j</groupId>
   <artifactId>neo4j-udc</artifactId>
   <name>Neo4j - Usage Data Collection</name>
-  <version>1.9-SNAPSHOT</version>
+  <version>2.1-SNAPSHOT</version>
+
   <description>Collects simple statistics about server deployment.</description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
-  
+
   <properties>
     <bundle.namespace>org.neo4j.ext.udc</bundle.namespace>
     <short-name>udc</short-name>
+    <version-package>udc.impl</version-package>
     <license-text.header>GPL-3-header.txt</license-text.header>
     <docs.url>http://docs.neo4j.org/chunked/${project.version}/usage-data-collector.html</docs.url>
     <licensing.prepend.text>notice-gpl-prefix.txt</licensing.prepend.text>
   </properties>
-  
+
   <packaging>jar</packaging>
 
   <scm>
-    <url>https://github.com/neo4j/community/tree/master/udc</url>
+	  <url>https://github.com/neo4j/neo4j/tree/master/community/udc</url>
   </scm>
 
   <licenses>
@@ -33,21 +35,21 @@
       <name>GNU General Public License, Version 3</name>
       <url>http://www.gnu.org/licenses/gpl-3.0-standalone.html</url>
       <comments>The software ("Software") developed and owned by Network Engine for
-Objects in Lund AB (referred to in this notice as "Neo Technology") is
-licensed under the GNU GENERAL PUBLIC LICENSE Version 3 to all third
-parties and that license is included below.
+        Objects in Lund AB (referred to in this notice as "Neo Technology") is
+        licensed under the GNU GENERAL PUBLIC LICENSE Version 3 to all third
+        parties and that license is included below.
 
-However, if you have executed an End User Software License and Services
-Agreement or an OEM Software License and Support Services Agreement, or
-another commercial license agreement with Neo Technology or one of its
-affiliates (each, a "Commercial Agreement"), the terms of the license in
-such Commercial Agreement will supersede the GNU GENERAL PUBLIC LICENSE
-Version 3 and you may use the Software solely pursuant to the terms of
-the relevant Commercial Agreement.
+        However, if you have executed an End User Software License and Services
+        Agreement or an OEM Software License and Support Services Agreement, or
+        another commercial license agreement with Neo Technology or one of its
+        affiliates (each, a "Commercial Agreement"), the terms of the license in
+        such Commercial Agreement will supersede the GNU GENERAL PUBLIC LICENSE
+        Version 3 and you may use the Software solely pursuant to the terms of
+        the relevant Commercial Agreement.
       </comments>
     </license>
   </licenses>
-  
+
   <build>
     <plugins>
       <plugin>
@@ -189,12 +191,12 @@ the relevant Commercial Agreement.
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
- </dependencies>
+  </dependencies>
 
   <distributionManagement>
     <site>
       <id>neo4j-site</id>
-      <url>scpexe://static.neo4j.org/var/www/components.neo4j.org/${project.artifactId}/${project.version}</url>
+      <url>scpexe://docs.neo4j.org/data/www/doc/components.neo4j.org/${project.artifactId}/${project.version}</url>
     </site>
   </distributionManagement>
 

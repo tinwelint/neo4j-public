@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,12 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.kernel.impl.traversal;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.neo4j.graphdb.Traverser.Order.BREADTH_FIRST;
-import static org.neo4j.graphdb.Traverser.Order.DEPTH_FIRST;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +40,12 @@ import org.neo4j.graphdb.Traverser;
 import org.neo4j.graphdb.Traverser.Order;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.MyRelTypes;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.neo4j.graphdb.Traverser.Order.BREADTH_FIRST;
+import static org.neo4j.graphdb.Traverser.Order.DEPTH_FIRST;
 
 public class TestTraversal extends AbstractNeo4jTestCase
 {
@@ -156,9 +156,9 @@ public class TestTraversal extends AbstractNeo4jTestCase
         {
             this.assertLevelsOfNodes( traverser, new String[][] {
                     new String[] { "1" },
-                    new String[] { "2", "3", "4" },
-                    new String[] { "5", "6", "7", "8", "9" },
-                    new String[] { "10", "11", "12", "13", "14" }
+                    new String[] { "3", "4", "2" },
+                    new String[] { "7", "8", "9", "6", "5" },
+                    new String[] { "14", "12", "13", "11", "10" }
             } );
             assertTrue( "Too many nodes returned from traversal", traverser
                 .iterator().hasNext() == false );
@@ -222,9 +222,9 @@ public class TestTraversal extends AbstractNeo4jTestCase
         {
             this.assertLevelsOfNodes( traverser, new String[][] {
                 new String[] { "1" },
-                new String[] { "2", "3", "4" },
+                new String[] { "4", "2", "3" },
                 new String[] { "5", "6", "7" },
-                new String[] { "10", "11", "12", "13" },
+                new String[] { "11", "10", "13", "12" },
             } );
             assertTrue( "Too many nodes returned from traversal", traverser
                 .iterator().hasNext() == false );
@@ -255,6 +255,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
             // a) Construct a returnable evaluator that returns node 2
             ReturnableEvaluator returnEvaluator = new ReturnableEvaluator()
             {
+                @Override
                 public boolean isReturnableNode( TraversalPosition pos )
                 {
                     try
@@ -293,13 +294,13 @@ public class TestTraversal extends AbstractNeo4jTestCase
             MyRelTypes.TEST, Direction.OUTGOING );
         try
         {
-            this.assertNextNodeId( traverser, "2" );
-            this.assertNextNodeId( traverser, "5" );
-            this.assertNextNodeId( traverser, "6" );
-            this.assertNextNodeId( traverser, "10" );
-            this.assertNextNodeId( traverser, "11" );
-            this.assertNextNodeId( traverser, "12" );
-            this.assertNextNodeId( traverser, "13" );
+            assertNextNodeId( traverser, "2" );
+            assertNextNodeId( traverser, "6" );
+            assertNextNodeId( traverser, "5" );
+            assertNextNodeId( traverser, "11" );
+            assertNextNodeId( traverser, "10" );
+            assertNextNodeId( traverser, "13" );
+            assertNextNodeId( traverser, "12" );
             assertTrue( "Too many nodes returned from traversal", traverser
                 .iterator().hasNext() == false );
         }
@@ -386,6 +387,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         // Construct a stop evaluator that stops on nodes 5, 6, 3 and 4
         StopEvaluator stopEvaluator = new StopEvaluator()
         {
+            @Override
             public boolean isStopNode( TraversalPosition position )
             {
                 try
@@ -410,11 +412,11 @@ public class TestTraversal extends AbstractNeo4jTestCase
         try
         {
             this.assertNextNodeId( traverser, "1" );
-            this.assertNextNodeId( traverser, "2" );
-            this.assertNextNodeId( traverser, "3" );
             this.assertNextNodeId( traverser, "4" );
-            this.assertNextNodeId( traverser, "5" );
+            this.assertNextNodeId( traverser, "3" );
+            this.assertNextNodeId( traverser, "2" );
             this.assertNextNodeId( traverser, "6" );
+            this.assertNextNodeId( traverser, "5" );
 
             assertTrue( "Too many nodes returned from traversal", traverser
                 .iterator().hasNext() == false );
@@ -443,6 +445,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         // (ie root's children)
         StopEvaluator stopEvaluator = new StopEvaluator()
         {
+            @Override
             public boolean isStopNode( TraversalPosition position )
             {
                 try
@@ -496,6 +499,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         // Construct a stop evaluator that stops on depth 2
         StopEvaluator stopEvaluator = new StopEvaluator()
         {
+            @Override
             public boolean isStopNode( TraversalPosition position )
             {
                 return position.depth() >= 2;
@@ -508,20 +512,15 @@ public class TestTraversal extends AbstractNeo4jTestCase
 
         try
         {
-            this.assertNextNodeId( traverser, "1" );
-            this.assertNextNodeId( traverser, "2" );
-            this.assertNextNodeId( traverser, "3" );
-            this.assertNextNodeId( traverser, "4" );
-            this.assertNextNodeId( traverser, "5" );
-            this.assertNextNodeId( traverser, "6" );
-            this.assertNextNodeId( traverser, "7" );
+            assertNextNodeId( traverser, "1" );
+            assertNextNodeId( traverser, "2" );
+            assertNextNodeId( traverser, "3" );
+            assertNextNodeId( traverser, "4" );
+            assertNextNodeId( traverser, "5" );
+            assertNextNodeId( traverser, "6" );
+            assertNextNodeId( traverser, "7" );
 
-            assertTrue( "Too many nodes returned from traversal", traverser
-                .iterator().hasNext() == false );
-        }
-        catch ( java.util.NoSuchElementException nsee )
-        {
-            fail( "Too few nodes returned from traversal" );
+            assertTrue( "Too many nodes returned from traversal", !traverser.iterator().hasNext() );
         }
         finally
         {
@@ -544,6 +543,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         // Construct stop- and returnable evaluators that return 5 nodes
         StopEvaluator stopEvaluator = new StopEvaluator()
         {
+            @Override
             public boolean isStopNode( TraversalPosition position )
             {
                 // Stop traversing when we've returned 5 nodes
@@ -552,6 +552,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         };
         ReturnableEvaluator returnEvaluator = new ReturnableEvaluator()
         {
+            @Override
             public boolean isReturnableNode( TraversalPosition position )
             {
                 // Return nodes until we've reached 5 nodes or end of graph
@@ -567,7 +568,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         {
             this.assertLevelsOfNodes( traverser, new String[][] {
                 new String[] { "1" },
-                new String[] { "2", "3", "4" },
+                new String[] { "2", "4", "3" },
                 new String[] { "5" },
             } );
 
@@ -600,6 +601,7 @@ public class TestTraversal extends AbstractNeo4jTestCase
         // Construct stop- and returnable evaluators that return 5 nodes
         StopEvaluator stopEvaluator = new StopEvaluator()
         {
+            @Override
             public boolean isStopNode( TraversalPosition position )
             {
                 // Stop when we got here by traversing a clone relationship
@@ -619,11 +621,10 @@ public class TestTraversal extends AbstractNeo4jTestCase
                 new String[] { "1" },
                 new String[] { "2", "3", "4" },
                 new String[] { "5", "6", "7", "8", "9" },
-                new String[] { "10", "11", "12", "13" }
+                new String[] { "11", "10", "13", "12" }
             } );
 
-            assertTrue( "Too many nodes returned from traversal", traverser
-                .iterator().hasNext() == false );
+            assertTrue( "Too many nodes returned from traversal", !traverser.iterator().hasNext() );
         }
         catch ( java.util.NoSuchElementException nsee )
         {

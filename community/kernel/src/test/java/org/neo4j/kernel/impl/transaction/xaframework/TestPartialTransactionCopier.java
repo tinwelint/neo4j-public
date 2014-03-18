@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,31 @@
  */
 package org.neo4j.kernel.impl.transaction.xaframework;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.transaction.xa.Xid;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.Pair;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.util.ArrayMap;
+import org.neo4j.kernel.impl.util.DumpLogicalLog.CommandFactory;
+import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.LogTestUtils;
+import org.neo4j.test.LogTestUtils.LogHookAdapter;
+import org.neo4j.test.TestGraphDatabaseFactory;
+
 import static java.nio.ByteBuffer.allocate;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static org.neo4j.kernel.impl.nioneo.xa.CommandMatchers.nodeCommandEntry;
 import static org.neo4j.kernel.impl.transaction.xaframework.LogIoUtils.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.xaframework.LogIoUtils.writeLogHeader;
@@ -31,33 +54,13 @@ import static org.neo4j.kernel.impl.transaction.xaframework.LogMatchers.onePhase
 import static org.neo4j.kernel.impl.transaction.xaframework.LogMatchers.startEntry;
 import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.transaction.xa.Xid;
-
-import org.junit.Test;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.impl.util.ArrayMap;
-import org.neo4j.kernel.impl.util.DumpLogicalLog.CommandFactory;
-import org.neo4j.kernel.impl.util.StringLogger;
-import org.neo4j.test.LogTestUtils;
-import org.neo4j.test.LogTestUtils.LogHookAdapter;
-import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
-
 public class TestPartialTransactionCopier
 {
-    private final EphemeralFileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
-    
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+
     @SuppressWarnings( "unchecked" )
     @Test
-    public void testIt() throws Exception
+    public void shouldCopyRunningTransactionsToNewLog() throws Exception
     {
         // Given
         int masterId = -1;
@@ -70,7 +73,7 @@ public class TestPartialTransactionCopier
         Integer brokenTxIdentifier = broken.other();
 
         // And I've read the log header on that broken file
-        FileChannel brokenLog = fileSystem.open( brokenLogFile, "rw" );
+        FileChannel brokenLog = fs.get().open( brokenLogFile, "rw" );
         ByteBuffer buffer = allocate( 9 + Xid.MAXGTRIDSIZE + Xid.MAXBQUALSIZE * 10 );
         readLogHeader( buffer, brokenLog, true );
 
@@ -78,7 +81,8 @@ public class TestPartialTransactionCopier
         PartialTransactionCopier copier = new PartialTransactionCopier(
                 buffer, new CommandFactory(),
                 StringLogger.DEV_NULL, new LogExtractor.LogPositionCache(),
-                null, createXidMapWithOneStartEntry( masterId, /*txId=*/brokenTxIdentifier ) );
+                null, createXidMapWithOneStartEntry( masterId, /*txId=*/brokenTxIdentifier ),
+                new Monitors().newMonitor( ByteCounterMonitor.class ) );
 
         // When
         File newLogFile = new File( "new.log" );
@@ -86,21 +90,22 @@ public class TestPartialTransactionCopier
 
         // Then
         assertThat(
-                logEntries( fileSystem, newLogFile ),
+                logEntries( fs.get(), newLogFile ),
                 containsExactly(
                         startEntry( brokenTxIdentifier, masterId, meId ),
-                        nodeCommandEntry( brokenTxIdentifier, /*nodeId=*/2 ),
-                        onePhaseCommitEntry( brokenTxIdentifier, /*txid=*/brokenTxIdentifier ),
-
-                        startEntry( 4, masterId, meId ),
-                        nodeCommandEntry( 4, /*nodeId=*/3),
-                        onePhaseCommitEntry( 4, /*txid=*/4 ),
-                        doneEntry( 4 ),
+                        nodeCommandEntry( brokenTxIdentifier, /*nodeId=*/1 ),
+                        onePhaseCommitEntry( brokenTxIdentifier, /*txid=*/3 ),
+                        // Missing done entry
 
                         startEntry( 5, masterId, meId ),
-                        nodeCommandEntry( 5, /*nodeId=*/4 ),
-                        onePhaseCommitEntry( 5, /*txid=*/5 ),
-                        doneEntry( 5 )
+                        nodeCommandEntry( 5, /*nodeId=*/2),
+                        onePhaseCommitEntry( 5, /*txid=*/4 ),
+                        doneEntry( 5 ),
+
+                        startEntry( 6, masterId, meId ),
+                        nodeCommandEntry( 6, /*nodeId=*/3 ),
+                        onePhaseCommitEntry( 6, /*txid=*/5 ),
+                        doneEntry( 6 )
                 ));
     }
 
@@ -109,13 +114,13 @@ public class TestPartialTransactionCopier
     private ArrayMap<Integer, LogEntry.Start> createXidMapWithOneStartEntry( int masterId, Integer brokenTxId )
     {
         ArrayMap<Integer, LogEntry.Start> xidentMap = new ArrayMap<Integer, LogEntry.Start>();
-        xidentMap.put( brokenTxId, new LogEntry.Start( null, brokenTxId, masterId, 3, 4, 5 ) );
+        xidentMap.put( brokenTxId, new LogEntry.Start( null, brokenTxId, masterId, 3, 4, 5, 6 ) );
         return xidentMap;
     }
 
     private LogBuffer createNewLogWithHeader( File newLogFile ) throws IOException
     {
-        FileChannel newLog = fileSystem.open( newLogFile, "rw" );
+        FileChannel newLog = fs.get().open( newLogFile, "rw" );
         LogBuffer newLogBuffer = new DirectLogBuffer( newLog, allocate(  10000 ) );
 
         ByteBuffer buf = allocate( 100 );
@@ -128,7 +133,7 @@ public class TestPartialTransactionCopier
     private Pair<File, Integer> createBrokenLogFile( String storeDir ) throws Exception
     {
         GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .setFileSystem( fileSystem ).newImpermanentDatabase( storeDir );
+                .setFileSystem( fs.get() ).newImpermanentDatabase( storeDir );
         for ( int i = 0; i < 4; i++ )
         {
             Transaction tx = db.beginTx();
@@ -164,7 +169,7 @@ public class TestPartialTransactionCopier
                 return true;
             }
         };
-        File brokenLogFile = filterNeostoreLogicalLog( fileSystem,
+        File brokenLogFile = filterNeostoreLogicalLog( fs.get(),
                 new File( storeDir, "nioneo_logical.log.v0"), filter );
 
         return Pair.of( brokenLogFile, brokenTxIdentifier.get() );

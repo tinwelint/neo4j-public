@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,10 +22,13 @@ package org.neo4j.cluster.member.paxos;
 import java.net.URI;
 
 import org.neo4j.cluster.BindingListener;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.com.BindingNotifier;
 import org.neo4j.cluster.member.ClusterMemberAvailability;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcast;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastSerializer;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectInputStreamFactory;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectOutputStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -36,18 +39,26 @@ import org.neo4j.kernel.logging.Logging;
  */
 public class PaxosClusterMemberAvailability implements ClusterMemberAvailability, Lifecycle
 {
-    private URI serverClusterId;
+    private volatile URI serverClusterId;
     private StringLogger logger;
     protected AtomicBroadcastSerializer serializer;
+    private final InstanceId myId;
     private BindingNotifier binding;
     private AtomicBroadcast atomicBroadcast;
     private BindingListener bindingListener;
+    private ObjectInputStreamFactory objectInputStreamFactory;
+    private ObjectOutputStreamFactory objectOutputStreamFactory;
 
-    public PaxosClusterMemberAvailability( BindingNotifier binding, AtomicBroadcast atomicBroadcast, Logging logging )
+    public PaxosClusterMemberAvailability( InstanceId myId, BindingNotifier binding, AtomicBroadcast atomicBroadcast,
+                                           Logging logging, ObjectInputStreamFactory objectInputStreamFactory,
+                                           ObjectOutputStreamFactory objectOutputStreamFactory )
     {
+        this.myId = myId;
         this.binding = binding;
         this.atomicBroadcast = atomicBroadcast;
-        this.logger = logging.getLogger( getClass() );
+        this.objectInputStreamFactory = objectInputStreamFactory;
+        this.objectOutputStreamFactory = objectOutputStreamFactory;
+        this.logger = logging.getMessagesLog( getClass() );
 
         bindingListener = new BindingListener()
         {
@@ -64,7 +75,7 @@ public class PaxosClusterMemberAvailability implements ClusterMemberAvailability
     public void init()
             throws Throwable
     {
-        serializer = new AtomicBroadcastSerializer();
+        serializer = new AtomicBroadcastSerializer( objectInputStreamFactory, objectOutputStreamFactory );
 
         binding.addBindingListener( bindingListener );
     }
@@ -93,7 +104,7 @@ public class PaxosClusterMemberAvailability implements ClusterMemberAvailability
     {
         try
         {
-            Payload payload = serializer.broadcast( new MemberIsAvailable( role, serverClusterId, roleUri ) );
+            Payload payload = serializer.broadcast( new MemberIsAvailable( role, myId, serverClusterId, roleUri ) );
             serializer.receive( payload );
             atomicBroadcast.broadcast( payload );
         }
@@ -108,7 +119,7 @@ public class PaxosClusterMemberAvailability implements ClusterMemberAvailability
     {
         try
         {
-            Payload payload = serializer.broadcast( new MemberIsUnavailable( role, serverClusterId ) );
+            Payload payload = serializer.broadcast( new MemberIsUnavailable( role, myId, serverClusterId ) );
             serializer.receive( payload );
             atomicBroadcast.broadcast( payload );
         }

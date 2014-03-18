@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,18 +25,26 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 public class SingleLoggingService extends LifecycleAdapter implements Logging
 {
     private final StringLogger logger;
+    private final ConsoleLogger consoleLogger;
 
     public SingleLoggingService( StringLogger logger )
     {
         this.logger = logger;
+        this.consoleLogger = new ConsoleLogger( this.logger );
     }
     
     @Override
-    public StringLogger getLogger( Class loggingClass )
+    public StringLogger getMessagesLog( Class loggingClass )
     {
         return logger;
     }
-    
+
+    @Override
+    public ConsoleLogger getConsoleLog( Class loggingClass )
+    {
+        return consoleLogger;
+    }
+
     @Override
     public void shutdown() throws Throwable
     {

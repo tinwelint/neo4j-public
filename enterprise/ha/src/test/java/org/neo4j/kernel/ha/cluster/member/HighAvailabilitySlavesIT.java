@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -43,7 +43,7 @@ public class HighAvailabilitySlavesIT
     @After
     public void after() throws Throwable
     {
-        clusterManager.shutdown();
+        clusterManager.stop();
     }
     
     @Test
@@ -60,8 +60,17 @@ public class HighAvailabilitySlavesIT
         long node = createNode( cluster.getMaster(), name );
 
         // then
-        for ( HighlyAvailableGraphDatabase db : cluster.getAllMembers() )
-            assertEquals( node, getNodeByName( db, name ) );
+        for ( HighlyAvailableGraphDatabase db : cluster.getAllMembers() ) {
+            Transaction transaction = db.beginTx();
+            try
+            {
+                assertEquals( node, getNodeByName( db, name ) );
+            }
+            finally
+            {
+                transaction.finish();
+            }
+        }
     }
 
     private long getNodeByName( HighlyAvailableGraphDatabase db, String name )

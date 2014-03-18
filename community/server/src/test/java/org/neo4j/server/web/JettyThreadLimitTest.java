@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,41 +19,26 @@
  */
 package org.neo4j.server.web;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.junit.Rule;
 import org.junit.Test;
-import org.mortbay.thread.QueuedThreadPool;
+import org.neo4j.test.Mute;
+
+import static org.junit.Assert.*;
+import static org.neo4j.test.Mute.muteAll;
 
 public class JettyThreadLimitTest
 {
-
-    @Test
-    public void shouldHaveSensibleDefaultJettyThreadPoolSize() throws Exception
-    {
-    	Jetty6WebServer server = new Jetty6WebServer();
-        server.setPort( 7480 );
-    	try {
-	        server.start();
-	        QueuedThreadPool threadPool = (QueuedThreadPool) server.getJetty()
-	                .getThreadPool();
-	        threadPool.start();
-            int configuredMaxThreads = 10 * Runtime.getRuntime().availableProcessors();
-            loadThreadPool( threadPool, configuredMaxThreads + 1 );
-            assertEquals(configuredMaxThreads, threadPool.getThreads() );
-	    } finally 
-	    {
-	    	server.stop();
-	    }
-    }
+    @Rule
+    public Mute mute = muteAll();
 
     @Test
     public void shouldHaveConfigurableJettyThreadPoolSize() throws Exception
     {
-    	Jetty6WebServer server = new Jetty6WebServer();
+    	Jetty9WebServer server = new Jetty9WebServer();
         final int maxThreads = 7;
         server.setMaxThreads( maxThreads );
         server.setPort( 7480 );
@@ -88,9 +73,11 @@ public class JettyThreadLimitTest
                     }
                     catch ( InterruptedException e )
                     {
+                        e.printStackTrace();
                     }
                     catch ( BrokenBarrierException e )
                     {
+                        e.printStackTrace();
                     }
                 }
             } );

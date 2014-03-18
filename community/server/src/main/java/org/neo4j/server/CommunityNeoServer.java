@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,10 +24,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.server.configuration.Configurator;
-import org.neo4j.server.database.CommunityDatabase;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.modules.DiscoveryModule;
 import org.neo4j.server.modules.ManagementApiModule;
+import org.neo4j.server.modules.Neo4jBrowserModule;
 import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.SecurityRulesModule;
 import org.neo4j.server.modules.ServerModule;
@@ -38,26 +38,29 @@ import org.neo4j.server.preflight.EnsurePreparedForHttpLogging;
 import org.neo4j.server.preflight.PerformRecoveryIfNecessary;
 import org.neo4j.server.preflight.PerformUpgradeIfNecessary;
 import org.neo4j.server.preflight.PreFlightTasks;
-import org.neo4j.server.web.Jetty6WebServer;
+import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.WebServer;
 import org.neo4j.server.webadmin.rest.AdvertisableService;
 import org.neo4j.server.webadmin.rest.JmxService;
 import org.neo4j.server.webadmin.rest.MonitorService;
 import org.neo4j.server.webadmin.rest.console.ConsoleService;
 
+import static org.neo4j.server.database.LifecycleManagingDatabase.EMBEDDED;
+import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManagingDatabase;
+
 public class CommunityNeoServer extends AbstractNeoServer
 {
-    public CommunityNeoServer()
-    {
-    }
-
     public CommunityNeoServer( Configurator configurator )
     {
-        this.configurator = configurator;
-        init();
+        this( configurator, lifecycleManagingDatabase( EMBEDDED ) );
     }
 
-	@Override
+    public CommunityNeoServer( Configurator configurator, Database.Factory dbFactory )
+    {
+        super( configurator, dbFactory );
+    }
+
+    @Override
 	protected PreFlightTasks createPreflightTasks()
     {
 		return new PreFlightTasks(
@@ -78,27 +81,22 @@ public class CommunityNeoServer extends AbstractNeoServer
         		new RESTApiModule(webServer, database, configurator.configuration()), 
         		new ManagementApiModule(webServer, configurator.configuration()),
                 new ThirdPartyJAXRSModule(webServer, configurator, this),
-                new WebAdminModule(webServer, configurator.configuration(), database), 
+                new WebAdminModule(webServer ),
+                new Neo4jBrowserModule(webServer, configurator.configuration(), database),
                 new StatisticModule(webServer, statisticsCollector, configurator.configuration()),
                 new SecurityRulesModule(webServer, configurator.configuration()));
 	}
 
 	@Override
-	protected Database createDatabase()
-    {
-		return new CommunityDatabase(configurator.configuration());
-	}
-
-	@Override
 	protected WebServer createWebServer()
     {
-		return new Jetty6WebServer();
+		return new Jetty9WebServer();
 	}
 
     @Override
     public Iterable<AdvertisableService> getServices()
     {
-        List<AdvertisableService> toReturn = new ArrayList<AdvertisableService>( 3 );
+        List<AdvertisableService> toReturn = new ArrayList<>( 3 );
         toReturn.add( new ConsoleService( null, null, null ) );
         toReturn.add( new JmxService( null, null ) );
         toReturn.add( new MonitorService( null, null ) );

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,22 @@
  */
 package org.neo4j.kernel.impl;
 
+import java.io.File;
 import java.util.concurrent.CountDownLatch;
+
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.logging.SystemOutLogging;
+import org.neo4j.qa.tooling.DumpProcessInformation;
 import org.neo4j.test.EmbeddedDatabaseRule;
+import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.subprocess.BreakPoint;
 import org.neo4j.test.subprocess.BreakpointHandler;
 import org.neo4j.test.subprocess.BreakpointTrigger;
@@ -35,7 +43,16 @@ import org.neo4j.test.subprocess.DebuggedThread;
 import org.neo4j.test.subprocess.DebuggerDeadlockCallback;
 import org.neo4j.test.subprocess.EnabledBreakpoints;
 import org.neo4j.test.subprocess.ForeignBreakpoints;
+import org.neo4j.test.subprocess.SubProcess;
 import org.neo4j.test.subprocess.SubProcessTestRunner;
+
+import static java.util.concurrent.TimeUnit.MINUTES;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import static org.neo4j.helpers.Predicates.stringContains;
+import static org.neo4j.qa.tooling.DumpVmInformation.dumpVmInfo;
 
 @ForeignBreakpoints( {
                       @ForeignBreakpoints.BreakpointDef( type = "org.neo4j.kernel.impl.core.ArrayBasedPrimitive",
@@ -43,10 +60,14 @@ import org.neo4j.test.subprocess.SubProcessTestRunner;
                       @ForeignBreakpoints.BreakpointDef( type = "org.neo4j.kernel.impl.core.NodeManager",
                               method = "getNodeIfCached" ) } )
 @RunWith( SubProcessTestRunner.class )
+@Ignore( "Ignored in 2.0 due to half-way refactoring moving properties into kernel API. " +
+         "Unignore and change appropriately when it's done" )
 public class TestPropertyDataRace
 {
     @ClassRule
     public static EmbeddedDatabaseRule database = new EmbeddedDatabaseRule();
+
+    public static final TargetDirectory targetDir = TargetDirectory.forTest( TestPropertyDataRace.class );
 
     @Test
     @EnabledBreakpoints( { "enable breakpoints", "done" } )
@@ -79,7 +100,7 @@ public class TestPropertyDataRace
                 {
                     for ( String key : one.getPropertyKeys() )
                     {
-                        System.out.println( getName() + " removed " + key + "=" + one.removeProperty( key ) );
+                        one.removeProperty( key );
                     }
                     clearCaches();
                     prepare.countDown();
@@ -126,7 +147,7 @@ public class TestPropertyDataRace
                     }
                     for ( String key : one.getPropertyKeys() )
                     {
-                        System.out.println( getName() + " removed " + key + "=" + one.removeProperty( key ) );
+                        one.removeProperty( key );
                     }
 
                     txn.success();
@@ -139,17 +160,26 @@ public class TestPropertyDataRace
                 done.countDown();
             }
         }.start();
-        done.await();
+        
+        if ( !done.await( 1, MINUTES ) )
+        {
+            File dumpDirectory = targetDir.directory( "dump", true );
+            dumpVmInfo( dumpDirectory );
+            new DumpProcessInformation( new SystemOutLogging(), dumpDirectory ).doThreadDump(
+                    stringContains( SubProcess.class.getSimpleName() ) );
+            fail( "Test didn't complete within a reasonable time, dumping process information to " + dumpDirectory );
+        }
+        
         for ( String key : two.getPropertyKeys() )
         {
-            System.out.println( "should be untouched: " + key + "=" + two.getProperty( key ) );
+            assertEquals( "two", two.getProperty( key ) );
         }
     }
 
     @BreakpointTrigger( "enable breakpoints" )
     private void clearCaches()
     {
-        database.getGraphDatabaseAPI().getNodeManager().clearCache();
+        database.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( NodeManager.class ).clearCache();
     }
 
     @BreakpointTrigger( "done" )
@@ -190,7 +220,10 @@ public class TestPropertyDataRace
     public static void onSetProperties( BreakPoint self, DebugInterface di )
     {
         self.disable();
-        if ( thread != null ) thread.resume();
+        if ( thread != null )
+        {
+            thread.resume();
+        }
         thread = di.thread().suspend( RESUME_THREAD );
     }
 
@@ -198,7 +231,10 @@ public class TestPropertyDataRace
     public static void onGetNodeIfCached( BreakPoint self, DebugInterface di )
     {
         self.disable();
-        if ( thread == null ) thread = di.thread().suspend( null );
+        if ( thread == null )
+        {
+            thread = di.thread().suspend( null );
+        }
     }
 
     @BreakpointHandler( "done" )

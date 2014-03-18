@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.channels.FileChannel;
+import java.util.zip.ZipOutputStream;
+
+import org.neo4j.helpers.Function;
 
 public interface FileSystemAbstraction
 {
@@ -36,6 +40,8 @@ public interface FileSystemAbstraction
     
     Reader openAsReader( File fileName, String encoding ) throws IOException;
     
+    Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException;
+    
     FileLock tryLock( File fileName, FileChannel channel ) throws IOException;
     
     FileChannel create( File fileName ) throws IOException;
@@ -44,7 +50,7 @@ public interface FileSystemAbstraction
     
     boolean mkdir( File fileName );
     
-    boolean mkdirs( File fileName );
+    void mkdirs( File fileName ) throws IOException;
     
     long getFileSize( File fileName );
 
@@ -53,11 +59,23 @@ public interface FileSystemAbstraction
     void deleteRecursively( File directory ) throws IOException;
     
     boolean renameFile( File from, File to ) throws IOException;
-
-    // TODO change the name to something more descriptive
-    void autoCreatePath( File path ) throws IOException;
     
     File[] listFiles( File directory );
     
     boolean isDirectory( File file );
+    
+    void moveToDirectory( File file, File toDirectory ) throws IOException;
+    
+    void copyFile( File from, File to ) throws IOException;
+    
+    void copyRecursively( File fromDirectory, File toDirectory ) throws IOException;
+
+    <K extends ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem( Class<K> clazz, Function<Class<K>, K> creator );
+
+    interface ThirdPartyFileSystem
+    {
+        void close();
+
+        void dumpToZip( ZipOutputStream zip, byte[] scratchPad ) throws IOException;
+    }
 }

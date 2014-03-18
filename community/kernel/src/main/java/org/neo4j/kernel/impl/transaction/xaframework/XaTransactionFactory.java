@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,6 @@ package org.neo4j.kernel.impl.transaction.xaframework;
 
 import org.neo4j.kernel.impl.core.TransactionState;
 
-
 /**
  * Factory for creating {@link XaTransaction XaTransactions} used during
  * recovery.
@@ -38,7 +37,8 @@ public abstract class XaTransactionFactory
      * @param state the transaction state for this transaction.
      * @return A new xa transaction
      */
-    public abstract XaTransaction create( int identifier, TransactionState state );
+    public abstract XaTransaction create( long lastCommittedTxWhenTransactionStarted,
+                                          TransactionState state );
 
     public abstract void flushAll();
     

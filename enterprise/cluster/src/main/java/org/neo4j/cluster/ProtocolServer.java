@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,9 +22,6 @@ package org.neo4j.cluster;
 import java.net.URI;
 
 import org.neo4j.cluster.com.BindingNotifier;
-import org.neo4j.cluster.com.message.Message;
-import org.neo4j.cluster.com.message.MessageProcessor;
-import org.neo4j.cluster.com.message.MessageType;
 import org.neo4j.cluster.statemachine.StateMachine;
 import org.neo4j.cluster.statemachine.StateMachineConversations;
 import org.neo4j.cluster.statemachine.StateMachineProxyFactory;
@@ -35,42 +32,38 @@ import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.logging.Logging;
 
 /**
- * A ProtocolServer ties together the underlying ConnectedStateMachines with an understanding of ones
+ * A ProtocolServer ties together the underlying StateMachines with an understanding of ones
  * own server address (me), and provides a proxy factory for creating clients to invoke the CSM.
  */
 public class ProtocolServer implements BindingNotifier
 {
-    private URI me;
+    private final InstanceId me;
+    private URI boundAt;
     protected StateMachineProxyFactory proxyFactory;
-    protected final ConnectedStateMachines connectedStateMachines;
+    protected final StateMachines stateMachines;
     private Iterable<BindingListener> bindingListeners = Listeners.newListeners();
     private final StringLogger msgLog;
 
-    public ProtocolServer( ConnectedStateMachines connectedStateMachines, Logging logging )
+    public ProtocolServer( InstanceId me, StateMachines stateMachines, Logging logging )
     {
-        this.connectedStateMachines = connectedStateMachines;
-        this.msgLog = logging.getLogger( getClass() );
+        this.me = me;
+        this.stateMachines = stateMachines;
+        this.msgLog = logging.getMessagesLog( getClass() );
 
-        FromHeaderMessageProcessor fromHeaderMessageProcessor = new FromHeaderMessageProcessor();
-        addBindingListener( fromHeaderMessageProcessor );
-        connectedStateMachines.addMessageProcessor( fromHeaderMessageProcessor );
-
-        StateMachineConversations conversations = new StateMachineConversations();
-        proxyFactory = new StateMachineProxyFactory( connectedStateMachines, conversations );
-        connectedStateMachines.addMessageProcessor( proxyFactory );
-
-        addBindingListener( conversations );
-        addBindingListener( proxyFactory );
+        StateMachineConversations conversations = new StateMachineConversations(me);
+        proxyFactory = new StateMachineProxyFactory( stateMachines, conversations, me );
+        stateMachines.addMessageProcessor( proxyFactory );
     }
 
+    @Override
     public void addBindingListener( BindingListener listener )
     {
         bindingListeners = Listeners.addListener( listener, bindingListeners );
         try
         {
-            if ( me != null )
+            if ( boundAt != null )
             {
-                listener.listeningAt( me );
+                listener.listeningAt( boundAt );
             }
         }
         catch ( Throwable t )
@@ -79,6 +72,7 @@ public class ProtocolServer implements BindingNotifier
         }
     }
 
+    @Override
     public void removeBindingListener( BindingListener listener )
     {
         bindingListeners = Listeners.removeListener( listener, bindingListeners );
@@ -86,7 +80,7 @@ public class ProtocolServer implements BindingNotifier
 
     public void listeningAt( final URI me )
     {
-        this.me = me;
+        this.boundAt = me;
 
         Listeners.notifyListeners( bindingListeners, new Listeners.Notification<BindingListener>()
         {
@@ -103,24 +97,19 @@ public class ProtocolServer implements BindingNotifier
      *
      * @return server id
      */
-    public URI getServerId()
+    public InstanceId getServerId()
     {
         return me;
     }
 
-    public ConnectedStateMachines getConnectedStateMachines()
+    public StateMachines getStateMachines()
     {
-        return connectedStateMachines;
+        return stateMachines;
     }
 
     public void addStateTransitionListener( StateTransitionListener stateTransitionListener )
     {
-        connectedStateMachines.addStateTransitionListener( stateTransitionListener );
-    }
-
-    public void removeStateTransitionListener( StateTransitionListener stateTransitionListener )
-    {
-        connectedStateMachines.removeStateTransitionListener( stateTransitionListener );
+        stateMachines.addStateTransitionListener( stateTransitionListener );
     }
 
     public <T> T newClient( Class<T> clientProxyInterface )
@@ -132,37 +121,21 @@ public class ProtocolServer implements BindingNotifier
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        builder.append(String.format("Instance URI:")).append(me.toString()).append("\n");
-        for( StateMachine stateMachine : connectedStateMachines.getStateMachines() )
+        builder.append( "Instance URI: " ).append( boundAt.toString() ).append( "\n" );
+        for( StateMachine stateMachine : stateMachines.getStateMachines() )
         {
-            builder.append( "  "+stateMachine).append("\n");
+            builder.append( "  " ).append( stateMachine ).append( "\n" );
         }
         return builder.toString();
     }
 
     public Timeouts getTimeouts()
     {
-        return connectedStateMachines.getTimeouts();
+        return stateMachines.getTimeouts();
     }
 
-    private class FromHeaderMessageProcessor
-            implements MessageProcessor, BindingListener
+    public URI boundAt()
     {
-        private String me;
-
-        @Override
-        public void listeningAt( URI me )
-        {
-            this.me = me.toString();
-        }
-
-        @Override
-        public void process( Message<? extends MessageType> message )
-        {
-            if ( message.hasHeader( Message.TO ) && me != null )
-            {
-                message.setHeader( Message.FROM, me );
-            }
-        }
+        return boundAt;
     }
 }

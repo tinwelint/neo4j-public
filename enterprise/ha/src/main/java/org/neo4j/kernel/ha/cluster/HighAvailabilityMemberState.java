@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,8 @@ package org.neo4j.kernel.ha.cluster;
 
 import java.net.URI;
 
+import org.neo4j.cluster.InstanceId;
+
 /**
  * This represents the different states that a cluster member
  * can have internally.
@@ -36,10 +38,10 @@ public enum HighAvailabilityMemberState
             {
                 @Override
                 public HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context,
-                                                                    URI masterURI )
+                                                                    InstanceId masterId )
                 {
                     assert context.getAvailableHaMaster() == null;
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return TO_MASTER;
                     }
@@ -48,30 +50,37 @@ public enum HighAvailabilityMemberState
 
                 @Override
                 public HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context,
-                                                                      URI masterURI, URI
-                        masterHaURI )
+                                                                      InstanceId masterId, URI masterHaURI )
                 {
 //                    assert context.getAvailableMaster() == null;
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
-                        throw new RuntimeException( "this cannot be happening" );
+                        throw new RuntimeException( "Received a MasterIsAvailable event for my InstanceId while in" +
+                                " PENDING state" );
                     }
                     return TO_SLAVE;
                 }
 
                 @Override
                 public HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context,
+                                                                     InstanceId slaveId,
                                                                      URI slaveUri )
                 {
-                    if ( slaveUri.equals( context.getMyId() ) )
+                    if ( slaveId.equals( context.getMyId() ) )
                     {
-                        throw new RuntimeException( "cannot go from pending to slave" );
+                        throw new RuntimeException( "Cannot go from pending to slave" );
                     }
                     return this;
                 }
 
                 @Override
-                public boolean isAccessAllowed( HighAvailabilityMemberContext context )
+                public boolean isEligibleForElection()
+                {
+                    return true;
+                }
+
+                @Override
+                public boolean isAccessAllowed()
                 {
                     return false;
                 }
@@ -85,14 +94,14 @@ public enum HighAvailabilityMemberState
             {
                 @Override
                 public HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context,
-                                                                    URI masterURI )
+                                                                    InstanceId masterId )
                 {
-                    if ( masterURI.equals( context.getElectedMasterId() ) )
+                    if ( masterId.equals( context.getElectedMasterId() ) )
                     {
                         // A member joined and we all got the same event
                         return this;
                     }
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return TO_MASTER;
                     }
@@ -102,15 +111,15 @@ public enum HighAvailabilityMemberState
 
                 @Override
                 public HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context,
-                                                                      URI masterURI,
+                                                                      InstanceId masterId,
                                                                       URI masterHaURI )
                 {
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         throw new RuntimeException( "i (" + context.getMyId() + ") am trying to become a slave but " +
                                 "someone said i am available as master" );
                     }
-                    if ( masterHaURI.equals( context.getAvailableHaMaster() ) )
+                    if ( masterId.equals( context.getElectedMasterId() ) )
                     {
                         // A member joined and we all got the same event
                         return this;
@@ -122,9 +131,10 @@ public enum HighAvailabilityMemberState
 
                 @Override
                 public HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context,
+                                                                     InstanceId slaveId,
                                                                      URI slaveUri )
                 {
-                    if ( slaveUri.equals( context.getMyId() ) )
+                    if ( slaveId.equals( context.getMyId() ) )
                     {
                         return SLAVE;
                     }
@@ -132,7 +142,13 @@ public enum HighAvailabilityMemberState
                 }
 
                 @Override
-                public boolean isAccessAllowed( HighAvailabilityMemberContext context )
+                public boolean isEligibleForElection()
+                {
+                    return false;
+                }
+
+                @Override
+                public boolean isAccessAllowed()
                 {
                     return false;
                 }
@@ -145,10 +161,10 @@ public enum HighAvailabilityMemberState
             {
                 @Override
                 public HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context,
-                                                                    URI masterURI )
+                                                                    InstanceId masterId )
                 {
                     assert context.getAvailableHaMaster() == null;
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return this;
                     }
@@ -157,29 +173,37 @@ public enum HighAvailabilityMemberState
 
                 @Override
                 public HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context,
-                                                                      URI masterURI,
+                                                                      InstanceId masterId,
                                                                       URI masterHaURI )
                 {
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return MASTER;
                     }
-                    throw new RuntimeException( "i probably missed a masterIsElected event - not really that good" );
+                    throw new RuntimeException( "Received a MasterIsAvailable event for instance " + masterId
+                    + " while in TO_MASTER state");
                 }
 
                 @Override
                 public HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context,
+                                                                     InstanceId slaveId,
                                                                      URI slaveUri )
                 {
-                    if ( slaveUri.equals( context.getMyId() ) )
+                    if ( slaveId.equals( context.getMyId() ) )
                     {
-                        throw new RuntimeException( "cannot be transitioning to master and slave at the same time" );
+                        throw new RuntimeException( "Cannot be transitioning to master and slave at the same time" );
                     }
                     return this;
                 }
 
                 @Override
-                public boolean isAccessAllowed( HighAvailabilityMemberContext context )
+                public boolean isEligibleForElection()
+                {
+                    return true;
+                }
+
+                @Override
+                public boolean isAccessAllowed()
                 {
                     return false;
                 }
@@ -192,9 +216,9 @@ public enum HighAvailabilityMemberState
             {
                 @Override
                 public HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context,
-                                                                    URI masterURI )
+                                                                    InstanceId masterId )
                 {
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return this;
                     }
@@ -205,30 +229,38 @@ public enum HighAvailabilityMemberState
 
                 @Override
                 public HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context,
-                                                                      URI masterURI,
+                                                                      InstanceId masterId,
                                                                       URI masterHaURI )
                 {
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return this;
                     }
                     throw new RuntimeException( "I, " + context.getMyId() + " got a masterIsAvailable for " +
-                            masterHaURI + " (id is " + masterURI + " ) while being master. That should not happen" );
+                            masterHaURI + " (id is " + masterId + " ) while in MASTER state. Probably missed a " +
+                            "MasterIsElected event." );
                 }
 
                 @Override
                 public HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context,
+                                                                     InstanceId slaveId,
                                                                      URI slaveUri )
                 {
-                    if ( slaveUri.equals( context.getMyId() ) )
+                    if ( slaveId.equals( context.getMyId() ) )
                     {
-                        throw new RuntimeException( "cannot be master and transition to slave at the same time" );
+                        throw new RuntimeException( "Cannot be master and transition to slave at the same time" );
                     }
                     return this;
                 }
 
                 @Override
-                public boolean isAccessAllowed( HighAvailabilityMemberContext context )
+                public boolean isEligibleForElection()
+                {
+                    return true;
+                }
+
+                @Override
+                public boolean isAccessAllowed()
                 {
                     return true;
                 }
@@ -241,13 +273,13 @@ public enum HighAvailabilityMemberState
             {
                 @Override
                 public HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context,
-                                                                    URI masterURI )
+                                                                    InstanceId masterId )
                 {
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
                         return TO_MASTER;
                     }
-                    if ( masterURI.equals( context.getElectedMasterId() ) )
+                    if ( masterId.equals( context.getElectedMasterId() ) )
                     {
                         return this;
                     }
@@ -259,40 +291,50 @@ public enum HighAvailabilityMemberState
 
                 @Override
                 public HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context,
-                                                                      URI masterURI,
+                                                                      InstanceId masterId,
                                                                       URI masterHaURI )
                 {
-                    if ( masterURI.equals( context.getMyId() ) )
+                    if ( masterId.equals( context.getMyId() ) )
                     {
-                        throw new RuntimeException( "master? i don't think so" );
+                        throw new RuntimeException( "Cannot transition to MASTER directly from SLAVE state" );
                     }
-                    else if ( masterHaURI.equals( context.getAvailableHaMaster() ) )
+                    else if ( masterId.equals( context.getElectedMasterId() ) )
                     {
                         // this is just someone else that joined the cluster
                         return this;
                     }
-                    throw new RuntimeException( "i prolly missed a masterIsElected event, we're not looking good" );
+                    throw new RuntimeException( "Received a MasterIsAvailable event for " + masterId +
+                            " which is different from the current master (" + context.getElectedMasterId() +
+                            ") while in the SLAVE state (probably missed a MasterIsElected event)" );
                 }
 
                 @Override
-                public HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context, URI slaveUri )
+                public HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context, InstanceId slaveId, URI slaveUri )
                 {
                     return this;
                 }
 
                 @Override
-                public boolean isAccessAllowed( HighAvailabilityMemberContext context )
+                public boolean isEligibleForElection()
+                {
+                    return true;
+                }
+
+                @Override
+                public boolean isAccessAllowed()
                 {
                     return true;
                 }
             };
 
-    public abstract HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context, URI masterUri );
+    public abstract HighAvailabilityMemberState masterIsElected( HighAvailabilityMemberContext context, InstanceId masterId );
 
-    public abstract HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context, URI masterClusterUri,
+    public abstract HighAvailabilityMemberState masterIsAvailable( HighAvailabilityMemberContext context, InstanceId masterId,
                                                                    URI masterHaURI );
 
-    public abstract HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context, URI slaveUri );
+    public abstract HighAvailabilityMemberState slaveIsAvailable( HighAvailabilityMemberContext context, InstanceId slaveId, URI slaveUri );
 
-    public abstract boolean isAccessAllowed( HighAvailabilityMemberContext context );
+    public abstract boolean isEligibleForElection();
+
+    public abstract boolean isAccessAllowed();
 }

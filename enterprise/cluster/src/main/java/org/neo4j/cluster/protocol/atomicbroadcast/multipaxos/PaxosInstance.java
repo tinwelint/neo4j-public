@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,6 +28,8 @@ import java.util.List;
  */
 public class PaxosInstance
 {
+
+
     enum State
     {
         empty,
@@ -35,10 +37,10 @@ public class PaxosInstance
         p1_ready,
         p2_pending,
         closed,
-        delivered
+        delivered;
     }
-
     PaxosInstanceStore store;
+
     InstanceId id = null;
     State state = State.empty;
     long ballot = 0;
@@ -49,6 +51,7 @@ public class PaxosInstance
     Object value_1;
     long phase1Ballot = 0;
     Object value_2;
+    // This is true iff the acceptors did not already have a value for this instance
     boolean clientValue = false;
     String conversationIdHeader;
 
@@ -70,11 +73,10 @@ public class PaxosInstance
         this.ballot = ballot;
     }
 
-    public void phase1Timeout( long ballot, List<URI> newAcceptors )
+    public void phase1Timeout( long ballot )
     {
         this.ballot = ballot;
         promises.clear();
-        this.acceptors = newAcceptors;
     }
 
     public void promise( ProposerMessage.PromiseState promiseState )
@@ -94,6 +96,8 @@ public class PaxosInstance
 
     public void ready( Object value, boolean clientValue )
     {
+        assertNotNull( value );
+        
         state = State.p1_ready;
         promises.clear();
         value_1 = null;
@@ -136,12 +140,22 @@ public class PaxosInstance
 
     public void closed( Object value, String conversationIdHeader )
     {
+        assertNotNull( value );
+        
         value_2 = value;
         state = State.closed;
         accepts.clear();
         rejectedAccepts.clear();
         acceptors = null;
         this.conversationIdHeader = conversationIdHeader;
+    }
+
+    private void assertNotNull( Object value )
+    {
+        if ( value == null )
+        {
+            throw new IllegalArgumentException( "value null" );
+        }
     }
 
     public void delivered()
@@ -155,9 +169,32 @@ public class PaxosInstance
         return acceptors;
     }
 
+    public PaxosInstance snapshot(PaxosInstanceStore store)
+    {
+        PaxosInstance snap = new PaxosInstance( store, id );
+
+        snap.state = state;
+        snap.ballot = ballot;
+        snap.acceptors = acceptors == null ? null : new ArrayList<>(acceptors);
+        snap.promises = promises == null ? null : new ArrayList<>(promises);
+        snap.accepts = accepts == null ? null : new ArrayList<>(accepts);
+        snap.rejectedAccepts = rejectedAccepts == null ? null : new ArrayList<>(rejectedAccepts);
+        snap.value_1 = value_1;
+        snap.phase1Ballot = phase1Ballot;
+        snap.value_2 = value_2;
+        snap.clientValue = clientValue;
+        snap.conversationIdHeader = conversationIdHeader;
+
+        return snap;
+    }
+
     @Override
     public String toString()
     {
-        return id + ": " + state.name() + " b=" + ballot;
+        return "[id:" + id +
+               " state:" + state.name() +
+               " b:" + ballot +
+               " v1:" + value_1 +
+               " v2:" + value_2 + "]";
     }
 }

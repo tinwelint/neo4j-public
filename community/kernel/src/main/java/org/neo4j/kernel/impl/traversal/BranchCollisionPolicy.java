@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,10 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
-import org.neo4j.graphdb.traversal.Evaluator;
-import org.neo4j.graphdb.traversal.BranchCollisionDetector;
-
-public interface BranchCollisionPolicy
+/**
+ * @deprecated See {@link org.neo4j.graphdb.traversal.BranchCollisionPolicy}
+ */
+public interface BranchCollisionPolicy extends org.neo4j.graphdb.traversal.BranchCollisionPolicy
 {
-    BranchCollisionDetector create( Evaluator evaluator );
+
 }

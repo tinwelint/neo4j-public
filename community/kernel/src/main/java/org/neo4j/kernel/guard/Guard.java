@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -54,9 +54,9 @@ public class Guard
         start( new OperationsCount( maxOps ) );
     }
 
-    public void startTimeout( final long validFor )
+    public void startTimeout( final long validForInMilliSeconds )
     {
-        final Timeout timeout = new Timeout( validFor + currentTimeMillis() );
+        final Timeout timeout = new Timeout( validForInMilliSeconds + currentTimeMillis() );
         start( timeout );
     }
 

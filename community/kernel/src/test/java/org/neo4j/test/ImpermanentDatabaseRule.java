@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,16 +21,29 @@ package org.neo4j.test;
 
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.kernel.logging.Logging;
 
 /**
  * JUnit @Rule for configuring, creating and managing an ImpermanentGraphDatabase instance.
  */
 public class ImpermanentDatabaseRule extends DatabaseRule
 {
+    private Logging logging;
+
+    public ImpermanentDatabaseRule()
+    {
+
+    }
+
+    public ImpermanentDatabaseRule( Logging logging )
+    {
+        this.logging = logging;
+    }
+
     @Override
     protected GraphDatabaseFactory newFactory()
     {
-        return new TestGraphDatabaseFactory();
+        return new TestGraphDatabaseFactory( logging );
     }
     
     @Override

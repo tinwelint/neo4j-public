@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,6 @@
  */
 package org.neo4j.server.rrd;
 
-import static java.lang.Double.NaN;
-import static java.util.Arrays.asList;
-import static java.util.concurrent.TimeUnit.DAYS;
-import static java.util.concurrent.TimeUnit.HOURS;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.server.configuration.Configurator.RRDB_LOCATION_PROPERTY_KEY;
-import static org.rrd4j.ConsolFun.AVERAGE;
-import static org.rrd4j.ConsolFun.MAX;
-import static org.rrd4j.ConsolFun.MIN;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,19 +26,36 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.configuration.Configuration;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.InternalAbstractGraphDatabase;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.server.database.Database;
-import org.neo4j.server.logging.Logger;
-import org.neo4j.server.rrd.sampler.NodeIdsInUseSampleable;
-import org.neo4j.server.rrd.sampler.PropertyCountSampleable;
-import org.neo4j.server.rrd.sampler.RelationshipCountSampleable;
 import org.rrd4j.ConsolFun;
 import org.rrd4j.core.DsDef;
 import org.rrd4j.core.RrdDb;
 import org.rrd4j.core.RrdDef;
 import org.rrd4j.core.RrdToolkit;
+
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.InternalAbstractGraphDatabase;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.server.database.Database;
+import org.neo4j.server.database.RrdDbWrapper;
+import org.neo4j.server.logging.Logger;
+import org.neo4j.server.rrd.sampler.NodeIdsInUseSampleable;
+import org.neo4j.server.rrd.sampler.PropertyCountSampleable;
+import org.neo4j.server.rrd.sampler.RelationshipCountSampleable;
+
+import static java.lang.Double.NaN;
+import static java.util.Arrays.asList;
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import static org.rrd4j.ConsolFun.AVERAGE;
+import static org.rrd4j.ConsolFun.MAX;
+import static org.rrd4j.ConsolFun.MIN;
+
+import static org.neo4j.server.configuration.Configurator.RRDB_LOCATION_PROPERTY_KEY;
 
 public class RrdFactory
 {
@@ -61,26 +67,27 @@ public class RrdFactory
 
     public RrdFactory( Configuration config )
     {
-
         this.config = config;
     }
 
-    public RrdDb createRrdDbAndSampler( final Database db, JobScheduler scheduler ) throws IOException
+    public org.neo4j.server.database.RrdDbWrapper createRrdDbAndSampler( final Database db, JobScheduler scheduler ) throws IOException
     {
+        NodeManager nodeManager = db.getGraph().getDependencyResolver().resolveDependency( NodeManager.class );
+
         Sampleable[] primitives = {
-                new NodeIdsInUseSampleable( db.getGraph() ),
-                new PropertyCountSampleable( db.getGraph() ),
-                new RelationshipCountSampleable( db.getGraph() )
+                new NodeIdsInUseSampleable( nodeManager ),
+                new PropertyCountSampleable( nodeManager ),
+                new RelationshipCountSampleable( nodeManager )
         };
 
         Sampleable[] usage = {};
 
-        final String basePath = config.getString( RRDB_LOCATION_PROPERTY_KEY,
-                getDefaultDirectory(db.getGraph()) );
-        final RrdDb rrdb = createRrdb( basePath, join( primitives, usage ) );
+        final String rrdPath = config.getString( RRDB_LOCATION_PROPERTY_KEY,
+                getDefaultRrdFile( db.getGraph() ) );
+        final RrdDbWrapper rrdb = createRrdb( rrdPath, isEphemereal( db.getGraph() ), join( primitives, usage ) );
 
         scheduler.scheduleAtFixedRate(
-                new RrdJob( new RrdSamplerImpl( rrdb, primitives ) ),
+                new RrdJob( new RrdSamplerImpl( rrdb.get(), primitives ) ),
                 RRD_THREAD_NAME + "[primitives]",
                 SECONDS.toMillis( 0 ),
                 SECONDS.toMillis( 3 )
@@ -99,22 +106,32 @@ public class RrdFactory
         return result.toArray( new Sampleable[result.size()] );
     }
 
-    private String getDefaultDirectory( GraphDatabaseAPI db ) throws IOException
+    private String getDefaultRrdFile( GraphDatabaseAPI db ) throws IOException
     {
-        if ( isEphemereal( db ) )
-        {
-            return tempDir();
-        } else
-        {
-            return new File( db.getStoreDir(), "rrd" ).getAbsolutePath();
-        }
+        return isEphemereal( db ) ? tempRrdFile() : new File( db.getStoreDir(), "rrd" ).getAbsolutePath();
     }
 
-    protected String tempDir() throws IOException
+    protected String tempRrdFile() throws IOException
     {
-        File tempFile = File.createTempFile( "neo4j", "rrd" );
+        final File tempFile = File.createTempFile( "neo4j", "rrd" );
         tempFile.delete();
         tempFile.mkdir();
+
+        Runtime.getRuntime().addShutdownHook( new Thread()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    FileUtils.deleteRecursively(tempFile);
+                }
+                catch ( IOException e )
+                {
+                    // Ignore
+                }
+            }
+        });
 
         return tempFile.getAbsolutePath();
     }
@@ -126,14 +143,15 @@ public class RrdFactory
         if ( config == null )
         {
             return false;
-        } else
+        }
+        else
         {
-            Boolean aBoolean = config.get( InternalAbstractGraphDatabase.Configuration.ephemeral );
-            return aBoolean != null && aBoolean;
+            Boolean ephemeral = config.get( InternalAbstractGraphDatabase.Configuration.ephemeral );
+            return ephemeral != null && ephemeral;
         }
     }
 
-    protected RrdDb createRrdb( String rrdPathx, Sampleable... sampleables )
+    protected RrdDbWrapper createRrdb( String rrdPathx, boolean ephemeral, Sampleable... sampleables )
     {
         File rrdFile = new File( rrdPathx );
         if ( rrdFile.exists() )
@@ -142,7 +160,7 @@ public class RrdFactory
             {
                 if ( !validateStepSize( rrdFile ) )
                 {
-                    return recreateArchive( rrdFile, sampleables );
+                    return recreateArchive( rrdFile, ephemeral, sampleables );
                 }
 
                 Sampleable[] missing = checkDataSources( rrdFile.getAbsolutePath(), sampleables );
@@ -150,31 +168,66 @@ public class RrdFactory
                 {
                     updateDataSources( rrdFile.getAbsolutePath(), missing );
                 }
-                return new RrdDb( rrdFile.getAbsolutePath() );
-            } catch ( IOException e )
+                return wrap( new RrdDb( rrdFile.getAbsolutePath() ), ephemeral );
+            }
+            catch ( IOException e )
             {
                 // RRD file may have become corrupt
                 LOG.error( "Unable to open rrd store, attempting to recreate it", e );
-                return recreateArchive( rrdFile, sampleables );
-            } catch (IllegalArgumentException e) {
+                return recreateArchive( rrdFile, ephemeral, sampleables );
+            }
+            catch ( IllegalArgumentException e )
+            {
                 // RRD file may have become corrupt
                 LOG.error( "Unable to open rrd store, attempting to recreate it", e );
-                return recreateArchive( rrdFile, sampleables );
+                return recreateArchive( rrdFile, ephemeral, sampleables );
             }
-        } else
+        }
+        else
         {
             RrdDef rrdDef = new RrdDef( rrdFile.getAbsolutePath(), STEP_SIZE );
             defineDataSources( rrdDef, sampleables );
             addArchives( rrdDef );
             try
             {
-                return new RrdDb( rrdDef );
-            } catch ( IOException e )
+                return wrap( new RrdDb( rrdDef ), ephemeral );
+            }
+            catch ( IOException e )
             {
                 LOG.error( "Unable to create new rrd store", e );
                 throw new RuntimeException( e );
             }
         }
+    }
+
+    private RrdDbWrapper wrap( RrdDb db, boolean ephemeral ) throws IOException
+    {
+        return ephemeral ? cleaningRrdDb( db ) : new RrdDbWrapper.Plain( db );
+    }
+
+    private RrdDbWrapper cleaningRrdDb( final RrdDb db )
+    {
+        return new RrdDbWrapper()
+        {
+            @Override
+            public RrdDb get()
+            {
+                return db;
+            }
+            
+            @Override
+            public void close() throws IOException
+            {
+                try
+                {
+                    db.close();
+                }
+                finally
+                {
+                    new File( db.getPath() ).delete();
+                }
+            }
+        };
     }
 
     private boolean validateStepSize( File rrdFile ) throws IOException
@@ -187,12 +240,12 @@ public class RrdFactory
         }
         finally
         {   
-            if(r != null)
+            if ( r != null )
                 r.close();
         }
     }
 
-    private RrdDb recreateArchive( File rrdFile, Sampleable[] sampleables )
+    private RrdDbWrapper recreateArchive( File rrdFile, boolean ephemeral, Sampleable[] sampleables )
     {
         File file = new File( rrdFile.getParentFile(),
                 rrdFile.getName() + "-invalid-" + System.currentTimeMillis() );
@@ -200,7 +253,7 @@ public class RrdFactory
         if ( rrdFile.renameTo( file ) )
         {
             LOG.error( "current RRDB is invalid, renamed it to %s", file.getAbsolutePath() );
-            return createRrdb( rrdFile.getAbsolutePath(), sampleables );
+            return createRrdb( rrdFile.getAbsolutePath(), ephemeral, sampleables );
         }
 
         throw new RuntimeException( "RRD file ['" + rrdFile.getAbsolutePath()
@@ -263,5 +316,4 @@ public class RrdFactory
             rrdDef.addDatasource( createDsDef( sampleable ) );
         }
     }
-
 }

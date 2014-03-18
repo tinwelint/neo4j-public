@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,6 @@
  */
 package org.neo4j.kernel.impl.transaction.xaframework;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,15 +29,38 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
+
 import org.neo4j.kernel.impl.transaction.XidImpl;
 import org.neo4j.kernel.impl.transaction.xaframework.LogExtractor.LogLoader;
+import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import static org.neo4j.kernel.impl.transaction.XidImpl.DEFAULT_SEED;
+import static org.neo4j.kernel.impl.transaction.XidImpl.getNewGlobalId;
 
 public class TestLogPruneStrategy
 {
-    private final FileSystemAbstraction FS = new EphemeralFileSystemAbstraction();
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    private EphemeralFileSystemAbstraction FS;
+    private File directory;
+    
+    @Before
+    public void before()
+    {
+        FS = fs.get();
+        directory = TargetDirectory.forTest( FS, getClass() ).directory( "prune", true );
+    }
     
     @Test
     public void noPruning() throws Exception
@@ -157,7 +174,9 @@ public class TestLogPruneStrategy
             {
                 assertLogRangeByTimestampExists( log, millisToKeep, lastTimestamp );
                 if ( System.currentTimeMillis() > end )
+                {
                     break;
+                }
             }
         }
     }
@@ -207,7 +226,9 @@ public class TestLogPruneStrategy
         {
             Long firstTimestamp = log.getFirstStartRecordTimestamp( version+1 );
             if ( firstTimestamp == null )
+            {
                 break;
+            }
             assertTrue( "Log " + version + " should've been deleted by now. first of " + (version+1) + ":" + firstTimestamp + ", highestVersion:" +
                     log.getHighestLogVersion() + ", lowerLimit:" + lowerLimit + ", timestamp:" + lastTimestamp,
                     firstTimestamp >= lowerLimit );
@@ -223,8 +244,10 @@ public class TestLogPruneStrategy
     {
         assertTrue( log.getHighestLogVersion() >= to );
         for ( long i = 0; i < from; i++ )
+        {
             assertFalse( "Log v" + i + " shouldn't exist when highest version is " + log.getHighestLogVersion() +
                     " and prune strategy " + log.pruning, FS.fileExists( log.getFileName( i ) ) );
+        }
         
         for ( long i = from; i <= to; i++ )
         {
@@ -237,8 +260,10 @@ public class TestLogPruneStrategy
                 empty.remove( i );
             }
             else
+            {
                 assertTrue( "Log v" + i + " should be at least size " + log.getLogSize(),
                         FS.getFileSize( file ) >= log.getLogSize() );
+            }
         }
         assertTrue( "Expected to find empty logs: " + empty, empty.isEmpty() );
     }
@@ -247,7 +272,9 @@ public class TestLogPruneStrategy
     {
         Set<Long> result = new HashSet<Long>();
         for ( long item : items )
+        {
             result.add( item );
+        }
         return result;
     }
 
@@ -281,7 +308,7 @@ public class TestLogPruneStrategy
             this.logSize = logSize;
             this.pruning = pruning;
             activeBuffer = ByteBuffer.allocate( logSize*10 );
-            baseFile = new File( "target/test-data/", "log" );
+            baseFile = new File( directory, "log" );
             clearAndWriteHeader();
         }
         
@@ -328,16 +355,21 @@ public class TestLogPruneStrategy
         public boolean addTransaction( int commandSize, long date ) throws IOException
         {
             InMemoryLogBuffer tempLogBuffer = new InMemoryLogBuffer();
-            LogIoUtils.writeStart( tempLogBuffer, identifier, new XidImpl( XidImpl.getNewGlobalId(), RESOURCE_XID ), -1, -1, date );
+            XidImpl xid = new XidImpl( getNewGlobalId( DEFAULT_SEED, 0 ), RESOURCE_XID );
+            LogIoUtils.writeStart( tempLogBuffer, identifier, xid, -1, -1, date, Long.MAX_VALUE );
             LogIoUtils.writeCommand( tempLogBuffer, identifier, new TestXaCommand( commandSize ) );
             LogIoUtils.writeCommit( false, tempLogBuffer, identifier, ++tx, date );
             LogIoUtils.writeDone( tempLogBuffer, identifier );
             tempLogBuffer.read( activeBuffer );
             if ( !timestamps.containsKey( version ) )
+             {
                 timestamps.put( version, date ); // The first tx timestamp for this version
+            }
             boolean rotate = (activeBuffer.capacity() - activeBuffer.remaining()) >= logSize;
             if ( rotate )
+            {
                 rotate();
+            }
             return rotate;
         }
         
@@ -350,7 +382,9 @@ public class TestLogPruneStrategy
             while ( true )
             {
                 if ( addTransaction( size, System.currentTimeMillis() ) )
+                {
                     return;
+                }
                 size = Math.max( 10, (size + 7)%100 );
             }
         }
@@ -375,7 +409,9 @@ public class TestLogPruneStrategy
             finally
             {
                 if ( channel != null )
+                {
                     channel.close();
+                }
             }
         }
         
@@ -386,9 +422,13 @@ public class TestLogPruneStrategy
             {
                 File file = getFileName( version );
                 if ( FS.fileExists( file ) )
+                {
                     size += FS.getFileSize( file );
+                }
                 else
+                {
                     break;
+                }
             }
             return size;
         }
@@ -396,16 +436,22 @@ public class TestLogPruneStrategy
         public int getTotalTransactionCountOfAllExistingLogFiles()
         {
             if ( getHighestLogVersion() == 0 )
+            {
                 return 0;
+            }
             long upper = getHighestLogVersion()-1;
             long lower = upper;
             while ( lower >= 0 )
             {
                 File file = getFileName( lower-1 );
                 if ( !FS.fileExists( file ) )
+                {
                     break;
+                }
                 else
+                {
                     lower--;
+                }
             }
             return (int) (getLastCommittedTxId() - getFirstCommittedTxId( lower ));
         }

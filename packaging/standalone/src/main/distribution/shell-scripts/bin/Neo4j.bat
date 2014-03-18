@@ -1,5 +1,5 @@
 @echo off
-rem Copyright (c) 2002-2013 "Neo Technology,"
+rem Copyright (c) 2002-2014 "Neo Technology,"
 rem Network Engine for Objects in Lund AB [http://neotechnology.com]
 rem
 rem This file is part of Neo4j.
@@ -20,8 +20,8 @@ rem along with this program.  If not, see <http://www.gnu.org/licenses/>.
 set serviceName=Neo4j-Server
 set serviceDisplayName=Neo4j-Server
 set serviceStartType=auto
-set classpath="-DserverClasspath=lib/*.jar;system/lib/*.jar;plugins/*.jar;system/coordinator/lib/*.jar;./conf*"
+set classpath="-DserverClasspath=lib/*.jar;system/lib/*.jar;plugins/**/*.jar;./conf*"
 set mainclass="-DserverMainClass=org.neo4j.server.Bootstrapper"
 set configFile="conf\neo4j-wrapper.conf"
 
-call "%~dp0\base.bat" %1 %2 %3 %4 %5
+call "%~dps0base.bat" %1 %2 %3 %4 %5

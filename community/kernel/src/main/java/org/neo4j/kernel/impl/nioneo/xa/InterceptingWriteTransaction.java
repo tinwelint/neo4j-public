@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,21 +21,28 @@ package org.neo4j.kernel.impl.nioneo.xa;
 
 import java.util.List;
 
-import org.neo4j.kernel.impl.core.TransactionState;
+import org.neo4j.kernel.api.labelscan.LabelScanStore;
+import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
+import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
+import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
-import org.neo4j.kernel.impl.transaction.LockManager;
 import org.neo4j.kernel.impl.transaction.xaframework.TransactionInterceptor;
 import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog;
 
-public class InterceptingWriteTransaction extends WriteTransaction
+public class InterceptingWriteTransaction extends NeoStoreTransaction
 {
     private final TransactionInterceptor interceptor;
 
-    InterceptingWriteTransaction( int identifier, XaLogicalLog log,
-            NeoStore neoStore, TransactionState state,
-            LockManager lockManager, TransactionInterceptor interceptor )
+    InterceptingWriteTransaction( long lastCommittedTxWhenTransactionStarted, XaLogicalLog log,
+                                  NeoStore neoStore, CacheAccessBackDoor cacheAccess,
+                                  IndexingService indexingService, LabelScanStore labelScanStore,
+                                  TransactionInterceptor interceptor, IntegrityValidator validator,
+                                  KernelTransactionImplementation kernelTransaction, LockService locks,
+                                  NeoStoreTransactionContext context )
     {
-        super( identifier, log, state, neoStore );
+        super( lastCommittedTxWhenTransactionStarted, log, neoStore, cacheAccess, indexingService,
+                labelScanStore, validator, kernelTransaction, locks, context );
         this.interceptor = interceptor;
     }
 

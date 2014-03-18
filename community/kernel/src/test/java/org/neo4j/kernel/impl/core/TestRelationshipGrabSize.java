@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,6 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
-import static org.neo4j.helpers.collection.IteratorUtil.count;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.kernel.impl.MyRelTypes.TEST;
-
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -37,19 +30,29 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.InternalAbstractGraphDatabase;
-import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static java.lang.String.valueOf;
+import static org.junit.Assert.*;
+import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
+import static org.neo4j.helpers.collection.IteratorUtil.count;
+import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 
 public class TestRelationshipGrabSize
 {
     private static final int GRAB_SIZE = 10;
-    private static ImpermanentGraphDatabase db;
+    private static GraphDatabaseAPI db;
     private Transaction tx;
 
     @BeforeClass
     public static void doBefore() throws Exception
     {
-        db = new ImpermanentGraphDatabase( stringMap( "relationship_grab_size", String.valueOf( GRAB_SIZE ) ) );
+        db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+                .newImpermanentDatabaseBuilder()
+                .setConfig( GraphDatabaseSettings.relationship_grab_size, valueOf( GRAB_SIZE ) )
+                .newGraphDatabase();
     }
     
     @AfterClass
@@ -65,15 +68,23 @@ public class TestRelationshipGrabSize
     
     private void finishTx( boolean success )
     {
-        if ( success ) tx.success();
-        tx.finish();
+        if ( success )
+        {
+            tx.success();
+        }
+        tx.close();
     }
     
     private void clearCache()
     {
-        db.getNodeManager().clearCache();
+        nodeManager().clearCache();
     }
-    
+
+    private NodeManager nodeManager()
+    {
+        return db.getDependencyResolver().resolveDependency( NodeManager.class );
+    }
+
     @Test
     public void deleteRelationshipFromNotFullyLoadedNode() throws Exception
     {
@@ -93,7 +104,7 @@ public class TestRelationshipGrabSize
         }
         finishTx( true );
 
-        db.getNodeManager().clearCache();
+        nodeManager().clearCache();
 
         /*
          * Here node1 has grabSize+1 relationships. The first grabSize to be loaded will be
@@ -121,7 +132,9 @@ public class TestRelationshipGrabSize
         assertEquals( type2Relationships, addToCollection( node1.getRelationships(), new HashSet<Relationship>() ) );
 
         finishTx( true );
+        beginTx();
         assertEquals( type2Relationships, addToCollection( node1.getRelationships(), new HashSet<Relationship>() ) );
+        finishTx( false );
     }
 
     @Test
@@ -138,7 +151,7 @@ public class TestRelationshipGrabSize
         tx.success();
         tx.finish();
 
-        db.getNodeManager().clearCache();
+        nodeManager().clearCache();
 
         tx = db.beginTx();
 
@@ -184,7 +197,9 @@ public class TestRelationshipGrabSize
         }
         assertEquals( expectedCount, count( node1.getRelationships() ) );
         finishTx( true );
+        beginTx();
         assertEquals( expectedCount, count( node1.getRelationships() ) );
+        finishTx( false );
     }
 
     @Test
@@ -200,12 +215,12 @@ public class TestRelationshipGrabSize
         // Create more than one grab size
         for ( int i = 0; i < 12; i++ )
         {
-            node1.createRelationshipTo( node2, type1 );
+            Relationship rel = node1.createRelationshipTo( node2, type1 );
             count++;
         }
         for ( int i = 0; i < 11; i++ )
         {
-            node1.createRelationshipTo( node2, type2 );
+            Relationship rel = node1.createRelationshipTo( node2, type2 );
             count++;
         }
         tx.success();
@@ -217,21 +232,24 @@ public class TestRelationshipGrabSize
         clearCacheAndCreateDeleteCount( db, node1, node2, type2, type2, count );
     }
 
-    private void clearCacheAndCreateDeleteCount( InternalAbstractGraphDatabase db, Node node1, Node node2,
+    private void clearCacheAndCreateDeleteCount( GraphDatabaseAPI db, Node node1, Node node2,
             RelationshipType createType, RelationshipType deleteType, int expectedCount )
     {
         Transaction tx = db.beginTx();
-        db.getNodeManager().clearCache();
+        db.getDependencyResolver().resolveDependency( NodeManager.class ).clearCache();
 
         node1.createRelationshipTo( node2, createType );
-        Relationship rel1 = node1.getRelationships( deleteType ).iterator().next();
-        rel1.delete();
+        node1.getRelationships( deleteType ).iterator().next().delete();
 
         assertEquals( expectedCount, count( node1.getRelationships() ) );
         assertEquals( expectedCount, count( node2.getRelationships() ) );
+
         tx.success();
         tx.finish();
+
+        tx = db.beginTx();
         assertEquals( expectedCount, count( node1.getRelationships() ) );
         assertEquals( expectedCount, count( node2.getRelationships() ) );
+        tx.finish();
     }
 }

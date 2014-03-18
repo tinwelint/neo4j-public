@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,8 +28,9 @@ import org.neo4j.com.Response;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
+import org.neo4j.kernel.ha.DelegateInvocationHandler;
+import org.neo4j.kernel.ha.com.RequestContextFactory;
 import org.neo4j.kernel.ha.com.master.Master;
-import org.neo4j.kernel.ha.cluster.HighAvailability;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.IdGenerator;
 import org.neo4j.kernel.impl.nioneo.store.IdRange;
@@ -41,15 +42,17 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
     private final Map<IdType, HaIdGenerator> generators =
             new EnumMap<IdType, HaIdGenerator>( IdType.class );
     private final IdGeneratorFactory localFactory = new DefaultIdGeneratorFactory();
-    private final Master master;
+    private final DelegateInvocationHandler<Master> master;
     private final StringLogger logger;
+    private final RequestContextFactory requestContextFactory;
     private IdGeneratorState globalState = IdGeneratorState.PENDING;
 
-    public HaIdGeneratorFactory( Master master, HighAvailability highAvailability, Logging logging )
+    public HaIdGeneratorFactory( DelegateInvocationHandler<Master> master, Logging logging,
+            RequestContextFactory requestContextFactory )
     {
         this.master = master;
-        this.logger = logging.getLogger( getClass() );
-//        highAvailability.addHighAvailabilityMemberListener( new HaIdGeneratorFactoryClusterMemberListener() );
+        this.logger = logging.getMessagesLog( getClass() );
+        this.requestContextFactory = requestContextFactory;
     }
 
     @Override
@@ -57,16 +60,18 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
     {
         HaIdGenerator previous = generators.remove( idType );
         if ( previous != null )
+        {
             previous.close();
+        }
         
-        IdGenerator initialIdGenerator = null;
+        IdGenerator initialIdGenerator;
         switch ( globalState )
         {
         case MASTER:
             initialIdGenerator = localFactory.open( fs, fileName, grabSize, idType, highId );
             break;
         case SLAVE:
-            initialIdGenerator = new SlaveIdGenerator( idType, highId, master, logger );
+            initialIdGenerator = new SlaveIdGenerator( idType, highId, master.cement(), logger, requestContextFactory );
             break;
         default:
             throw new IllegalStateException( globalState.name() );
@@ -87,62 +92,7 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
     {
         return generators.get( idType );
     }
-    
-//    private class HaIdGeneratorFactoryClusterMemberListener implements HighAvailabilityMemberListener
-//    {
-//        @Override
-//        public void masterIsElected( HighAvailabilityMemberChangeEvent event )
-//        {
-//            if ( event.getNewState() == event.getOldState() )
-//            {
-//                return;
-//            }
-//            for ( HaIdGenerator generator : generators.values() )
-//            {
-//                generator.stateChanged( event );
-//            }
-//        }
-//
-//        @Override
-//        public void masterIsAvailable( HighAvailabilityMemberChangeEvent event )
-//        {
-//            if ( event.getNewState() == event.getOldState() )
-//            {
-//                return;
-//            }
-//            for ( HaIdGenerator generator : generators.values() )
-//            {
-//                generator.stateChanged( event );
-//            }
-//        }
-//
-//        @Override
-//        public void slaveIsAvailable( HighAvailabilityMemberChangeEvent event )
-//        {
-//            if ( event.getNewState() == event.getOldState() )
-//            {
-//                return;
-//            }
-//            for ( HaIdGenerator generator : generators.values() )
-//            {
-//                generator.stateChanged( event );
-//            }
-//        }
-//
-//        @Override
-//        public void instanceStops( HighAvailabilityMemberChangeEvent event )
-//        {
-//            if ( event.getNewState() == event.getOldState() )
-//            {
-//                return;
-//            }
-//            for ( HaIdGenerator generator : generators.values() )
-//            {
-//                generator.stateChanged( event );
-//            }
-//        }
-//    }
-    
+
     public void switchToMaster()
     {
         globalState = IdGeneratorState.MASTER;
@@ -157,7 +107,7 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
         globalState = IdGeneratorState.SLAVE;
         for ( HaIdGenerator generator : generators.values() )
         {
-            generator.switchToSlave();
+            generator.switchToSlave( master.cement() );
         }
     }
 
@@ -170,7 +120,7 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
 
     private class HaIdGenerator implements IdGenerator
     {
-        private IdGenerator delegate;
+        private volatile IdGenerator delegate;
         private final FileSystemAbstraction fs;
         private final File fileName;
         private final int grabSize;
@@ -189,44 +139,11 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
             logger.debug( "Instantiated HaIdGenerator for " + initialDelegate + " " + idType + ", " + initialState );
         }
 
-        /*
-         * I know what you're thinking. You're thinking "shouldn't this be a ClusterInstanceListener instead". To tell
-         * you the truth, with all the stuff happening around, i'm not even sure myself. But given that getting the
-         * state transition here wrong will result in store corruption, the question you should be asking yourself is
-         * "do I feel lucky?". So, do you feel lucky, punk?
-         *
-         * State transitioning for IdGenerators cannot be done with the AbstractModeSwitcher as they are now without
-         * severely violating the expected contract. State has to be kept because the actions on transitions depend
-         * not only on the member state we are moving to but also the previous state of the IdGenerator - if it
-          * was a slave or a master IdGenerator. For that reason, it is implemented completely separately.
-         */
-//        public void stateChanged( HighAvailabilityMemberChangeEvent event )
-//        {
-//            
-//            // Assume blockade is up and no active threads are running here
-//            if ( event.getNewState() == HighAvailabilityMemberState.TO_MASTER ||
-//                    // When the first PENDING --> TO_MASTER event comes there are no HaIdGenerator
-//                    // instances available because that event reaches HighAvailabilityModeSwitcher
-//                    // first, which starts the data sources and in turn instantiates these id generators.
-//                    event.getNewState() == HighAvailabilityMemberState.MASTER )
-//            {
-//                switchToMaster();
-//            }
-//            else if ( event.getNewState() == HighAvailabilityMemberState.TO_SLAVE
-//                    // When the first PENDING --> TO_SLAVE event comes there are no HaIdGenerator
-//                    // instances available because that event reaches HighAvailabilityModeSwitcher
-//                    // first, which starts the data sources and in turn instantiates these id generators.
-//                    || event.getNewState() == HighAvailabilityMemberState.SLAVE )
-//            {
-//                switchToSlave();
-//            }
-//        }
-
-        private void switchToSlave()
+        private void switchToSlave( Master master )
         {
             long highId = delegate.getHighId();
             delegate.close();
-            delegate = new SlaveIdGenerator( idType, highId, master, logger );
+            delegate = new SlaveIdGenerator( idType, highId, master, logger, requestContextFactory );
             logger.debug( "Instantiated slave delegate " + delegate + " of type " + idType + " with highid " + highId );
             state = IdGeneratorState.SLAVE;
         }
@@ -238,80 +155,100 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
                 long highId = delegate.getHighId();
                 delegate.close();
                 if ( fs.fileExists( fileName ) )
+                {
                     fs.deleteFile( fileName );
+                }
                     
                 localFactory.create( fs, fileName, highId );
                 delegate = localFactory.open( fs, fileName, grabSize, idType, highId );
                 logger.debug( "Instantiated master delegate " + delegate + " of type " + idType + " with highid " + highId );
             }
             else
+            {
                 logger.debug( "Keeps " + delegate );
+            }
 
             state = IdGeneratorState.MASTER;
         }
 
+        @Override
         public String toString()
         {
             return delegate.toString();
         }
 
+        @Override
         public final boolean equals( Object other )
         {
             return delegate.equals( other );
         }
 
+        @Override
         public final int hashCode()
         {
             return delegate.hashCode();
         }
 
+        @Override
         public long nextId()
         {
             if ( state == IdGeneratorState.PENDING )
+            {
                 throw new IllegalStateException( state.name() );
+            }
             
             long result = delegate.nextId();
             return result;
         }
 
+        @Override
         public IdRange nextIdBatch( int size )
         {
             if ( state == IdGeneratorState.PENDING )
+            {
                 throw new IllegalStateException( state.name() );
+            }
             
             return delegate.nextIdBatch( size );
         }
 
+        @Override
         public void setHighId( long id )
         {
             delegate.setHighId( id );
         }
 
+        @Override
         public long getHighId()
         {
             return delegate.getHighId();
         }
 
+        @Override
         public void freeId( long id )
         {
             delegate.freeId( id );
         }
 
+        @Override
         public void close()
         {
             delegate.close();
         }
 
+        @Override
         public long getNumberOfIdsInUse()
         {
             return delegate.getNumberOfIdsInUse();
         }
 
+        @Override
         public long getDefragCount()
         {
             return delegate.getDefragCount();
         }
 
+        @Override
         public void delete()
         {
             delegate.delete();
@@ -326,13 +263,16 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
         private final Master master;
         private final IdType idType;
         private final StringLogger logger;
+        private final RequestContextFactory requestContextFactory;
 
-        SlaveIdGenerator( IdType idType, long highId, Master master, StringLogger logger )
+        SlaveIdGenerator( IdType idType, long highId, Master master, StringLogger logger,
+                RequestContextFactory requestContextFactory )
         {
             this.idType = idType;
             this.highestIdInUse = highId;
             this.master = master;
             this.logger = logger;
+            this.requestContextFactory = requestContextFactory;
         }
 
         @Override
@@ -340,44 +280,42 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
         {
         }
 
+        @Override
         public void freeId( long id )
         {
         }
 
+        @Override
         public long getHighId()
         {
             return highestIdInUse;
         }
 
+        @Override
         public long getNumberOfIdsInUse()
         {
             return highestIdInUse - defragCount;
         }
 
+        @Override
         public synchronized long nextId()
         {
             long nextId = nextLocalId();
             if ( nextId == VALUE_REPRESENTING_NULL )
             {
-                // If we dont have anymore grabbed ids from master, grab a bunch
-                Response<IdAllocation> response = master.allocateIds( idType );
-                try
+                // If we don't have anymore grabbed ids from master, grab a bunch
+                try ( Response<IdAllocation> response =
+                        master.allocateIds( requestContextFactory.newRequestContext(), idType ) )
                 {
                     IdAllocation allocation = response.response();
                     logger.info( "Received id allocation " + allocation + " from master " + master + " for " + idType );
                     nextId = storeLocally( allocation );
                 }
-                finally
-                {
-                    response.close();
-                }
             }
-            // TODO necessary check?
-//            else if ( !master.equals( stuff.getMaster() ) )
-//                throw new ComException( "Master changed" );
             return nextId;
         }
 
+        @Override
         public IdRange nextIdBatch( int size )
         {
             throw new UnsupportedOperationException( "Should never be called" );
@@ -385,7 +323,7 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
 
         private long storeLocally( IdAllocation allocation )
         {
-            this.highestIdInUse = allocation.getHighestIdInUse();
+            setHighId( allocation.getHighestIdInUse() );
             this.defragCount = allocation.getDefragCount();
             this.idQueue = new IdRangeIterator( allocation.getIdRange() );
             return idQueue.next();
@@ -396,12 +334,13 @@ public class HaIdGeneratorFactory implements IdGeneratorFactory
             return this.idQueue.next();
         }
 
+        @Override
         public void setHighId( long id )
         {
-            // TODO Check for if it's lower than what I have?
-            this.highestIdInUse = id;
+            this.highestIdInUse = Math.max( this.highestIdInUse, id );
         }
 
+        @Override
         public long getDefragCount()
         {
             return this.defragCount;

@@ -1,5 +1,5 @@
 ###
-Copyright (c) 2002-2013 "Neo Technology,"
+Copyright (c) 2002-2014 "Neo Technology,"
 Network Engine for Objects in Lund AB [http://neotechnology.com]
 
 This file is part of Neo4j.
@@ -24,15 +24,11 @@ define ["neo4j/webadmin/utils/ItemUrlResolver"], (ItemUrlResolver) ->
 
     constructor : (server) ->
       @server = server
-      @urlResolver = new ItemUrlResolver(server)
-      @pattern = /// ^\s*
-                    (start|cypher|create) # Start with "start", "cypher" or "create"
-                    ([\s\S]+)  # followed by anything
-                    $
-                 ///i
 
-    match : (statement) =>
-      @pattern.test(statement)
+    match : (statement) ->
+      # Send them all,
+      # and let the parser sort them out!
+      yes
       
     exec : (statement) =>
       @server.query(statement)

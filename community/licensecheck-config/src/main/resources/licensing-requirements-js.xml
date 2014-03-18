@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2002-2013 "Neo Technology,"
+    Copyright (c) 2002-2014 "Neo Technology,"
     Network Engine for Objects in Lund AB [http://neotechnology.com]
 
     This file is part of Neo4j.
@@ -39,7 +39,6 @@
     </artifact>
     <artifact id="colorpicker.js" name="Color picker">
       <license>MIT</license>
-      <license>GPL2</license>
     </artifact>
     <artifact id="DateFormat.js" name="Date Format">
       <license>MIT</license>
@@ -48,9 +47,7 @@
       <license>ASL2.0</license>
     </artifact>
     <artifact id="has.js" name="Pure Feature Detection Library (has.js)">
-      <license>New BSD License</license>
       <license>MIT</license>
-      <license>Academic Free License</license>
     </artifact>
     <artifact id="jquery.flot.js" name="jquery.flot.js">
       <license>MIT</license>
@@ -60,19 +57,15 @@
     </artifact>
     <artifact id="jquery.hotkeys.js" name="jquery.hotkeys.js">
       <license>MIT</license>
-      <license>GPL2</license>
     </artifact>
     <artifact id="jquery.js" name="JQuery">
       <license>MIT</license>
-      <license>GPL2</license>
     </artifact>
     <artifact id="jquery.putCursorAtEnd.js" name="jquery.putCursorAtEnd.js">
       <license>MIT</license>
-      <license>GPL2</license>
     </artifact>
     <artifact id="jquery.sortable.js" name="jquery.sortable.js">
       <license>MIT</license>
-      <license>GPL2</license>
     </artifact>
     <artifact id="json2.js" name="JSON2">
       <license>Public Domain - JSON2</license>

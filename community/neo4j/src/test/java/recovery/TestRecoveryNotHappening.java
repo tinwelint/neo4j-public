@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,27 @@
  */
 package recovery;
 
-import static java.lang.Runtime.getRuntime;
-import static java.lang.System.getProperty;
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.kernel.impl.util.FileUtils.truncateFile;
-import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
-
 import java.io.File;
 
 import org.junit.After;
 import org.junit.Test;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry;
 import org.neo4j.test.LogTestUtils.LogHookAdapter;
 import org.neo4j.test.TargetDirectory;
+
+import static java.lang.Runtime.getRuntime;
+import static java.lang.System.getProperty;
+
+import static org.junit.Assert.assertEquals;
+
+import static org.neo4j.kernel.impl.util.FileUtils.truncateFile;
+import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
 
 public class TestRecoveryNotHappening
 {
@@ -99,30 +102,25 @@ public class TestRecoveryNotHappening
     public static void main( String[] args )
     {
         String storeDir = args[0];
-        GraphDatabaseService db = new EmbeddedGraphDatabase( storeDir );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         createNodeWithNameProperty( db, "test" );
         System.exit( 0 );
     }
 
     private void startDb()
     {
-        db = new EmbeddedGraphDatabase( storeDirectory.getAbsolutePath() );
+        db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDirectory.getAbsolutePath() );
     }
 
     private static Node createNodeWithNameProperty( GraphDatabaseService db, String name )
     {
-        Transaction tx = db.beginTx();
-        try
+        try(Transaction tx = db.beginTx())
         {
             Node node = db.createNode();
             node.setProperty( "name", name );
             db.index().forNodes( "index" ).add( node, "name", name );
             tx.success();
             return node;
-        }
-        finally
-        {
-            tx.finish();
         }
     }
 

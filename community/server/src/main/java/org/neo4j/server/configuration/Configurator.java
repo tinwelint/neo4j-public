@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,14 +24,18 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.MapConfiguration;
+
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.info.DiagnosticsExtractor;
 import org.neo4j.kernel.info.DiagnosticsPhase;
 import org.neo4j.server.webadmin.console.ShellSessionCreator;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 
 public interface Configurator
 {
@@ -42,7 +46,7 @@ public interface Configurator
     String DATABASE_LOCATION_PROPERTY_KEY = "org.neo4j.server.database.location";
     String NEO_SERVER_CONFIG_FILE_KEY = "org.neo4j.server.properties";
     String DB_MODE_KEY = "org.neo4j.server.database.mode";
-    
+
     String DEFAULT_DATABASE_LOCATION_PROPERTY_KEY = "data/graph.db";
 
     int DEFAULT_WEBSERVER_PORT = 7474;
@@ -63,10 +67,10 @@ public interface Configurator
     String MANAGEMENT_PATH_PROPERTY_KEY = "org.neo4j.server.webadmin.management.uri";
     String DEFAULT_MANAGEMENT_API_PATH = "/db/manage";
 
-    String DEFAULT_WEB_ADMIN_PATH = "/webadmin";
+    String BROWSER_PATH = "/browser";
 
     String RRDB_LOCATION_PROPERTY_KEY = "org.neo4j.server.webadmin.rrdb.location";
-    
+
     String MANAGEMENT_CONSOLE_ENGINES = "org.neo4j.server.manage.console_engines";
     List<String> DEFAULT_MANAGEMENT_CONSOLE_ENGINES = new ArrayList<String>(){
         private static final long serialVersionUID = 6621747998288594121L;
@@ -81,16 +85,16 @@ public interface Configurator
 
     String WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY = "org.neo4j.server.webserver.https.enabled";
     Boolean DEFAULT_WEBSERVER_HTTPS_ENABLED = false;
-    
+
     String WEBSERVER_HTTPS_PORT_PROPERTY_KEY = "org.neo4j.server.webserver.https.port";
     int DEFAULT_WEBSERVER_HTTPS_PORT = 7473;
 
     String WEBSERVER_KEYSTORE_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.https.keystore.location";
     String DEFAULT_WEBSERVER_KEYSTORE_PATH = "neo4j-home/ssl/keystore";
-    
+
     String WEBSERVER_HTTPS_CERT_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.https.cert.location";
     String DEFAULT_WEBSERVER_HTTPS_CERT_PATH = "neo4j-home/ssl/snakeoil.cert";
-    
+
     String WEBSERVER_HTTPS_KEY_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.https.key.location";
     String DEFAULT_WEBSERVER_HTTPS_KEY_PATH = "neo4j-home/ssl/snakeoil.key";
 
@@ -98,15 +102,21 @@ public interface Configurator
     boolean DEFAULT_HTTP_LOGGING = false;
     String HTTP_LOG_CONFIG_LOCATION = "org.neo4j.server.http.log.config";
     String WADL_ENABLED = "unsupported_wadl_generation_enabled";
-    
-	String STARTUP_TIMEOUT = "org.neo4j.server.startup_timeout";
-	int DEFAULT_STARTUP_TIMEOUT = 120;
+
+    String STARTUP_TIMEOUT = "org.neo4j.server.startup_timeout";
+    int DEFAULT_STARTUP_TIMEOUT = 120;
+
+    String TRANSACTION_TIMEOUT = "org.neo4j.server.transaction.timeout";
+    int DEFAULT_TRANSACTION_TIMEOUT = 60/*seconds*/;
 
     Configuration configuration();
 
     Map<String, String> getDatabaseTuningProperties();
 
-    Set<ThirdPartyJaxRsPackage> getThirdpartyJaxRsClasses();
+    @Deprecated
+    List<ThirdPartyJaxRsPackage> getThirdpartyJaxRsClasses();
+
+    List<ThirdPartyJaxRsPackage> getThirdpartyJaxRsPackages();
 
     DiagnosticsExtractor<Configurator> DIAGNOSTICS = new DiagnosticsExtractor<Configurator>()
     {
@@ -126,18 +136,52 @@ public interface Configurator
                         while ( keys.hasNext() )
                         {
                             Object key = keys.next();
-                            if ( key instanceof String ) return key + " = " + config.getProperty( (String) key );
+                            if ( key instanceof String )
+                            {
+                                return key + " = " + config.getProperty( (String) key );
+                            }
                         }
                         return null;
                     }
                 }, true );
             }
         }
-        
+
         @Override
         public String toString()
         {
             return Configurator.class.getName();
         }
+    };
+
+    public static abstract class Adapter implements Configurator
+    {
+        @Override
+        public List<ThirdPartyJaxRsPackage> getThirdpartyJaxRsClasses()
+        {
+            return getThirdpartyJaxRsPackages();
+        }
+
+        @Override
+        public List<ThirdPartyJaxRsPackage> getThirdpartyJaxRsPackages()
+        {
+            return emptyList();
+        }
+
+        @Override
+        public Map<String, String> getDatabaseTuningProperties()
+        {
+            return emptyMap();
+        }
+
+        @Override
+        public Configuration configuration()
+        {
+            return new MapConfiguration( emptyMap() );
+        }
+    }
+
+    public static final Configurator EMPTY = new Configurator.Adapter()
+    {
     };
 }

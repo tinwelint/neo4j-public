@@ -1,29 +1,16 @@
 [[tutorials-java-embedded-index]]
-User database with index
-========================
+User database with legacy index
+===============================
 
-You have a user database, and want to retrieve users by name.
-To begin with, this is the structure of the database we want to create:
-	
-image::users.png[title="Node space view of users", scaledwidth="100%"]
+NOTE: Please read <<tutorials-java-embedded-resource-iteration>> on how to properly close ResourceIterators returned from index lookups.
 
-That is, the reference node is connected to a users-reference node to which all users are connected.
+You have a user database, and want to retrieve users by name using the legacy indexing system.
 
 [TIP]
 The source code used in this example is found here:
 https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/embedded-examples/src/main/java/org/neo4j/examples/EmbeddedNeo4jWithIndexing.java[EmbeddedNeo4jWithIndexing.java]
 
-To begin with, we define the relationship types we want to use:
-
-[snippet,java]
-----
-component=neo4j-examples
-source=org/neo4j/examples/EmbeddedNeo4jWithIndexing.java
-classifier=sources
-tag=createRelTypes
-----
-
-Then we have created two helper methods to handle user names and adding users to the database:
+We have created two helper methods to handle user names and adding users to the database:
     
 [snippet,java]
 ----

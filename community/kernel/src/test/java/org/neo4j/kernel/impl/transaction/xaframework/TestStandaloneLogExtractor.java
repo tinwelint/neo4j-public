@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,25 @@
  */
 package org.neo4j.kernel.impl.transaction.xaframework;
 
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.test.BatchTransaction.beginBatchTx;
-
 import java.io.File;
 import java.io.IOException;
 
 import org.junit.Test;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.BatchTransaction;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+
+import static org.junit.Assert.assertEquals;
+
+import static org.neo4j.test.BatchTransaction.beginBatchTx;
 
 public class TestStandaloneLogExtractor
 {
@@ -41,27 +46,44 @@ public class TestStandaloneLogExtractor
     {
         run( true, 1 );
     }
-    
+
     @Test
     public void testRecreateUncleanDbFromStandaloneExtractor() throws Exception
     {
         run( false, 2 );
     }
-    
+
     private void run( boolean cleanShutdown, int nr ) throws Exception
     {
         EphemeralFileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
-        
-        String storeDir = "dir";
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( fileSystem ).newImpermanentDatabase( storeDir );
+
+        String storeDir = "source" + nr;
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().
+                setFileSystem( fileSystem ).
+                newImpermanentDatabase( storeDir );
+
         createSomeTransactions( db );
-        EphemeralFileSystemAbstraction snapshot = fileSystem.snapshot();
         DbRepresentation rep = DbRepresentation.of( db );
-        db.shutdown();
-        
-        GraphDatabaseAPI newDb = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( snapshot ).newImpermanentDatabase( storeDir );
-        XaDataSource ds = newDb.getXaDataSourceManager().getNeoStoreDataSource();
-        LogExtractor extractor = LogExtractor.from( snapshot, new File( storeDir ) );
+
+        EphemeralFileSystemAbstraction snapshot;
+        if ( cleanShutdown )
+        {
+            db.shutdown();
+            snapshot = fileSystem.snapshot();
+        } else
+        {
+            snapshot = fileSystem.snapshot();
+            db.shutdown();
+        }
+
+        GraphDatabaseAPI newDb = (GraphDatabaseAPI) new TestGraphDatabaseFactory().
+                setFileSystem( snapshot ).
+                newImpermanentDatabase( storeDir );
+
+        XaDataSource ds = newDb.getDependencyResolver().resolveDependency( XaDataSourceManager.class )
+                .getNeoStoreDataSource();
+        LogExtractor extractor = LogExtractor.from( snapshot, new File( storeDir ),
+                new Monitors().newMonitor( ByteCounterMonitor.class ) );
         long expectedTxId = 2;
         while ( true )
         {
@@ -70,35 +92,46 @@ public class TestStandaloneLogExtractor
             assertEquals( expectedTxId++, txId );
 
             /* first tx=2
-             * 1 tx for relationship type + 1 for the first tx
-             * 5 additional tx
-             * ==> 9
+             * 1 tx for relationship type
+             * 1 tx for property index
+             * 1 for the first tx
+             * 5 additional tx + 1 tx for the other property index
+             * ==> 11
              */
-            if ( expectedTxId == 9 ) expectedTxId = -1;
-            if ( txId == -1 ) break;
+            if ( expectedTxId == 11 )
+            {
+                expectedTxId = -1;
+            }
+            if ( txId == -1 )
+            {
+                break;
+            }
             ds.applyCommittedTransaction( txId, buffer );
         }
         DbRepresentation newRep = DbRepresentation.of( newDb );
         newDb.shutdown();
 
         assertEquals( rep, newRep );
+        fileSystem.shutdown();
     }
-    
+
     private void createSomeTransactions( GraphDatabaseAPI db ) throws IOException
     {
-        BatchTransaction tx = beginBatchTx( db );
-        Node node = db.createNode();
-        node.setProperty( "name", "First" );
-        Node otherNode = db.createNode();
-        node.createRelationshipTo( otherNode, MyRelTypes.TEST );
-        tx.restart();
-        db.getXaDataSourceManager().getNeoStoreDataSource().rotateLogicalLog();
-        
-        for ( int i = 0; i < 5; i++ )
+        try ( BatchTransaction tx = beginBatchTx( db ) )
         {
-            db.createNode().setProperty( "type", i );
-            tx.restart();
+            Node node = db.createNode();
+            node.setProperty( "name", "First" );
+            Node otherNode = db.createNode();
+            node.createRelationshipTo( otherNode, MyRelTypes.TEST );
+            tx.intermediaryCommit();
+            db.getDependencyResolver().resolveDependency( XaDataSourceManager.class )
+                    .getNeoStoreDataSource().rotateLogicalLog();
+
+            for ( int i = 0; i < 5; i++ )
+            {
+                db.createNode().setProperty( "type", i );
+                tx.intermediaryCommit();
+            }
         }
-        tx.finish();
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -66,10 +66,8 @@ public class BatchOperationResults
                     .append( COMMA );
         }
 
-        System.out.println("DONE:" + id);
         if ( location != null )
         {
-            System.out.println("Got Location:" + location);
             locations.put( id, location );
             results.append( "\"location\":" )
                     .append( JsonHelper.createJsonFrom( location ) )

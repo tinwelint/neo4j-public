@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,6 @@
  */
 package org.neo4j.com;
 
-import static org.neo4j.kernel.impl.util.Bits.numbersToBitString;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -38,22 +36,24 @@ import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
 
+import static org.neo4j.kernel.impl.util.Bits.numbersToBitString;
+
 public class DechunkingChannelBuffer implements ChannelBuffer
 {
     private final BlockingReadHandler<ChannelBuffer> reader;
     private ChannelBuffer buffer;
     private boolean more;
     private boolean hasMarkedReaderIndex;
-    private final long timeoutSeconds;
+    private final long timeoutMillis;
     private boolean failure;
     private final byte applicationProtocolVersion;
     private final byte internalProtocolVersion;
 
-    DechunkingChannelBuffer( BlockingReadHandler<ChannelBuffer> reader, long timeoutSeconds, byte internalProtocolVersion,
+    DechunkingChannelBuffer( BlockingReadHandler<ChannelBuffer> reader, long timeoutMillis, byte internalProtocolVersion,
             byte applicationProtocolVersion )
     {
         this.reader = reader;
-        this.timeoutSeconds = timeoutSeconds;
+        this.timeoutMillis = timeoutMillis;
         this.internalProtocolVersion = internalProtocolVersion;
         this.applicationProtocolVersion = applicationProtocolVersion;
         readNextChunk();
@@ -63,7 +63,7 @@ public class DechunkingChannelBuffer implements ChannelBuffer
     {
         try
         {
-            ChannelBuffer result = reader.read( timeoutSeconds, TimeUnit.SECONDS );
+            ChannelBuffer result = reader.read( timeoutMillis, TimeUnit.MILLISECONDS );
             if ( result == null )
             {
                 throw new ComException( "Channel has been closed" );
@@ -118,8 +118,7 @@ public class DechunkingChannelBuffer implements ChannelBuffer
 
         if ( failure )
         {
-            Throwable failure = readAndThrowFailureResponse();
-            throw new ComException( "Server side exception", failure );
+            readAndThrowFailureResponse();
         }
     }
 
@@ -145,20 +144,27 @@ public class DechunkingChannelBuffer implements ChannelBuffer
         }
     }
 
-    private Throwable readAndThrowFailureResponse()
+    private void readAndThrowFailureResponse()
     {
-        Throwable cause = null;
+        Throwable cause;
         try
         {
             ObjectInputStream input = new ObjectInputStream( asInputStream() );
             cause = (Throwable) input.readObject();
         }
-        catch ( Exception e )
+        catch ( Throwable e )
         {
-            throw new ComException( "Couldn't read failure response", e );
+            // Note: this is due to a problem with the streaming of exceptions, the ChunkingChannelBuffer will almost
+            // always sends exceptions back as two chunks, the first one empty and the second with the exception.
+            // We hit this when we try to read the exception of the first one, and in reading it hit the second
+            // chunk with the "real" exception. This should be revisited to 1) clear up the chunking and 2) handle
+            // serialized exceptions spanning multiple chunks.
+            if ( e instanceof RuntimeException ) throw (RuntimeException) e;
+            if ( e instanceof Error ) throw (Error) e;
+
+            throw new ComException( e );
         }
 
-        
         if ( cause instanceof RuntimeException ) throw (RuntimeException) cause;
         if ( cause instanceof Error ) throw (Error) cause;
         throw new ComException( cause );

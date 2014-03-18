@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,8 +31,8 @@ import org.neo4j.cluster.com.message.MessageHolder;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastListener;
 import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.cluster.protocol.cluster.ClusterMessage;
+import org.neo4j.cluster.protocol.heartbeat.HeartbeatMessage;
 import org.neo4j.cluster.statemachine.State;
-import org.neo4j.cluster.timeout.Timeouts;
 
 /**
  * State Machine for implementation of Atomic Broadcast client interface
@@ -96,8 +96,8 @@ public enum AtomicBroadcastState
                         {
                             if ( message.getPayload() instanceof ClusterMessage.ConfigurationChangeState )
                             {
-                                outgoing.offer( internal( ClusterMessage.configurationChanged,
-                                        message.getPayload() ) );
+                                outgoing.offer( message.copyHeadersTo( internal( ClusterMessage.configurationChanged,
+                                        message.getPayload() ) ) );
                             }
 
                             break;
@@ -132,34 +132,43 @@ public enum AtomicBroadcastState
                         case broadcast:
                         case failed:
                         {
-                            URI coordinator = context.getCoordinator();
+                            org.neo4j.cluster.InstanceId coordinator = context.getCoordinator();
                             if ( coordinator != null )
                             {
-                                outgoing.offer( to( ProposerMessage.propose, coordinator, message.getPayload() ) );
-                                Timeouts timeouts = context.getClusterContext().timeouts;
-                                timeouts.setTimeout( "broadcast-" + message.getHeader( Message.CONVERSATION_ID ),
+                                URI coordinatorUri = context.getUriForId( coordinator );
+                                outgoing.offer( message.copyHeadersTo(
+                                        to( ProposerMessage.propose, coordinatorUri, message.getPayload() ) ) );
+                                context.setTimeout( "broadcast-" + message.getHeader( Message.CONVERSATION_ID ),
                                         timeout( AtomicBroadcastMessage.broadcastTimeout, message,
                                                 message.getPayload() ) );
                             }
                             else
                             {
                                 outgoing.offer( message.copyHeadersTo( internal( ProposerMessage.propose,
-                                        message.getPayload() ), Message.CONVERSATION_ID ) );
+                                        message.getPayload() ), Message.CONVERSATION_ID, org.neo4j.cluster.protocol
+                                  .atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                             }
                             break;
                         }
 
                         case broadcastResponse:
                         {
-                            context.getClusterContext().timeouts.cancelTimeout( "broadcast-" + message.getHeader(
-                                    Message.CONVERSATION_ID ) );
+                            context.cancelTimeout( "broadcast-" + message.getHeader( Message.CONVERSATION_ID ) );
 
                             // TODO FILTER MESSAGES
 
                             if ( message.getPayload() instanceof ClusterMessage.ConfigurationChangeState )
                             {
-                                outgoing.offer( internal( ClusterMessage.configurationChanged,
-                                        message.getPayload() ) );
+                                outgoing.offer( message.copyHeadersTo( internal( ClusterMessage.configurationChanged,
+                                        message.getPayload() ) ) );
+                                ClusterMessage.ConfigurationChangeState change = message.getPayload();
+                                if ( change.getJoinUri() != null )
+                                {
+                                    outgoing.offer( message.copyHeadersTo(
+                                            Message.internal( HeartbeatMessage.i_am_alive,
+                                                    new HeartbeatMessage.IAmAliveState( change.getJoin() ) ),
+                                            Message.FROM ) );
+                                }
                             }
                             else
                             {
@@ -171,7 +180,12 @@ public enum AtomicBroadcastState
 
                         case broadcastTimeout:
                         {
-                            outgoing.offer( internal( AtomicBroadcastMessage.broadcast, message.getPayload() ) );
+                            /*
+                             * There is never the need to rebroadcast on broadcast timeout. The propose message always
+                             * circulates on the wire until it is accepted - it comes back here when it fails just to
+                             * check if the coordinator changed (look at "failed/broadcast" handling above).
+                             */
+//                            outgoing.offer( internal( AtomicBroadcastMessage.broadcast, message.getPayload() ) );
                             break;
                         }
 

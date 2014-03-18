@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Timer;
 
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.helpers.Service;
@@ -73,7 +74,12 @@ public class UdcKernelExtensionFactory extends KernelExtensionFactory<UdcKernelE
     public Lifecycle newKernelExtension( UdcKernelExtensionFactory.Dependencies dependencies ) throws Throwable
     {
         return new UdcKernelExtension( loadConfig( dependencies.getConfig() ), dependencies.getXaDataSourceManager(),
-                dependencies.getKernelData() );
+                dependencies.getKernelData(), new Timer( "Neo4j UDC Timer", isAlwaysDaemon() ) );
+    }
+
+    private boolean isAlwaysDaemon()
+    {
+        return true;
     }
 
     private Config loadConfig( Config config )

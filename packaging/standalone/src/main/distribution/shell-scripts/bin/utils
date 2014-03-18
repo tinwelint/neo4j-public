@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2002-2013 "Neo Technology,"
+# Copyright (c) 2002-2014 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 #
 # This file is part of Neo4j.
@@ -19,6 +19,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+function show_java_requirements() {
+  echo "* Please use Oracle(R) Java(TM) 7 to run Neo4j Server. Download \"Java Platform (JDK) 7\" from:"
+  echo "  http://www.oracle.com/technetwork/java/javase/downloads/index.html"
+}
+
+function show_installation_instructions() {
+  echo "* Please see http://docs.neo4j.org/ for Neo4j Server installation instructions."
+}
+
 # getconfig <filename>
 #   - plain key-value pairs become environment variables
 #   - keys have '.' chars changed to '_'
@@ -31,14 +40,12 @@ function getconfig {
         key=`echo ${BASH_REMATCH[1]} | sed 's/\./_/g'`
         value="${BASH_REMATCH[2]}"
         if [[ ${key} =~ ^(.*)_([0-9]+)$ ]]; then
-          key=${BASH_REMATCH[1]}
-          if [[ ${!key} ]]; then
-            export ${key}="${!key} ${value}"
-          else
-            export ${key}="$value"
-          fi
+          key="${BASH_REMATCH[1]}"
+        fi
+        if [[ ${!key} ]]; then
+          export ${key}="${!key} ${value}"
         else
-          export ${key}="${value}"
+          export ${key}="$value"
         fi
       fi
     done < "$1"
@@ -51,15 +58,13 @@ function getconfigquoted {
       if [[ ${line} =~ "^([^#\s][^=]+)=(.+)$" ]]; then
         key=`echo ${BASH_REMATCH[1]} | sed 's/\./_/g'`
         value="${BASH_REMATCH[2]}"
-        if [[ ${key} =~ "^(.*)_([0-9]+)$" ]]; then
+        if [[ ${key} =~ "^(.*)(_[0-9]+)?$" ]]; then
           key=${BASH_REMATCH[1]}
-          if [[ ${!key} ]]; then
-            export ${key}="${!key} ${value}"
-          else
-            export ${key}="$value"
-          fi
+        fi
+        if [[ ${!key} ]]; then
+          export ${key}="${!key} ${value}"
         else
-          export ${key}="${value}"
+          export ${key}="$value"
         fi
       fi
     done < "$1"
@@ -80,7 +85,7 @@ findjava() {
              echo "Using Java version: $JAVA_VERSION"
            fi
            if [ -z "$JAVA_HOME" ] ; then
-             JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Home
+             JAVA_HOME=`/usr/libexec/java_home -v 1.7`
            fi
            ;;
   esac
@@ -107,7 +112,10 @@ findjava() {
         JAVACMD="$JAVA_HOME/bin/java"
       fi
     else
-      JAVACMD=`which java`
+      if [ "`uname`" != "Darwin" ] ; then
+        # Don't use default java on Darwin because it displays a misleading dialog box
+        JAVACMD=`which java`
+      fi
     fi
   fi
 }
@@ -145,6 +153,7 @@ reportstatus() {
 
   if [ -z $NEO4J_PID ] ; then
     echo "$FRIENDLY_NAME is not running"
+	exit 3
   else
     echo "$FRIENDLY_NAME is running at pid $NEO4J_PID"
   fi
@@ -153,9 +162,11 @@ reportstatus() {
 # Use findjava to set JAVACMD. If that fails ($JAVACMD is not set) then exit with failure
 exitonnojava() {
   findjava
+
   if [ ! -x "$JAVACMD" ] ; then
-    echo "Error: JAVA_HOME is not defined correctly."
-    echo "  We cannot execute $JAVACMD"
+    echo "ERROR: Unable to find java. (Cannot execute $JAVACMD)"
+    show_java_requirements
+    show_installation_instructions
     exit 1
   fi
 }
@@ -259,7 +270,7 @@ remove_user() {
     
     case $yn in
       [Yy]* ) $DELETE_CMD $wrapper_user
-              modify_user_config "" created=true
+              modify_user_config "" "true"
         ;;
       * ) echo "OK, we'll let that user live, for now." 
         ;;
@@ -346,22 +357,35 @@ selectinittool() {
   fi
 }
 
-# check if running JDK 6, warn if not
+warn_about_java_runtime() {
+  echo "WARNING! You are using an unsupported Java runtime. "
+  show_java_requirements
+  show_installation_instructions
+}
+
+complain_about_java_version() {
+  echo "ERROR! Neo4j cannot be started using java version $JAVAVERSION. "
+  show_java_requirements
+  show_installation_instructions
+}
+
+# check if running Oracle JDK 7, warn if not
 checkjvmcompatibility() {
-  $JAVACMD -version 2>&1 | egrep -q "Java HotSpot\\(TM\\) (64-Bit Server|Client) VM"
+  # Shut down if java version < 1.7
+  JAVAVERSION=$("$JAVACMD" -version 2>&1 | awk -F '"' '/version/ {print $2}')
+  if [[ "$JAVAVERSION" < "1.7" ]]; then
+    complain_about_java_version
+    exit 1
+  fi
+
+  $JAVACMD -version 2>&1 | egrep -q "Java HotSpot\\(TM\\) (64-Bit Server|Server|Client) VM"
   if [ $? -eq 1 ]
   then
-    echo "WARNING! You are using an unsupported Java runtime. Please use Oracle(R) Java(TM) Runtime Environment 7."
-  else
-    $JAVACMD -version 2>&1 | egrep -q "java version \"1.7"
-    if [ $? -eq 1 ]
-    then
-      echo "WARNING! You are using an unsupported version of the Java runtime. Please use Oracle(R) Java(TM) Runtime Environment 7."
-    fi
+    warn_about_java_runtime
   fi
 }
 
 checkclasspath() {
-  echo $CLASSPATH | grep -q SNAPSHOT && \
-  echo -e "\nWARNING! Latest Development Build. Not intended for general-pupose use. May be unstable."
+  echo $CLASSPATH | egrep -q 'neo4j-kernel-[0-9.]{2,8}-SNAPSHOT' && \
+  echo -e "\nWARNING! Latest Development Build. Not intended for general-purpose use. May be unstable."
 }

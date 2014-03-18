@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 
@@ -74,9 +75,9 @@ public class RaceBetweenCommitAndGetMoreRelationshipsIT extends TimerTask
             path = args[0];
         }
         delete( new File( path ) );
-        InternalAbstractGraphDatabase graphdb = new EmbeddedGraphDatabase( path );
+        GraphDatabaseAPI graphdb = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabase( path );
         RaceBetweenCommitAndGetMoreRelationshipsIT race = instance = new RaceBetweenCommitAndGetMoreRelationshipsIT(
-                graphdb, graphdb.getNodeManager() );
+                graphdb, graphdb.getDependencyResolver().resolveDependency( NodeManager.class ) );
         try
         {
             race.execute();
@@ -107,8 +108,14 @@ public class RaceBetweenCommitAndGetMoreRelationshipsIT extends TimerTask
 
     private void execute() throws Throwable
     {
+        try(Transaction tx = graphdb.beginTx())
+        {
+            graphdb.createNode(); // Create a node with id 0 (test was originally written to use the reference node)
+            tx.success();
+        }
         setup( 1000 );
         nodeManager.clearCache();
+
         timer.schedule( this, 10, 10 );
         Worker[] threads = { new Worker( "writer", error )
         {
@@ -126,7 +133,7 @@ public class RaceBetweenCommitAndGetMoreRelationshipsIT extends TimerTask
                 try
                 {
                     int count = 0;
-                    for ( @SuppressWarnings( "unused" ) Relationship rel : graphdb.getReferenceNode()
+                    for ( @SuppressWarnings( "unused" ) Relationship rel : graphdb.getNodeById(0)
                             .getRelationships() )
                     {
                         count++;
@@ -160,18 +167,19 @@ public class RaceBetweenCommitAndGetMoreRelationshipsIT extends TimerTask
         return assertions;
     }
 
-    protected void setup( int relCount )
+    protected Node setup( int relCount )
     {
         Transaction tx = graphdb.beginTx();
         try
         {
-            Node root = graphdb.getReferenceNode();
+            Node root = graphdb.getNodeById( 0 );
             for ( int i = 0; i < relCount; i++ )
             {
                 root.createRelationshipTo( graphdb.createNode(), TYPE );
             }
 
             tx.success();
+            return root;
         }
         finally
         {

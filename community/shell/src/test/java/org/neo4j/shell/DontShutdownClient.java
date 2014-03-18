@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 
 import org.neo4j.shell.impl.SameJvmClient;
+import org.neo4j.shell.impl.SystemOutput;
 import org.neo4j.shell.kernel.GraphDatabaseShellServer;
 
 public class DontShutdownClient
@@ -30,7 +31,8 @@ public class DontShutdownClient
     public static void main( String[] args ) throws Exception
     {
         GraphDatabaseShellServer server = new GraphDatabaseShellServer( args[0], false, null );
-        ShellClient client = new SameJvmClient( new HashMap<String, Serializable>(), server );
+        new SameJvmClient( new HashMap<String, Serializable>(), server,
+            /* Temporary, switch back to SilentOutput once flaky test is resolved. */ new SystemOutput() );
         server.shutdown();
         // Intentionally don't shutdown the client
     }

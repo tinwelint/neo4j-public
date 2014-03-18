@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,14 @@
  */
 package org.neo4j.shell;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.helpers.Args;
+import org.neo4j.shell.impl.RmiLocation;
+import org.neo4j.shell.impl.ShellBootstrap;
+import org.neo4j.shell.impl.SimpleAppServer;
+import org.neo4j.shell.kernel.GraphDatabaseShellServer;
+
+import java.io.*;
 import java.lang.reflect.Method;
 import java.rmi.ConnectException;
 import java.rmi.RemoteException;
@@ -32,12 +35,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.helpers.Args;
-import org.neo4j.shell.impl.AbstractServer;
-import org.neo4j.shell.impl.RmiLocation;
-import org.neo4j.shell.impl.ShellBootstrap;
-import org.neo4j.shell.kernel.GraphDatabaseShellServer;
+import static org.neo4j.kernel.impl.util.Charsets.UTF_8;
+import static org.neo4j.kernel.impl.util.FileUtils.newBufferedFileReader;
 
 /**
  * Can start clients, either remotely to another JVM running a server
@@ -87,6 +86,18 @@ public class StartClient
     public static final String ARG_COMMAND = "c";
 
     /**
+     * File a file with shell commands to execute when the shell client has
+     * been connected.
+     */
+    public static final String ARG_FILE = "file";
+
+    /**
+     * Special character used to request reading from stdin rather than a file.
+     * Uses the dash character, which is a common way to specify this.
+     */
+    public static final String ARG_FILE_STDIN = "-";
+
+    /**
      * Configuration file to load and use if a local {@link GraphDatabaseService}
      * is started in this JVM.
      */
@@ -132,7 +143,6 @@ public class StartClient
                     "You should either supply only " + ARG_PATH +
                     " or " + ARG_HOST + "/" + ARG_PORT + "/" + ARG_NAME + " so that either a local or " +
                     "remote shell client can be started" );
-            return;
         }
         // Local
         else if ( path != null )
@@ -150,6 +160,13 @@ public class StartClient
         // Remote
         else
         {
+            String readonly = args.get( ARG_READONLY, null );
+            if (readonly != null )
+            {
+                System.err.println(
+                        "Warning: -" + ARG_READONLY + " is ignored unless you connect with -" + ARG_PATH + "!" );
+            }
+
             // Start server on the supplied process
             if ( pid != null )
             {
@@ -255,8 +272,8 @@ public class StartClient
 
     private void startServer( String pid, Args args )
     {
-        String port = args.get( "port", Integer.toString( AbstractServer.DEFAULT_PORT ) );
-        String name = args.get( "name", AbstractServer.DEFAULT_NAME );
+        String port = args.get( "port", Integer.toString( SimpleAppServer.DEFAULT_PORT ) );
+        String name = args.get( "name", SimpleAppServer.DEFAULT_NAME );
         try
         {
             String jarfile = new File(
@@ -275,8 +292,8 @@ public class StartClient
         try
         {
             String host = args.get( ARG_HOST, "localhost" );
-            int port = args.getNumber( ARG_PORT, AbstractServer.DEFAULT_PORT ).intValue();
-            String name = args.get( ARG_NAME, AbstractServer.DEFAULT_NAME );
+            int port = args.getNumber( ARG_PORT, SimpleAppServer.DEFAULT_PORT ).intValue();
+            String name = args.get( ARG_NAME, SimpleAppServer.DEFAULT_NAME );
             ShellClient client = ShellLobby.newClient( RmiLocation.location( host, port, name ),
                     getSessionVariablesFromArgs( args ) );
             if ( !isCommandLine( args ) )
@@ -293,7 +310,8 @@ public class StartClient
 
     private static boolean isCommandLine( Args args )
     {
-        return args.get( ARG_COMMAND, null ) != null;
+        return args.get( ARG_COMMAND, null ) != null ||
+               args.get( ARG_FILE, null ) != null;
     }
 
     private static void grabPromptOrJustExecuteCommand( ShellClient client, Args args ) throws Exception
@@ -303,10 +321,56 @@ public class StartClient
         {
             client.evaluate( command );
             client.shutdown();
+            return;
         }
-        else
+        String fileName = args.get( ARG_FILE, null );
+        if ( fileName != null )
         {
-            client.grabPrompt();
+            BufferedReader reader = null;
+            try
+            {
+                if ( fileName.equals( ARG_FILE_STDIN ) )
+                {
+                    reader = new BufferedReader( new InputStreamReader( System.in, UTF_8 ) );
+                }
+                else
+                {
+                    File file = new File( fileName );
+                    if ( !file.exists() )
+                    {
+                        throw new ShellException( "File to execute " + "does not exist: " + fileName );
+                    }
+                    reader = newBufferedFileReader( file, UTF_8 );
+                }
+                executeCommandStream( client, reader );
+            }
+            finally
+            {
+                if ( reader != null )
+                {
+                    reader.close();
+                }
+            }
+            return;
+        }
+
+        client.grabPrompt();
+    }
+
+    private static void executeCommandStream( ShellClient client, BufferedReader reader ) throws IOException,
+            ShellException
+    {
+        try
+        {
+            for ( String line; ( line = reader.readLine() ) != null; )
+            {
+                client.evaluate( line );
+            }
+        }
+        finally
+        {
+            client.shutdown();
+            reader.close();
         }
     }
 
@@ -328,16 +392,19 @@ public class StartClient
                 session.put( key, entry.getValue() );
             }
         }
+        if ( isCommandLine( args ) )
+        {
+            session.put( "quiet", true );
+        }
         return session;
     }
 
     private static void applyProfileFile( File file, Map<String, Serializable> session ) throws ShellException
     {
-        InputStream in = null;
-        try
+        try (FileInputStream fis = new FileInputStream( file ))
         {
             Properties properties = new Properties();
-            properties.load( new FileInputStream( file ) );
+            properties.load( fis );
             for ( Object key : properties.keySet() )
             {
                 String stringKey = (String) key;
@@ -349,20 +416,6 @@ public class StartClient
         {
             throw new IllegalArgumentException( "Couldn't find profile '" +
                     file.getAbsolutePath() + "'" );
-        }
-        finally
-        {
-            if ( in != null )
-            {
-                try
-                {
-                    in.close();
-                }
-                catch ( IOException e )
-                {
-                    // OK
-                }
-            }
         }
     }
 
@@ -395,21 +448,26 @@ public class StartClient
 
     private static void printUsage()
     {
-        int port = AbstractServer.DEFAULT_PORT;
-        String name = AbstractServer.DEFAULT_NAME;
-        int longestArgLength = longestString( ARG_COMMAND, ARG_CONFIG, ARG_HOST, ARG_NAME,
+        int port = SimpleAppServer.DEFAULT_PORT;
+        String name = SimpleAppServer.DEFAULT_NAME;
+        int longestArgLength = longestString( ARG_FILE, ARG_COMMAND,
+                ARG_CONFIG,
+                ARG_HOST, ARG_NAME,
                 ARG_PATH, ARG_PID, ARG_PORT, ARG_READONLY );
         System.out.println(
                 padArg( ARG_HOST, longestArgLength ) + "Domain name or IP of host to connect to (default: localhost)" +
                         "\n" +
                         padArg( ARG_PORT, longestArgLength ) + "Port of host to connect to (default: " +
-                        AbstractServer.DEFAULT_PORT + ")\n" +
+                        SimpleAppServer.DEFAULT_PORT + ")\n" +
                         padArg( ARG_NAME, longestArgLength ) + "RMI name, i.e. rmi://<host>:<port>/<name> (default: "
-                        + AbstractServer.DEFAULT_NAME + ")\n" +
+                        + SimpleAppServer.DEFAULT_NAME + ")\n" +
                         padArg( ARG_PID, longestArgLength ) + "Process ID to connect to\n" +
                         padArg( ARG_COMMAND, longestArgLength ) + "Command line to execute. After executing it the " +
                         "shell exits\n" +
-                        padArg( ARG_READONLY, longestArgLength ) + "Connect in readonly mode\n" +
+                        padArg( ARG_FILE, longestArgLength ) + "File containing commands to execute, or '-' to read " +
+                        "from stdin. After executing it the shell exits\n" +
+                        padArg( ARG_READONLY, longestArgLength ) + "Connect in readonly mode (only for connecting " +
+                        "with -" + ARG_PATH + ")\n" +
                         padArg( ARG_PATH, longestArgLength ) + "Points to a neo4j db path so that a local server can " +
                         "be started there\n" +
                         padArg( ARG_CONFIG, longestArgLength ) + "Points to a config file when starting a local " +

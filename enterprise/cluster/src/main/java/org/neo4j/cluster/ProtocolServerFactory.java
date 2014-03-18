@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,8 @@ import java.util.concurrent.Executor;
 
 import org.neo4j.cluster.com.message.MessageSender;
 import org.neo4j.cluster.com.message.MessageSource;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectInputStreamFactory;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectOutputStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.AcceptorInstanceStore;
 import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 import org.neo4j.cluster.timeout.TimeoutStrategy;
@@ -34,8 +36,10 @@ import org.neo4j.cluster.timeout.TimeoutStrategy;
  */
 public interface ProtocolServerFactory
 {
-    ProtocolServer newProtocolServer( TimeoutStrategy timeouts, MessageSource input, MessageSender output,
+    ProtocolServer newProtocolServer( InstanceId me, TimeoutStrategy timeouts, MessageSource input, MessageSender output,
                                       AcceptorInstanceStore acceptorInstanceStore,
                                       ElectionCredentialsProvider electionCredentialsProvider,
-                                      Executor stateMachineExecutor );
+                                      Executor stateMachineExecutor,
+                                      ObjectInputStreamFactory objectInputStreamFactory,
+                                      ObjectOutputStreamFactory objectOutputStreamFactory);
 }

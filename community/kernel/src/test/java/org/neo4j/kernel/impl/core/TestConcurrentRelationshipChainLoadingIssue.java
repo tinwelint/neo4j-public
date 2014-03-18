@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,34 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.Test;
+
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.kernel.impl.util.MultipleCauseException;
+import org.neo4j.test.TestGraphDatabaseFactory;
+
 import static java.lang.Runtime.getRuntime;
+import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.SECONDS;
+
 import static org.junit.Assert.assertEquals;
+
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cache_type;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.relationship_grab_size;
 import static org.neo4j.helpers.collection.IteratorUtil.count;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.impl.MyRelTypes;
-import org.neo4j.test.ImpermanentDatabaseRule;
 
 /**
  * This isn't a deterministic test, but instead tries to trigger a race condition
@@ -49,24 +56,50 @@ import org.neo4j.test.ImpermanentDatabaseRule;
 public class TestConcurrentRelationshipChainLoadingIssue
 {
     private final int relCount = 2;
-    public final @Rule ImpermanentDatabaseRule graphDb = new ImpermanentDatabaseRule()
-    {
-        protected void configure( GraphDatabaseBuilder builder )
-        {
-            builder.setConfig( cache_type, "weak" );
-            builder.setConfig( relationship_grab_size, "" + (relCount/2) );
-        }
-    };
     
     @Test
     public void tryToTriggerRelationshipLoadingStoppingMidWay() throws Throwable
     {
-        GraphDatabaseAPI db = graphDb.getGraphDatabaseAPI();
-        final Node node = createNodeWithRelationships( db );
-        
+        tryToTriggerRelationshipLoadingStoppingMidWay( 50 );
+    }
+    
+    @Test
+    public void tryToTriggerRelationshipLoadingStoppingMidWayForDenseNodeRepresentation() throws Throwable
+    {
+        tryToTriggerRelationshipLoadingStoppingMidWay( 1 );
+    }
+    
+    private void tryToTriggerRelationshipLoadingStoppingMidWay( int denseNodeThreshold ) throws Throwable
+    {
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+                .setConfig( cache_type, "weak" )
+                .setConfig( relationship_grab_size, "" + relCount/2 )
+                .setConfig( dense_node_threshold, "" + denseNodeThreshold )
+                .newGraphDatabase();
+        Node node = createNodeWithRelationships( db );
+
+        checkStateToHelpDiagnoseFlakeyTest( db, node );
+
         long end = currentTimeMillis()+SECONDS.toMillis( 5 );
+        int iterations = 0;
         while ( currentTimeMillis() < end )
-            tryOnce( db, node );
+        {
+            tryOnce( db, node, iterations++ );
+        }
+    }
+
+    private void checkStateToHelpDiagnoseFlakeyTest( GraphDatabaseAPI db, Node node )
+    {
+        loadNode( db, node );
+        db.getDependencyResolver().resolveDependency( NodeManager.class ).clearCache();
+        loadNode( db, node );
+    }
+
+    private void loadNode( GraphDatabaseAPI db, Node node )
+    {
+        try (Transaction ignored = db.beginTx()) {
+            count( node.getRelationships() );
+        }
     }
 
     private void awaitStartSignalAndRandomTimeLonger( final CountDownLatch startSignal )
@@ -82,13 +115,13 @@ public class TestConcurrentRelationshipChainLoadingIssue
         }
     }
     
-    private void tryOnce( final GraphDatabaseAPI db, final Node node ) throws Throwable
+    private void tryOnce( final GraphDatabaseAPI db, final Node node, int iterations ) throws Throwable
     {
-        db.getNodeManager().clearCache();
+        db.getDependencyResolver().resolveDependency( NodeManager.class ).clearCache();
         ExecutorService executor = newCachedThreadPool();
         final CountDownLatch startSignal = new CountDownLatch( 1 );
         int threads = getRuntime().availableProcessors();
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final List<Throwable> errors = Collections.synchronizedList( new ArrayList<Throwable>() );
         for ( int i = 0; i < threads; i++ )
         {
             executor.submit( new Runnable()
@@ -97,13 +130,17 @@ public class TestConcurrentRelationshipChainLoadingIssue
                 public void run()
                 {
                     awaitStartSignalAndRandomTimeLonger( startSignal );
+                    Transaction transaction = db.beginTx();
                     try
                     {
                         assertEquals( relCount, count( node.getRelationships() ) );
                     }
                     catch ( Throwable e )
                     {
-                        error.set( e );
+                        errors.add( e );
+                    }
+                    finally {
+                        transaction.finish();
                     }
                 }
             } );
@@ -112,16 +149,23 @@ public class TestConcurrentRelationshipChainLoadingIssue
         executor.shutdown();
         executor.awaitTermination( 10, SECONDS );
         
-        if ( error.get() != null )
-            throw error.get();
+        if ( !errors.isEmpty() )
+        {
+            throw new MultipleCauseException(
+                    format("Exception(s) after %s iterations with %s threads", iterations, threads),
+                    errors );
+        }
     }
-    
+
     private static int idleLoop( int l )
     {
-        int i = 0;
+        // Use atomic integer to disable the JVM from rewriting this loop to simple addition.
+        AtomicInteger i = new AtomicInteger( 0 );
         for ( int j = 0; j < l; j++ )
-            i++;
-        return i;
+        {
+            i.incrementAndGet();
+        }
+        return i.get();
     }
 
     private Node createNodeWithRelationships( GraphDatabaseAPI db )
@@ -132,9 +176,13 @@ public class TestConcurrentRelationshipChainLoadingIssue
         {
             node = db.createNode();
             for ( int i = 0; i < relCount / 2; i++ )
+            {
                 node.createRelationshipTo( node, MyRelTypes.TEST );
+            }
             for ( int i = 0; i < relCount / 2; i++ )
+            {
                 node.createRelationshipTo( node, MyRelTypes.TEST2 );
+            }
             tx.success();
             return node;
         }

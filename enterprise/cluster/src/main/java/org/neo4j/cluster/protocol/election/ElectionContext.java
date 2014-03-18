@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,341 +19,70 @@
  */
 package org.neo4j.cluster.protocol.election;
 
-import static org.neo4j.helpers.collection.Iterables.filter;
-import static org.neo4j.helpers.collection.Iterables.map;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
-import org.neo4j.cluster.protocol.cluster.ClusterContext;
-import org.neo4j.cluster.protocol.heartbeat.HeartbeatContext;
-import org.neo4j.helpers.Function;
-import org.neo4j.helpers.Predicate;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.cluster.InstanceId;
+import org.neo4j.cluster.protocol.ConfigurationContext;
+import org.neo4j.cluster.protocol.LoggingContext;
+import org.neo4j.cluster.protocol.TimeoutsContext;
 
 /**
  * Context used by {@link ElectionState}.
  */
-public class ElectionContext
+public interface ElectionContext
+    extends TimeoutsContext, LoggingContext, ConfigurationContext
 {
-    private List<ElectionRole> roles = new ArrayList<ElectionRole>();
-    private ClusterContext clusterContext;
-    private HeartbeatContext heartbeatContext;
 
-    private Map<String, Election> elections = new HashMap<String, Election>();
-    private ElectionCredentialsProvider electionCredentialsProvider;
+    void created();
 
-    public ElectionContext( Iterable<ElectionRole> roles, ClusterContext clusterContext,
-                            HeartbeatContext heartbeatContext )
-    {
-        this.heartbeatContext = heartbeatContext;
-        Iterables.addAll( this.roles, roles );
-        this.clusterContext = clusterContext;
-    }
-
-    public void setElectionCredentialsProvider( ElectionCredentialsProvider electionCredentialsProvider )
-    {
-        this.electionCredentialsProvider = electionCredentialsProvider;
-    }
-
-    public void created()
-    {
-        for ( ElectionRole role : roles )
-        {
-            // Elect myself for all roles
-            clusterContext.elected( role.getName(), clusterContext.getMe() );
-        }
-    }
-
-    public List<ElectionRole> getPossibleRoles()
-    {
-        return roles;
-    }
+    List<ElectionRole> getPossibleRoles();
 
     /*
      * Removes all roles from the provided node. This is expected to be the first call when receiving a demote
      * message for a node, since it is the way to ensure that election will happen for each role that node had
      */
-    public void nodeFailed( URI node )
-    {
-        Iterable<String> rolesToDemote = getRoles( node );
-        for ( String role : rolesToDemote )
-        {
-            clusterContext.getConfiguration().getRoles().remove( role );
-        }
-    }
+    void nodeFailed( InstanceId node );
 
-    public Iterable<String> getRoles( URI server )
-    {
-        return clusterContext.getConfiguration().getRolesOf( server );
-    }
+    Iterable<String> getRoles( InstanceId server );
 
-    public ClusterContext getClusterContext()
-    {
-        return clusterContext;
-    }
+    void unelect( String roleName );
 
-    public HeartbeatContext getHeartbeatContext()
-    {
-        return heartbeatContext;
-    }
+    boolean isElectionProcessInProgress( String role );
 
-    public void unelect( String roleName )
-    {
-        clusterContext.getConfiguration().removeElected( roleName );
-    }
+    void startDemotionProcess( String role, final InstanceId demoteNode );
 
-    public boolean isElectionProcessInProgress( String role )
-    {
-        return elections.containsKey( role );
-    }
+    void startElectionProcess( String role );
 
-    public void startDemotionProcess( String role, final URI demoteNode )
-    {
-        elections.put( role, new Election( new WinnerStrategy()
-        {
-            @Override
-            public URI pickWinner( List<Vote> voteList )
-            {
+    void startPromotionProcess( String role, final InstanceId promoteNode );
 
-                // Remove blank votes
-                List<Vote> filteredVoteList = Iterables.toList( Iterables.filter( new Predicate<Vote>()
-                {
-                    @Override
-                    public boolean accept( Vote item )
-                    {
-                        return !( item.getCredentials() instanceof NotElectableElectionCredentials );
-                    }
-                }, voteList ) );
+    void voted( String role, InstanceId suggestedNode, Comparable<Object> suggestionCredentials );
 
-                // Sort based on credentials
-                // The most suited candidate should come out on top
-                Collections.sort( filteredVoteList );
-                Collections.reverse( filteredVoteList );
+    InstanceId getElectionWinner( String role );
 
-                for ( Vote vote : filteredVoteList )
-                {
-                    // Don't elect as winner the node we are trying to demote
-                    if ( !vote.getSuggestedNode().equals( demoteNode ) )
-                    {
-                        return vote.getSuggestedNode();
-                    }
-                }
+    Comparable<Object> getCredentialsForRole( String role );
 
-                // No possible winner
-                return null;
-            }
-        } ) );
-    }
+    int getVoteCount( String role );
 
-    public void startElectionProcess( String role )
-    {
-        elections.put( role, new Election( new WinnerStrategy()
-        {
-            @Override
-            public URI pickWinner( List<Vote> voteList )
-            {
-                // Remove blank votes
-                List<Vote> filteredVoteList = Iterables.toList( Iterables.filter( new Predicate<Vote>()
-                {
-                    @Override
-                    public boolean accept( Vote item )
-                    {
-                        return !( item.getCredentials() instanceof NotElectableElectionCredentials);
-                    }
-                }, voteList ) );
+    int getNeededVoteCount();
 
-                // Sort based on credentials
-                // The most suited candidate should come out on top
-                Collections.sort( filteredVoteList );
-                Collections.reverse( filteredVoteList );
+    void cancelElection( String role );
 
-                for ( Vote vote : filteredVoteList )
-                {
-                    return vote.getSuggestedNode();
-                }
+    Iterable<String> getRolesRequiringElection();
 
-                // No possible winner
-                return null;
-            }
-        } ) );
-    }
+    boolean electionOk();
 
-    public void startPromotionProcess( String role, final URI promoteNode )
-    {
-        elections.put( role, new Election( new WinnerStrategy()
-        {
-            @Override
-            public URI pickWinner( List<Vote> voteList )
-            {
+    boolean isInCluster();
 
-                // Remove blank votes
-                List<Vote> filteredVoteList = Iterables.toList( Iterables.filter( new Predicate<Vote>()
-                {
-                    @Override
-                    public boolean accept( Vote item )
-                    {
-                        return !( item.getCredentials() instanceof NotElectableElectionCredentials);
-                    }
-                }, voteList ) );
+    Iterable<InstanceId> getAlive();
 
-                // Sort based on credentials
-                // The most suited candidate should come out on top
-                Collections.sort( filteredVoteList );
-                Collections.reverse( filteredVoteList );
+    boolean isElector();
 
-                for ( Vote vote : filteredVoteList )
-                {
-                    // Don't elect as winner the node we are trying to demote
-                    if ( !vote.getSuggestedNode().equals( promoteNode ) )
-                    {
-                        return vote.getSuggestedNode();
-                    }
-                }
+    boolean isFailed( InstanceId key );
 
-                // No possible winner
-                return null;
-            }
-        } ) );
-    }
+    InstanceId getElected( String roleName );
 
-    public void voted( String role, URI suggestedNode, Comparable<Object> suggestionCredentials )
-    {
-        if ( isElectionProcessInProgress( role ) )
-        {
-            List<Vote> voteList = elections.get( role ).getVotes();
-            voteList.add( new Vote( suggestedNode, suggestionCredentials ) );
-        }
-    }
+    boolean hasCurrentlyElectedVoted( String role, InstanceId currentElected );
 
-    public URI getElectionWinner( String role )
-    {
-        Election election = elections.get( role );
-        if ( election == null || election.getVotes().isEmpty() )
-        {
-            return null;
-        }
-
-        elections.remove( role );
-
-        return election.pickWinner();
-    }
-
-    public Comparable<Object> getCredentialsForRole( String role )
-    {
-        return electionCredentialsProvider.getCredentials( role );
-    }
-
-    public int getVoteCount( String role )
-    {
-        Election election = elections.get( role );
-        if ( election != null )
-        {
-            List<Vote> voteList = election.getVotes();
-            if ( voteList == null )
-            {
-                return 0;
-            }
-
-            return voteList.size();
-        }
-        else
-        {
-            return 0;
-        }
-    }
-
-    public int getNeededVoteCount()
-    {
-        return clusterContext.getConfiguration().getMembers().size() - heartbeatContext.getFailed().size();
-    }
-
-    public void cancelElection( String role )
-    {
-        elections.remove( role );
-    }
-
-    public Iterable<String> getRolesRequiringElection()
-    {
-        return filter( new Predicate<String>() // Only include roles that are not elected
-        {
-            @Override
-            public boolean accept( String role )
-            {
-                return clusterContext.getConfiguration().getElected( role ) == null;
-            }
-        }, map( new Function<ElectionRole, String>() // Convert ElectionRole to String
-        {
-            @Override
-            public String apply( ElectionRole role )
-            {
-                return role.getName();
-            }
-        }, roles ) );
-    }
-
-    private static class Vote
-            implements Comparable<Vote>
-    {
-        private final URI suggestedNode;
-        private final Comparable<Object> voteCredentials;
-
-        private Vote( URI suggestedNode, Comparable<Object> voteCredentials )
-        {
-            this.suggestedNode = suggestedNode;
-            this.voteCredentials = voteCredentials;
-        }
-
-        public URI getSuggestedNode()
-        {
-            return suggestedNode;
-        }
-
-        @Override
-        public int compareTo( Vote o )
-        {
-            return this.voteCredentials.compareTo( o.voteCredentials );
-        }
-
-        @Override
-        public String toString()
-        {
-            return suggestedNode + ":" + voteCredentials;
-        }
-
-        public Comparable<Object> getCredentials()
-        {
-            return voteCredentials;
-        }
-    }
-
-    private static class Election
-    {
-        private WinnerStrategy winnerStrategy;
-        List<Vote> votes = new ArrayList<Vote>();
-
-        private Election( WinnerStrategy winnerStrategy )
-        {
-            this.winnerStrategy = winnerStrategy;
-        }
-
-        public List<Vote> getVotes()
-        {
-            return votes;
-        }
-
-        public URI pickWinner()
-        {
-            return winnerStrategy.pickWinner( votes );
-        }
-    }
-
-    interface WinnerStrategy
-    {
-        URI pickWinner( List<Vote> votes );
-    }
+    Set<InstanceId> getFailed();
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -57,9 +57,9 @@ public class ClusterMembershipTest
                 join( 100, 2 ).
                 join( 100, 3 ).
                 message( 100, "*** Cluster formed, now leave" ).
-                verifyConfigurations( 0 ).sleep( 100 ).
+                verifyConfigurations( "starting leave", 0 ).sleep( 100 ).
                 leave( 0, 1 ).
-                verifyConfigurations( 200 ).
+                verifyConfigurations( "after 1 left", 200 ).
                 leave( 0, 2 ).
                 leave( 200, 3 ) );
     }
@@ -73,7 +73,7 @@ public class ClusterMembershipTest
                 sleep( 10 ).
                 join( 0, 1 ).
                 message( 100, "*** Cluster formed, now leave" ).
-                leave( 0, 1 ).verifyConfigurations( 0 ) );
+                leave( 0, 1 ).verifyConfigurations( "after 1 left", 0 ) );
     }
 
     @Test
@@ -142,29 +142,16 @@ public class ClusterMembershipTest
         );
     }
 
-    @Ignore
     @Test
+    @Ignore("instance 1 is in start, 2 in discovery. Correct but we don't have a way to verify it yet")
     public void oneNodeCreatesClusterAndThenAnotherJoinsAsFirstLeaves()
             throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
     {
         testCluster( 2, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
-                rounds( 810 ).
+                rounds( 1000 ).
                 join( 0, 1 ).
-                join( 10, 2 ).
+                join( 10, 2, 1, 2 ).
                 leave( 20, 1 )
-        );
-    }
-
-    @Ignore
-    @Test
-    public void oneNodeCreatesClusterAndThenAnotherJoinsAsFirstLeaves2()
-            throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
-    {
-        testCluster( 2, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
-                rounds( 100 ).
-                join( 0, 1 ).
-                join( 10, 2 ).
-                leave( 60, 1 )
         );
     }
 
@@ -173,7 +160,7 @@ public class ClusterMembershipTest
             throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
     {
         testCluster( 4, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
-                rounds( 1000 ).
+                rounds( 200 ).
                 join( 100, 1 ).
                 join( 100, 2 ).
                 join( 100, 3 ).
@@ -183,13 +170,12 @@ public class ClusterMembershipTest
         );
     }
 
-    @Ignore
     @Test
     public void threeNodesJoinAndThenFirstLeavesAsFourthJoins2()
             throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
     {
         testCluster( 5, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
-                rounds( 1000 ).
+                rounds( 200 ).
                 join( 100, 1 ).
                 join( 100, 2 ).
                 join( 100, 3 ).
@@ -200,16 +186,17 @@ public class ClusterMembershipTest
                 leave( 0, 2 )
         );
     }
-
+    
+    @Ignore( "Ignore until fix available" )
     @Test
     public void threeNodesJoinAtSameTime()
             throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
     {
         testCluster( 3, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
-                rounds( 1000 ).
-                join( 0, 1, 2, 3 ).
-                join( 0, 2, 1, 3 ).
-                join( 0, 3, 1, 2 ).
-                message( 3300, "*** Cluster formed" ));
+                rounds( 400 ).
+                join( 0, 1, 1, 2, 3 ).
+                join( 0, 2, 1, 2, 3 ).
+                join( 0, 3, 1, 2, 3 ).
+                message( 390, "*** Cluster formed" ));
     }
 }

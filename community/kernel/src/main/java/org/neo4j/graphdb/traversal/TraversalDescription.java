@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -78,7 +78,7 @@ public interface TraversalDescription
 
     /**
      * Adds {@code evaluator} to the list of evaluators which will control the
-     * behaviour of the traversal. Each {@link Evaluator} can decide whether or
+     * behavior of the traversal. Each {@link Evaluator} can decide whether or
      * not to include a position in the traverser result, i.e. return it from
      * the {@link Traverser} iterator and also whether to continue down that
      * path or to prune, so that the traverser won't continue further down that
@@ -99,7 +99,7 @@ public interface TraversalDescription
 
     /**
      * Adds {@code evaluator} to the list of evaluators which will control the
-     * behaviour of the traversal. Each {@link PathEvaluator} can decide whether or
+     * behavior of the traversal. Each {@link PathEvaluator} can decide whether or
      * not to include a position in the traverser result, i.e. return it from
      * the {@link Traverser} iterator and also whether to continue down that
      * path or to prune, so that the traverser won't continue further down that
@@ -197,6 +197,8 @@ public interface TraversalDescription
      * @param initialState factory for supplying the initial traversal branches with
      * state values potentially used by the {@link PathExpander}.
      * @return a new traversal description with the new modifications.
+     *
+     * @deprecated Because InitialStateFactory is deprecated
      */
     <STATE> TraversalDescription expand( PathExpander<STATE> expander, InitialStateFactory<STATE> initialState );
     
@@ -224,6 +226,8 @@ public interface TraversalDescription
      *
      * @param expander the {@link RelationshipExpander} to use.
      * @return a new traversal description with the new modifications.
+     *
+     * @deprecated Because RelationshipExpander is deprecated
      */
     TraversalDescription expand( RelationshipExpander expander );
     

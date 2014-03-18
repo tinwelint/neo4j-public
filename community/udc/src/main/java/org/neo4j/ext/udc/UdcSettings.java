@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,6 @@ package org.neo4j.ext.udc;
 
 import static org.neo4j.helpers.Settings.ANY;
 import static org.neo4j.helpers.Settings.BOOLEAN;
-import static org.neo4j.helpers.Settings.HOSTNAME_PORT;
 import static org.neo4j.helpers.Settings.INTEGER;
 import static org.neo4j.helpers.Settings.STRING;
 import static org.neo4j.helpers.Settings.TRUE;
@@ -31,7 +30,6 @@ import static org.neo4j.helpers.Settings.min;
 import static org.neo4j.helpers.Settings.setting;
 
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.Settings;
 
 public class UdcSettings
@@ -59,8 +57,7 @@ public class UdcSettings
      * The host address to which UDC updates will be sent.
      * Should be of the form hostname[:port].
      */
-    public static final Setting<HostnamePort> udc_host = setting( "neo4j.ext.udc.host", HOSTNAME_PORT,
-            "udc.neo4j.org" );
+    public static final Setting<String> udc_host = setting( "neo4j.ext.udc.host", STRING, "udc.neo4j.org" );
 
     /**
      * Configuration key for overriding the source parameter in UDC

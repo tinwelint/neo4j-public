@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,8 @@
  */
 package org.neo4j.server.web;
 
-import org.mortbay.component.LifeCycle;
+import org.eclipse.jetty.util.component.LifeCycle;
+
 /**
  * @author tbaum
  * @since 01.12.11

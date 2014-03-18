@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,7 +41,7 @@ final class ServerHolder extends Thread
     {
         if ( server == null ) return;
         if ( server != ServerHolder.server )
-            throw new AssertionError( "trying to release a server not allocated from here" );
+            throw new AssertionError( "trying to suspend a server not allocated from here" );
         if ( allocation == null ) throw new AssertionError( "releasing the server although it is not allocated" );
         allocation = null;
     }

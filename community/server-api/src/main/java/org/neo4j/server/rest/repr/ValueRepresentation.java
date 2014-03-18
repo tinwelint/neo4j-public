@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -53,6 +53,11 @@ public class ValueRepresentation extends Representation
     void putTo( MappingSerializer serializer, String key )
     {
         serializer.writer.writeValue( type, key, value );
+    }
+
+    public static ValueRepresentation ofNull()
+    {
+        return new ValueRepresentation( RepresentationType.NULL, null );
     }
 
     public static ValueRepresentation string( String value )

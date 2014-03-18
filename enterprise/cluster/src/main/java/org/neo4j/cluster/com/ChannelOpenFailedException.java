@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.cluster.com;
 
 /**
- * This is thrown when {@link NetworkInstance} is unable to open a channel to another instance
+ * This is thrown when {@link NetworkSender} is unable to open a channel to another instance
  * in the cluster.
  */
 public class ChannelOpenFailedException extends RuntimeException

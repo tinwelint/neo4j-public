@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,20 @@
  */
 package org.neo4j.server.preflight;
 
+import org.junit.Rule;
+import org.junit.Test;
+import org.neo4j.server.logging.InMemoryAppender;
+import org.neo4j.test.Mute;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
-import org.junit.Test;
-import org.neo4j.server.logging.InMemoryAppender;
-import org.neo4j.server.preflight.PreFlightTasks;
-import org.neo4j.server.preflight.PreflightTask;
+import static org.neo4j.test.Mute.muteAll;
 
 public class TestPreflightTasks
 {
-
     @Test
     public void shouldPassWithNoRules()
     {
@@ -139,4 +139,7 @@ public class TestPreflightTasks
 
         return rules;
     }
+    
+    @Rule
+    public Mute mute = muteAll();
 }

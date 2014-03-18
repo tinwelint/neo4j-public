@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,10 +34,10 @@ public class AddRelToIndex
         String path = args[0];
         String indexName = "myIndex";
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( path );
-        Index<Relationship> index = db.index().forRelationships( indexName );
         Transaction tx = db.beginTx();
+        Index<Relationship> index = db.index().forRelationships( indexName );
         Node node = db.createNode();
-        Relationship relationship = db.getReferenceNode().createRelationshipTo( node, DynamicRelationshipType.withName( "KNOWS" ) );
+        Relationship relationship = db.createNode().createRelationshipTo( node, DynamicRelationshipType.withName( "KNOWS" ) );
         index.add( relationship, "key", "value" );
         tx.success();
         tx.finish();

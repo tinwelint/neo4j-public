@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,105 +20,59 @@
 package org.neo4j.kernel.impl.storemigration;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.neo4j.helpers.UTF8;
-import org.neo4j.kernel.impl.nioneo.store.NeoStore;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyDynamicStoreReader;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyNodeStoreReader;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyPropertyIndexStoreReader;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyPropertyStoreReader;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyRelationshipStoreReader;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyRelationshipTypeStoreReader;
-import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
+import org.neo4j.helpers.Pair;
+import org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Outcome;
 
+/**
+ * Logic to check whether a database version is upgradable to the current version. It looks at the
+ * version information found in the store files themselves.
+ */
 public class UpgradableDatabase
 {
-    /*
-     * Initialized by the static block below.
-     */
-    public static final Map<String, String> fileNamesToExpectedVersions;
+    private final StoreVersionCheck storeVersionCheck;
 
-    static
+    public UpgradableDatabase( StoreVersionCheck storeVersionCheck )
     {
-        Map<String, String> before = new HashMap<String, String>();
-        before.put( NeoStore.DEFAULT_NAME, LegacyStore.FROM_VERSION );
-        before.put( "neostore.nodestore.db", LegacyNodeStoreReader.FROM_VERSION );
-        before.put( "neostore.propertystore.db",
-                LegacyPropertyStoreReader.FROM_VERSION );
-        before.put( "neostore.propertystore.db.arrays",
-                LegacyDynamicStoreReader.FROM_VERSION_ARRAY );
-        before.put( "neostore.propertystore.db.index",
-                LegacyPropertyIndexStoreReader.FROM_VERSION );
-        before.put( "neostore.propertystore.db.index.keys",
-                LegacyDynamicStoreReader.FROM_VERSION_STRING );
-        before.put( "neostore.propertystore.db.strings",
-                LegacyDynamicStoreReader.FROM_VERSION_STRING );
-        before.put( "neostore.relationshipstore.db",
-                LegacyRelationshipStoreReader.FROM_VERSION );
-        before.put( "neostore.relationshiptypestore.db",
-                LegacyRelationshipTypeStoreReader.FROM_VERSION );
-        before.put( "neostore.relationshiptypestore.db.names",
-                LegacyDynamicStoreReader.FROM_VERSION_STRING );
-        fileNamesToExpectedVersions = Collections.unmodifiableMap( before );
-    }
-
-    public void checkUpgradeable( File neoStoreFile )
-    {
-        if (!storeFilesUpgradeable( neoStoreFile ))
-        {
-            throw new StoreUpgrader.UnableToUpgradeException( "Not all store files match the version required for successful upgrade" );
-        }
+        this.storeVersionCheck = storeVersionCheck;
     }
 
     public boolean storeFilesUpgradeable( File neoStoreFile )
     {
-        File storeDirectory = neoStoreFile.getParentFile();
-        for ( String fileName : fileNamesToExpectedVersions.keySet() )
+        try
+		{
+            checkUpgradeable( neoStoreFile );
+            return true;
+        }
+		catch ( StoreUpgrader.UnableToUpgradeException e )
         {
-            String expectedVersion = fileNamesToExpectedVersions.get( fileName );
-            FileChannel fileChannel = null;
-            byte[] expectedVersionBytes = UTF8.encode( expectedVersion );
-            try
+            return false;
+        }
+    }
+
+    public void checkUpgradeable( File neoStoreFile )
+    {
+        File storeDirectory = neoStoreFile.getParentFile();
+        for ( StoreFile store : StoreFile.legacyStoreFiles() )
+        {
+            String expectedVersion = store.legacyVersion();
+            File storeFile = new File( storeDirectory, store.storeFileName() );
+            Pair<Outcome, String> outcome = storeVersionCheck.hasVersion( storeFile, expectedVersion );
+            if ( !outcome.first().isSuccessful() )
             {
-                File storeFile = new File( storeDirectory, fileName );
-                if (!storeFile.exists()) {
-                    return false;
-                }
-                fileChannel = new RandomAccessFile( storeFile, "r" ).getChannel();
-                if ( fileChannel.size() < expectedVersionBytes.length ) {
-                    return false;
-                }
-                fileChannel.position( fileChannel.size() - expectedVersionBytes.length );
-                byte[] foundVersionBytes = new byte[expectedVersionBytes.length];
-                fileChannel.read( ByteBuffer.wrap( foundVersionBytes ) );
-                if ( !expectedVersion.equals( UTF8.decode( foundVersionBytes ) ) )
+                switch ( outcome.first() )
                 {
-                    return false;
-                }
-            } catch ( IOException e )
-            {
-                throw new RuntimeException( e );
-            } finally
-            {
-                if ( fileChannel != null )
-                {
-                    try
-                    {
-                        fileChannel.close();
-                    } catch ( IOException e )
-                    {
-                        // Ignore exception on close
-                    }
+                case missingStoreFile:
+                    throw new StoreUpgrader.UpgradeMissingStoreFilesException( storeFile.getName() );
+                case storeVersionNotFound:
+                    throw new StoreUpgrader.UpgradingStoreVersionNotFoundException( storeFile.getName() );
+                case unexpectedUpgradingStoreVersion:
+                    throw new StoreUpgrader.UnexpectedUpgradingStoreVersionException(
+                            storeFile.getName(), expectedVersion, outcome.other() );
+                default:
+                    throw new IllegalArgumentException( outcome.first().name() );
                 }
             }
         }
-        return true;
     }
 }

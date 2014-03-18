@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,7 +47,7 @@ import org.neo4j.shell.util.json.JSONArray;
 import org.neo4j.shell.util.json.JSONException;
 import org.neo4j.shell.util.json.JSONObject;
 
-public class Dbinfo extends ReadOnlyGraphDatabaseApp
+public class Dbinfo extends NonTransactionProvidingApp
 {
     {
         addOptionDefinition( "l", new OptionDefinition( OptionValueType.MAY,
@@ -97,11 +97,11 @@ public class Dbinfo extends ReadOnlyGraphDatabaseApp
         {
             try
             {
-                kernel = graphDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
-                        .getSingleManagementBean( Kernel.class );
+                kernel = graphDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class ).getSingleManagementBean( Kernel.class );
             }
             catch ( Exception e )
             {
+                // Ignore - the null check does the work
             }
         }
         if ( kernel == null )
@@ -208,9 +208,10 @@ public class Dbinfo extends ReadOnlyGraphDatabaseApp
         try
         {
             Attribute attribute = (Attribute) value;
-            if ( attribute.getValue().getClass().isArray() )
+            Object attributeValue = attribute.getValue();
+            if ( attributeValue != null && attributeValue.getClass().isArray() )
             {
-                Object[] arrayValue = (Object[]) attribute.getValue();
+                Object[] arrayValue = (Object[]) attributeValue;
                 JSONArray array = new JSONArray();
                 for ( Object item : (Object[]) arrayValue )
                 {
@@ -227,7 +228,7 @@ public class Dbinfo extends ReadOnlyGraphDatabaseApp
             }
             else
             {
-                json.put( attribute.getName(), attribute.getValue() );
+                json.put( attribute.getName(), attributeValue );
             }
         }
         catch ( JSONException e )

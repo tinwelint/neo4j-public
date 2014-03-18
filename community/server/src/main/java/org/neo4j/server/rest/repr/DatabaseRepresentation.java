@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,26 @@
  */
 package org.neo4j.server.rest.repr;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.kernel.Version;
+import static org.neo4j.server.rest.web.Surface.PATH_BATCH;
+import static org.neo4j.server.rest.web.Surface.PATH_CYPHER;
+import static org.neo4j.server.rest.web.Surface.PATH_EXTENSIONS;
+import static org.neo4j.server.rest.web.Surface.PATH_LABELS;
+import static org.neo4j.server.rest.web.Surface.PATH_NODES;
+import static org.neo4j.server.rest.web.Surface.PATH_NODE_INDEX;
+import static org.neo4j.server.rest.web.Surface.PATH_RELATIONSHIP_INDEX;
+import static org.neo4j.server.rest.web.Surface.PATH_RELATIONSHIP_TYPES;
+import static org.neo4j.server.rest.web.Surface.PATH_SCHEMA_CONSTRAINT;
+import static org.neo4j.server.rest.web.Surface.PATH_SCHEMA_INDEX;
+import static org.neo4j.server.rest.web.Surface.PATH_TRANSACTION;
 
+import org.neo4j.kernel.Version;
 
 public class DatabaseRepresentation extends MappingRepresentation implements ExtensibleRepresentation
 {
-    private final GraphDatabaseService graphDb;
 
-    public DatabaseRepresentation( GraphDatabaseService graphDb )
+    public DatabaseRepresentation()
     {
         super( RepresentationType.GRAPHDB );
-        this.graphDb = graphDb;
     }
 
     @Override
@@ -44,27 +51,17 @@ public class DatabaseRepresentation extends MappingRepresentation implements Ext
     @Override
     protected void serialize( MappingSerializer serializer )
     {
-        serializer.putUri( "node", "node" );
-        try
-        {
-            // TODO Depracation of reference node
-            /*
-             * When the reference node is removed as a concept this try/catch should be removed completely.
-             * This will make GetOnRootFunctionalTest to break so the two places (at the time of this writing)
-             * where the field reference_node is checked should just be removed.
-             */
-            serializer.putUri( "reference_node", NodeRepresentation.path( graphDb.getReferenceNode() ) );
-        }
-        catch ( NotFoundException e )
-        {
-//            serializer.putString( "reference_node","null" );
-        }
-        serializer.putUri( "node_index", "index/node" );
-        serializer.putUri( "relationship_index", "index/relationship" );
-        serializer.putUri( "extensions_info", "ext" );
-        serializer.putUri( "relationship_types", "relationship/types" );
-        serializer.putUri( "batch", "batch" );
-        serializer.putUri( "cypher", "cypher" );
-        serializer.putString( "neo4j_version", Version.getKernelRevision() );
+        serializer.putUri( "node", PATH_NODES );
+        serializer.putUri( "node_index", PATH_NODE_INDEX );
+        serializer.putUri( "relationship_index", PATH_RELATIONSHIP_INDEX );
+        serializer.putUri( "extensions_info", PATH_EXTENSIONS );
+        serializer.putUri( "relationship_types", PATH_RELATIONSHIP_TYPES );
+        serializer.putUri( "batch", PATH_BATCH );
+        serializer.putUri( "cypher", PATH_CYPHER );
+        serializer.putUri( "indexes", PATH_SCHEMA_INDEX );
+        serializer.putUri( "constraints", PATH_SCHEMA_CONSTRAINT );
+        serializer.putUri( "transaction", PATH_TRANSACTION );
+        serializer.putUri( "node_labels", PATH_LABELS );
+        serializer.putString( "neo4j_version", Version.getKernel().getReleaseVersion() );
     }
 }

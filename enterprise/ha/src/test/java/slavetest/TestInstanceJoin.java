@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,6 @@
  */
 package slavetest;
 
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.com.ServerUtil.rotateLogs;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.test.TargetDirectory.forTest;
-
 import java.util.Map;
 
 import org.junit.Test;
@@ -35,7 +29,16 @@ import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.ha.UpdatePuller;
+import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
+import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.test.TargetDirectory;
+
+import static org.junit.Assert.*;
+import static org.neo4j.com.ServerUtil.rotateLogs;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.test.TargetDirectory.forTest;
 
 /*
  * This test case ensures that instances with the same store id but very old txids
@@ -56,16 +59,18 @@ public class TestInstanceJoin
         try
         {
             master = start( dir.directory( "master", true ).getAbsolutePath(), 0, stringMap( keep_logical_logs.name(),
-                    "1 files" ) );
+                    "1 files", ClusterSettings.initial_hosts.name(), "127.0.0.1:5001" ) );
             createNode( master, "something", "unimportant" );
             // Need to start and shutdown the slave so when we start it up later it verifies instead of copying
-            slave = start( dir.directory( "slave", true ).getAbsolutePath(), 1 );
+            slave = start( dir.directory( "slave", true ).getAbsolutePath(), 1,
+                    stringMap( ClusterSettings.initial_hosts.name(), "127.0.0.1:5001,127.0.0.1:5002" ) );
             slave.shutdown();
 
             long nodeId = createNode( master, key, value );
             createNode( master, "something", "unimportant" );
             // Rotating, moving the above transactions away so they are removed on shutdown.
-            rotateLogs( master );
+            rotateLogs( getXaDataSourceManager( master ), getKernelPanicGenerator( master ),
+                    master.getDependencyResolver().resolveDependency( StringLogger.class ) );
 
             /*
              * We need to shutdown - rotating is not enough. The problem is that log positions are cached and they
@@ -76,12 +81,16 @@ public class TestInstanceJoin
              */
             master.shutdown();
             master = start( dir.directory( "master", false ).getAbsolutePath(), 0, stringMap( keep_logical_logs.name(),
-                    "1 files" ) );
+                    "1 files", ClusterSettings.initial_hosts.name(), "127.0.0.1:5001" ) );
 
-            slave = start( dir.directory( "slave", false ).getAbsolutePath(), 1 );
+            slave = start( dir.directory( "slave", false ).getAbsolutePath(), 1,
+                    stringMap( ClusterSettings.initial_hosts.name(), "127.0.0.1:5001,127.0.0.1:5002" ) );
             slave.getDependencyResolver().resolveDependency( UpdatePuller.class ).pullUpdates();
 
-            assertEquals( "store contents differ", value, slave.getNodeById( nodeId ).getProperty( key ) );
+            try ( Transaction ignore = slave.beginTx() )
+            {
+                assertEquals( "store contents differ", value, slave.getNodeById( nodeId ).getProperty( key ) );
+            }
         }
         finally
         {
@@ -97,19 +106,25 @@ public class TestInstanceJoin
         }
     }
 
-    private long createNode( HighlyAvailableGraphDatabase db, String key, String value )
+    private KernelPanicEventGenerator getKernelPanicGenerator( HighlyAvailableGraphDatabase database )
     {
-        Transaction tx = db.beginTx();
-        Node node = db.createNode();
-        node.setProperty( key, value );
-        tx.success();
-        tx.finish();
-        return node.getId();
+        return database.getDependencyResolver().resolveDependency( KernelPanicEventGenerator.class );
     }
 
-    private static HighlyAvailableGraphDatabase start( String storeDir, int i )
+    private XaDataSourceManager getXaDataSourceManager( HighlyAvailableGraphDatabase database )
     {
-        return start( storeDir, i, stringMap() );
+        return database.getDependencyResolver().resolveDependency( XaDataSourceManager.class );
+    }
+
+    private long createNode( HighlyAvailableGraphDatabase db, String key, String value )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            node.setProperty( key, value );
+            tx.success();
+            return node.getId();
+        }
     }
 
     private static HighlyAvailableGraphDatabase start( String storeDir, int i, Map<String, String> additionalConfig )
@@ -117,8 +132,7 @@ public class TestInstanceJoin
         HighlyAvailableGraphDatabase db = (HighlyAvailableGraphDatabase) new HighlyAvailableGraphDatabaseFactory().
                 newHighlyAvailableDatabaseBuilder( storeDir )
                 .setConfig( ClusterSettings.cluster_server, "127.0.0.1:" + (5001 + i) )
-                .setConfig( ClusterSettings.initial_hosts, "127.0.0.1:5001" )
-                .setConfig( HaSettings.server_id, i + "" )
+                .setConfig( ClusterSettings.server_id, i + "" )
                 .setConfig( HaSettings.ha_server, "127.0.0.1:" + (6666 + i) )
                 .setConfig( HaSettings.pull_interval, "0ms" )
                 .setConfig( additionalConfig )

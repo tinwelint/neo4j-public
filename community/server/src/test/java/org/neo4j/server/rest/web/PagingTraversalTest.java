@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,33 +19,35 @@
  */
 package org.neo4j.server.rest.web;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.FakeClock;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.AbstractGraphDatabase;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
-import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.database.Database;
+import org.neo4j.server.database.WrappedDatabase;
 import org.neo4j.server.rest.domain.GraphDbHelper;
 import org.neo4j.server.rest.domain.TraverserReturnType;
-import org.neo4j.server.rest.paging.FakeClock;
 import org.neo4j.server.rest.paging.LeaseManager;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.server.EntityOutputFormat;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
 public class PagingTraversalTest
 {
@@ -57,23 +59,26 @@ public class PagingTraversalTest
     private GraphDbHelper helper;
     private LeaseManager leaseManager;
     private static final int SIXTY_SECONDS = 60;
+    private AbstractGraphDatabase graph;
 
     @Before
     public void startDatabase() throws IOException
     {
-        database = new Database( ServerTestUtils.EPHEMERAL_GRAPH_DATABASE_FACTORY, null );
+        graph = (AbstractGraphDatabase)new TestGraphDatabaseFactory().newImpermanentDatabase();
+        database = new WrappedDatabase(graph);
         helper = new GraphDbHelper( database );
         output = new EntityOutputFormat( new JsonFormat(), URI.create( BASE_URI ), null );
         leaseManager = new LeaseManager( new FakeClock() );
-        service = new RestfulGraphDatabase( uriInfo(), new JsonFormat(),
+        service = new RestfulGraphDatabase( new JsonFormat(),
                 output,
-                new DatabaseActions( database, leaseManager, ForceMode.forced, true ) );
+                new DatabaseActions( leaseManager, ForceMode.forced, true, database.getGraph() ) );
+        service = new TransactionWrappingRestfulGraphDatabase( graph, service );
     }
 
     @After
     public void shutdownDatabase() throws Throwable
     {
-        this.database.shutdown();
+        this.graph.shutdown();
     }
 
     @Test
@@ -85,12 +90,9 @@ public class PagingTraversalTest
                 .get( "Location" )
                 .get( 0 )
                 .toString();
-        assertThat( responseUri, containsString( "/node/1/paged/traverse/node/" ) );
+        assertThat( responseUri, containsString( "/node/0/paged/traverse/node/" ) );
         assertNotNull( response.getEntity() );
-        System.out.println( response.getEntity()
-                .toString() );
-        assertThat( response.getEntity()
-                .toString(), containsString( "\"name\" : \"19\"" ) );
+        assertThat( new String( (byte[]) response.getEntity() ), containsString( "\"name\" : \"19\"" ) );
     }
 
     @Test
@@ -104,10 +106,8 @@ public class PagingTraversalTest
 
         assertEquals( 200, response.getStatus() );
         assertNotNull( response.getEntity() );
-        assertThat( response.getEntity()
-                .toString(), not( containsString( "\"name\" : \"19\"" ) ) );
-        assertThat( response.getEntity()
-                .toString(), containsString( "\"name\" : \"91\"" ) );
+        assertThat( new String( (byte[]) response.getEntity() ), not( containsString( "\"name\" : \"19\"" ) ) );
+        assertThat( new String( (byte[]) response.getEntity() ), containsString( "\"name\" : \"91\"" ) );
     }
 
     @Test
@@ -121,13 +121,18 @@ public class PagingTraversalTest
     public void shouldRespondWith404WhenTraversalHasExpired()
     {
         Response response = createAPagedTraverser();
-        ( (FakeClock) leaseManager.getClock() ).forwardMinutes( 2 );
+        ((FakeClock) leaseManager.getClock()).forward( enoughMinutesToExpireTheTraversal(), TimeUnit.MINUTES );
 
         String traverserId = parseTraverserIdFromLocationUri( response );
 
         response = service.pagedTraverse( traverserId, TraverserReturnType.node );
 
         assertEquals( 404, response.getStatus() );
+    }
+
+    private int enoughMinutesToExpireTheTraversal()
+    {
+        return 10;
     }
 
     @Test
@@ -161,20 +166,16 @@ public class PagingTraversalTest
 
         String traverserId = parseTraverserIdFromLocationUri( response );
 
-        ( (FakeClock) leaseManager.getClock() ).forwardSeconds( 30 );
+        ((FakeClock) leaseManager.getClock()).forward( 30, TimeUnit.SECONDS );
         response = service.pagedTraverse( traverserId, TraverserReturnType.node );
         assertEquals( 200, response.getStatus() );
 
-        ( (FakeClock) leaseManager.getClock() ).forwardSeconds( 30 );
+        ((FakeClock) leaseManager.getClock()).forward( 30, TimeUnit.SECONDS );
         response = service.pagedTraverse( traverserId, TraverserReturnType.node );
         assertEquals( 200, response.getStatus() );
 
-        ( (FakeClock) leaseManager.getClock() ).forwardMinutes( 10 ); // Long
-                                                                      // pause,
-                                                                      // expect
-                                                                      // lease
-                                                                      // to
-                                                                      // expire
+        ((FakeClock) leaseManager.getClock()).forward( this.enoughMinutesToExpireTheTraversal(), TimeUnit.MINUTES );
+
         response = service.pagedTraverse( traverserId, TraverserReturnType.node );
         assertEquals( 404, response.getStatus() );
     }
@@ -191,41 +192,25 @@ public class PagingTraversalTest
                 .getStatus() );
     }
 
-    private UriInfo uriInfo()
-    {
-        UriInfo mockUriInfo = mock( UriInfo.class );
-        try
-        {
-            when( mockUriInfo.getBaseUri() ).thenReturn( new URI( BASE_URI ) );
-        }
-        catch ( URISyntaxException e )
-        {
-            throw new RuntimeException( e );
-        }
-
-        return mockUriInfo;
-    }
-
     private Response createAPagedTraverser()
     {
         long startNodeId = createListOfNodes( 1000 );
         String description = description();
 
         final int PAGE_SIZE = 10;
-        Response response = service.createPagedTraverser( startNodeId, TraverserReturnType.node, PAGE_SIZE,
-                SIXTY_SECONDS, description );
 
-        return response;
+        return service.createPagedTraverser( startNodeId, TraverserReturnType.node, PAGE_SIZE,
+                SIXTY_SECONDS, description );
     }
 
     private String description()
     {
-        String description = "{"
-                             + "\"prune_evaluator\":{\"language\":\"builtin\",\"name\":\"none\"},"
-                             + "\"return_filter\":{\"language\":\"javascript\",\"body\":\"position.endNode().getProperty('name').contains('9');\"},"
-                             + "\"order\":\"depth first\","
-                             + "\"relationships\":{\"type\":\"PRECEDES\",\"direction\":\"out\"}" + "}";
-        return description;
+        return "{"
+               + "\"prune_evaluator\":{\"language\":\"builtin\",\"name\":\"none\"},"
+               + "\"return_filter\":{\"language\":\"javascript\",\"body\":\"position.endNode().getProperty('name').contains('9');\"},"
+               + "\"order\":\"depth first\","
+               + "\"relationships\":{\"type\":\"PRECEDES\",\"direction\":\"out\"}"
+               + "}";
     }
 
     private long createListOfNodes( int numberOfNodes )
@@ -241,6 +226,7 @@ public class PagingTraversalTest
                 database.getGraph().getNodeById( previousNodeId )
                         .createRelationshipTo( database.getGraph().getNodeById( currentNodeId ),
                                 DynamicRelationshipType.withName( "PRECEDES" ) );
+                previousNodeId = currentNodeId;
             }
 
             tx.success();

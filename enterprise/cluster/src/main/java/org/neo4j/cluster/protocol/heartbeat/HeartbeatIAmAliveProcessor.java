@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,43 +20,59 @@
 package org.neo4j.cluster.protocol.heartbeat;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageHolder;
 import org.neo4j.cluster.com.message.MessageProcessor;
 import org.neo4j.cluster.com.message.MessageType;
+import org.neo4j.cluster.protocol.cluster.ClusterContext;
 
 /**
  * When a message is received, create an I Am Alive message as well, since we know that the sending instance is up
  */
 public class HeartbeatIAmAliveProcessor implements MessageProcessor
 {
-    private MessageHolder output;
+    private final MessageHolder output;
+    private final ClusterContext clusterContext;
 
-    public HeartbeatIAmAliveProcessor( MessageHolder output )
+    public HeartbeatIAmAliveProcessor( MessageHolder output, ClusterContext clusterContext )
     {
         this.output = output;
+        this.clusterContext = clusterContext;
     }
 
     @Override
-    public void process( Message<? extends MessageType> message )
+    public boolean process( Message<? extends MessageType> message )
     {
-        if (!message.isInternal() && !message.isBroadcast() &&
-                !message.getMessageType().equals( HeartbeatMessage.i_am_alive ))
+        if ( !message.isInternal() &&
+                !message.getMessageType().equals( HeartbeatMessage.i_am_alive ) )
         {
-            try
+            // We assume the FROM header always exists.
+            String from =  message.getHeader( Message.FROM );
+            if ( !from.equals( message.getHeader( Message.TO ) )  )
             {
-                String from = message.getHeader( Message.FROM );
-                if (!from.equals( message.getHeader( Message.TO ) ))
+                InstanceId theId;
+                if ( message.hasHeader( Message.INSTANCE_ID ) )
+                {
+                    // INSTANCE_ID is there since after 1.9.6
+                    theId = new InstanceId( Integer.parseInt( message.getHeader( Message.INSTANCE_ID ) ) );
+                }
+                else
+                {
+                    theId = clusterContext.getConfiguration().getIdForUri( URI.create( from ) );
+                }
+
+                if ( theId != null && clusterContext.getConfiguration().getMembers().containsKey( theId )
+                        && !clusterContext.isMe( theId ) )
+                {
                     output.offer( message.copyHeadersTo(
                             Message.internal( HeartbeatMessage.i_am_alive,
-                                    new HeartbeatMessage.IAmAliveState( new URI( from ) ) ), Message.FROM ) );
-            }
-            catch( URISyntaxException e )
-            {
-                e.printStackTrace();
+                                    new HeartbeatMessage.IAmAliveState( theId ) ),
+                            Message.FROM, Message.INSTANCE_ID ) );
+                }
             }
         }
+        return true;
     }
 }

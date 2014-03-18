@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -45,10 +45,10 @@ public abstract class NodeOrRelationship
     {
         return entity instanceof Node ? wrap( (Node) entity ) : wrap( (Relationship) entity );
     }
-    
-    private Object nodeOrRelationship;
 
-    private NodeOrRelationship( Object nodeOrRelationship )
+    private final Object nodeOrRelationship;
+
+    NodeOrRelationship( Object nodeOrRelationship )
     {
         this.nodeOrRelationship = nodeOrRelationship;
     }
@@ -72,7 +72,7 @@ public abstract class NodeOrRelationship
     {
         return (Relationship) nodeOrRelationship;
     }
-    
+
     public PropertyContainer asPropertyContainer()
     {
         return (PropertyContainer) nodeOrRelationship;
@@ -183,6 +183,12 @@ public abstract class NodeOrRelationship
         {
             return object().getRelationships( direction );
         }
+
+        @Override
+        public String toString()
+        {
+            return "Shell wrapped node [" + asNode() + "]";
+        }
     }
 
     static class WrapRelationship extends NodeOrRelationship
@@ -248,7 +254,13 @@ public abstract class NodeOrRelationship
         @Override
         public Iterable<Relationship> getRelationships( Direction direction )
         {
-            return new ArrayList<Relationship>();
+            return new ArrayList<>();
+        }
+
+        @Override
+        public String toString()
+        {
+            return "Shell wrapped relationship [" + asRelationship() + "]";
         }
     }
 }

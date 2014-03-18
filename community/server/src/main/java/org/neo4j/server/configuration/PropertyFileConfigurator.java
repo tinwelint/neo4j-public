@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,34 +24,32 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.SystemConfiguration;
+
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.server.configuration.validation.Validator;
 import org.neo4j.server.logging.Logger;
 
-public class PropertyFileConfigurator implements Configurator
+public class PropertyFileConfigurator extends Configurator.Adapter
 {
-
     private static final String NEO4J_PROPERTIES_FILENAME = "neo4j.properties";
 
     public static final Logger log = Logger.getLogger( PropertyFileConfigurator.class );
 
-    private CompositeConfiguration serverConfiguration = new CompositeConfiguration();
+    private final CompositeConfiguration serverConfiguration = new CompositeConfiguration();
     private File propertyFileDirectory;
 
-    private Validator validator = new Validator();
+    private final Validator validator = new Validator();
     private Map<String, String> databaseTuningProperties = null;
-    private HashSet<ThirdPartyJaxRsPackage> thirdPartyPackages;
 
     public PropertyFileConfigurator( File propertiesFile )
     {
@@ -75,10 +73,10 @@ public class PropertyFileConfigurator implements Configurator
             propertyFileDirectory = propertiesFile.getParentFile();
             loadPropertiesConfig( propertiesFile );
             loadDatabaseTuningProperties( propertiesFile );
-            
+
             normalizeUris();
             ensureRelativeUris();
-            
+
             if ( v != null )
             {
                 v.validate( this.configuration() );
@@ -113,7 +111,7 @@ public class PropertyFileConfigurator implements Configurator
             {
                 log.info(
                         "No database tuning properties (org.neo4j.server.db.tuning.properties) found in [%s], using defaults.",
-                        databaseTuningPropertyFileLocation );
+                        configFile.getPath() );
                 return;
             }
         }
@@ -133,7 +131,7 @@ public class PropertyFileConfigurator implements Configurator
         }
         catch( IOException e )
         {
-            databaseTuningProperties = new HashMap<String, String>();
+            databaseTuningProperties = new HashMap<>();
         }
     }
 
@@ -224,14 +222,23 @@ public class PropertyFileConfigurator implements Configurator
     }
 
     @Override
-    public Set<ThirdPartyJaxRsPackage> getThirdpartyJaxRsClasses()
+    public List<ThirdPartyJaxRsPackage> getThirdpartyJaxRsPackages()
     {
-        thirdPartyPackages = new HashSet<ThirdPartyJaxRsPackage>();
-        Properties properties = this.configuration()
-                .getProperties( THIRD_PARTY_PACKAGES_KEY );
-        for ( Object key : properties.keySet() )
+        List<ThirdPartyJaxRsPackage> thirdPartyPackages = new ArrayList<ThirdPartyJaxRsPackage>();
+        List<String> packagesAndMountpoints = this.configuration().getList( THIRD_PARTY_PACKAGES_KEY );
+
+        for ( String packageAndMoutpoint : packagesAndMountpoints )
         {
-            thirdPartyPackages.add( new ThirdPartyJaxRsPackage( key.toString(), properties.getProperty( key.toString() ) ) );
+            String[] parts = packageAndMoutpoint.split( "=" );
+            if ( parts.length != 2 )
+            {
+                throw new IllegalArgumentException( "config for " + THIRD_PARTY_PACKAGES_KEY + " is wrong: " +
+                        packageAndMoutpoint );
+            }
+            String pkg = parts[0];
+            String mountPoint = parts[1];
+
+            thirdPartyPackages.add( new ThirdPartyJaxRsPackage( pkg, mountPoint ) );
         }
         return thirdPartyPackages;
     }

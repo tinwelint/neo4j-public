@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,15 +23,17 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.DefaultTxHook;
-import org.neo4j.kernel.InternalAbstractGraphDatabase;
+import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.util.StringLogger;
+
+import static org.neo4j.helpers.Settings.osIsWindows;
 
 /**
  * Not thread safe (since DiffRecordStore is not thread safe), intended for
@@ -40,48 +42,60 @@ import org.neo4j.kernel.impl.util.StringLogger;
 public class StoreAccess
 {
     // Top level stores
+    private final RecordStore<DynamicRecord> schemaStore;
     private final RecordStore<NodeRecord> nodeStore;
     private final RecordStore<RelationshipRecord> relStore;
-    private final RecordStore<RelationshipTypeRecord> relTypeStore;
+    private final RecordStore<RelationshipTypeTokenRecord> relationshipTypeTokenStore;
+    private final RecordStore<LabelTokenRecord> labelTokenStore;
+    private final RecordStore<DynamicRecord> nodeDynamicLabelStore;
     private final RecordStore<PropertyRecord> propStore;
     // Transitive stores
     private final RecordStore<DynamicRecord> stringStore, arrayStore;
-    private final RecordStore<PropertyIndexRecord> propIndexStore;
-    private final RecordStore<DynamicRecord> typeNameStore;
-    private final RecordStore<DynamicRecord> propKeyStore;
+    private final RecordStore<PropertyKeyTokenRecord> propertyKeyTokenStore;
+    private final RecordStore<DynamicRecord> relationshipTypeNameStore;
+    private final RecordStore<DynamicRecord> labelNameStore;
+    private final RecordStore<DynamicRecord> propertyKeyNameStore;
+    private final RecordStore<RelationshipGroupRecord> relGroupStore;
     // internal state
     private boolean closeable;
     private NeoStore neoStore;
 
-    public StoreAccess( InternalAbstractGraphDatabase graphdb )
+    public StoreAccess( GraphDatabaseAPI graphdb )
     {
         this( getNeoStoreFrom( graphdb ) );
     }
 
-    private static NeoStore getNeoStoreFrom( InternalAbstractGraphDatabase graphdb )
+    @SuppressWarnings( "deprecation" )
+    private static NeoStore getNeoStoreFrom( GraphDatabaseAPI graphdb )
     {
-        return graphdb.getXaDataSourceManager().getNeoStoreDataSource().getNeoStore();
+        return graphdb.getDependencyResolver().resolveDependency( XaDataSourceManager.class ).getNeoStoreDataSource().getNeoStore();
     }
 
     public StoreAccess( NeoStore store )
     {
-        this( store.getNodeStore(), store.getRelationshipStore(), store.getPropertyStore(),
-                store.getRelationshipTypeStore() );
+        this( store.getSchemaStore(), store.getNodeStore(), store.getRelationshipStore(), store.getPropertyStore(),
+                store.getRelationshipTypeStore(), store.getLabelTokenStore(), store.getRelationshipGroupStore() );
         this.neoStore = store;
     }
 
-    public StoreAccess( NodeStore nodeStore, RelationshipStore relStore, PropertyStore propStore,
-                        RelationshipTypeStore typeStore )
+    public StoreAccess( SchemaStore schemaStore, NodeStore nodeStore, RelationshipStore relStore, PropertyStore propStore,
+                        RelationshipTypeTokenStore typeStore, LabelTokenStore labelTokenStore,
+                        RelationshipGroupStore relGroupStore )
     {
+        this.schemaStore = wrapStore( schemaStore );
         this.nodeStore = wrapStore( nodeStore );
         this.relStore = wrapStore( relStore );
         this.propStore = wrapStore( propStore );
         this.stringStore = wrapStore( propStore.getStringStore() );
         this.arrayStore = wrapStore( propStore.getArrayStore() );
-        this.relTypeStore = wrapStore( typeStore );
-        this.propIndexStore = wrapStore( propStore.getIndexStore() );
-        this.typeNameStore = wrapStore( typeStore.getNameStore() );
-        this.propKeyStore = wrapStore( propStore.getIndexStore().getNameStore() );
+        this.relationshipTypeTokenStore = wrapStore( typeStore );
+        this.labelTokenStore = wrapStore( labelTokenStore );
+        this.nodeDynamicLabelStore = wrapStore( wrapNodeDynamicLabelStore( nodeStore.getDynamicLabelStore() ) );
+        this.propertyKeyTokenStore = wrapStore( propStore.getPropertyKeyTokenStore() );
+        this.relationshipTypeNameStore = wrapStore( typeStore.getNameStore() );
+        this.labelNameStore = wrapStore( labelTokenStore.getNameStore() );
+        this.propertyKeyNameStore = wrapStore( propStore.getPropertyKeyTokenStore().getNameStore() );
+        this.relGroupStore = wrapStore( relGroupStore );
     }
 
     public StoreAccess( String path )
@@ -93,32 +107,25 @@ public class StoreAccess
     {
         this( fileSystem, path, defaultParams() );
     }
-    
+
     public StoreAccess( String path, Map<String, String> params )
     {
         this( new DefaultFileSystemAbstraction(), path, params );
     }
-    
+
     public StoreAccess( FileSystemAbstraction fileSystem, String path, Map<String, String> params )
     {
         this( new StoreFactory( new Config( requiredParams( params, path ) ),
                                 new DefaultIdGeneratorFactory(),
                                 new DefaultWindowPoolFactory(),
-                                fileSystem, initLogger( fileSystem, path ),
+                                fileSystem, StringLogger.DEV_NULL,
                                 new DefaultTxHook() ).attemptNewNeoStore( new File( path, "neostore" ) ) );
         this.closeable = true;
     }
 
-    private static StringLogger initLogger( FileSystemAbstraction fileSystem, String path )
-    {
-        StringLogger logger = StringLogger.loggerDirectory( fileSystem, new File( path ) );
-        logger.logMessage( "Starting " + StoreAccess.class.getSimpleName() );
-        return logger;
-    }
-
     private static Map<String, String> requiredParams( Map<String, String> params, String path )
     {
-        params = new HashMap<String, String>( params );
+        params = new HashMap<>( params );
         params.put( "neo_store", new File( path, "neostore" ).getPath() );
         return params;
     }
@@ -126,6 +133,11 @@ public class StoreAccess
     public NeoStore getRawNeoStore()
     {
         return neoStore;
+    }
+
+    public RecordStore<DynamicRecord> getSchemaStore()
+    {
+        return schemaStore;
     }
 
     public RecordStore<NodeRecord> getNodeStore()
@@ -136,6 +148,11 @@ public class StoreAccess
     public RecordStore<RelationshipRecord> getRelationshipStore()
     {
         return relStore;
+    }
+
+    public RecordStore<RelationshipGroupRecord> getRelationshipGroupStore()
+    {
+        return relGroupStore;
     }
 
     public RecordStore<PropertyRecord> getPropertyStore()
@@ -153,27 +170,42 @@ public class StoreAccess
         return arrayStore;
     }
 
-    public RecordStore<RelationshipTypeRecord> getRelationshipTypeStore()
+    public RecordStore<RelationshipTypeTokenRecord> getRelationshipTypeTokenStore()
     {
-        return relTypeStore;
+        return relationshipTypeTokenStore;
     }
 
-    public RecordStore<PropertyIndexRecord> getPropertyIndexStore()
+    public RecordStore<LabelTokenRecord> getLabelTokenStore()
     {
-        return propIndexStore;
+        return labelTokenStore;
     }
 
-    public RecordStore<DynamicRecord> getTypeNameStore()
+    public RecordStore<DynamicRecord> getNodeDynamicLabelStore()
     {
-        return typeNameStore;
+        return nodeDynamicLabelStore;
     }
 
-    public RecordStore<DynamicRecord> getPropertyKeyStore()
+    public RecordStore<PropertyKeyTokenRecord> getPropertyKeyTokenStore()
     {
-        return propKeyStore;
+        return propertyKeyTokenStore;
     }
 
-    public final <P extends RecordStore.Processor> P applyToAll( P processor )
+    public RecordStore<DynamicRecord> getRelationshipTypeNameStore()
+    {
+        return relationshipTypeNameStore;
+    }
+
+    public RecordStore<DynamicRecord> getLabelNameStore()
+    {
+        return labelNameStore;
+    }
+
+    public RecordStore<DynamicRecord> getPropertyKeyNameStore()
+    {
+        return propertyKeyNameStore;
+    }
+
+    public final <F extends Exception, P extends RecordStore.Processor<F>> P applyToAll( P processor ) throws F
     {
         for ( RecordStore<?> store : allStores() )
         {
@@ -186,13 +218,29 @@ public class StoreAccess
     {
         if ( propStore == null )
         {
+            // for when the property store isn't available (e.g. because the contained data in very sensitive)
             return new RecordStore<?>[]{ // no property stores
-                    nodeStore, relStore, relTypeStore, typeNameStore
+                    nodeStore, relStore,
+                    relationshipTypeTokenStore, relationshipTypeNameStore,
+                    labelTokenStore, labelNameStore, nodeDynamicLabelStore
             };
         }
         return new RecordStore<?>[]{
-                nodeStore, relStore, propStore, stringStore, arrayStore, // basic
-                relTypeStore, propIndexStore, typeNameStore, propKeyStore, // internal
+                schemaStore, nodeStore, relStore, propStore, stringStore, arrayStore,
+                relationshipTypeTokenStore, propertyKeyTokenStore, labelTokenStore,
+                relationshipTypeNameStore, propertyKeyNameStore, labelNameStore,
+                nodeDynamicLabelStore
+        };
+    }
+
+    private static RecordStore<DynamicRecord> wrapNodeDynamicLabelStore( RecordStore<DynamicRecord> store ) {
+        return new DelegatingRecordStore<DynamicRecord>( store ) {
+            @Override
+            public <FAILURE extends Exception> void accept( Processor<FAILURE> processor, DynamicRecord record)
+                    throws FAILURE
+            {
+                processor.processLabelArrayWithOwner( this, record );
+            }
         };
     }
 
@@ -202,23 +250,24 @@ public class StoreAccess
     }
 
     @SuppressWarnings("unchecked")
-    protected void apply( RecordStore.Processor processor, RecordStore<?> store )
+    protected <FAILURE extends Exception> void apply( RecordStore.Processor<FAILURE> processor, RecordStore<?> store )
+            throws FAILURE
     {
         processor.applyFiltered( store, RecordStore.IN_USE );
     }
 
     private static Map<String, String> defaultParams()
     {
-        Map<String, String> params = new HashMap<String, String>();
-        params.put( GraphDatabaseSettings.nodestore_mapped_memory.name(), "20M" );
-        params.put( GraphDatabaseSettings.nodestore_propertystore_mapped_memory.name(), "90M" );
-        params.put( GraphDatabaseSettings.nodestore_propertystore_index_mapped_memory.name(), "1M" );
-        params.put( GraphDatabaseSettings.nodestore_propertystore_index_mapped_memory.name(), "1M" );
-        params.put( GraphDatabaseSettings.strings_mapped_memory.name(), "130M" );
-        params.put( GraphDatabaseSettings.arrays_mapped_memory.name(), "130M" );
-        params.put( GraphDatabaseSettings.relationshipstore_mapped_memory.name(), "100M" );
+        Map<String, String> params = new HashMap<>();
+        params.put( GraphDatabaseSettings.nodestore_mapped_memory_size.name(), "20M" );
+        params.put( GraphDatabaseSettings.nodestore_propertystore_mapped_memory_size.name(), "90M" );
+        params.put( GraphDatabaseSettings.nodestore_propertystore_index_mapped_memory_size.name(), "1M" );
+        params.put( GraphDatabaseSettings.nodestore_propertystore_index_keys_mapped_memory_size.name(), "1M" );
+        params.put( GraphDatabaseSettings.strings_mapped_memory_size.name(), "130M" );
+        params.put( GraphDatabaseSettings.arrays_mapped_memory_size.name(), "130M" );
+        params.put( GraphDatabaseSettings.relationshipstore_mapped_memory_size.name(), "100M" );
         // if on windows, default no memory mapping
-        if ( GraphDatabaseSetting.osIsWindows() )
+        if ( osIsWindows() )
         {
             params.put( GraphDatabaseSettings.use_memory_mapped_buffers.name(), "false" );
         }

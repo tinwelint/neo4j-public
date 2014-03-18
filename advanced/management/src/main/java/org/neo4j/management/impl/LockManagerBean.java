@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -57,16 +57,23 @@ public final class LockManagerBean extends ManagementBeanProvider
         LockManagerImpl( ManagementData management ) throws NotCompliantMBeanException
         {
             super( management );
-            this.lockManager = management.getKernelData().graphDatabase().getLockManager();
+            this.lockManager = lockManager( management );
+        }
+
+        private org.neo4j.kernel.impl.transaction.LockManager lockManager( ManagementData management )
+        {
+            return management.getKernelData().graphDatabase().getDependencyResolver()
+                    .resolveDependency( org.neo4j.kernel.impl.transaction.LockManager.class );
         }
 
         LockManagerImpl( ManagementData management, boolean mxBean )
         {
             super( management, mxBean );
-            this.lockManager = management.getKernelData().graphDatabase().getLockManager();
+            this.lockManager = lockManager( management );
         }
 
-        public long getNumberOfAdvertedDeadlocks()
+        @Override
+        public long getNumberOfAvertedDeadlocks()
         {
             return lockManager.getDetectedDeadlockCount();
         }

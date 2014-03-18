@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,28 +26,30 @@ import org.neo4j.kernel.impl.transaction.DataSourceRegistrationListener;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
 
 public class DefaultSlaveFactory implements SlaveFactory
 {
     private final Logging logging;
-    private final int maxConcurrentChannelsPerSlave;
+    private final Monitors monitors;
     private final int chunkSize;
     private StoreId storeId;
 
-    public DefaultSlaveFactory( XaDataSourceManager xaDsm, Logging logging,
-            int maxConcurrentChannelsPerSlave, int chunkSize )
+    public DefaultSlaveFactory( XaDataSourceManager xaDsm, Logging logging, Monitors monitors, int chunkSize )
     {
         this.logging = logging;
-        this.maxConcurrentChannelsPerSlave = maxConcurrentChannelsPerSlave;
+        this.monitors = monitors;
         this.chunkSize = chunkSize;
         xaDsm.addDataSourceRegistrationListener( new StoreIdSettingListener() );
     }
-    
+
     @Override
     public Slave newSlave( ClusterMember clusterMember )
     {
         return new SlaveClient( clusterMember.getInstanceId(), clusterMember.getHAUri().getHost(),
-                clusterMember.getHAUri().getPort(), logging, storeId, maxConcurrentChannelsPerSlave, chunkSize );
+                clusterMember.getHAUri().getPort(), logging, monitors, storeId,
+                2, // and that's 1 too many, because we push from the master from one thread only anyway
+                chunkSize );
     }
 
     private class StoreIdSettingListener extends DataSourceRegistrationListener.Adapter

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.storemigration.CurrentDatabase;
 import org.neo4j.kernel.impl.storemigration.DatabaseFiles;
 import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
+import org.neo4j.kernel.impl.storemigration.StoreVersionCheck;
 import org.neo4j.kernel.impl.storemigration.UpgradableDatabase;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
 import org.neo4j.kernel.impl.storemigration.monitoring.VisibleMigrationProgressMonitor;
@@ -47,9 +48,9 @@ public class PerformUpgradeIfNecessary implements PreflightTask
 
     private final Logger logger = Logger.getLogger( PerformUpgradeIfNecessary.class );
     private String failureMessage = "Unable to upgrade database";
-    private Configuration config;
-    private PrintStream out;
-    private Map<String, String> dbConfig;
+    private final Configuration config;
+    private final PrintStream out;
+    private final Map<String, String> dbConfig;
 
     public PerformUpgradeIfNecessary( Configuration serverConfig, Map<String, String> dbConfig, PrintStream out )
     {
@@ -66,7 +67,7 @@ public class PerformUpgradeIfNecessary implements PreflightTask
             String dbLocation = new File( config.getString( Configurator.DATABASE_LOCATION_PROPERTY_KEY ) )
                     .getAbsolutePath();
 
-            if ( new CurrentDatabase().storeFilesAtCurrentVersion( new File( dbLocation ) ) )
+            if ( new CurrentDatabase(new StoreVersionCheck( new DefaultFileSystemAbstraction() ) ).storeFilesAtCurrentVersion( new File( dbLocation ) ) )
             {
                 return true;
             }
@@ -75,17 +76,18 @@ public class PerformUpgradeIfNecessary implements PreflightTask
             dbConfig.put( "store_dir", dbLocation );
             dbConfig.put( "neo_store", store.getPath() );
 
-            if ( !new UpgradableDatabase().storeFilesUpgradeable( store ) )
+            FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
+            UpgradableDatabase upgradableDatabase = new UpgradableDatabase( new StoreVersionCheck( fileSystem ) );
+            if ( !upgradableDatabase.storeFilesUpgradeable( store ) )
             {
                 return true;
             }
 
-            FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
             Config conf = new Config( dbConfig, GraphDatabaseSettings.class );
-            StoreUpgrader storeUpgrader = new StoreUpgrader( conf, StringLogger.SYSTEM,
+            StoreUpgrader storeUpgrader = new StoreUpgrader( conf,
                     new ConfigMapUpgradeConfiguration( conf ),
-                    new UpgradableDatabase(), new StoreMigrator( new VisibleMigrationProgressMonitor( StringLogger.SYSTEM, out ) ),
-                    new DatabaseFiles(), new DefaultIdGeneratorFactory(), fileSystem );
+                    upgradableDatabase, new StoreMigrator( new VisibleMigrationProgressMonitor( StringLogger.DEV_NULL, out ) ),
+                    new DatabaseFiles( fileSystem ), new DefaultIdGeneratorFactory(), fileSystem );
 
             try
             {

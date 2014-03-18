@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,9 @@ package org.neo4j.kernel.logging;
 import java.io.File;
 import java.net.URL;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
@@ -31,10 +34,7 @@ import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.slf4j.Logger;
-
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.joran.JoranConfigurator;
-import ch.qos.logback.core.joran.spi.JoranException;
+import org.slf4j.Marker;
 
 /**
  * Logging service that uses Logback as backend.
@@ -85,6 +85,10 @@ public class LogbackService
                 {
                     JoranConfigurator configurator = new JoranConfigurator();
                     configurator.setContext( loggerContext );
+
+                    if (config.getParams().containsKey( "ha.server_id" ))
+                        loggerContext.putProperty( "host", config.getParams().get( "ha.server_id" ) );
+
                     loggerContext.putProperty( "neo_store", storeDir.getPath() );
                     loggerContext.putProperty( "remote_logging_enabled", config.get( GraphDatabaseSettings
                             .remote_logging_enabled ).toString() );
@@ -134,17 +138,23 @@ public class LogbackService
     }
 
     @Override
-    public StringLogger getLogger( Class loggingClass )
+    public StringLogger getMessagesLog( Class loggingClass )
     {
-        return new Slf4jStringLogger( loggerContext.getLogger( loggingClass ) );
+        return new Slf4jToStringLoggerAdapter( loggerContext.getLogger( loggingClass ) );
     }
 
-    public static class Slf4jStringLogger
+    @Override
+    public ConsoleLogger getConsoleLog( Class loggingClass )
+    {
+        return new ConsoleLogger( new Slf4jToStringLoggerAdapter( loggerContext.getLogger( loggingClass ) ) );
+    }
+
+    private static class Slf4jToStringLoggerAdapter
             extends StringLogger
     {
-        Logger logger;
+        private final Logger logger;
 
-        public Slf4jStringLogger( Logger logger )
+        public Slf4jToStringLoggerAdapter( Logger logger )
         {
             this.logger = logger;
         }
@@ -156,7 +166,7 @@ public class LogbackService
         }
 
         @Override
-        public void logLongMessage( final String msg, Visitor<LineLogger> source, final boolean flush )
+        public void logLongMessage( final String msg, Visitor<LineLogger, RuntimeException> source, final boolean flush )
         {
             logMessage( msg, flush );
             source.visit( new LineLogger()
@@ -180,6 +190,12 @@ public class LogbackService
             {
                 logger.info( msg );
             }
+        }
+
+        @Override
+        public void logMessage( String msg, LogMarker marker )
+        {
+           logger.info( from( marker ), msg );
         }
 
         @Override
@@ -258,6 +274,11 @@ public class LogbackService
         public void close()
         {
             // Ignore
+        }
+
+        private static Marker from( LogMarker marker )
+        {
+            return new Slf4jMarkerAdapter( marker.getName() );
         }
     }
 }

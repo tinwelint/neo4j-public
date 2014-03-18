@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -40,14 +40,13 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
-import org.neo4j.graphdb.index.BatchInserterIndex;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.index.lucene.ValueContext;
 import org.neo4j.kernel.impl.cache.LruCache;
 import org.neo4j.kernel.impl.util.IoPrimitiveUtils;
+import org.neo4j.unsafe.batchinsert.BatchInserterIndex;
 
-class LuceneBatchInserterIndex implements BatchInserterIndex,
-        org.neo4j.unsafe.batchinsert.BatchInserterIndex
+class LuceneBatchInserterIndex implements BatchInserterIndex
 {
     private final IndexIdentifier identifier;
     private final IndexType type;
@@ -246,7 +245,7 @@ class LuceneBatchInserterIndex implements BatchInserterIndex,
     
     private double determineGoodBufferSize( double atLeast )
     {
-        double heapHint = (double)(Runtime.getRuntime().maxMemory()/(1024*1024*14));
+        double heapHint = Runtime.getRuntime().maxMemory()/(1024*1024*14);
         double result = Math.max( atLeast, heapHint );
         return Math.min( result, 700 );
     }
@@ -381,13 +380,10 @@ class LuceneBatchInserterIndex implements BatchInserterIndex,
     private File getStoreDir( File dbStoreDir )
     {
         File dir = new File( dbStoreDir, "index" );
-        if ( !dir.exists() )
+        if ( !dir.exists() && !dir.mkdirs() )
         {
-            if ( !dir.mkdirs() )
-            {
-                throw new RuntimeException( "Unable to create directory path["
-                        + dir.getAbsolutePath() + "] for Neo4j store." );
-            }
+            throw new RuntimeException( "Unable to create directory path["
+                    + dir.getAbsolutePath() + "] for Neo4j store." );
         }
         return dir;
     }

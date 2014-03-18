@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,8 @@ package org.neo4j.kernel.impl.transaction.xaframework;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Pair;
 
@@ -31,7 +32,7 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     public static abstract class Configuration
     {
         // TODO This config should be split into a boolean and a string (keep_logical_logs vs kept_logical_logs)
-        public static final GraphDatabaseSetting.StringSetting keep_logical_logs = GraphDatabaseSettings.keep_logical_logs;
+        public static final Setting<String> keep_logical_logs = GraphDatabaseSettings.keep_logical_logs;
     }
 
     private XaLogicalLog logicalLog;
@@ -101,7 +102,9 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     @Override
     public long rotateLogicalLog() throws IOException
     {
-        return logicalLog.rotate();
+        // Go through XaResourceManager so that all paths which rotates the
+        // logical log will go through its lock
+        return getXaContainer().getResourceManager().rotateLogicalLog();
     }
 
     @Override
@@ -139,7 +142,7 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     {
         return logicalLog.getMasterForCommittedTransaction( txId );
     }
-    
+
     @Override
     public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
     {

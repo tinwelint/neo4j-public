@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,17 +29,23 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.neo4j.cluster.BindingListener;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.ClusterMonitor;
 import org.neo4j.cluster.ClusterSettings;
-import org.neo4j.cluster.ConnectedStateMachines;
 import org.neo4j.cluster.ExecutorLifecycleAdapter;
 import org.neo4j.cluster.MultiPaxosServerFactory;
 import org.neo4j.cluster.ProtocolServer;
+import org.neo4j.cluster.StateMachines;
 import org.neo4j.cluster.com.BindingNotifier;
-import org.neo4j.cluster.com.NetworkInstance;
+import org.neo4j.cluster.com.NetworkReceiver;
+import org.neo4j.cluster.com.NetworkSender;
+import org.neo4j.cluster.logging.NettyLoggerFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcast;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastListener;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectInputStreamFactory;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectOutputStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.AtomicBroadcastMessage;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InMemoryAcceptorInstanceStore;
@@ -62,10 +68,12 @@ import org.neo4j.cluster.statemachine.StateTransitionLogger;
 import org.neo4j.cluster.timeout.FixedTimeoutStrategy;
 import org.neo4j.cluster.timeout.MessageTimeoutStrategy;
 import org.neo4j.cluster.timeout.Timeouts;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.DaemonThreadFactory;
 import org.neo4j.helpers.Factory;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.NamedThreadFactory;
+import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -75,15 +83,15 @@ import org.neo4j.kernel.logging.Logging;
 public class ClusterClient extends LifecycleAdapter
         implements ClusterMonitor, Cluster, AtomicBroadcast, Snapshot, Election, BindingNotifier
 {
+    public static final Setting<Long> clusterJoinTimeout = Settings.setting("ha.cluster_join_timeout", Settings.DURATION, "0s");
+
     public interface Configuration
     {
+        int getServerId();
+
         HostnamePort getAddress();
 
-        boolean clusterDiscoveryEnabled();
-
         List<HostnamePort> getInitialHosts();
-
-        String getDiscoveryUrl();
 
         String getClusterName();
 
@@ -113,6 +121,10 @@ public class ClusterClient extends LifecycleAdapter
         long leaveTimeout(); // inherits paxosTimeout
 
         long electionTimeout(); // inherits paxosTimeout
+
+        long clusterJoinTimeout(); // Whether to timeout the whole process or not
+
+        String name(); // Cluster client name, if any
     }
 
     public static Configuration adapt( final Config config )
@@ -120,21 +132,15 @@ public class ClusterClient extends LifecycleAdapter
         return new Configuration()
         {
             @Override
-            public boolean clusterDiscoveryEnabled()
+            public int getServerId()
             {
-                return config.get( ClusterSettings.cluster_discovery_enabled );
+                return config.get( ClusterSettings.server_id );
             }
 
             @Override
             public List<HostnamePort> getInitialHosts()
             {
                 return config.get( ClusterSettings.initial_hosts );
-            }
-
-            @Override
-            public String getDiscoveryUrl()
-            {
-                return config.get( ClusterSettings.cluster_discovery_url );
             }
 
             @Override
@@ -227,6 +233,18 @@ public class ClusterClient extends LifecycleAdapter
             {
                 return config.get( ClusterSettings.learn_timeout );
             }
+
+            @Override
+            public long clusterJoinTimeout()
+            {
+                return config.get(clusterJoinTimeout);
+            }
+
+            @Override
+            public String name()
+            {
+                return config.get( ClusterSettings.instance_name );
+            }
         };
     }
 
@@ -240,7 +258,9 @@ public class ClusterClient extends LifecycleAdapter
     private final ProtocolServer server;
 
     public ClusterClient( final Configuration config, final Logging logging,
-                          ElectionCredentialsProvider electionCredentialsProvider )
+                          ElectionCredentialsProvider electionCredentialsProvider,
+                          ObjectInputStreamFactory objectInputStreamFactory,
+                          ObjectOutputStreamFactory objectOutputStreamFactory )
     {
         MessageTimeoutStrategy timeoutStrategy = new MessageTimeoutStrategy(
                 new FixedTimeoutStrategy( config.defaultTimeout() ) )
@@ -255,19 +275,49 @@ public class ClusterClient extends LifecycleAdapter
                 .timeout( ClusterMessage.leaveTimedout, config.leaveTimeout() )
                 .timeout( ElectionMessage.electionTimeout, config.electionTimeout() );
 
-        MultiPaxosServerFactory protocolServerFactory = new MultiPaxosServerFactory( new ClusterConfiguration( config
-                .getClusterName() ), logging );
+        MultiPaxosServerFactory protocolServerFactory = new MultiPaxosServerFactory(
+                new ClusterConfiguration( config
+                .getClusterName(), logging.getMessagesLog( ClusterConfiguration.class ) ), logging );
 
         InMemoryAcceptorInstanceStore acceptorInstanceStore = new InMemoryAcceptorInstanceStore();
 
-        NetworkInstance networkNodeTCP = new NetworkInstance( new NetworkInstance.Configuration()
+        InternalLoggerFactory.setDefaultFactory( new NettyLoggerFactory(logging) );
+
+        NetworkReceiver receiver = new NetworkReceiver( new NetworkReceiver.Configuration()
         {
             @Override
             public HostnamePort clusterServer()
             {
                 return config.getAddress();
             }
+
+            @Override
+            public int defaultPort()
+            {
+                return 5001;
+            }
+
+            @Override
+            public String name()
+            {
+                return config.name();
+            }
         }, logging );
+
+        NetworkSender sender = new NetworkSender(new NetworkSender.Configuration()
+        {
+            @Override
+            public int defaultPort()
+            {
+                return 5001;
+            }
+
+            @Override
+            public int port()
+            {
+                return config.getAddress().getPort();
+            }
+        }, receiver, logging);
 
         ExecutorLifecycleAdapter stateMachineExecutor = new ExecutorLifecycleAdapter( new Factory<ExecutorService>()
         {
@@ -278,16 +328,23 @@ public class ClusterClient extends LifecycleAdapter
             }
         } );
 
-        server = protocolServerFactory.newProtocolServer( timeoutStrategy, networkNodeTCP, networkNodeTCP,
-                acceptorInstanceStore, electionCredentialsProvider, stateMachineExecutor );
+        server = protocolServerFactory.newProtocolServer( new InstanceId( config.getServerId() ), timeoutStrategy,
+                receiver, sender,
+                acceptorInstanceStore, electionCredentialsProvider, stateMachineExecutor, objectInputStreamFactory, objectOutputStreamFactory );
 
-        networkNodeTCP.addNetworkChannelsListener( new NetworkInstance.NetworkChannelsListener()
+        receiver.addNetworkChannelsListener( new NetworkReceiver.NetworkChannelsListener()
         {
+            volatile private StateTransitionLogger logger = null;
+
             @Override
             public void listeningAt( URI me )
             {
                 server.listeningAt( me );
-                server.addStateTransitionListener( new StateTransitionLogger( logging ) );
+                if (logger == null)
+                {
+                    logger = new StateTransitionLogger( logging );
+                    server.addStateTransitionListener( logger );
+                }
             }
 
             @Override
@@ -301,71 +358,19 @@ public class ClusterClient extends LifecycleAdapter
             }
         } );
 
+        life.add( sender );
         life.add( stateMachineExecutor );
-
-        life.add( networkNodeTCP );
+        life.add( receiver );
 
         // Timeout timer - triggers every 10 ms
-        life.add( new Lifecycle()
-        {
-            private ScheduledExecutorService scheduler;
-            private ScheduledFuture<?> tickFuture;
-
-            @Override
-            public void init() throws Throwable
-            {
-                server.getTimeouts().tick( System.currentTimeMillis() );
-            }
-
-            @Override
-            public void start() throws Throwable
-            {
-                scheduler = Executors.newSingleThreadScheduledExecutor(
-                        new DaemonThreadFactory( "timeout-clusterClient" ) );
-
-                tickFuture = scheduler.scheduleWithFixedDelay( new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        long now = System.currentTimeMillis();
-
-                        server.getTimeouts().tick( now );
-                    }
-                }, 0, 10, TimeUnit.MILLISECONDS );
-            }
-
-            @Override
-            public void stop() throws Throwable
-            {
-                tickFuture.cancel( true );
-                scheduler.shutdownNow();
-            }
-
-            @Override
-            public void shutdown() throws Throwable
-            {
-            }
-        } );
+        life.add( new TimeoutTrigger() );
 
         life.add( new ClusterJoin( new ClusterJoin.Configuration()
         {
             @Override
-            public boolean isDiscoveryEnabled()
-            {
-                return config.clusterDiscoveryEnabled();
-            }
-
-            @Override
             public List<HostnamePort> getInitialHosts()
             {
                 return config.getInitialHosts();
-            }
-
-            @Override
-            public String getDiscoveryUrl()
-            {
-                return config.getDiscoveryUrl();
             }
 
             @Override
@@ -378,6 +383,12 @@ public class ClusterClient extends LifecycleAdapter
             public boolean isAllowedToCreateCluster()
             {
                 return config.isAllowedToCreateCluster();
+            }
+
+            @Override
+            public long getClusterJoinTimeout()
+            {
+                return config.clusterJoinTimeout();
             }
         }, server, logging ) );
 
@@ -467,7 +478,7 @@ public class ClusterClient extends LifecycleAdapter
     }
 
     @Override
-    public void demote( URI node )
+    public void demote( InstanceId node )
     {
         election.demote( node );
     }
@@ -479,7 +490,7 @@ public class ClusterClient extends LifecycleAdapter
     }
 
     @Override
-    public void promote( URI node, String role )
+    public void promote( InstanceId node, String role )
     {
         election.promote( node, role );
     }
@@ -509,7 +520,7 @@ public class ClusterClient extends LifecycleAdapter
 
     public void dumpDiagnostics( StringBuilder appendTo )
     {
-        ConnectedStateMachines stateMachines = server.getConnectedStateMachines();
+        StateMachines stateMachines = server.getStateMachines();
         for ( StateMachine stateMachine : stateMachines.getStateMachines() )
         {
             appendTo.append( "   " ).append( stateMachine.getMessageType().getSimpleName() ).append( ":" )
@@ -525,8 +536,55 @@ public class ClusterClient extends LifecycleAdapter
         }
     }
 
-    public URI getServerUri()
+    public InstanceId getServerId()
     {
         return server.getServerId();
+    }
+
+    public URI getClusterServer()
+    {
+        return server.boundAt();
+    }
+
+    public class TimeoutTrigger implements Lifecycle
+    {
+        private ScheduledExecutorService scheduler;
+        private ScheduledFuture<?> tickFuture;
+
+        @Override
+        public void init() throws Throwable
+        {
+            server.getTimeouts().tick( System.currentTimeMillis() );
+        }
+
+        @Override
+        public void start() throws Throwable
+        {
+            scheduler = Executors.newSingleThreadScheduledExecutor(
+                    new DaemonThreadFactory( "timeout-clusterClient" ) );
+
+            tickFuture = scheduler.scheduleWithFixedDelay( new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    long now = System.currentTimeMillis();
+
+                    server.getTimeouts().tick( now );
+                }
+            }, 0, 10, TimeUnit.MILLISECONDS );
+        }
+
+        @Override
+        public void stop() throws Throwable
+        {
+            tickFuture.cancel( true );
+            scheduler.shutdownNow();
+        }
+
+        @Override
+        public void shutdown() throws Throwable
+        {
+        }
     }
 }

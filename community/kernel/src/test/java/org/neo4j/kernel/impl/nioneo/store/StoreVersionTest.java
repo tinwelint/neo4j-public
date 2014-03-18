@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.hamcrest.CoreMatchers.containsString;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
@@ -39,23 +40,23 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.kernel.impl.util.StringLogger;
-import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+import org.neo4j.test.EphemeralFileSystemRule;
 
 public class StoreVersionTest
 {
     @Test
     public void allStoresShouldHaveTheCurrentVersionIdentifier() throws IOException
     {
-        FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
         File outputDir = new File( "target/var/" + StoreVersionTest.class.getSimpleName() );
-        assertTrue( fileSystem.mkdirs( outputDir ) );
+        fs.get().mkdirs( outputDir );
+
         File storeFileName = new File( outputDir, NeoStore.DEFAULT_NAME );
 
         Map<String, String> config = new HashMap<String, String>();
         config.put( GraphDatabaseSettings.store_dir.name(), outputDir.getPath());
         config.put( "neo_store", storeFileName.getPath() );
         StoreFactory sf = new StoreFactory( new Config( config, GraphDatabaseSettings.class ),
-                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fileSystem, StringLogger.SYSTEM,
+                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fs.get(), StringLogger.DEV_NULL,
                 null );
         NeoStore neoStore = sf.createNeoStore( storeFileName );
 
@@ -64,7 +65,7 @@ public class StoreVersionTest
                 neoStore.getRelationshipStore(),
                 neoStore.getRelationshipTypeStore(),
                 neoStore.getPropertyStore(),
-                neoStore.getPropertyStore().getIndexStore()
+                neoStore.getPropertyStore().getPropertyKeyTokenStore()
         };
 
         for ( CommonAbstractStore store : stores )
@@ -85,13 +86,12 @@ public class StoreVersionTest
         File workingFile = new File( outputDir, "neostore.nodestore.db" );
         FileUtils.copyFile( new File( legacyStoreResource.getFile() ), workingFile );
 
-        FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
         Config config = new Config( new HashMap<String, String>(), GraphDatabaseSettings.class );
 
         try
         {
             new NodeStore( workingFile, config, new DefaultIdGeneratorFactory(),
-                    new DefaultWindowPoolFactory(), fileSystem, StringLogger.SYSTEM );
+                    new DefaultWindowPoolFactory(), fs.get(), StringLogger.DEV_NULL, null );
             fail( "Should have thrown exception" );
         }
         catch ( NotCurrentStoreVersionException e )
@@ -106,8 +106,7 @@ public class StoreVersionTest
         File outputDir = new File( "target/var/"
                 + StoreVersionTest.class.getSimpleName()
                 + "test2" );
-        FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
-        assertTrue( fileSystem.mkdirs( outputDir ) );
+        fs.get().mkdirs( outputDir );
 
         File storeFileName = new File( outputDir, NeoStore.DEFAULT_NAME );
 
@@ -115,14 +114,14 @@ public class StoreVersionTest
         config.put( GraphDatabaseSettings.store_dir.name(), outputDir.getPath() );
         config.put( "neo_store", storeFileName.getPath() );
         StoreFactory sf = new StoreFactory( new Config( config, GraphDatabaseSettings.class ),
-                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fileSystem, StringLogger.SYSTEM,
+                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fs.get(), StringLogger.DEV_NULL,
                 null );
         NeoStore neoStore = sf.createNeoStore( storeFileName );
         // The first checks the instance method, the other the public one
         assertEquals( CommonAbstractStore.ALL_STORES_VERSION,
                 NeoStore.versionLongToString( neoStore.getStoreVersion() ) );
         assertEquals( CommonAbstractStore.ALL_STORES_VERSION,
-                NeoStore.versionLongToString( NeoStore.getStoreVersion( fileSystem, storeFileName ) ) );
+                NeoStore.versionLongToString( NeoStore.getStoreVersion( fs.get(), storeFileName ) ) );
     }
 
     @Test
@@ -137,4 +136,6 @@ public class StoreVersionTest
                     NeoStore.versionLongToString( NeoStore.versionStringToLong( string ) ) );
         }
     }
+    
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 }

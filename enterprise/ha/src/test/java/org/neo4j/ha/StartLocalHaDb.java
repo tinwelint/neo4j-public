@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,11 +20,11 @@
 package org.neo4j.ha;
 
 import org.junit.Ignore;
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
-import org.neo4j.kernel.ha.HaSettings;
 
-@Ignore
+@Ignore("Not a test")
 public class StartLocalHaDb
 {
     public static void main( String[] args )
@@ -33,7 +33,7 @@ public class StartLocalHaDb
         String configFile = args[1];
         final GraphDatabaseService graphDb = new HighlyAvailableGraphDatabaseFactory().
             newHighlyAvailableDatabaseBuilder( path ).
-                setConfig(HaSettings.server_id, "1").
+                setConfig( ClusterSettings.server_id, "1").
                 loadPropertiesFromFile( configFile ).
             newGraphDatabase();
         Runtime.getRuntime().addShutdownHook( new Thread()

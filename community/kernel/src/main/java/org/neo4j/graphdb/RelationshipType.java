@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,9 @@
  */
 package org.neo4j.graphdb;
 
-
 /**
  * A relationship type is mandatory on all relationships and is used to navigate
- * the node space. RelationshipType is in particular a key part of the
+ * the graph. RelationshipType is in particular a key part of the
  * {@link Traverser traverser framework} but it's also used in various
  * {@link Node#getRelationships() relationship operations} on Node.
  * <p>
@@ -95,5 +94,5 @@ public interface RelationshipType
      * 
      * @return the name of the relationship type
      */
-    public String name();
+    String name();
 }

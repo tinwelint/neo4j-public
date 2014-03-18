@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,6 +36,7 @@ import org.apache.log4j.spi.LoggerRepository;
  */
 public class BackupLoggerConfigurator implements Configurator
 {
+    // TODO: We've removed ZK. Is this still needed?
     @Override
     public void doConfigure( URL url, LoggerRepository repository )
     {

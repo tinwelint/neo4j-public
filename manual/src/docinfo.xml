@@ -1,6 +1,6 @@
 <!--
 
-    Copyright (c) 2002-2013 "Neo Technology,"
+    Copyright (c) 2002-2014 "Neo Technology,"
     Network Engine for Objects in Lund AB [http://neotechnology.com]
 
     This file is part of Neo4j.
@@ -27,7 +27,7 @@
 </authorgroup>
 
 <copyright>
-  <year>2013</year>
+  <year>2014</year>
   <holder>Neo Technology</holder>
 </copyright>
 
@@ -47,27 +47,27 @@
       </listitem>
       <listitem>
         <para>
-          <link linkend="tutorials-java-embedded">Using Neo4j embedded in Java applications</link>
-        </para>
-      </listitem>
-      <listitem>
-        <para>
-          <link linkend="tutorials-rest">Remote Client Libraries</link>
-        </para>
-      </listitem>
-      <listitem>
-        <para>
-          <link linkend="languages">Languages</link>
-        </para>
-      </listitem>
-      <listitem>
-        <para>
-          <link linkend="server">Neo4j Server</link>
+          <link linkend="languages">Languages / Remote Client Libraries</link>
         </para>
       </listitem>
       <listitem>
         <para>
           <link linkend="rest-api">REST API</link>
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          <link linkend="deployment">Installation</link>
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          <link linkend="deployment-upgrading">Upgrading</link>
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          <link linkend="operations-security">Security</link>
         </para>
       </listitem>
     </itemizedlist>

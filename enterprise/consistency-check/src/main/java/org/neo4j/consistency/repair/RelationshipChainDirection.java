@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,6 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.consistency.repair;
+
+import static java.lang.String.format;
 
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 
@@ -45,6 +47,6 @@ public enum RelationshipChainDirection
         {
             return second;
         }
-        throw new IllegalArgumentException( String.format( "%d does not reference node %d", rel, nodeId ) );
+        throw new IllegalArgumentException( format( "%s does not reference node %d", rel, nodeId ) );
     }
 }

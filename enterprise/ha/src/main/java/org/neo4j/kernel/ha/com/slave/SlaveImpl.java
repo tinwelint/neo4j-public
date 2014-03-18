@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,8 +22,8 @@ package org.neo4j.kernel.ha.com.slave;
 import org.neo4j.com.Response;
 import org.neo4j.com.ServerUtil;
 import org.neo4j.kernel.ha.HaXaDataSourceManager;
-import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.ha.com.RequestContextFactory;
+import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.ha.com.master.Slave;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
 
@@ -46,7 +46,6 @@ public class SlaveImpl implements Slave
     @Override
     public Response<Void> pullUpdates( String resource, long upToAndIncludingTxId )
     {
-        // Pull updates from the master
         xaDsm.applyTransactions( master.pullUpdates( requestContextFactory.newRequestContext( 0 ) ), ServerUtil.NO_ACTION );
         return ServerUtil.packResponseWithoutTransactionStream( storeId, null );
     }

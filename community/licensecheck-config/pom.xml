@@ -1,14 +1,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>grandparent</artifactId>
-    <groupId>org.neo4j.build</groupId>
-    <version>36</version>
-    <relativePath />
+    <groupId>org.neo4j</groupId>
+    <artifactId>parent</artifactId>
+    <version>2.1-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
   </parent>
   <groupId>org.neo4j.build</groupId>
   <artifactId>licensecheck-config</artifactId>
-  <version>1.9-SNAPSHOT</version>
+  <version>2.1-SNAPSHOT</version>
+
   <name>Licensing configuration</name>
   <description>Licensing configuration for the Neo4j project.</description>
   <packaging>jar</packaging>
@@ -16,10 +17,12 @@
 
   <properties>
     <short-name>licenses</short-name>
+    <maven.site.skip>true</maven.site.skip>
+    <maven.site.deploy.skip>true</maven.site.deploy.skip>
   </properties>
 
   <scm>
-    <url>https://github.com/neo4j/community/tree/master/licensecheck-config</url>
+	  <url>https://github.com/neo4j/neo4j/tree/master/community/licensecheck-config</url>
   </scm>
 
   <licenses>
@@ -39,10 +42,28 @@
     </developer>
   </developers>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.neo4j.build.plugins</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+         <executions>
+          <execution>
+            <id>check-licenses</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
   <distributionManagement>
     <site>
       <id>neo4j-site</id>
-      <url>scpexe://static.neo4j.org/var/www/components.neo4j.org/${project.artifactId}/${project.version}</url>
+      <url>scpexe://docs.neo4j.org/data/www/doc/components.neo4j.org/${project.artifactId}/${project.version}</url>
     </site>
   </distributionManagement>
 

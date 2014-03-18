@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,74 +19,63 @@
  */
 package org.neo4j.kernel;
 
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.index.IndexProvider;
-import org.neo4j.helpers.Service;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.Function;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.cache.CacheProvider;
 import org.neo4j.kernel.impl.transaction.xaframework.TransactionInterceptorProvider;
+import org.neo4j.kernel.logging.Logging;
 
 /**
  * An implementation of {@link GraphDatabaseService} that is used to embed Neo4j
- * in an application. You typically instantiate it by invoking the
- * {@link #EmbeddedGraphDatabase(String) single argument constructor} that takes
- * a path to a directory where Neo4j will store its data files, as such:
+ * in an application. You typically instantiate it by using
+ * {@link org.neo4j.graphdb.factory.GraphDatabaseFactory} like so:
  * <p/>
+ * 
  * <pre>
  * <code>
- * GraphDatabaseService graphDb = new EmbeddedGraphDatabase( &quot;var/graphdb&quot; );
+ * GraphDatabaseService graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( &quot;var/graphdb&quot; );
  * // ... use Neo4j
  * graphDb.shutdown();
  * </code>
  * </pre>
  * <p/>
  * For more information, see {@link GraphDatabaseService}.
+ *
+ * @deprecated This will be moved to internal packages in the next major release.
  */
+@Deprecated
 public class EmbeddedGraphDatabase extends InternalAbstractGraphDatabase
 {
-    /**
-     * Creates an embedded {@link GraphDatabaseService} with a store located in
-     * <code>storeDir</code>, which will be created if it doesn't already exist.
-     *
-     * @param storeDir the store directory for the Neo4j store files
-     */
-    public EmbeddedGraphDatabase( String storeDir )
-    {
-        this( storeDir, new HashMap<String, String>() );
-    }
+    private static final Iterable<Class<?>> SETTINGS_CLASSES = Arrays.<Class<?>>asList( GraphDatabaseSettings.class );
 
     /**
-     * A non-standard way of creating an embedded {@link GraphDatabaseService}
-     * with a set of configuration parameters.
-     * <p/>
-     * Creates an embedded {@link GraphDatabaseService} with a store located in
-     * <code>storeDir</code>, which will be created if it doesn't already exist.
-     *
-     * @param storeDir the store directory for the db files
-     * @param params   configuration parameters
+     * Internal constructor used by {@link org.neo4j.graphdb.factory.GraphDatabaseFactory}
      */
-    public EmbeddedGraphDatabase( String storeDir, Map<String, String> params )
-    {
-        this( storeDir, params,
-                Service.load( IndexProvider.class ),
-                Iterables.<KernelExtensionFactory<?>,KernelExtensionFactory>cast( Service.load( KernelExtensionFactory.class ) ),
-                Service.load( CacheProvider.class ),
-                Service.load( TransactionInterceptorProvider.class ) );
-    }
-
-    public EmbeddedGraphDatabase( String storeDir, Map<String, String> params, Iterable<IndexProvider> indexProviders,
+    public EmbeddedGraphDatabase( String storeDir, Map<String, String> params,
                                   Iterable<KernelExtensionFactory<?>> kernelExtensions,
                                   Iterable<CacheProvider> cacheProviders,
                                   Iterable<TransactionInterceptorProvider> txInterceptorProviders )
     {
-        super( storeDir, params, Iterables.<Class<?>, Class<?>>iterable( (Class<?>) GraphDatabaseSettings.class ),
-                indexProviders, kernelExtensions, cacheProviders, txInterceptorProviders );
+        super( storeDir, params, SETTINGS_CLASSES, kernelExtensions, cacheProviders, txInterceptorProviders );
+        run();
+    }
 
+    /**
+     * Internal constructor used by {@link org.neo4j.graphdb.factory.GraphDatabaseFactory}
+     */
+    public EmbeddedGraphDatabase( Config config, Function<Config, Logging> loggingProvider,
+                                  Iterable<KernelExtensionFactory<?>> kernelExtensions,
+                                  Iterable<CacheProvider> cacheProviders,
+                                  Iterable<TransactionInterceptorProvider> txInterceptorProviders )
+    {
+        super( config.registerSettingsClasses( SETTINGS_CLASSES ),
+               loggingProvider, kernelExtensions, cacheProviders, txInterceptorProviders );
         run();
     }
 }

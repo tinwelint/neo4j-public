@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,7 @@ import static org.neo4j.com.MadeUpServer.FRAME_LENGTH;
 import static org.neo4j.com.Protocol.writeString;
 import static org.neo4j.com.RequestContext.EMPTY;
 import static org.neo4j.com.RequestContext.lastAppliedTx;
-import static org.neo4j.kernel.configuration.Config.DEFAULT_DATA_SOURCE_NAME;
+import static org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -34,7 +34,9 @@ import java.nio.channels.ReadableByteChannel;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.neo4j.com.MadeUpServer.MadeUpRequestType;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.kernel.logging.DevNullLoggingService;
+import org.neo4j.kernel.monitoring.Monitors;
 
 public class MadeUpClient extends Client<MadeUpCommunicationInterface> implements MadeUpCommunicationInterface
 {
@@ -43,10 +45,10 @@ public class MadeUpClient extends Client<MadeUpCommunicationInterface> implement
     public MadeUpClient( int port, StoreId storeIdToExpect,
             byte internalProtocolVersion, byte applicationProtocolVersion, int chunkSize )
     {
-        super( localhost(), port, new DevNullLoggingService(), storeIdToExpect, FRAME_LENGTH,
-                applicationProtocolVersion, Client.DEFAULT_READ_RESPONSE_TIMEOUT_SECONDS,
+        super( localhost(), port, new DevNullLoggingService(), new Monitors(), storeIdToExpect, FRAME_LENGTH,
+                applicationProtocolVersion, Client.DEFAULT_READ_RESPONSE_TIMEOUT_SECONDS * 1000,
                 Client.DEFAULT_MAX_NUMBER_OF_CONCURRENT_CHANNELS_PER_CLIENT,
-                Client.DEFAULT_MAX_NUMBER_OF_CONCURRENT_CHANNELS_PER_CLIENT, chunkSize );
+                chunkSize );
         this.internalProtocolVersion = internalProtocolVersion;
     }
 
@@ -74,7 +76,7 @@ public class MadeUpClient extends Client<MadeUpCommunicationInterface> implement
         return sendRequest( MadeUpRequestType.MULTIPLY, getRequestContext(), new Serializer()
         {
             @Override
-            public void write( ChannelBuffer buffer, ByteBuffer readBuffer ) throws IOException
+            public void write( ChannelBuffer buffer ) throws IOException
             {
                 buffer.writeInt( value1 );
                 buffer.writeInt( value2 );
@@ -84,7 +86,7 @@ public class MadeUpClient extends Client<MadeUpCommunicationInterface> implement
 
     private RequestContext getRequestContext()
     {
-        return new RequestContext( EMPTY.getSessionId(), EMPTY.machineId(), EMPTY.getEventIdentifier(),
+        return new RequestContext( EMPTY.getEpoch(), EMPTY.machineId(), EMPTY.getEventIdentifier(),
                 new RequestContext.Tx[] { lastAppliedTx( DEFAULT_DATA_SOURCE_NAME, 1 ) }, EMPTY.getMasterId(),
                 EMPTY.getChecksum() );
     }
@@ -95,7 +97,7 @@ public class MadeUpClient extends Client<MadeUpCommunicationInterface> implement
         return sendRequest( MadeUpRequestType.FETCH_DATA_STREAM, getRequestContext(), new Serializer()
         {
             @Override
-            public void write( ChannelBuffer buffer, ByteBuffer readBuffer ) throws IOException
+            public void write( ChannelBuffer buffer ) throws IOException
             {
                 buffer.writeInt( dataSize );
             }
@@ -117,9 +119,9 @@ public class MadeUpClient extends Client<MadeUpCommunicationInterface> implement
         return sendRequest( MadeUpRequestType.SEND_DATA_STREAM, getRequestContext(), new Serializer()
         {
             @Override
-            public void write( ChannelBuffer buffer, ByteBuffer readBuffer ) throws IOException
+            public void write( ChannelBuffer buffer ) throws IOException
             {
-                BlockLogBuffer writer = new BlockLogBuffer( buffer );
+                BlockLogBuffer writer = new BlockLogBuffer( buffer, new Monitors().newMonitor( ByteCounterMonitor.class ) );
                 try
                 {
                     writer.write( data );
@@ -138,7 +140,7 @@ public class MadeUpClient extends Client<MadeUpCommunicationInterface> implement
         return sendRequest( MadeUpRequestType.THROW_EXCEPTION, getRequestContext(), new Serializer()
         {
             @Override
-            public void write( ChannelBuffer buffer, ByteBuffer readBuffer ) throws IOException
+            public void write( ChannelBuffer buffer ) throws IOException
             {
                 writeString( buffer, messageInException );
             }

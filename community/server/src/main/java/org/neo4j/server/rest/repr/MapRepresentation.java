@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,20 @@ package org.neo4j.server.rest.repr;
 
 import java.util.Map;
 
+import static java.lang.reflect.Array.get;
+import static java.lang.reflect.Array.getLength;
+import static java.util.Arrays.asList;
+
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
+
 public class MapRepresentation extends MappingRepresentation
 {
 
     private final Map value;
 
-    public MapRepresentation(Map value)
+    public MapRepresentation( Map value )
     {
         super( RepresentationType.MAP );
         this.value = value;
@@ -35,18 +43,68 @@ public class MapRepresentation extends MappingRepresentation
     @Override
     protected void serialize( MappingSerializer serializer )
     {
-        for (Object key : value.keySet())
+        for ( Object key : value.keySet() )
         {
             Object val = value.get( key );
-            if (val instanceof Number) serializer.putNumber( key.toString(),  (Number) val );
-            else if (val instanceof String) serializer.putString( key.toString(),  (String) val );
-            else if (val instanceof Iterable) serializer.putList( key.toString(), ObjectToRepresentationConverter.getListRepresentation( (Iterable) val ) );
-            else if (val instanceof Map) serializer.putMapping( key.toString(), ObjectToRepresentationConverter.getMapRepresentation( (Map) val ) );
-            //default
-            else serializer.putString( key.toString(),  val.toString() );
+            if ( val instanceof Number )
+            {
+                serializer.putNumber( key.toString(), (Number) val );
+            }
+            else if ( val instanceof Boolean )
+            {
+                serializer.putBoolean( key.toString(), (Boolean) val );
+            }
+            else if ( val instanceof String )
+            {
+                serializer.putString( key.toString(), (String) val );
+            }
+            else if (val instanceof Path )
+            {
+                PathRepresentation<Path> representation = new PathRepresentation<>( (Path) val );
+                serializer.putMapping( key.toString(), representation );
+            }
+            else if ( val instanceof Iterable )
+            {
+                serializer.putList( key.toString(), ObjectToRepresentationConverter.getListRepresentation( (Iterable)
+                        val ) );
+            }
+            else if ( val instanceof Map )
+            {
+                serializer.putMapping( key.toString(), ObjectToRepresentationConverter.getMapRepresentation( (Map)
+                        val ) );
+            }
+            else if (val == null)
+            {
+                serializer.putString( key.toString(), null );
+            }
+            else if (val.getClass().isArray())
+            {
+                Object[] objects = toArray( val );
+
+                serializer.putList( key.toString(), ObjectToRepresentationConverter.getListRepresentation( asList(objects) ) );
+            }
+            else if (val instanceof Node || val instanceof Relationship )
+            {
+                Representation representation = ObjectToRepresentationConverter.getSingleRepresentation( val );
+                serializer.putMapping( key.toString(), (MappingRepresentation) representation );
+            }
+            else
+            {
+                throw new IllegalArgumentException( "Unsupported value type: " + val.getClass() );
+            }
         }
-        
     }
 
-    
+    private Object[] toArray( Object val )
+    {
+        int length = getLength( val );
+
+        Object[] objects = new Object[length];
+
+        for (int i=0; i<length; i++) {
+            objects[i] = get( val, i );
+        }
+
+        return objects;
+    }
 }

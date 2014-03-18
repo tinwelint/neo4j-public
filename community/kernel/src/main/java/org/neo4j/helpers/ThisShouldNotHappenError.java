@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,14 @@ package org.neo4j.helpers;
 
 public class ThisShouldNotHappenError extends Error
 {
-    public ThisShouldNotHappenError(String developer, String message) {
-        super("Developer: " + developer + " claims that: " + message);
+    public ThisShouldNotHappenError( String developer, String message )
+    {
+        super( "Developer: " + developer + " claims that: " + message );
+    }
+
+
+    public ThisShouldNotHappenError( String developer, String message, Throwable cause )
+    {
+        super( "Developer: " + developer + " claims that: " + message, cause );
     }
 }

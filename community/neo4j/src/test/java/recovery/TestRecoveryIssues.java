@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,10 @@
  */
 package recovery;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
-
 import javax.transaction.xa.Xid;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -41,11 +37,15 @@ import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.impl.transaction.TxLog;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.impl.transaction.xaframework.XaResourceHelpImpl;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.AbstractSubProcessTestBase;
 import org.neo4j.test.subprocess.BreakPoint;
 import org.neo4j.test.subprocess.DebugInterface;
 import org.neo4j.test.subprocess.DebuggedThread;
 import org.neo4j.test.subprocess.KillSubProcess;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 // TODO These tests need review. Don't work after refactoring
 
@@ -98,29 +98,19 @@ public class TestRecoveryIssues extends AbstractSubProcessTestBase
         @Override
         public void run( GraphDatabaseAPI graphdb )
         {
-            Transaction tx = graphdb.beginTx();
             Node node;
-            try
+            try(Transaction tx = graphdb.beginTx())
             {
                 node = graphdb.createNode();
 
                 tx.success();
             }
-            finally
-            {
-                tx.finish();
-            }
-            tx = graphdb.beginTx();
-            try
+            try(Transaction tx = graphdb.beginTx())
             {
                 node.setProperty( "correct", "yes" );
                 graphdb.index().forNodes( "nodes" ).add( node, "name", "value" );
 
                 tx.success();
-            }
-            finally
-            {
-                tx.finish();
             }
         }
     }
@@ -130,18 +120,13 @@ public class TestRecoveryIssues extends AbstractSubProcessTestBase
         @Override
         public void run( GraphDatabaseAPI graphdb )
         {
-            Transaction tx = graphdb.beginTx();
-            try
+            try(Transaction tx = graphdb.beginTx())
             {
                 Node node = graphdb.createNode();
                 node.setProperty( "correct", "yes" );
                 graphdb.index().forNodes( "nodes" ).add( node, "name", "value" );
 
                 tx.success();
-            }
-            finally
-            {
-                tx.finish();
             }
         }
     }
@@ -240,7 +225,7 @@ public class TestRecoveryIssues extends AbstractSubProcessTestBase
      */
     public static void main( String... args ) throws Exception
     {
-        TxLog log = new TxLog( new File(args[0]), new DefaultFileSystemAbstraction() );
+        TxLog log = new TxLog( new File(args[0]), new DefaultFileSystemAbstraction(), new Monitors() );
         byte globalId[] = new byte[NEOKERNL.length + 16];
         System.arraycopy( NEOKERNL, 0, globalId, 0, NEOKERNL.length );
         ByteBuffer byteBuf = ByteBuffer.wrap( globalId );

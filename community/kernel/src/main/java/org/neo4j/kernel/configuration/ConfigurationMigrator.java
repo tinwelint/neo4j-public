@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,5 +25,5 @@ import org.neo4j.kernel.impl.util.StringLogger;
 
 public interface ConfigurationMigrator
 {
-    public Map<String, String> apply(Map<String, String> rawConfiguration, StringLogger log);
+    Map<String, String> apply(Map<String, String> rawConfiguration, StringLogger log);
 }

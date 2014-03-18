@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.kernel.impl.annotations;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
@@ -33,7 +32,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 
-@SupportedSourceVersion( SourceVersion.RELEASE_6 )
+@SupportedSourceVersion( SourceVersion.RELEASE_7 )
 @SupportedAnnotationTypes( "org.neo4j.helpers.Service.Implementation" )
 public class ServiceProcessor extends AnnotationProcessor
 {

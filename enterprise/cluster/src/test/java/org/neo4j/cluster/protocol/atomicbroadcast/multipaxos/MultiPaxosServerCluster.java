@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.test.ProcessStreamHandler;
+
+import static org.neo4j.test.StreamConsumer.PRINT_FAILURES;
 
 /**
  * TODO
@@ -114,7 +116,7 @@ public class MultiPaxosServerCluster
         public PaxosServer( Process server, String prefix )
         {
             this.server = server;
-            handler = new ProcessStreamHandler( server, false, prefix );
+            handler = new ProcessStreamHandler( server, false, prefix, PRINT_FAILURES );
             handler.launch();
             writer = new BufferedWriter( new OutputStreamWriter(server.getOutputStream()));
         }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,6 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,14 +30,15 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
+
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
@@ -56,6 +54,9 @@ import org.neo4j.test.subprocess.EnabledBreakpoints;
 import org.neo4j.test.subprocess.ForeignBreakpoints;
 import org.neo4j.test.subprocess.SubProcessTestRunner;
 import org.neo4j.tooling.GlobalGraphOperations;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @RunWith(Suite.class)
 @SuiteClasses({IdGeneratorRebuildFailureEmulationTest.FailureBeforeRebuild.class,
@@ -97,7 +98,7 @@ public class IdGeneratorRebuildFailureEmulationTest
         public static void on_setHighId( DebugInterface di, BreakPoint setHighId )
         {
             if ( setHighId.invocationCount() > 1
-                    || "org.neo4j.kernel.impl.nioneo.store.RelationshipTypeStore".equals( di.thread().getStackTrace()
+                    || RelationshipTypeTokenStore.class.getName().equals( di.thread().getStackTrace()
                     [2].getClassName() ) )
             {
                 setHighId.disable();
@@ -155,10 +156,10 @@ public class IdGeneratorRebuildFailureEmulationTest
         createInitialData( graphdb );
         graphdb.shutdown();
         Map<String, String> config = new HashMap<String, String>();
-        config.put( GraphDatabaseSettings.rebuild_idgenerators_fast.name(), GraphDatabaseSetting.FALSE );
+        config.put( GraphDatabaseSettings.rebuild_idgenerators_fast.name(), Settings.FALSE );
         config.put( GraphDatabaseSettings.store_dir.name(), prefix );
         factory = new StoreFactory( new Config( config, GraphDatabaseSettings.class ),
-                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fs, StringLogger.SYSTEM, null );
+                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fs, StringLogger.DEV_NULL, null );
     }
 
     @After
@@ -182,24 +183,30 @@ public class IdGeneratorRebuildFailureEmulationTest
 
     private void verifyData( GraphDatabaseService graphdb )
     {
-        int nodecount = 0;
-        for ( Node node : GlobalGraphOperations.at( graphdb ).getAllNodes() )
+        Transaction tx = graphdb.beginTx();
+        try
         {
-            int propcount = readProperties( node );
-            int relcount = 0;
-            for ( Relationship rel : node.getRelationships() )
+            int nodecount = 0;
+            for ( Node node : GlobalGraphOperations.at( graphdb ).getAllNodes() )
             {
-                assertEquals( "all relationships should have 3 properties.", 3, readProperties( rel ) );
-                relcount++;
-            }
-            if ( !graphdb.getReferenceNode().equals( node ) )
-            {
+                int propcount = readProperties( node );
+                int relcount = 0;
+                for ( Relationship rel : node.getRelationships() )
+                {
+                    assertEquals( "all relationships should have 3 properties.", 3, readProperties( rel ) );
+                    relcount++;
+                }
                 assertEquals( "all created nodes should have 3 properties.", 3, propcount );
                 assertEquals( "all created nodes should have 2 relationships.", 2, relcount );
+
+                nodecount++;
             }
-            nodecount++;
+            assertEquals( "The database should have 2 nodes.", 2, nodecount );
         }
-        assertEquals( "The database should have 3 nodes.", 3, nodecount );
+        finally
+        {
+            tx.finish();
+        }
     }
 
     private void createInitialData( GraphDatabaseService graphdb )
@@ -258,6 +265,7 @@ public class IdGeneratorRebuildFailureEmulationTest
         }
     }
 
+    @SuppressWarnings("deprecation")
     private class Database extends ImpermanentGraphDatabase
     {
         @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,8 +27,14 @@ public class DevNullLoggingService
         implements Logging
 {
     @Override
-    public StringLogger getLogger( Class loggingClass )
+    public StringLogger getMessagesLog( Class loggingClass )
     {
         return StringLogger.DEV_NULL;
+    }
+
+    @Override
+    public ConsoleLogger getConsoleLog( Class loggingClass )
+    {
+        return new ConsoleLogger( StringLogger.DEV_NULL );
     }
 }

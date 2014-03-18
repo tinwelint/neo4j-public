@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,20 @@
  */
 package org.neo4j.index.impl.lucene;
 
-import static junit.framework.Assert.fail;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.tooling.GlobalGraphOperations;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class RecoveryIT
 {
@@ -51,31 +52,39 @@ public class RecoveryIT
         process.destroy();
         process.waitFor();
 
-        GraphDatabaseService db = new EmbeddedGraphDatabase( path );
-        assertTrue( db.index().existsForNodes( "myIndex" ) );
-        Index<Node> index = db.index().forNodes( "myIndex" );
-        for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase(path );
+        Transaction transaction = db.beginTx();
+        try
         {
-            for ( String key : node.getPropertyKeys() )
+            assertTrue( db.index().existsForNodes( "myIndex" ) );
+            Index<Node> index = db.index().forNodes( "myIndex" );
+            for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
             {
-                String value = (String) node.getProperty( key );
-                boolean found = false;
-                for ( Node indexedNode : index.get( key, value ) )
+                for ( String key : node.getPropertyKeys() )
                 {
-                    if ( indexedNode.equals( node ) )
+                    String value = (String) node.getProperty( key );
+                    boolean found = false;
+                    for ( Node indexedNode : index.get( key, value ) )
                     {
-                        found = true;
-                        break;
+                        if ( indexedNode.equals( node ) )
+                        {
+                            found = true;
+                            break;
+                        }
                     }
-                }
-                if ( !found )
-                {
-                    throw new IllegalStateException( node + " has property '" + key + "'='" +
-                            value + "', but not in index" );
+                    if ( !found )
+                    {
+                        throw new IllegalStateException( node + " has property '" + key + "'='" +
+                                value + "', but not in index" );
+                    }
                 }
             }
         }
-        db.shutdown();
+        finally
+        {
+            transaction.finish();
+            db.shutdown();
+        }
     }
 
     private void awaitFile( File file ) throws InterruptedException

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,15 @@
  */
 package org.neo4j.server.enterprise;
 
-import static org.neo4j.cluster.client.ClusterClient.adapt;
-import static org.neo4j.helpers.Exceptions.exceptionsOfType;
-import static org.neo4j.helpers.Exceptions.peel;
-import static org.neo4j.helpers.collection.MapUtil.loadStrictly;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.server.configuration.Configurator.DB_TUNING_PROPERTY_FILE_KEY;
-import static org.neo4j.server.configuration.Configurator.NEO_SERVER_CONFIG_FILE_KEY;
-import static org.slf4j.impl.StaticLoggerBinder.getSingleton;
-
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.jboss.netty.channel.ChannelException;
+
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.client.ClusterClient;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
 import org.neo4j.cluster.protocol.election.NotElectableElectionCredentialsProvider;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.Args;
@@ -42,11 +35,17 @@ import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleException;
-import org.neo4j.kernel.logging.ClassicLoggingService;
-import org.neo4j.kernel.logging.LogbackService;
+import org.neo4j.kernel.logging.LogbackWeakDependency;
 import org.neo4j.kernel.logging.Logging;
 
-import ch.qos.logback.classic.LoggerContext;
+import static org.neo4j.cluster.client.ClusterClient.adapt;
+import static org.neo4j.helpers.Exceptions.exceptionsOfType;
+import static org.neo4j.helpers.Exceptions.peel;
+import static org.neo4j.helpers.collection.MapUtil.loadStrictly;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.logging.LogbackWeakDependency.DEFAULT_TO_CLASSIC;
+import static org.neo4j.server.configuration.Configurator.DB_TUNING_PROPERTY_FILE_KEY;
+import static org.neo4j.server.configuration.Configurator.NEO_SERVER_CONFIG_FILE_KEY;
 
 /**
  * Wrapper around a {@link ClusterClient} to fit the environment of the Neo4j server,
@@ -66,8 +65,9 @@ public class StandaloneClusterClient
 {
     private final LifeSupport life = new LifeSupport();
     
-    private StandaloneClusterClient( ClusterClient clusterClient )
+    private StandaloneClusterClient( Logging logging, ClusterClient clusterClient )
     {
+        life.add( logging );
         life.add( clusterClient );
         addShutdownHook();
         life.start();
@@ -75,18 +75,14 @@ public class StandaloneClusterClient
 
     protected void addShutdownHook()
     {
-        Runtime.getRuntime()
-                .addShutdownHook( new Thread()
-                {
-                    @Override
-                    public void run()
-                    {
-                        if ( life != null )
-                        {
-                            life.shutdown();
-                        }
-                    }
-                } );
+        Runtime.getRuntime().addShutdownHook( new Thread()
+        {
+            @Override
+            public void run()
+            {
+                life.shutdown();
+            }
+        } );
     }
 
 
@@ -105,14 +101,18 @@ public class StandaloneClusterClient
         verifyConfig( config );
         try
         {
-            new StandaloneClusterClient( new ClusterClient( adapt( new Config( config ) ),
-                    logging(), new NotElectableElectionCredentialsProvider() ) );
+            Logging logging = logging();
+            ObjectStreamFactory objectStreamFactory = new ObjectStreamFactory();
+            new StandaloneClusterClient( logging, new ClusterClient( adapt( new Config( config ) ),
+                    logging, new NotElectableElectionCredentialsProvider(), objectStreamFactory, objectStreamFactory )  );
         }
         catch ( LifecycleException e )
         {
+            @SuppressWarnings({"ThrowableResultOfMethodCallIgnored", "unchecked"})
             Throwable cause = peel( e, exceptionsOfType( LifecycleException.class ) );
             if ( cause instanceof ChannelException )
-                System.err.println( "ERROR: " + cause.getMessage() + (cause.getCause() != null ? ", caused by:" + cause.getCause().getMessage() : "") );
+                System.err.println( "ERROR: " + cause.getMessage() +
+                        (cause.getCause() != null ? ", caused by:" + cause.getCause().getMessage() : "") );
             else
             {
                 System.err.println( "ERROR: Unknown error" );
@@ -123,15 +123,14 @@ public class StandaloneClusterClient
 
     private static void verifyConfig( Map<String, String> config )
     {
-        boolean discovery = Boolean.parseBoolean( config.get( ClusterSettings.cluster_discovery_enabled.getClass() ) );
-        if ( discovery && !config.containsKey( ClusterSettings.cluster_discovery_url.name() ) )
-        {
-            System.err.println( "No discovery URL supplied" );
-            System.exit( 1 );
-        }
-        else if ( !discovery && !config.containsKey( ClusterSettings.initial_hosts.name() ) )
+        if ( !config.containsKey( ClusterSettings.initial_hosts.name() ) )
         {
             System.err.println( "No initial hosts to connect to supplied" );
+            System.exit( 1 );
+        }
+        if ( !config.containsKey( ClusterSettings.server_id.name() ) )
+        {
+            System.err.println( "No server id specified" );
             System.exit( 1 );
         }
     }
@@ -141,24 +140,15 @@ public class StandaloneClusterClient
         Map<String, String> result = new HashMap<String, String>( config );
         Map<String, String> existingConfig = loadStrictly( propertiesFile );
         for ( Setting<?> setting : new Setting[] {
-                ClusterSettings.cluster_discovery_enabled,
                 ClusterSettings.initial_hosts,
-                ClusterSettings.cluster_discovery_url,
                 ClusterSettings.cluster_name,
-                ClusterSettings.cluster_server } )
+                ClusterSettings.cluster_server,
+                ClusterSettings.server_id} )
                 // TODO add timeouts
         {
             moveOver( existingConfig, result, setting );
         }
-        
-//        int[] ports = ClusterSettings.cluster_server.getPorts( existingConfig );
-//        if ( ports != null && ports.length == 1 )
-//        {
-//            System.err.println( "WARNING: single port configured for " + ClusterSettings.cluster_server.name() +
-//                    ". If a Neo4j server is running using this configuration there will be a port conflict. " +
-//                    "Please consider configuring a port range instead." );
-//        }
-        
+
         return result;
     }
 
@@ -172,22 +162,11 @@ public class StandaloneClusterClient
     private static Logging logging()
     {
         File home = new File( System.getProperty( "neo4j.home" ) );
-        String logDir = System.getProperty( "org.neo4j.cluster.logdirectory", new File( new File( home, "data" ), "log" ).getPath() );
+        String logDir = System.getProperty( "org.neo4j.cluster.logdirectory",
+                new File( new File( new File ( home, "data" ), "log" ), "arbiter" ).getPath() );
         Config config = new Config( stringMap( InternalAbstractGraphDatabase.Configuration.store_dir.name(), logDir ) );
-        
-        // Copied from InternalAbstractGraphDatabase#createStringLogger
-        Logging logging;
-        try
-        {
-            StandaloneClusterClient.class.getClassLoader().loadClass( "ch.qos.logback.classic.LoggerContext" );
-            LogbackService logback = new LogbackService( config, (LoggerContext) getSingleton().getLoggerFactory() );
-            logging = logback;
-        }
-        catch ( ClassNotFoundException e )
-        {
-            logging = new ClassicLoggingService( config );
-        }
-        return logging;
+
+        return new LogbackWeakDependency().tryLoadLogbackService( config, DEFAULT_TO_CLASSIC );
     }
     
     private static File extractDbTuningProperties( String propertiesFile )

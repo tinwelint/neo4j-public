@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,9 +28,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.impl.util.StringLogger;
 
 /**
  * Cluster configuration. Includes name of cluster, list of nodes, and role mappings
@@ -40,98 +42,126 @@ public class ClusterConfiguration
     public static final String COORDINATOR = "coordinator";
 
     private final String name;
-    private List<URI> members;
-    private Map<String, URI> roles = new HashMap<String, URI>();
+    private final StringLogger logger;
+    private final List<URI> candidateMembers;
+    private Map<InstanceId, URI> members;
+    private Map<String, InstanceId> roles = new HashMap<String, InstanceId>();
     private int allowedFailures = 1;
 
-    public ClusterConfiguration( String name, String... members )
+    public ClusterConfiguration( String name, StringLogger logger, String... members )
     {
         this.name = name;
-        this.members = new ArrayList<URI>();
+        this.logger = logger;
+        this.candidateMembers = new ArrayList<URI>();
         for ( String node : members )
         {
             try
             {
-                this.members.add( new URI( node ) );
+                this.candidateMembers.add( new URI( node ) );
             }
             catch ( URISyntaxException e )
             {
                 e.printStackTrace();
             }
         }
+        this.members = new HashMap<InstanceId, URI>();
     }
 
-    public ClusterConfiguration( String name, Collection<URI> members )
+    public ClusterConfiguration( String name, StringLogger logger, Collection<URI> members )
     {
         this.name = name;
-        this.members = new ArrayList<URI>( members );
+        this.logger = logger;
+        this.candidateMembers = new ArrayList<URI>( members );
+        this.members = new HashMap<InstanceId, URI>();
     }
 
     public ClusterConfiguration( ClusterConfiguration copy )
     {
-        this.name = copy.name;
-        this.members = new ArrayList<URI>( copy.members );
-        this.roles = new HashMap<String, URI>( copy.roles );
+        this(copy, copy.logger);
     }
 
-    public void joined( URI nodeUrl )
+    private ClusterConfiguration( ClusterConfiguration copy, StringLogger logger )
     {
-        if ( members.contains( nodeUrl ) )
+        this.name = copy.name;
+        this.logger = logger;
+        this.candidateMembers = new ArrayList<URI>( copy.candidateMembers );
+        this.roles = new HashMap<String, InstanceId>( copy.roles );
+        this.members = new HashMap<InstanceId, URI>( copy.members );
+    }
+
+    public void joined( InstanceId joinedInstanceId, URI instanceUri )
+    {
+        if ( instanceUri.equals( members.get( joinedInstanceId ) ) )
         {
-            return;
+            return; // Already know that this node is in - ignore
         }
 
-        this.members = new ArrayList<URI>( members );
-        members.add( nodeUrl );
+        this.members = new HashMap<InstanceId, URI>( members );
+        members.put( joinedInstanceId, instanceUri );
     }
 
-    public void left( URI nodeUrl )
+    public void left( InstanceId leftInstanceId )
     {
-        this.members = new ArrayList<URI>( members );
-        members.remove( nodeUrl );
+        logger.info( "Instance " + leftInstanceId + " is leaving the cluster" );
+        this.members = new HashMap<InstanceId, URI>( members );
+        members.remove( leftInstanceId );
 
         // Remove any roles that this node had
-        Iterator<Map.Entry<String, URI>> entries = roles.entrySet().iterator();
+        Iterator<Map.Entry<String, InstanceId>> entries = roles.entrySet().iterator();
         while ( entries.hasNext() )
         {
-            Map.Entry<String, URI> roleEntry = entries.next();
+            Map.Entry<String, InstanceId> roleEntry = entries.next();
 
-            if ( roleEntry.getValue().equals( nodeUrl ) )
+            if ( roleEntry.getValue().equals( leftInstanceId ) )
             {
+                logger.info("Removed role " + roleEntry.getValue() + " from leaving instance " + roleEntry.getKey() );
                 entries.remove();
             }
         }
     }
 
-    public void elected( String name, URI node )
+    public void elected( String name, InstanceId electedInstanceId )
     {
-        assert members.contains( node );
-        roles = new HashMap<String, URI>( roles );
-        roles.put( name, node );
+        assert members.containsKey( electedInstanceId );
+        roles = new HashMap<String, InstanceId>( roles );
+        roles.put( name, electedInstanceId );
     }
 
-    public void setMembers( Iterable<URI> members )
+    public void unelected( String roleName )
     {
-        this.members = new ArrayList<URI>();
-        for ( URI node : members )
+        assert roles.containsKey( roleName );
+        roles = new HashMap<String, InstanceId>( roles );
+        roles.remove( roleName );
+    }
+
+    public void setMembers( Map<InstanceId, URI> members )
+    {
+        this.members = new HashMap<InstanceId, URI>( members );
+    }
+
+    public void setRoles( Map<String, InstanceId> roles )
+    {
+        for ( InstanceId electedInstanceId : roles.values() )
         {
-            this.members.add( node );
+            assert members.containsKey( electedInstanceId );
         }
+
+        this.roles = new HashMap<String, InstanceId>( roles );
     }
 
-    public void setRoles( Map<String, URI> roles )
+    public Iterable<InstanceId> getMemberIds()
     {
-        for ( URI uri : roles.values() )
-        {
-            assert members.contains( uri );
-        }
-
-        this.roles = new HashMap<String, URI>( roles );
+        return members.keySet();
     }
 
-    public List<URI> getMembers()
+    public Map<InstanceId, URI> getMembers()
     {
         return members;
+    }
+
+    public List<URI> getMemberURIs()
+    {
+        return Iterables.toList( members.values() );
     }
 
     public String getName()
@@ -139,7 +169,7 @@ public class ClusterConfiguration
         return name;
     }
 
-    public Map<String, URI> getRoles()
+    public Map<String, InstanceId> getRoles()
     {
         return roles;
     }
@@ -151,43 +181,115 @@ public class ClusterConfiguration
 
     public void left()
     {
-        this.members = new ArrayList<URI>();
-        roles = new HashMap<String, URI>();
+        this.members = new HashMap<InstanceId, URI>();
+        roles = new HashMap<String, InstanceId>();
     }
 
     public void removeElected( String roleName )
     {
-        roles = new HashMap<String, URI>( roles );
-        roles.remove( roleName );
+        roles = new HashMap<String, InstanceId>( roles );
+        InstanceId removed = roles.remove( roleName );
+        logger.info( "Removed role " + roleName + " from instance " + removed );
     }
 
-    public URI getElected( String roleName )
+    public InstanceId getElected( String roleName )
     {
         return roles.get( roleName );
     }
 
-    public Iterable<String> getRolesOf( final URI node )
+    public Iterable<String> getRolesOf( final InstanceId node )
     {
-        return Iterables.map( new Function<Map.Entry<String, URI>, String>()
+        return Iterables.map( new Function<Map.Entry<String, InstanceId>, String>()
         {
             @Override
-            public String apply( Map.Entry<String, URI> stringURIEntry )
+            public String apply( Map.Entry<String, InstanceId> stringURIEntry )
             {
                 return stringURIEntry.getKey();
             }
-        }, Iterables.filter( new Predicate<Map.Entry<String, URI>>()
+        }, Iterables.filter( new Predicate<Map.Entry<String, InstanceId>>()
         {
             @Override
-            public boolean accept( Map.Entry<String, URI> item )
+            public boolean accept( Map.Entry<String, InstanceId> item )
             {
                 return item.getValue().equals( node );
             }
         }, roles.entrySet() ) );
     }
 
+    public URI getUriForId( InstanceId node )
+    {
+        return members.get( node );
+    }
+
+    public InstanceId getIdForUri( URI fromUri )
+    {
+        for ( Map.Entry<InstanceId, URI> serverIdURIEntry : members.entrySet() )
+        {
+            if ( serverIdURIEntry.getValue().equals( fromUri ) )
+            {
+                return serverIdURIEntry.getKey();
+            }
+        }
+        return null;
+    }
+
+    public ClusterConfiguration snapshot(StringLogger logger)
+    {
+        return new ClusterConfiguration(this, logger);
+    }
+
     @Override
     public String toString()
     {
         return "Name:" + name + " Nodes:" + members + " Roles:" + roles;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+
+        ClusterConfiguration that = (ClusterConfiguration) o;
+
+        if ( allowedFailures != that.allowedFailures )
+        {
+            return false;
+        }
+        if ( !candidateMembers.equals( that.candidateMembers ) )
+        {
+            return false;
+        }
+        if ( !members.equals( that.members ) )
+        {
+            return false;
+        }
+        if ( !name.equals( that.name ) )
+        {
+            return false;
+        }
+        if ( !roles.equals( that.roles ) )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = name.hashCode();
+        result = 31 * result + candidateMembers.hashCode();
+        result = 31 * result + members.hashCode();
+        result = 31 * result + roles.hashCode();
+        result = 31 * result + allowedFailures;
+        return result;
     }
 }

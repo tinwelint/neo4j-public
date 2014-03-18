@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,9 @@ package org.neo4j.server;
 
 import javax.ws.rs.ext.Provider;
 
-import org.neo4j.server.database.InjectableProvider;
-
 import com.sun.jersey.api.core.HttpContext;
+
+import org.neo4j.server.database.InjectableProvider;
 
 @Provider
 public class NeoServerProvider extends InjectableProvider<NeoServer>

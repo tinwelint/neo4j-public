@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,21 @@
  */
 package org.neo4j.kernel.ha;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.node_cache_array_fraction;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.node_cache_size;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.relationship_cache_array_fraction;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.relationship_cache_size;
-
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.cache.Cache;
 import org.neo4j.kernel.impl.cache.CacheProvider;
-import org.neo4j.kernel.impl.cache.GCResistantCacheProvider;
+import org.neo4j.kernel.impl.cache.HighPerformanceCacheProvider;
 import org.neo4j.kernel.impl.core.Caches;
 import org.neo4j.kernel.impl.core.NodeImpl;
 import org.neo4j.kernel.impl.core.RelationshipImpl;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.monitoring.Monitors;
+
+import static org.neo4j.kernel.impl.cache.HighPerformanceCacheSettings.node_cache_array_fraction;
+import static org.neo4j.kernel.impl.cache.HighPerformanceCacheSettings.node_cache_size;
+import static org.neo4j.kernel.impl.cache.HighPerformanceCacheSettings.relationship_cache_array_fraction;
+import static org.neo4j.kernel.impl.cache.HighPerformanceCacheSettings.relationship_cache_size;
 
 public class HaCaches implements Caches
 {
@@ -41,10 +42,12 @@ public class HaCaches implements Caches
     private Cache<NodeImpl> node;
     private Cache<RelationshipImpl> relationship;
     private final StringLogger logger;
+    private final Monitors monitors;
 
-    public HaCaches( StringLogger logger )
+    public HaCaches( StringLogger logger, Monitors monitors )
     {
         this.logger = logger;
+        this.monitors = monitors;
     }
 
     @Override
@@ -52,8 +55,8 @@ public class HaCaches implements Caches
     {
         if ( !cacheConfigSame( newType, config ) )
         {
-            node = newType.newNodeCache( logger, config );
-            relationship = newType.newRelationshipCache( logger, config );
+            node = newType.newNodeCache( logger, config, monitors );
+            relationship = newType.newRelationshipCache( logger, config, monitors );
         }
         else
         {
@@ -70,15 +73,15 @@ public class HaCaches implements Caches
                 this.type != null && this.type.getName().equals( type.getName() ) &&
                 
                 // Only reuse array caches, since the other ones are cheap to recreate
-                GCResistantCacheProvider.NAME.equals( this.type.getName() ) &&
+                HighPerformanceCacheProvider.NAME.equals( this.type.getName() ) &&
                 
                 mySettingIsSameAs(config, node_cache_array_fraction ) &&
                 mySettingIsSameAs(config, relationship_cache_array_fraction ) &&
-                mySettingIsSameAs(config, node_cache_size) &&
-        		mySettingIsSameAs(config, relationship_cache_size);
+                mySettingIsSameAs(config, node_cache_size ) &&
+        		mySettingIsSameAs(config, relationship_cache_size );
     }
 
-    private boolean mySettingIsSameAs(Config otherConfig, GraphDatabaseSetting<?> setting) {
+    private boolean mySettingIsSameAs(Config otherConfig, Setting<?> setting) {
 		Object myValue = config.get(setting);
 		Object otherValue = otherConfig.get(setting);
 		

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,13 @@
  */
 package org.neo4j.test;
 
-import static org.neo4j.cluster.ClusterSettings.default_timeout;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.test.ha.ClusterManager.clusterOfSize;
-import static org.neo4j.test.ha.ClusterManager.masterAvailable;
-
 import java.io.File;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.TestName;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -35,10 +33,16 @@ import org.neo4j.test.ha.ClusterManager;
 import org.neo4j.test.ha.ClusterManager.ManagedCluster;
 import org.neo4j.test.ha.ClusterManager.Provider;
 
+import static org.neo4j.cluster.ClusterSettings.default_timeout;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.test.ha.ClusterManager.clusterOfSize;
+import static org.neo4j.test.ha.ClusterManager.masterAvailable;
+
 public abstract class AbstractClusterTest
 {
-    private final File dir = TargetDirectory.forTest( getClass() ).directory( "dbs", true );
-    private final LifeSupport life = new LifeSupport();
+    public @Rule TestName testName = new TestName();
+    private File dir;
+    protected LifeSupport life = new LifeSupport();
     private final Provider provider;
     protected ClusterManager clusterManager;
     protected ManagedCluster cluster;
@@ -56,6 +60,7 @@ public abstract class AbstractClusterTest
     @Before
     public void before() throws Exception
     {
+        dir = TargetDirectory.forTest( getClass() ).directory( testName.getMethodName(), true );
         clusterManager = life.add( new ClusterManager( provider, dir, stringMap( default_timeout.name(), "1s" ) )
         {
             @Override

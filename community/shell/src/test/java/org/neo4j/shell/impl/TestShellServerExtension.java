@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@ package org.neo4j.shell.impl;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.extension.KernelExtensionFactoryContractTest;
 import org.neo4j.shell.ShellSettings;
 
@@ -39,7 +39,7 @@ public class TestShellServerExtension extends
         Map<String, String> configuration = super.configuration( shouldLoad, instance );
         if ( shouldLoad )
         {
-            configuration.put( ShellSettings.remote_shell_enabled.name(), GraphDatabaseSetting.TRUE );
+            configuration.put( ShellSettings.remote_shell_enabled.name(), Settings.TRUE );
             configuration.put( ShellSettings.remote_shell_name.name(), "neo4j-shell-" + instance );
         }
         return configuration;

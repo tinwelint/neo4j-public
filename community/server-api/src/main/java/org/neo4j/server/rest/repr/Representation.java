@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -78,8 +78,7 @@ public abstract class Representation
 		return this.type;
 	}
 	
-    abstract String serialize( RepresentationFormat format, URI baseUri,
-            ExtensionInjector extensions ) ;
+    abstract String serialize( RepresentationFormat format, URI baseUri, ExtensionInjector extensions );
 
     abstract void addTo( ListSerializer serializer );
 

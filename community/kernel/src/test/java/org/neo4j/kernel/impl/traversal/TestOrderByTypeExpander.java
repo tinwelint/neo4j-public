@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,6 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.neo4j.graphdb.Direction.INCOMING;
-import static org.neo4j.graphdb.Direction.OUTGOING;
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.kernel.Traversal.traversal;
-
 import java.util.Iterator;
 
 import org.junit.Before;
@@ -33,9 +26,16 @@ import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipExpander;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.OrderedByTypeExpander;
 
-public class TestOrderByTypeExpander extends AbstractTestBase
+import static org.junit.Assert.*;
+import static org.neo4j.graphdb.Direction.INCOMING;
+import static org.neo4j.graphdb.Direction.OUTGOING;
+import static org.neo4j.graphdb.DynamicRelationshipType.withName;
+import static org.neo4j.kernel.Traversal.traversal;
+
+public class TestOrderByTypeExpander extends TraversalTestBase
 {
     private final RelationshipType next = withName( "NEXT" );
     private final RelationshipType firstComment = withName( "FIRST_COMMENT" );
@@ -97,6 +97,7 @@ public class TestOrderByTypeExpander extends AbstractTestBase
     
     private void assertOrder( Iterator<Node> itr, String... names )
     {
+        Transaction tx = beginTx();
         for ( String name : names )
         {
             Node node = itr.next();
@@ -104,5 +105,7 @@ public class TestOrderByTypeExpander extends AbstractTestBase
                     getNodeWithName( name ), node );
         }
         assertFalse( itr.hasNext() );
+        tx.success();
+        tx.finish();
     }
 }

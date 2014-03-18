@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,8 +20,10 @@
 package org.neo4j.kernel.impl.transaction.xaframework;
 
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -29,13 +31,19 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.junit.Ignore;
 import org.junit.Test;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import org.neo4j.graphdb.mockfs.BreakableFileSystemAbstraction;
+import org.neo4j.graphdb.mockfs.FileSystemGuard;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
 
 public class TestDirectMappedLogBuffer
 {
-
     class FileChannelWithChoppyDisk extends FileChannel
     {
 
@@ -58,13 +66,13 @@ public class TestDirectMappedLogBuffer
         @Override
         public int write( ByteBuffer byteBuffer ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public long write( ByteBuffer[] byteBuffers, int i, int i1 ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -110,7 +118,7 @@ public class TestDirectMappedLogBuffer
         @Override
         public FileChannel truncate( long l ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -119,43 +127,43 @@ public class TestDirectMappedLogBuffer
         @Override
         public long transferTo( long l, long l1, WritableByteChannel writableByteChannel ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public long transferFrom( ReadableByteChannel readableByteChannel, long l, long l1 ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public int read( ByteBuffer byteBuffer, long l ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public MappedByteBuffer map( MapMode mapMode, long l, long l1 ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public FileLock lock( long l, long l1, boolean b ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public FileLock tryLock( long l, long l1, boolean b ) throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         protected void implCloseChannel() throws IOException
         {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -164,7 +172,7 @@ public class TestDirectMappedLogBuffer
     {
         // Given
         FileChannelWithChoppyDisk mockChannel = new FileChannelWithChoppyDisk(/* that writes */2/* bytes at a time */);
-        LogBuffer writeBuffer = new DirectMappedLogBuffer( mockChannel );
+        LogBuffer writeBuffer = new DirectMappedLogBuffer( mockChannel, new Monitors().newMonitor( ByteCounterMonitor.class ) );
 
         // When
         writeBuffer.put( new byte[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16} );
@@ -179,12 +187,124 @@ public class TestDirectMappedLogBuffer
     {
         // Given
         FileChannelWithChoppyDisk mockChannel = new FileChannelWithChoppyDisk(/* that writes */0/* bytes at a time */);
-        LogBuffer writeBuffer = new DirectMappedLogBuffer( mockChannel );
+        LogBuffer writeBuffer = new DirectMappedLogBuffer( mockChannel, new Monitors().newMonitor( ByteCounterMonitor.class ) );
 
         // When
         writeBuffer.put( new byte[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16} );
         writeBuffer.writeOut();
 
         // Then expect an IOException
+    }
+
+    @Test
+    @Ignore("This test demonstrates a way in which DirectMappedLogBuffer can fail. In particular, using DMLB after an" +
+            "IOException can cause corruption in the underlying file channel. However, it is wrong to use DMLB after" +
+            "such an error anyway, so this not something requiring fixing.")
+    public void logBufferWritesContentsTwiceOnFailure() throws Exception
+    {
+        /*
+         * The guard will throw an exception before writing the fifth byte. We will catch that and try to continue
+         * writing. If that operation leads to writing to position 0 again then this is obviously an error (as we
+         * will be overwriting the stuff we wrote before the exception) and so we must fail.
+         */
+        final AtomicBoolean broken = new AtomicBoolean( false );
+        FileSystemGuard guard = new FileSystemGuard()
+        {
+            @Override
+            public void checkOperation( OperationType operationType, File onFile, int bytesWrittenTotal,
+                                        int bytesWrittenThisCall, long channelPosition ) throws IOException
+            {
+                if ( !broken.get() && bytesWrittenTotal == 4 )
+                {
+                    broken.set( true );
+                    throw new IOException( "IOException after which this buffer should not be used" );
+                }
+                if ( broken.get() && channelPosition == 0 )
+                {
+                    throw new IOException( "This exception should never happen" );
+                }
+            }
+        };
+
+        BreakableFileSystemAbstraction fs = new BreakableFileSystemAbstraction( new EphemeralFileSystemAbstraction(), guard );
+        DirectMappedLogBuffer buffer = new DirectMappedLogBuffer( fs.create( new File( "log" ) ), new Monitors().newMonitor( ByteCounterMonitor.class ) );
+        buffer.putInt( 1 ).putInt( 2 ).putInt( 3 );
+        try
+        {
+            buffer.writeOut();
+        }
+        catch ( IOException e )
+        {
+            e.printStackTrace();
+        }
+        buffer.writeOut();
+    }
+
+    @Test
+    public void testMonitoringBytesWritten() throws Exception
+    {
+        Monitors monitors = new Monitors();
+        ByteCounterMonitor monitor = monitors.newMonitor( ByteCounterMonitor.class );
+        DirectMappedLogBuffer buffer = new DirectMappedLogBuffer( new FileChannelWithChoppyDisk( 100 ), monitor );
+
+        final AtomicLong bytesWritten = new AtomicLong();
+
+        monitors.addMonitorListener( new ByteCounterMonitor()
+        {
+            @Override
+            public void bytesWritten( long numberOfBytes )
+            {
+                bytesWritten.addAndGet( numberOfBytes );
+            }
+
+            @Override
+            public void bytesRead( long numberOfBytes )
+            {
+
+            }
+        } );
+
+        buffer.put( (byte) 1 );
+        assertEquals( 0, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 1, bytesWritten.get() );
+
+        buffer.putShort( (short) 1 );
+        assertEquals( 1, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 3, bytesWritten.get() );
+
+        buffer.putInt( 1 );
+        assertEquals( 3, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 7, bytesWritten.get() );
+
+        buffer.putLong( 1 );
+        assertEquals( 7, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 15, bytesWritten.get() );
+
+        buffer.putFloat( 1 );
+        assertEquals( 15, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 19, bytesWritten.get() );
+
+        buffer.putDouble( 1 );
+        assertEquals( 19, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 27, bytesWritten.get() );
+
+        buffer.put( new byte[]{ 1, 2, 3 } );
+        assertEquals( 27, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 30, bytesWritten.get() );
+
+        buffer.put( new char[] { '1', '2', '3'} );
+        assertEquals( 30, bytesWritten.get() );
+        buffer.force();
+        assertEquals( 36, bytesWritten.get() );
+
+        buffer.force();
+        assertEquals( 36, bytesWritten.get() );
     }
 }

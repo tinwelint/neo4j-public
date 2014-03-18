@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,43 +19,67 @@
  */
 package org.neo4j.server.database;
 
-import org.neo4j.kernel.AbstractGraphDatabase;
+import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Function;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.logging.Logging;
 
-public class WrappedDatabase extends Database {
+public class WrappedDatabase extends LifecycleAdapter implements Database
+{
+    private final GraphDatabaseAPI graph;
+    private final ExecutionEngine executionEngine;
 
-	@SuppressWarnings("deprecation")
-	public WrappedDatabase(AbstractGraphDatabase db) {
-		this.graph = db;
-	}
-	
-	@Override
-	public void init() throws Throwable 
-	{
-		
-	}
-
-	@Override
-	public void start() throws Throwable 
-	{
-		
-	}
-
-	@Override
-	public void stop() throws Throwable 
-	{
-		
-	}
-
-    @Override
-	public void shutdown()
+    public static Database.Factory wrappedDatabase( final GraphDatabaseAPI db )
     {
-        
-    }
-    
-    @Override
-	public String getLocation()
-    {
-        return graph.getStoreDir();
+        return new Factory()
+        {
+            @Override
+            public Database newDatabase( Config config, Function<Config, Logging> loggingProvider )
+            {
+                return new WrappedDatabase( db );
+            }
+        };
     }
 
+    public WrappedDatabase( GraphDatabaseAPI graph )
+    {
+        this.graph = graph;
+        this.executionEngine = new ExecutionEngine( graph );
+        try
+        {
+            start();
+        }
+        catch ( Throwable throwable )
+        {
+            throw new RuntimeException( throwable );
+        }
+    }
+
+    @Override
+    public String getLocation()
+    {
+        return graph.getDependencyResolver().resolveDependency( Config.class )
+                .get( GraphDatabaseSettings.store_dir ).getAbsolutePath();
+    }
+
+    @Override
+    public GraphDatabaseAPI getGraph()
+    {
+        return graph;
+    }
+
+    @Override
+    public ExecutionEngine executionEngine()
+    {
+        return executionEngine;
+    }
+
+    @Override
+    public boolean isRunning()
+    {
+        return true;
+    }
 }

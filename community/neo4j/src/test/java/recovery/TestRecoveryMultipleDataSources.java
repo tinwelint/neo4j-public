@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,26 @@
  */
 package recovery;
 
-import static java.lang.Runtime.getRuntime;
-import static java.lang.System.exit;
-import static java.lang.System.getProperty;
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.kernel.impl.util.FileUtils.deleteRecursively;
-import static org.neo4j.test.TargetDirectory.forTest;
-
 import java.io.File;
 
 import org.junit.Test;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.tooling.GlobalGraphOperations;
+
+import static java.lang.Runtime.getRuntime;
+import static java.lang.System.exit;
+import static java.lang.System.getProperty;
+
+import static org.junit.Assert.assertEquals;
+
+import static org.neo4j.kernel.impl.util.FileUtils.deleteRecursively;
+import static org.neo4j.test.TargetDirectory.forTest;
 
 public class TestRecoveryMultipleDataSources
 {
@@ -58,10 +62,10 @@ public class TestRecoveryMultipleDataSources
                 getClass().getName() } ).waitFor() );
         
         // When
-        GraphDatabaseService db = new EmbeddedGraphDatabase( dir );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( dir );
 
         // Then
-        try
+        try(Transaction ignored = db.beginTx())
         {
             assertEquals( MyRelTypes.TEST.name(), GlobalGraphOperations.at( db ).getAllRelationshipTypes().iterator().next().name() );
         }
@@ -73,17 +77,17 @@ public class TestRecoveryMultipleDataSources
 
     public static void main( String[] args )
     {
-        GraphDatabaseAPI db = new EmbeddedGraphDatabase( dir );
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabase( dir );
         Transaction tx = db.beginTx();
         db.createNode().createRelationshipTo( db.createNode(), MyRelTypes.TEST );
         tx.success();
-        tx.finish();
+        tx.close();
         
-        db.getXaDataSourceManager().rotateLogicalLogs();
+        db.getDependencyResolver().resolveDependency( XaDataSourceManager.class ).rotateLogicalLogs();
         tx = db.beginTx();
         db.index().forNodes( "index" ).add( db.createNode(), dir, db.createNode() );
         tx.success();
-        tx.finish();
+        tx.close();
         exit( 0 );
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.neo4j.cluster.ClusterSettings.cluster_server;
 import static org.neo4j.cluster.ClusterSettings.initial_hosts;
+import static org.neo4j.cluster.ClusterSettings.server_id;
 import static org.neo4j.kernel.ha.HaSettings.ha_server;
-import static org.neo4j.kernel.ha.HaSettings.server_id;
 import static org.neo4j.kernel.ha.HaSettings.state_switch_timeout;
 
 import java.io.File;
@@ -34,8 +34,8 @@ import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.test.TargetDirectory;
 import org.neo4j.tooling.GlobalGraphOperations;
 
@@ -49,8 +49,9 @@ public class ForeignStoreIdIT
         firstInstance = new HighlyAvailableGraphDatabaseFactory()
                 .newHighlyAvailableDatabaseBuilder( DIR.directory( "1", true ).getAbsolutePath() )
                 .setConfig( server_id, "1" )
-                .setConfig( cluster_server, ":5001" )
-                .setConfig( ha_server, ":6001" )
+                .setConfig( cluster_server, "127.0.0.1:5001" )
+                .setConfig( ha_server, "127.0.0.1:6031" )
+                .setConfig( initial_hosts, "127.0.0.1:5001" )
                 .newGraphDatabase();
         // -- another instance preparing to join with a store with a different store ID
         String foreignDbStoreDir = createAnotherStore( DIR.directory( "2", true ), 0 );
@@ -60,9 +61,9 @@ public class ForeignStoreIdIT
         foreignInstance = new HighlyAvailableGraphDatabaseFactory()
                 .newHighlyAvailableDatabaseBuilder( foreignDbStoreDir )
                 .setConfig( server_id, "2" )
-                .setConfig( initial_hosts, ":5001" )
-                .setConfig( cluster_server, ":5002" )
-                .setConfig( ha_server, ":6002" )
+                .setConfig( initial_hosts, "127.0.0.1:5001" )
+                .setConfig( cluster_server, "127.0.0.1:5002" )
+                .setConfig( ha_server, "127.0.0.1:6032" )
                 .newGraphDatabase();
         // -- and creates a node
         long foreignNode = createNode( foreignInstance, "foreigner" );
@@ -80,8 +81,9 @@ public class ForeignStoreIdIT
         firstInstance = new HighlyAvailableGraphDatabaseFactory()
                 .newHighlyAvailableDatabaseBuilder( DIR.directory( "1", true ).getAbsolutePath() )
                 .setConfig( server_id, "1" )
-                .setConfig( cluster_server, ":5001" )
-                .setConfig( ha_server, ":6001" )
+                .setConfig( initial_hosts, "127.0.0.1:5001" )
+                .setConfig( cluster_server, "127.0.0.1:5001" )
+                .setConfig( ha_server, "127.0.0.1:6041" )
                 .newGraphDatabase();
         createNodes( firstInstance, 3, "first" );
         // -- another instance preparing to join with a store with a different store ID
@@ -92,9 +94,9 @@ public class ForeignStoreIdIT
         foreignInstance = new HighlyAvailableGraphDatabaseFactory()
                 .newHighlyAvailableDatabaseBuilder( foreignDbStoreDir )
                 .setConfig( server_id, "2" )
-                .setConfig( initial_hosts, ":5001" )
-                .setConfig( cluster_server, ":5002" )
-                .setConfig( ha_server, ":6002" )
+                .setConfig( initial_hosts, "127.0.0.1:5001" )
+                .setConfig( cluster_server, "127.0.0.1:5002" )
+                .setConfig( ha_server, "127.0.0.1:6042" )
                 .setConfig( state_switch_timeout, "5s" )
                 .newGraphDatabase();
 
@@ -125,17 +127,26 @@ public class ForeignStoreIdIT
     
     private long findNode( GraphDatabaseService db, String name )
     {
-        for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
-            if ( name.equals( node.getProperty( "name", null ) ) )
-                return node.getId();
-        fail( "Didn't find node '" + name + "' in " + db );
-        return -1; // will never happen
+        Transaction transaction = db.beginTx();
+
+        try
+        {
+            for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
+                if ( name.equals( node.getProperty( "name", null ) ) )
+                    return node.getId();
+            fail( "Didn't find node '" + name + "' in " + db );
+            return -1; // will never happen
+        }
+        finally
+        {
+            transaction.finish();
+        }
     }
 
     private String createAnotherStore( File directory, int transactions )
     {
         String storeDir = directory.getAbsolutePath();
-        GraphDatabaseService db = new EmbeddedGraphDatabase( storeDir );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         createNodes( db, transactions, "node" );
         db.shutdown();
         return storeDir;

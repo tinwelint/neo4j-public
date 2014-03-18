@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,27 +24,34 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.impl.nioneo.store.AbstractDynamicStore;
 import org.neo4j.kernel.impl.nioneo.store.FileLock;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipStore;
+import org.neo4j.kernel.impl.nioneo.store.SchemaStore;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.test.impl.ChannelInputStream;
 import org.neo4j.test.impl.ChannelOutputStream;
 import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
 
-public class JumpingFileSystemAbstraction implements FileSystemAbstraction
+public class JumpingFileSystemAbstraction extends LifecycleAdapter implements FileSystemAbstraction
 {
     private final int sizePerJump;
-    private final FileSystemAbstraction actualFileSystem = new EphemeralFileSystemAbstraction();
+    private final EphemeralFileSystemAbstraction actualFileSystem = new EphemeralFileSystemAbstraction();
 
     public JumpingFileSystemAbstraction( int sizePerJump )
     {
@@ -61,7 +68,8 @@ public class JumpingFileSystemAbstraction implements FileSystemAbstraction
                 fileName.getName().equals( "neostore.relationshipstore.db" ) ||
                 fileName.getName().equals( "neostore.propertystore.db" ) ||
                 fileName.getName().equals( "neostore.propertystore.db.strings" ) ||
-                fileName.getName().equals( "neostore.propertystore.db.arrays" ) )
+                fileName.getName().equals( "neostore.propertystore.db.arrays" ) ||
+                fileName.getName().equals( "neostore.relationshipgroupstore.db" ) )
         {        
             return new JumpingFileChannel( channel, recordSizeFor( fileName ) );
         }
@@ -84,6 +92,12 @@ public class JumpingFileSystemAbstraction implements FileSystemAbstraction
     public Reader openAsReader( File fileName, String encoding ) throws IOException
     {
         return new InputStreamReader( openAsInputStream( fileName ), encoding );
+    }
+    
+    @Override
+    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    {
+        return new OutputStreamWriter( openAsOutputStream( fileName, append ), encoding );
     }
 
     @Override
@@ -123,21 +137,15 @@ public class JumpingFileSystemAbstraction implements FileSystemAbstraction
     }
     
     @Override
-    public boolean mkdirs( File fileName )
+    public void mkdirs( File fileName )
     {
-        return actualFileSystem.mkdirs( fileName );
+        actualFileSystem.mkdirs( fileName );
     }
     
     @Override
     public boolean renameFile( File from, File to ) throws IOException
     {
         return actualFileSystem.renameFile( from, to );
-    }
-    
-    @Override
-    public void autoCreatePath( File path ) throws IOException
-    {
-        actualFileSystem.autoCreatePath( path );
     }
 
     @Override
@@ -158,6 +166,24 @@ public class JumpingFileSystemAbstraction implements FileSystemAbstraction
         return actualFileSystem.isDirectory( file );
     }
     
+    @Override
+    public void moveToDirectory( File file, File toDirectory ) throws IOException
+    {
+        actualFileSystem.moveToDirectory( file, toDirectory );
+    }
+    
+    @Override
+    public void copyFile( File from, File to ) throws IOException
+    {
+        actualFileSystem.copyFile( from, to );
+    }
+    
+    @Override
+    public void copyRecursively( File fromDirectory, File toDirectory ) throws IOException
+    {
+        actualFileSystem.copyRecursively( fromDirectory, toDirectory );
+    }
+    
     private int recordSizeFor( File fileName )
     {
         if ( fileName.getName().endsWith( "nodestore.db" ) )
@@ -176,6 +202,19 @@ public class JumpingFileSystemAbstraction implements FileSystemAbstraction
         else if ( fileName.getName().endsWith( "propertystore.db" ) )
         {
             return PropertyStore.RECORD_SIZE;
+        }
+        else if ( fileName.getName().endsWith( "nodestore.db.labels" ) )
+        {
+            return Integer.parseInt( GraphDatabaseSettings.label_block_size.getDefaultValue() ) +
+                    AbstractDynamicStore.BLOCK_HEADER_SIZE;
+        }
+        else if ( fileName.getName().endsWith( "schemastore.db" ) )
+        {
+            return AbstractDynamicStore.getRecordSize( SchemaStore.BLOCK_SIZE );
+        }
+        else if ( fileName.getName().endsWith( "relationshipgroupstore.db" ) )
+        {
+            return AbstractDynamicStore.getRecordSize( RelationshipGroupStore.RECORD_SIZE );
         }
         throw new IllegalArgumentException( fileName.getPath() );
     }
@@ -362,5 +401,18 @@ public class JumpingFileSystemAbstraction implements FileSystemAbstraction
         {
             actual.close();
         }
+    }
+
+    @Override
+    public <K extends ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem(
+            Class<K> clazz, Function<Class<K>, K> creator )
+    {
+        return actualFileSystem.getOrCreateThirdPartyFileSystem( clazz, creator );
+    }
+
+    @Override
+    public void shutdown()
+    {
+        actualFileSystem.shutdown();
     }
 }

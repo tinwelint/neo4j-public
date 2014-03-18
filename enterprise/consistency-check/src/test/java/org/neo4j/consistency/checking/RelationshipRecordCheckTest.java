@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,16 @@
  */
 package org.neo4j.consistency.checking;
 
-import static org.mockito.Mockito.verify;
-
 import org.junit.Test;
+
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
-import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeRecord;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeTokenRecord;
+
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class RelationshipRecordCheckTest extends
                                          RecordCheckTestBase<RelationshipRecord, ConsistencyReport.RelationshipConsistencyReport, RelationshipRecordCheck>
@@ -46,7 +48,7 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -54,26 +56,29 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingForRelationshipWithConsistentReferences() throws Exception
     {
         // given
+        /*
+         * (1) --> (3) <==> (2)
+         */
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, relationship.getId(), NONE ) ) );
-        add( inUse( new NodeRecord( 2, 53, NONE ) ) );
-        add( inUse( new NodeRecord( 3, NONE, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, relationship.getId(), NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 53, NONE ) ) );
+        add( inUse( new NodeRecord( 3, false, NONE, NONE ) ) );
         add( inUse( new PropertyRecord( 101 ) ) );
         relationship.setNextProp( 101 );
         RelationshipRecord sNext = add( inUse( new RelationshipRecord( 51, 1, 3, 4 ) ) );
@@ -82,49 +87,52 @@ public class RelationshipRecordCheckTest extends
 
         relationship.setFirstNextRel( sNext.getId() );
         sNext.setFirstPrevRel( relationship.getId() );
+        sNext.setFirstInFirstChain( false );
         relationship.setSecondNextRel( tNext.getId() );
         tNext.setFirstPrevRel( relationship.getId() );
+        tNext.setFirstInFirstChain( false );
         relationship.setSecondPrevRel( tPrev.getId() );
+        relationship.setFirstInSecondChain( false );
         tPrev.setSecondNextRel( relationship.getId() );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
-    public void shouldReportIllegalLabel() throws Exception
+    public void shouldReportIllegalRelationshipType() throws Exception
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, NONE ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
-        verify( report ).illegalLabel();
-        verifyOnlyReferenceDispatch( report );
+        verify( report ).illegalRelationshipType();
+        verifyNoMoreInteractions( report );
     }
 
     @Test
-    public void shouldReportLabelNotInUse() throws Exception
+    public void shouldReportRelationshipTypeNotInUse() throws Exception
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        RelationshipTypeRecord label = add( notInUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        RelationshipTypeTokenRecord relationshipType = add( notInUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
-        verify( report ).labelNotInUse( label );
-        verifyOnlyReferenceDispatch( report );
+        verify( report ).relationshipTypeNotInUse( relationshipType );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -132,15 +140,15 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, NONE, 1, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).illegalSourceNode();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -148,16 +156,16 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        NodeRecord node = add( notInUse( new NodeRecord( 1, NONE, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        NodeRecord node = add( notInUse( new NodeRecord( 1, false, NONE, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).sourceNodeNotInUse( node );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -165,15 +173,15 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, NONE, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).illegalTargetNode();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -181,16 +189,16 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        NodeRecord node = add( notInUse( new NodeRecord( 2, NONE, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        NodeRecord node = add( notInUse( new NodeRecord( 2, false, NONE, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).targetNodeNotInUse( node );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -198,10 +206,10 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
         relationship.setNextProp( 11 );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         PropertyRecord property = add( notInUse( new PropertyRecord( 11 ) ) );
 
         // when
@@ -209,7 +217,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).propertyNotInUse( property );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -217,10 +225,10 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
         relationship.setNextProp( 11 );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         PropertyRecord property = add( inUse( new PropertyRecord( 11 ) ) );
         property.setPrevProp( 6 );
 
@@ -229,7 +237,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).propertyNotFirstInChain( property );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -237,16 +245,16 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        NodeRecord source = add( inUse( new NodeRecord( 1, 7, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        NodeRecord source = add( inUse( new NodeRecord( 1, false, 7, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).sourceNodeDoesNotReferenceBack( source );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -254,16 +262,16 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        NodeRecord target = add( inUse( new NodeRecord( 2, 7, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        NodeRecord target = add( inUse( new NodeRecord( 2, false, 7, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).targetNodeDoesNotReferenceBack( target );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -271,9 +279,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        NodeRecord source = add( inUse( new NodeRecord( 1, NONE, NONE ) ) );
-        NodeRecord target = add( inUse( new NodeRecord( 2, NONE, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        NodeRecord source = add( inUse( new NodeRecord( 1, false, NONE, NONE ) ) );
+        NodeRecord target = add( inUse( new NodeRecord( 2, false, NONE, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
@@ -281,7 +289,7 @@ public class RelationshipRecordCheckTest extends
         // then
         verify( report ).sourceNodeDoesNotReferenceBack( source );
         verify( report ).targetNodeDoesNotReferenceBack( target );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -289,11 +297,12 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        NodeRecord source = add( inUse( new NodeRecord( 1, NONE, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        NodeRecord source = add( inUse( new NodeRecord( 1, false, NONE, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sPrev = add( inUse( new RelationshipRecord( 51, 1, 0, 0 ) ) );
         relationship.setFirstPrevRel( sPrev.getId() );
+        relationship.setFirstInFirstChain( false );
         sPrev.setFirstNextRel( relationship.getId() );
 
         // when
@@ -301,7 +310,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourceNodeHasNoRelationships( source );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -309,11 +318,12 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        NodeRecord target = add( inUse( new NodeRecord( 2, NONE, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        NodeRecord target = add( inUse( new NodeRecord( 2, false, NONE, NONE ) ) );
         RelationshipRecord tPrev = add( inUse( new RelationshipRecord( 51, 0, 2, 0 ) ) );
         relationship.setSecondPrevRel( tPrev.getId() );
+        relationship.setFirstInSecondChain( false );
         tPrev.setSecondNextRel( relationship.getId() );
 
         // when
@@ -321,7 +331,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetNodeHasNoRelationships( target );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -329,18 +339,19 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 0, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 0, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sPrev = add( inUse( new RelationshipRecord( 51, 8, 9, 0 ) ) );
         relationship.setFirstPrevRel( sPrev.getId() );
+        relationship.setFirstInFirstChain( false );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).sourcePrevReferencesOtherNodes( sPrev );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -348,18 +359,19 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 0, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 0, NONE ) ) );
         RelationshipRecord tPrev = add( inUse( new RelationshipRecord( 51, 8, 9, 0 ) ) );
         relationship.setSecondPrevRel( tPrev.getId() );
+        relationship.setFirstInSecondChain( false );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).targetPrevReferencesOtherNodes( tPrev );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -367,9 +379,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sNext = add( inUse( new RelationshipRecord( 51, 8, 9, 0 ) ) );
         relationship.setFirstNextRel( sNext.getId() );
 
@@ -378,7 +390,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourceNextReferencesOtherNodes( sNext );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -386,9 +398,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord tNext = add( inUse( new RelationshipRecord( 51, 8, 9, 0 ) ) );
         relationship.setSecondNextRel( tNext.getId() );
 
@@ -397,7 +409,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetNextReferencesOtherNodes( tNext );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -405,18 +417,19 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 0, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 0, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sPrev = add( inUse( new RelationshipRecord( 51, 2, 0, 0 ) ) );
         relationship.setFirstPrevRel( sPrev.getId() );
+        relationship.setFirstInFirstChain( false );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).sourcePrevReferencesOtherNodes( sPrev );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -424,18 +437,19 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 0, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 0, NONE ) ) );
         RelationshipRecord tPrev = add( inUse( new RelationshipRecord( 51, 1, 0, 0 ) ) );
         relationship.setSecondPrevRel( tPrev.getId() );
+        relationship.setFirstInSecondChain( false );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).targetPrevReferencesOtherNodes( tPrev );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -443,9 +457,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sNext = add( inUse( new RelationshipRecord( 51, 2, 0, 0 ) ) );
         relationship.setFirstNextRel( sNext.getId() );
 
@@ -454,7 +468,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourceNextReferencesOtherNodes( sNext );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -462,9 +476,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord tNext = add( inUse( new RelationshipRecord( 51, 1, 0, 0 ) ) );
         relationship.setSecondNextRel( tNext.getId() );
 
@@ -473,7 +487,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetNextReferencesOtherNodes( tNext );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -481,18 +495,19 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 0, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 0, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sPrev = add( inUse( new RelationshipRecord( 51, 1, 3, 0 ) ) );
         relationship.setFirstPrevRel( sPrev.getId() );
+        relationship.setFirstInFirstChain( false );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).sourcePrevDoesNotReferenceBack( sPrev );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -500,18 +515,19 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 0, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 0, NONE ) ) );
         RelationshipRecord tPrev = add( inUse( new RelationshipRecord( 51, 2, 3, 0 ) ) );
         relationship.setSecondPrevRel( tPrev.getId() );
+        relationship.setFirstInSecondChain( false );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = check( relationship );
 
         // then
         verify( report ).targetPrevDoesNotReferenceBack( tPrev );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -519,9 +535,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord sNext = add( inUse( new RelationshipRecord( 51, 3, 1, 0 ) ) );
         relationship.setFirstNextRel( sNext.getId() );
 
@@ -530,7 +546,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourceNextDoesNotReferenceBack( sNext );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -538,9 +554,9 @@ public class RelationshipRecordCheckTest extends
     {
         // given
         RelationshipRecord relationship = inUse( new RelationshipRecord( 42, 1, 2, 4 ) );
-        add( inUse( new RelationshipTypeRecord( 4 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 4 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord tNext = add( inUse( new RelationshipRecord( 51, 3, 2, 0 ) ) );
         relationship.setSecondNextRel( tNext.getId() );
 
@@ -549,7 +565,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetNextDoesNotReferenceBack( tNext );
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     // change checking
@@ -562,18 +578,22 @@ public class RelationshipRecordCheckTest extends
         oldRelationship.setNextProp( 1 );
         oldRelationship.setFirstNextRel( 101 );
         oldRelationship.setFirstPrevRel( 102 );
+        oldRelationship.setFirstInFirstChain( false );
         oldRelationship.setSecondNextRel( 103 );
         oldRelationship.setSecondPrevRel( 104 );
+        oldRelationship.setFirstInSecondChain( false );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         oldRelationship.setNextProp( 2 );
         newRelationship.setFirstNextRel( 201 );
         newRelationship.setFirstPrevRel( 202 );
+        newRelationship.setFirstInFirstChain( false );
         newRelationship.setSecondNextRel( 203 );
         newRelationship.setSecondPrevRel( 204 );
+        newRelationship.setFirstInSecondChain( false );
 
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
 
         addChange( inUse( new PropertyRecord( 1 ) ),
                    inUse( new PropertyRecord( 1 ) ) );
@@ -601,7 +621,7 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -610,9 +630,9 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = notInUse( new RelationshipRecord( 42, 0, 0, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
-        NodeRecord source = add( notInUse( new NodeRecord( 1, 0, 0 ) ) );
-        NodeRecord target = add( notInUse( new NodeRecord( 2, 0, 0 ) ) );
-        RelationshipTypeRecord label = add( notInUse( new RelationshipTypeRecord( 0 ) ) );
+        NodeRecord source = add( notInUse( new NodeRecord( 1, false, 0, 0 ) ) );
+        NodeRecord target = add( notInUse( new NodeRecord( 2, false, 0, 0 ) ) );
+        RelationshipTypeTokenRecord label = add( notInUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
@@ -620,21 +640,21 @@ public class RelationshipRecordCheckTest extends
         // then
         verify( report ).sourceNodeNotInUse( source );
         verify( report ).targetNodeNotInUse( target );
-        verify( report ).labelNotInUse( label );
-        verifyOnlyReferenceDispatch( report );
+        verify( report ).relationshipTypeNotInUse( label );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenAddingAnInitialProperty() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         newRelationship.setNextProp( addChange( notInUse( new PropertyRecord( 10 ) ),
                                                 inUse( new PropertyRecord( 10 ) ) ).getId() );
@@ -643,20 +663,20 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenChangingProperty() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         PropertyRecord oldProp = addChange( inUse( new PropertyRecord( 10 ) ),
                                             inUse( new PropertyRecord( 10 ) ) );
@@ -672,72 +692,74 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenAddingPrevSourceRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        addChange( inUse( new NodeRecord( 1, 42, NONE ) ),
-                   inUse( new NodeRecord( 1, 10, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        addChange( inUse( new NodeRecord( 1, false, 42, NONE ) ),
+                   inUse( new NodeRecord( 1, false, 10, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord prev = addChange( notInUse( new RelationshipRecord( 10, 0, 0, 0 ) ),
                                              inUse( new RelationshipRecord( 10, 1, 3, 0 ) ) );
 
         newRelationship.setFirstPrevRel( prev.getId() );
+        newRelationship.setFirstInFirstChain( false );
         prev.setFirstNextRel( newRelationship.getId() );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenAddingPrevTargetRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        addChange( inUse( new NodeRecord( 2, 42, NONE ) ),
-                   inUse( new NodeRecord( 2, 10, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        addChange( inUse( new NodeRecord( 2, false, 42, NONE ) ),
+                   inUse( new NodeRecord( 2, false, 10, NONE ) ) );
 
         RelationshipRecord prev = addChange( notInUse( new RelationshipRecord( 10, 0, 0, 0 ) ),
                                              inUse( new RelationshipRecord( 10, 3, 2, 0 ) ) );
 
         newRelationship.setSecondPrevRel( prev.getId() );
+        newRelationship.setFirstInSecondChain( false );
         prev.setSecondNextRel( newRelationship.getId() );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenAddingNextSourceRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord next = addChange( notInUse( new RelationshipRecord( 10, 0, 0, 0 ) ),
                                              inUse( new RelationshipRecord( 10, 1, 3, 0 ) ) );
@@ -749,20 +771,20 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenAddingNextTargetRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord next = addChange( notInUse( new RelationshipRecord( 10, 0, 0, 0 ) ),
                                              inUse( new RelationshipRecord( 10, 3, 2, 0 ) ) );
@@ -774,49 +796,51 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenChangingPrevSourceRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord oldPrev = inUse( new RelationshipRecord( 10, 1, 3, 0 ) );
         addChange( oldPrev, inUse( new RelationshipRecord( 10, 1, 3, 0 ) ) );
         RelationshipRecord newPrev = addChange( notInUse( new RelationshipRecord( 11, 0, 0, 0 ) ),
                                                 inUse( new RelationshipRecord( 11, 1, 3, 0 ) ) );
         oldRelationship.setFirstPrevRel( oldPrev.getId() );
+        oldRelationship.setFirstInFirstChain( false );
         oldPrev.setFirstNextRel( oldRelationship.getId() );
 
         newRelationship.setFirstPrevRel( newPrev.getId() );
+        newRelationship.setFirstInFirstChain( false );
         newPrev.setFirstNextRel( newRelationship.getId() );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenChangingNextSourceRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord oldNext = inUse( new RelationshipRecord( 10, 1, 3, 0 ) );
         addChange( oldNext, inUse( new RelationshipRecord( 10, 1, 3, 0 ) ) );
@@ -832,49 +856,51 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenChangingPrevTargetRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord oldPrev = inUse( new RelationshipRecord( 10, 3, 2, 0 ) );
         addChange( oldPrev, inUse( new RelationshipRecord( 10, 3, 2, 0 ) ) );
         RelationshipRecord newPrev = addChange( notInUse( new RelationshipRecord( 11, 0, 0, 0 ) ),
                                                 inUse( new RelationshipRecord( 11, 3, 2, 0 ) ) );
         oldRelationship.setSecondPrevRel( oldPrev.getId() );
+        oldRelationship.setFirstInSecondChain( false );
         oldPrev.setSecondNextRel( oldRelationship.getId() );
 
         newRelationship.setSecondPrevRel( newPrev.getId() );
+        newRelationship.setFirstInSecondChain( false );
         newPrev.setSecondNextRel( newRelationship.getId() );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
     public void shouldNotReportAnythingWhenChangingNextTargetRelationship() throws Exception
     {
         // given
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
 
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
 
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
 
         RelationshipRecord oldNext = inUse( new RelationshipRecord( 10, 3, 2, 0 ) );
         addChange( oldNext, inUse( new RelationshipRecord( 10, 3, 2, 0 ) ) );
@@ -890,7 +916,7 @@ public class RelationshipRecordCheckTest extends
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
 
         // then
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -901,9 +927,9 @@ public class RelationshipRecordCheckTest extends
         oldRelationship.setNextProp( 1 );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         newRelationship.setNextProp( 2 );
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
         addChange( notInUse( new PropertyRecord( 2 ) ),
                    inUse( new PropertyRecord( 2 ) ) );
 
@@ -912,7 +938,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).propertyNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -921,12 +947,14 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         oldRelationship.setFirstPrevRel( 101 );
+        oldRelationship.setFirstInFirstChain( false );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         newRelationship.setFirstPrevRel( 201 );
+        newRelationship.setFirstInFirstChain( false );
 
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
 
         addChange( notInUse( new RelationshipRecord( 201, 0, 0, 0 ) ),
                    inUse( new RelationshipRecord( 201, 0, 11, 0 ) ) ).setSecondNextRel( 42 );
@@ -936,7 +964,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourcePrevNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -948,9 +976,9 @@ public class RelationshipRecordCheckTest extends
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         newRelationship.setFirstNextRel( 201 );
 
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
 
         addChange( notInUse( new RelationshipRecord( 201, 0, 0, 0 ) ),
                    inUse( new RelationshipRecord( 201, 0, 11, 0 ) ) ).setSecondPrevRel( 42 );
@@ -960,7 +988,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourceNextNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -969,12 +997,14 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         oldRelationship.setSecondPrevRel( 101 );
+        oldRelationship.setFirstInSecondChain( false );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         newRelationship.setSecondPrevRel( 201 );
+        newRelationship.setFirstInSecondChain( false );
 
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
 
         addChange( notInUse( new RelationshipRecord( 201, 0, 0, 0 ) ),
                    inUse( new RelationshipRecord( 201, 12, 0, 0 ) ) ).setFirstNextRel( 42 );
@@ -984,7 +1014,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetPrevNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -996,9 +1026,9 @@ public class RelationshipRecordCheckTest extends
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         newRelationship.setSecondNextRel( 201 );
 
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
 
         addChange( notInUse( new RelationshipRecord( 201, 0, 0, 0 ) ),
                    inUse( new RelationshipRecord( 201, 12, 0, 0 ) ) ).setFirstPrevRel( 42 );
@@ -1008,7 +1038,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetNextNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -1017,8 +1047,10 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         oldRelationship.setFirstPrevRel( add( inUse( new RelationshipRecord( 101, 11, 12, 0 ) ) ).getId() );
+        oldRelationship.setFirstInFirstChain( false );
         oldRelationship.setFirstNextRel( add( inUse( new RelationshipRecord( 102, 11, 12, 0 ) ) ).getId() );
         oldRelationship.setSecondPrevRel( add( inUse( new RelationshipRecord( 103, 11, 12, 0 ) ) ).getId() );
+        oldRelationship.setFirstInSecondChain( false );
         oldRelationship.setSecondNextRel( add( inUse( new RelationshipRecord( 104, 11, 12, 0 ) ) ).getId() );
         oldRelationship.setNextProp( add( inUse( new PropertyRecord( 201 ) ) ).getId() );
         RelationshipRecord newRelationship = notInUse( new RelationshipRecord( 42, 0, 0, 0 ) );
@@ -1032,7 +1064,7 @@ public class RelationshipRecordCheckTest extends
         verify( report ).targetPrevNotUpdated();
         verify( report ).targetNextNotUpdated();
         verify( report ).propertyNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -1041,9 +1073,9 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord prev = addChange( notInUse( new RelationshipRecord( 10, 0, 0, 0 ) ),
                                              inUse( new RelationshipRecord( 10, 1, 3, 0 ) ) );
         newRelationship.setFirstPrevRel( prev.getId() );
@@ -1054,7 +1086,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).sourceNodeNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -1063,9 +1095,9 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
         RelationshipRecord newRelationship = inUse( new RelationshipRecord( 42, 1, 2, 0 ) );
-        add( inUse( new RelationshipTypeRecord( 0 ) ) );
-        add( inUse( new NodeRecord( 1, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 2, 42, NONE ) ) );
+        add( inUse( new RelationshipTypeTokenRecord( 0 ) ) );
+        add( inUse( new NodeRecord( 1, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 2, false, 42, NONE ) ) );
         RelationshipRecord prev = addChange( notInUse( new RelationshipRecord( 10, 0, 0, 0 ) ),
                                              inUse( new RelationshipRecord( 10, 3, 2, 0 ) ) );
         newRelationship.setSecondPrevRel( prev.getId() );
@@ -1076,7 +1108,7 @@ public class RelationshipRecordCheckTest extends
 
         // then
         verify( report ).targetNodeNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 
     @Test
@@ -1085,8 +1117,8 @@ public class RelationshipRecordCheckTest extends
         // given
         RelationshipRecord oldRelationship = inUse( new RelationshipRecord( 42, 11, 12, 0 ) );
         RelationshipRecord newRelationship = notInUse( new RelationshipRecord( 42, 0, 0, 0 ) );
-        add( inUse( new NodeRecord( 11, 42, NONE ) ) );
-        add( inUse( new NodeRecord( 12, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 11, false, 42, NONE ) ) );
+        add( inUse( new NodeRecord( 12, false, 42, NONE ) ) );
 
         // when
         ConsistencyReport.RelationshipConsistencyReport report = checkChange( oldRelationship, newRelationship );
@@ -1094,6 +1126,6 @@ public class RelationshipRecordCheckTest extends
         // then
         verify( report ).sourceNodeNotUpdated();
         verify( report ).targetNodeNotUpdated();
-        verifyOnlyReferenceDispatch( report );
+        verifyNoMoreInteractions( report );
     }
 }

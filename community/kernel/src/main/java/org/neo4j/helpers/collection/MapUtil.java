@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,8 +30,12 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.helpers.Pair;
 
 /**
  * Utility to create {@link Map}s.
@@ -392,5 +396,31 @@ public abstract class MapUtil
         Map<K, V> copy = new HashMap<K, V>( map );
         copy.remove( key );
         return copy;
+    }
+
+    public static Map<String, String> toStringMap( PropertyContainer entity )
+    {
+        Map<String, String> out = new HashMap<>();
+        for ( String key : entity.getPropertyKeys() )
+        {
+            out.put( key, entity.getProperty( key ).toString() );
+        }
+        return out;
+    }
+
+    public static <K,V> Map<K, V> toMap( Iterable<Pair<K, V>> pairs )
+    {
+        return toMap( pairs.iterator() );
+    }
+
+    public static <K,V> Map<K, V> toMap( Iterator<Pair<K, V>> pairs )
+    {
+        Map<K,V> result = new HashMap<K,V>();
+        while(pairs.hasNext())
+        {
+            Pair<K,V> pair = pairs.next();
+            result.put(pair.first(), pair.other());
+        }
+        return result;
     }
 }

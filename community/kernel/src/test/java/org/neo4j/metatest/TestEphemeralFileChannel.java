@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -95,6 +95,7 @@ public class TestEphemeralFileChannel
         channel.read( buffer, 15 );
         buffer.flip();
         assertEquals( longValue, buffer.getLong() );
+        fs.shutdown();
     }
     
     @Test
@@ -117,6 +118,7 @@ public class TestEphemeralFileChannel
         // THEN
         assertEquals( bytes.length, nrOfReadBytes );
         assertTrue( Arrays.equals( bytes, readBytes ) );
+        fs.shutdown();
     }
     
     @Test
@@ -131,6 +133,7 @@ public class TestEphemeralFileChannel
          *       |
          *     file
          */
+        EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
         File root = new File( "root" );
         File dir1 = new File( root, "dir1" );
         File dir2 = new File( root, "dir2" );
@@ -139,7 +142,11 @@ public class TestEphemeralFileChannel
         File file2 = new File( dir1, "file2" );
         File file3 = new File( dir2, "file" );
         File file4 = new File( subdir1, "file" );
-        EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
+        
+        fs.mkdirs( dir2 );
+        fs.mkdirs( dir1 );
+        fs.mkdirs( subdir1 );
+        
         fs.create( file1 );
         fs.create( file2 );
         fs.create( file3 );
@@ -150,5 +157,6 @@ public class TestEphemeralFileChannel
         assertEquals( asSet( subdir1, file1, file2 ), asSet( fs.listFiles( dir1 ) ) );
         assertEquals( asSet( file3 ), asSet( fs.listFiles( dir2 ) ) );
         assertEquals( asSet( file4 ), asSet( fs.listFiles( subdir1 ) ) );
+        fs.shutdown();
     }
 }

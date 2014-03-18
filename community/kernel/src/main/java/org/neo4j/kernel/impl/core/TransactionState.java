@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,15 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import java.util.Collection;
+import java.util.Set;
 
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.kernel.impl.core.WritableTransactionState.PrimitiveElement;
-import org.neo4j.kernel.impl.nioneo.store.NameData;
-import org.neo4j.kernel.impl.nioneo.store.PropertyData;
-import org.neo4j.kernel.impl.transaction.TxHook;
+import org.neo4j.kernel.api.properties.DefinedProperty;
+import org.neo4j.kernel.impl.core.WritableTransactionState.SetAndDirectionCounter;
+import org.neo4j.kernel.impl.nioneo.xa.NeoStoreTransaction;
+import org.neo4j.kernel.impl.persistence.PersistenceManager;
+import org.neo4j.kernel.impl.persistence.PersistenceManager.ResourceHolder;
+import org.neo4j.kernel.impl.transaction.RemoteTxHook;
 import org.neo4j.kernel.impl.transaction.xaframework.TxIdGenerator;
 import org.neo4j.kernel.impl.util.ArrayMap;
 import org.neo4j.kernel.impl.util.RelIdArray;
@@ -42,98 +42,129 @@ import org.neo4j.kernel.impl.util.RelIdArray;
  * </ul>
  * @author Mattias
  *
+ * This is slowly being replaced / merged with the new KernelTransaction transaction state,
+ * {@link org.neo4j.kernel.impl.api.state.TxState}, please avoid adding more functionality to this class.
  */
 public interface TransactionState
 {
+    TransactionState NO_STATE = new NoTransactionState();
+
     LockElement acquireWriteLock( Object resource );
 
     LockElement acquireReadLock( Object resource );
-    
-    ArrayMap<Integer, RelIdArray> getCowRelationshipAddMap( NodeImpl node );
-    
-    RelIdArray getOrCreateCowRelationshipAddMap( NodeImpl node, int type );
-    
-    ArrayMap<Integer, Collection<Long>> getCowRelationshipRemoveMap( NodeImpl node );
 
-    Collection<Long> getOrCreateCowRelationshipRemoveMap( NodeImpl node, int type );
+    RelIdArray getOrCreateCowRelationshipAddMap( NodeImpl node, int type );
+
+    ArrayMap<Integer, SetAndDirectionCounter> getCowRelationshipRemoveMap( NodeImpl node );
+
+    SetAndDirectionCounter getOrCreateCowRelationshipRemoveMap( NodeImpl node, int type );
 
     void setFirstIds( long nodeId, long firstRel, long firstProp );
-    
+
     void commit();
 
     void commitCows();
 
     void rollback();
 
-    boolean hasLocks();
+    ArrayMap<Integer, DefinedProperty> getCowPropertyRemoveMap( Primitive primitive );
 
-    void dumpLocks();
+    ArrayMap<Integer, DefinedProperty> getCowPropertyAddMap( Primitive primitive );
 
-    ArrayMap<Integer, PropertyData> getCowPropertyRemoveMap( Primitive primitive );
+    ArrayMap<Integer, DefinedProperty> getOrCreateCowPropertyAddMap( Primitive primitive );
 
-    ArrayMap<Integer, PropertyData> getCowPropertyAddMap( Primitive primitive );
+    ArrayMap<Integer, DefinedProperty> getOrCreateCowPropertyRemoveMap( Primitive primitive );
 
-    PrimitiveElement getPrimitiveElement( boolean create );
+    void createNode( long id );
 
-    ArrayMap<Integer, PropertyData> getOrCreateCowPropertyAddMap(
-            Primitive primitive );
+    void createRelationship( long id );
 
-    ArrayMap<Integer, PropertyData> getOrCreateCowPropertyRemoveMap(
-            Primitive primitive );
+    void deleteNode( long id );
 
-    void deletePrimitive( Primitive primitive );
-
-    void removeNodeFromCache( long nodeId );
-
-    void addRelationshipType( NameData type );
-
-    void addPropertyIndex( NameData index );
-
-    void removeRelationshipFromCache( long id );
-
-    /**
-     * Patches the relationship chain loading parts of the start and end nodes of deleted relationships. This is
-     * a good idea to call when deleting relationships, otherwise the in memory representation of relationship chains
-     * may become damaged.
-     * This is not expected to remove the deleted relationship from the cache - use
-     * {@link #removeRelationshipFromCache(long)} for that purpose before calling this method.
-     *
-     * @param relId The relId of the relationship deleted
-     * @param firstNodeId The relId of the first node
-     * @param firstNodeNextRelId The next relationship relId of the first node in its relationship chain
-     * @param secondNodeId The relId of the second node
-     * @param secondNodeNextRelId The next relationship relId of the second node in its relationship chain
-     */
-    void patchDeletedRelationshipNodes( long relId, long firstNodeId, long firstNodeNextRelId, long secondNodeId,
-                                      long secondNodeNextRelId );
-
-    void removeRelationshipTypeFromCache( int id );
-
-    void removeGraphPropertiesFromCache();
-
-    void clearCache();
+    void deleteRelationship( long id );
 
     TransactionData getTransactionData();
-    
-    void addPropertyIndex( PropertyIndex index );
 
-    PropertyIndex getPropertyIndex( String key );
+    boolean nodeIsDeleted( long nodeId );
 
-    PropertyIndex getPropertyIndex( int keyId );
-    
-    boolean isDeleted( Node node );
+    boolean relationshipIsDeleted( long relationshpId );
 
-    boolean isDeleted( Relationship relationship );
-    
-    PropertyIndex[] getAddedPropertyIndexes();
-    
     boolean hasChanges();
+
+    RemoteTxHook getTxHook();
+
+    TxIdGenerator getTxIdGenerator();
+
+    Set<Long> getCreatedNodes();
+
+    Set<Long> getCreatedRelationships();
+
+    // Tech debt, this is here waiting for transaction state to move to the TxState class
+    Iterable<WritableTransactionState.CowNodeElement> getChangedNodes();
     
-    void setRollbackOnly();
+    /**
+     * Below are two methods for getting and setting a {@link ResourceHolder}, i.e. a carrier of a
+     * {@link NeoStoreTransaction}. This is not a very good strategy. The reason it's here is that it's
+     * less contended to put and reach that instance in each {@link TransactionState} object, instead of
+     * in a shared map or similar in {@link PersistenceManager}.
+     */
+    ResourceHolder getNeoStoreTransaction();
     
-    public TxHook getTxHook();
-    
-    public TxIdGenerator getTxIdGenerator();
-    
-    public static final TransactionState NO_STATE = new NoTransactionState();
+    void setNeoStoreTransaction( ResourceHolder neoStoreTransaction );
+
+    /**
+     * A history of slave transactions and their cultural impact on Graph Databases.
+     *
+     *
+     * Acknowledgments
+     *
+     * I would like to thank both Mattias and Chris for their excellent input on this subject, without their eye
+     * witness accounts of the actual events, none of this would be possible.
+     *
+     *
+     * Chapter I
+     * Humble Beginnings
+     *
+     * Once upon a time, when a slave asked the master to perform an action, this used to imply something, a bond.
+     * The master recognized the slaves need for a transaction, and would implicitly create one. It was a time of peace
+     * and of reconciliation. Alas, this soon led to confusion as untrustworthy networks would cause master switches.
+     * A new master might receive a message intended for another, and would out of the kindness of his kernel create a
+     * new transaction for the slave. While a beautiful gesture, it shouldn't have done this because now it had tore
+     * transaction state into two transactions, a most vile abomination.
+     *
+     * So it was decided that the trust the masters had in their slaves must be revoked. Instead slaves had to
+     * explicitly ask the masters to create a transaction. All was now consistent - but now an additional network hop
+     * was required, and slaves begin transactions on the masters for the most simple of requests. Read only operations
+     * would suddenly pull updates. The universe was in disarray.
+     *
+     *
+     * Chapter II
+     * A hack
+     *
+     * Pulling updates on read operations is very bad, because it voids the databases contracts for when updates should
+     * be pulled, and makes read scaling perform very poorly. It was soon recognized that, while correct, the new
+     * regimen could not be allowed to stand. A hack was devised, whereupon the slave would wait to initialize the
+     * transaction on the master until the first write lock was required. A clear signal that a write was about to
+     * happen.
+     *
+     * This very hack is why the below methods exist.
+     *
+     *
+     * Chapter III
+     * A new dawn
+     *
+     * Once all Neo4j operations are contained in the Kernel component, the kernel will be able to get a clear view of
+     * all running transactions, and clear entry points for all running operations within those transactions. With that,
+     * a new rein of trust can be implemented. As soon as a slave sees a new master, it will be able to void all running
+     * transactions, and start new with the new master. This will allow a return to the days of implicit transactions,
+     * where network communication is done only just when it is needed, and removing the additional network hop.
+     *
+     * The End.
+     *
+     */
+    boolean isRemotelyInitialized();
+
+    void markAsRemotelyInitialized();
+
+    ArrayMap<Integer,RelIdArray> getCowRelationshipAddMap( NodeImpl node );
 }

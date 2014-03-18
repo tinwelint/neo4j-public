@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,31 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.traversal.TraversalDescription;
+
 import static org.neo4j.graphdb.traversal.Evaluators.atDepth;
 import static org.neo4j.kernel.Traversal.traversal;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.neo4j.graphdb.traversal.TraversalDescription;
-
-public class DepthOneTraversalTest extends AbstractTestBase
+public class DepthOneTraversalTest extends TraversalTestBase
 {
+    private Transaction tx;
+
     @Before
     public void createTheGraph()
     {
         createGraph( "0 ROOT 1", "1 KNOWS 2", "2 KNOWS 3", "2 KNOWS 4",
                 "4 KNOWS 5", "5 KNOWS 6", "3 KNOWS 1" );
+        tx = beginTx();
+    }
+
+    @After
+    public void tearDown()
+    {
+        tx.finish();
     }
     
     private void shouldGetBothNodesOnDepthOne( TraversalDescription description )

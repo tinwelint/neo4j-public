@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -56,7 +56,7 @@ public class LatencyCalculator
         incoming.addMessageProcessor( new MessageProcessor()
         {
             @Override
-            public void process( Message<? extends MessageType> message )
+            public boolean process( Message<? extends MessageType> message )
             {
                 synchronized(LatencyCalculator.this)
                 {
@@ -93,17 +93,19 @@ public class LatencyCalculator
                         }
                     }
                 }
+                return true;
             }
         } );
     }
 
     @Override
-    public void process( Message<? extends MessageType> message )
+    public boolean process( Message<? extends MessageType> message )
     {
-        if (!message.isInternal() && !message.getHeader( Message.TO ).equals( message.getHeader( Message.CREATED_BY ) ))
+        if ( !message.isInternal() && !message.getHeader( Message.TO ).equals( message.getHeader( Message.CREATED_BY ) ) )
         {
             conversations.put( message.getHeader( Message.CONVERSATION_ID ), now );
         }
+        return true;
     }
 
     @Override

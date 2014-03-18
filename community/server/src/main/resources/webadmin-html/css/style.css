@@ -8,6 +8,7 @@
 @import url(grid.css);
 @import url(../lib/colorpicker/css/colorpicker.css);
 @import url(../js/lib/codemirror2/codemirror.css);
+@import url(../lib/deck/css/deck-neo4j.css);
 
 body { 
   width:100%; 
@@ -16,6 +17,7 @@ body {
   background:#fff; 
   padding:0;
   margin:0; 
+  font-size: 100%;
   font-family:arial, sans-serif; 
   overflow:hidden;
 }
@@ -39,7 +41,7 @@ body {
 
 #splash {
   margin: 15% auto;
-  width: 152px;
+  /*width: 152px;*/
 }
 
 #splash h1 {
@@ -872,4 +874,28 @@ pre {
   position: absolute;
   right: 0;
   top: 100px;
+}
+
+/**
+ * borrowed from bootstrap
+ */
+.alert {
+  padding: 8px 35px 8px 14px;
+  margin-bottom: 20px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  background-color: #fcf8e3;
+  border: 1px solid #fbeed5;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+.alert-danger,
+.alert-error {
+  background-color: #f2dede;
+  border-color: #eed3d7;
+  color: #b94a48;
+}
+.missing {
+  padding: 10%;
+  margin: 0;
 }

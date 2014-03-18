@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,7 +47,7 @@ public class JmxKernelExtension implements Lifecycle
     public JmxKernelExtension( KernelData kernelData, Logging logging )
     {
         this.kernelData = kernelData;
-        this.logger = logging.getLogger( getClass() );
+        this.logger = logging.getMessagesLog( getClass() );
     }
 
     @Override
@@ -138,7 +138,7 @@ public class JmxKernelExtension implements Lifecycle
             }
             return bean;
         }
-        return null;
+        throw new NotFoundException( "No management bean found for "+type.getName() );
     }
 
     public <T> Collection<T> getManagementBeans( Class<T> beanInterface )

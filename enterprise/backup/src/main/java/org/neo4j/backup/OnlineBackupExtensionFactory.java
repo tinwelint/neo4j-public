@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,11 @@ import org.neo4j.helpers.Service;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
 
 @Service.Implementation(KernelExtensionFactory.class)
 public class OnlineBackupExtensionFactory extends KernelExtensionFactory<OnlineBackupExtensionFactory.Dependencies>
@@ -34,7 +38,15 @@ public class OnlineBackupExtensionFactory extends KernelExtensionFactory<OnlineB
     {
         Config getConfig();
 
+        XaDataSourceManager xaDataSourceManager();
+
         GraphDatabaseAPI getGraphDatabaseAPI();
+
+        Logging logging();
+
+        KernelPanicEventGenerator kpeg();
+
+        Monitors monitors();
     }
 
     public OnlineBackupExtensionFactory()
@@ -51,6 +63,8 @@ public class OnlineBackupExtensionFactory extends KernelExtensionFactory<OnlineB
     @Override
     public Lifecycle newKernelExtension( Dependencies dependencies ) throws Throwable
     {
-        return new OnlineBackupKernelExtension( dependencies.getConfig(), dependencies.getGraphDatabaseAPI() );
+        return new OnlineBackupKernelExtension( dependencies.getConfig(), dependencies.getGraphDatabaseAPI(),
+                dependencies.xaDataSourceManager(), dependencies.kpeg(), dependencies.logging(),
+                dependencies.monitors() );
     }
 }

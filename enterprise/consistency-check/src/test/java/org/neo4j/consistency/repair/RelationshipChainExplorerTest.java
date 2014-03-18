@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,12 +23,15 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.impl.nioneo.store.RecordStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 import org.neo4j.kernel.impl.nioneo.store.StoreAccess;
@@ -37,16 +40,28 @@ import org.neo4j.test.TargetDirectory;
 public class RelationshipChainExplorerTest
 {
     private static final TargetDirectory target = TargetDirectory.forTest( RelationshipChainExplorerTest.class );
+    private static final int NDegreeTwoNodes = 10;
 
     @Rule
     public TargetDirectory.TestDirectory storeLocation = target.cleanTestDirectory();
+    private StoreAccess store;
+
+    @Before
+    public void setupStoreAccess()
+    {
+        store = createStoreWithOneHighDegreeNodeAndSeveralDegreeTwoNodes( NDegreeTwoNodes );
+    }
+
+    @After
+    public void tearDownStoreAccess()
+    {
+        store.close();
+    }
 
     @Test
     public void shouldLoadAllConnectedRelationshipRecordsAndTheirFullChainsOfRelationshipRecords() throws Exception
     {
         // given
-        int nDegreeTwoNodes = 10;
-        StoreAccess store = createStoreWithOneHighDegreeNodeAndSeveralDegreeTwoNodes( nDegreeTwoNodes );
         RecordStore<RelationshipRecord> relationshipStore = store.getRelationshipStore();
 
         // when
@@ -56,15 +71,13 @@ public class RelationshipChainExplorerTest
                         relationshipStore.getRecord( relationshipIdInMiddleOfChain ) );
 
         // then
-        assertEquals( nDegreeTwoNodes * 2, records.size() );
+        assertEquals( NDegreeTwoNodes * 2, records.size() );
     }
 
     @Test
     public void shouldCopeWithAChainThatReferencesNotInUseZeroValueRecords() throws Exception
     {
         // given
-        int nDegreeTwoNodes = 10;
-        StoreAccess store = createStoreWithOneHighDegreeNodeAndSeveralDegreeTwoNodes( nDegreeTwoNodes );
         RecordStore<RelationshipRecord> relationshipStore = store.getRelationshipStore();
         breakTheChain( relationshipStore );
 
@@ -76,7 +89,7 @@ public class RelationshipChainExplorerTest
 
         // then
         int recordsInaccessibleBecauseOfBrokenChain = 3;
-        assertEquals( nDegreeTwoNodes * 2 - recordsInaccessibleBecauseOfBrokenChain, records.size() );
+        assertEquals( NDegreeTwoNodes * 2 - recordsInaccessibleBecauseOfBrokenChain, records.size() );
     }
 
     private void breakTheChain( RecordStore<RelationshipRecord> relationshipStore )
@@ -93,7 +106,7 @@ public class RelationshipChainExplorerTest
     private StoreAccess createStoreWithOneHighDegreeNodeAndSeveralDegreeTwoNodes( int nDegreeTwoNodes )
     {
         File storeDirectory = storeLocation.directory();
-        EmbeddedGraphDatabase database = new EmbeddedGraphDatabase( storeDirectory.getPath() );
+        GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabase( storeDirectory.getPath() );
         Transaction transaction = database.beginTx();
         try
         {

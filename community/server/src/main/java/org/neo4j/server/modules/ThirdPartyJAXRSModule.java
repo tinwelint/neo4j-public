@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,6 @@ import static org.neo4j.server.JAXRSHelper.listFrom;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.server.NeoServer;
@@ -41,7 +40,7 @@ public class ThirdPartyJAXRSModule implements ServerModule
 	private final WebServer webServer;
 
     private ExtensionInitializer extensionInitializer;
-	private Set<ThirdPartyJaxRsPackage> packages;
+	private List<ThirdPartyJaxRsPackage> packages;
 
 
     public ThirdPartyJAXRSModule( WebServer webServer, Configurator configurator, NeoServer neoServer )
@@ -54,7 +53,7 @@ public class ThirdPartyJAXRSModule implements ServerModule
     @Override
 	public void start(StringLogger logger)
     {
-        this.packages = configurator.getThirdpartyJaxRsClasses();
+        this.packages = configurator.getThirdpartyJaxRsPackages();
         for ( ThirdPartyJaxRsPackage tpp : packages )
         {
             List<String> packageNames = packagesFor( tpp );

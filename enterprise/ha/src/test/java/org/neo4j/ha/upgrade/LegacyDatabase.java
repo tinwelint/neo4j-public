@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,4 +34,6 @@ public interface LegacyDatabase extends Remote
     long createNode( String name ) throws RemoteException;
     
     void verifyNodeExists( long id, String name ) throws RemoteException;
+    
+    boolean isMaster() throws RemoteException;
 }

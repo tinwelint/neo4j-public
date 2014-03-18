@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,8 +25,10 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
@@ -38,6 +40,7 @@ import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.protocol.election.ServerIdElectionCredentialsProvider;
 import org.neo4j.cluster.statemachine.StateTransitionLogger;
 import org.neo4j.cluster.timeout.MessageTimeoutStrategy;
+import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.logging.LogbackService;
 import org.neo4j.kernel.logging.Logging;
@@ -59,6 +62,8 @@ public class NetworkMock
     private MessageTimeoutStrategy timeoutStrategy;
     private Logging logging;
     protected final StringLogger logger;
+    private final List<Pair<Future<?>, Runnable>> futureWaiter;
+
 
     public NetworkMock( long tickDuration, MultipleFailureLatencyStrategy strategy,
                         MessageTimeoutStrategy timeoutStrategy )
@@ -67,24 +72,25 @@ public class NetworkMock
         this.strategy = strategy;
         this.timeoutStrategy = timeoutStrategy;
         this.logging = new LogbackService( null, (LoggerContext) LoggerFactory.getILoggerFactory() );
-        logger = logging.getLogger( NetworkMock.class );
+        logger = logging.getMessagesLog( NetworkMock.class );
+        futureWaiter = new LinkedList<Pair<Future<?>, Runnable>>();
     }
 
-    public TestProtocolServer addServer( URI serverId )
+    public TestProtocolServer addServer( int serverId, URI serverUri )
     {
-        TestProtocolServer server = newTestProtocolServer( serverId );
+        TestProtocolServer server = newTestProtocolServer( serverId, serverUri );
 
-        debug( serverId.toString(), "joins network" );
+        debug( serverUri.toString(), "joins network" );
 
-        participants.put( serverId.toString(), server );
+        participants.put( serverUri.toString(), server );
 
         return server;
     }
 
-    protected TestProtocolServer newTestProtocolServer( URI serverId )
+    protected TestProtocolServer newTestProtocolServer( int serverId, URI serverUri )
     {
         LoggerContext loggerContext = new LoggerContext();
-        loggerContext.putProperty( "host", serverId.toString() );
+        loggerContext.putProperty( "host", serverUri.toString() );
 
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext( loggerContext );
@@ -99,13 +105,13 @@ public class NetworkMock
 
         Logging logging = new LogbackService( null, loggerContext );
 
-        ProtocolServerFactory protocolServerFactory = new MultiPaxosServerFactory( new ClusterConfiguration(
-                "default" ), logging );
+        ProtocolServerFactory protocolServerFactory = new MultiPaxosServerFactory(
+                new ClusterConfiguration( "default", StringLogger.SYSTEM ), logging );
 
         ServerIdElectionCredentialsProvider electionCredentialsProvider = new ServerIdElectionCredentialsProvider();
-        electionCredentialsProvider.listeningAt( serverId );
-        TestProtocolServer protocolServer = new TestProtocolServer( timeoutStrategy, protocolServerFactory, serverId,
-                new InMemoryAcceptorInstanceStore(), electionCredentialsProvider );
+        electionCredentialsProvider.listeningAt( serverUri );
+        TestProtocolServer protocolServer = new TestProtocolServer( timeoutStrategy, protocolServerFactory, serverUri,
+                new InstanceId( serverId ), new InMemoryAcceptorInstanceStore(), electionCredentialsProvider );
         protocolServer.addStateTransitionListener( new StateTransitionLogger( logging ) );
         return protocolServer;
     }
@@ -119,6 +125,11 @@ public class NetworkMock
     {
         debug( serverId, "leaves network" );
         participants.remove( serverId );
+    }
+
+    public void addFutureWaiter(Future<?> future, Runnable toRun)
+    {
+        futureWaiter.add( Pair.<Future<?>, Runnable>of(future, toRun) );
     }
 
     public int tick()
@@ -135,7 +146,7 @@ public class NetworkMock
             if ( messageDelivery.getMessageDeliveryTime() <= now )
             {
                 long delay = strategy.messageDelay( messageDelivery.getMessage(),
-                        messageDelivery.getServer().toString() );
+                        messageDelivery.getServer().getServer().boundAt().toString() );
                 if ( delay != NetworkLatencyStrategy.LOST )
                 {
                     messageDelivery.getServer().process( messageDelivery.getMessage() );
@@ -161,53 +172,38 @@ public class NetworkMock
         for ( Message message : messages )
         {
             String to = message.getHeader( Message.TO );
-            if ( to.equals( Message.BROADCAST ) )
+            long delay = 0;
+            if ( message.getHeader( Message.TO ).equals( message.getHeader( Message.FROM ) ) )
             {
-                for ( Map.Entry<String, TestProtocolServer> testServer : participants.entrySet() )
-                {
-                    if ( !testServer.getKey().equals( message.getHeader( Message.FROM ) ) )
-                    {
-                        long delay = strategy.messageDelay( message, testServer.getKey() );
-                        if ( delay == NetworkLatencyStrategy.LOST )
-                        {
-                            logger.debug( "Broadcasted message to " + testServer.getKey() + " was lost" );
-
-                        }
-                        else
-                        {
-                            logger.debug( "Broadcast to " + testServer.getKey() + ": " + message );
-                            messageDeliveries.add( new MessageDelivery( now + delay, message, testServer.getValue() ) );
-                        }
-                    }
-                }
+                logger.debug( "Sending message to itself; zero latency" );
             }
             else
             {
-                long delay = 0;
-                if ( message.getHeader( Message.TO ).equals( message.getHeader( Message.FROM ) ) )
-                {
-                    logger.debug( "Sending message to itself; zero latency" );
-                }
-                else
-                {
-                    delay = strategy.messageDelay( message, to );
-                }
+                delay = strategy.messageDelay( message, to );
+            }
 
-                if ( delay == NetworkLatencyStrategy.LOST )
-                {
-                    logger.debug( "Send message to " + to + " was lost" );
-                }
-                else
-                {
-                    TestProtocolServer server = participants.get( to );
-                    logger.debug( "Send to " + to + ": " + message );
-                    messageDeliveries.add( new MessageDelivery( now + delay, message, server ) );
-                }
+            if ( delay == NetworkLatencyStrategy.LOST )
+            {
+                logger.debug( "Send message to " + to + " was lost" );
+            }
+            else
+            {
+                TestProtocolServer server = participants.get( to );
+                logger.debug( "Send to " + to + ": " + message );
+                messageDeliveries.add( new MessageDelivery( now + delay, message, server ) );
             }
         }
 
-        // Allow other threads (listeners) to process
-        Thread.yield();
+        Iterator<Pair<Future<?>, Runnable>> waiters = futureWaiter.iterator();
+        while ( waiters.hasNext() )
+        {
+            Pair<Future<?>, Runnable> next = waiters.next();
+            if ( next.first().isDone() )
+            {
+                next.other().run();
+                waiters.remove();
+            }
+        }
 
         return messageDeliveries.size();
     }

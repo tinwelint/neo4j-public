@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.kernel.impl.core;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.kernel.impl.AbstractNeo4jTestCase.deleteFileOrDirectory;
+import static org.neo4j.kernel.impl.nioneo.store.NodeStore.RECORD_SIZE;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +30,6 @@ import org.junit.Test;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.core.JumpingFileSystemAbstraction.JumpingFileChannel;
-import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.IdGenerator;
 
 public class TestJumpingIdGenerator
@@ -43,7 +42,7 @@ public class TestJumpingIdGenerator
         IdGenerator generator = factory.get( IdType.NODE );
         for ( int i = 0; i < sizePerJump/2; i++ )
         {
-            assertEquals( (long)i, generator.nextId() );
+            assertEquals( i, generator.nextId() );
         }
         
         for ( int i = 0; i < sizePerJump-1; i++ )
@@ -71,8 +70,9 @@ public class TestJumpingIdGenerator
     public void testOffsettedFileChannel() throws Exception
     {
         File fileName = new File("target/var/neostore.nodestore.db");
-        deleteFileOrDirectory( fileName );
-        FileSystemAbstraction offsettedFileSystem = new JumpingFileSystemAbstraction( 10 );
+        JumpingFileSystemAbstraction offsettedFileSystem = new JumpingFileSystemAbstraction( 10 );
+        offsettedFileSystem.deleteFile( fileName );
+        offsettedFileSystem.mkdirs( fileName.getParentFile() );
         IdGenerator idGenerator = new JumpingIdGeneratorFactory( 10 ).get( IdType.NODE );
         JumpingFileChannel channel = (JumpingFileChannel) offsettedFileSystem.open( fileName, "rw" );
         
@@ -91,12 +91,13 @@ public class TestJumpingIdGenerator
         }
         
         channel.close();
+        offsettedFileSystem.shutdown();
     }
 
     private byte readSomethingLikeNodeRecord( JumpingFileChannel channel, long id ) throws IOException
     {
-        ByteBuffer buffer = ByteBuffer.allocate( 9 );
-        channel.position( id*9 );
+        ByteBuffer buffer = ByteBuffer.allocate( RECORD_SIZE );
+        channel.position( id*RECORD_SIZE );
         channel.read( buffer );
         buffer.flip();
         buffer.getLong();
@@ -105,8 +106,8 @@ public class TestJumpingIdGenerator
 
     private void writeSomethingLikeNodeRecord( JumpingFileChannel channel, long id, int justAByte ) throws IOException
     {
-        channel.position( id*9 );
-        ByteBuffer buffer = ByteBuffer.allocate( 9 );
+        channel.position( id*RECORD_SIZE );
+        ByteBuffer buffer = ByteBuffer.allocate( RECORD_SIZE );
         buffer.putLong( 4321 );
         buffer.put( (byte) justAByte );
         buffer.flip();

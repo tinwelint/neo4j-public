@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,42 +19,43 @@
  */
 package recovery;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-
 import javax.transaction.xa.Xid;
 
 import org.junit.Ignore;
 import org.junit.Test;
+
 import org.neo4j.backup.OnlineBackup;
 import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
+import org.neo4j.helpers.Settings;
 import org.neo4j.helpers.UTF8;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.index.impl.lucene.LuceneDataSource;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.transaction.TxLog;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.impl.transaction.xaframework.XaResourceHelpImpl;
 import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.AbstractSubProcessTestBase;
 import org.neo4j.test.subprocess.BreakPoint;
 import org.neo4j.test.subprocess.DebugInterface;
 import org.neo4j.test.subprocess.DebuggedThread;
 import org.neo4j.test.subprocess.KillSubProcess;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 @SuppressWarnings( "serial" )
 @Ignore
@@ -88,7 +89,7 @@ public class TestDoubleRecovery extends AbstractSubProcessTestBase
         OnlineBackup.from( InetAddress.getLocalHost().getHostAddress() ).incremental( backupDirectory );
         run( new Verification() );
 
-        EmbeddedGraphDatabase db = new EmbeddedGraphDatabase( backupDirectory );
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabase( backupDirectory );
         try
         {
             new Verification().run( db );
@@ -122,36 +123,6 @@ public class TestDoubleRecovery extends AbstractSubProcessTestBase
                 node.setProperty( "correct", "yes" );
                 graphdb.index().forNodes( "nodes" ).add( node, "name", "value" );
 
-                tx.success();
-            }
-            finally
-            {
-                tx.finish();
-            }
-        }
-    }
-
-    static class Write1PCTransaction implements Task
-    {
-        @Override
-        public void run( GraphDatabaseAPI graphdb )
-        {
-            Transaction tx = graphdb.beginTx();
-            Node node;
-            try
-            { // hack to get around another bug
-                node = graphdb.createNode();
-
-                tx.success();
-            }
-            finally
-            {
-                tx.finish();
-            }
-            tx = graphdb.beginTx();
-            try
-            {
-                node.setProperty( "correct", "yes" );
                 tx.success();
             }
             finally
@@ -214,46 +185,7 @@ public class TestDoubleRecovery extends AbstractSubProcessTestBase
         }
     };
 
-    private final BreakPoint BEFORE_SECOND_1PC = new BreakPoint( XaResourceHelpImpl.class, "commit", Xid.class, boolean.class )
-    {
-        private int counter;
-
-        @Override
-        protected void callback( DebugInterface debug ) throws KillSubProcess
-        {
-            if ( onePhaseCommitIn( debug.thread() ) )
-            {
-                if ( ++counter == 2 )
-                {
-                    debug.thread().suspend( null );
-                    this.disable();
-                    afterWrite.countDown();
-                    throw KillSubProcess.withExitCode( -1 );
-                }
-            }
-        }
-
-        private boolean onePhaseCommitIn( DebuggedThread thread )
-        {
-            return Boolean.parseBoolean( thread.getLocal( 1, "onePhase" ) );
-        }
-    };
-
-//    private final BreakPoint BEFORE_TXLOG_MARK_AS_COMMITTING_2PC = new BreakPoint( TxLog.class, "markAsCommitting", byte[].class )
-//    {
-//        @Override
-//        protected void callback( DebugInterface debug ) throws KillSubProcess
-//        {
-//            System.out.println( "yeah" );
-//            debug.thread().suspend( null );
-//            this.disable();
-//            afterWrite.countDown();
-//            throw new KillSubProcess( -1 );
-//        }
-//    };
-
     private final BreakPoint[] breakpointsForBefore2PC = new BreakPoint[] { ON_CRASH, BEFORE_ANY_DATASOURCE_2PC };
-//    private final BreakPoint[] breakpointsForMarkAsCommitting2PC = new BreakPoint[] { ON_CRASH, BEFORE_TXLOG_MARK_AS_COMMITTING_2PC };
 
     @Override
     protected BreakPoint[] breakpoints( int id )
@@ -261,7 +193,7 @@ public class TestDoubleRecovery extends AbstractSubProcessTestBase
         return breakpointsForBefore2PC;
     }
 
-    private final Bootstrapper bootstrap = bootstrap( this, MapUtil.stringMap( OnlineBackupSettings.online_backup_enabled.name(), GraphDatabaseSetting.TRUE ) );
+    private final Bootstrapper bootstrap = bootstrap( this, MapUtil.stringMap( OnlineBackupSettings.online_backup_enabled.name(), Settings.TRUE ) );
 
     @Override
     protected Bootstrapper bootstrap( int id ) throws IOException
@@ -297,7 +229,7 @@ public class TestDoubleRecovery extends AbstractSubProcessTestBase
      */
     public static void main( String... args ) throws Exception
     {
-        EmbeddedGraphDatabase graphdb = new EmbeddedGraphDatabase( "target/test-data/junk" );
+        GraphDatabaseAPI graphdb = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabase( "target/test-data/junk" );
         try
         {
             new WriteTransaction().run( graphdb );
@@ -307,7 +239,7 @@ public class TestDoubleRecovery extends AbstractSubProcessTestBase
             graphdb.shutdown();
         }
 
-        TxLog log = new TxLog( new File(args[0]), new DefaultFileSystemAbstraction() );
+        TxLog log = new TxLog( new File(args[0]), new DefaultFileSystemAbstraction(), new Monitors() );
         byte globalId[] = new byte[NEOKERNL.length + 16];
         System.arraycopy( NEOKERNL, 0, globalId, 0, NEOKERNL.length );
         ByteBuffer byteBuf = ByteBuffer.wrap( globalId );

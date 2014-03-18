@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,6 @@ import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.ha.UpdatePuller;
-import org.neo4j.kernel.ha.management.HighlyAvailableKernelData;
 import org.neo4j.management.ClusterMemberInfo;
 import org.neo4j.management.HighAvailability;
 
@@ -85,7 +84,7 @@ public final class HighAvailabilityBean extends ManagementBeanProvider
         @Override
         public String getInstanceId()
         {
-            return Integer.toString( kernelData.getMemberInfo().getServerId() );
+            return kernelData.getMemberInfo().getInstanceId();
         }
 
         @Override

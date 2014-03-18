@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,36 @@
  */
 package org.neo4j.server.enterprise.functional;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.Configurator;
-import org.neo4j.server.enterprise.EnterpriseDatabase;
 import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.*;
+import static org.neo4j.server.configuration.Configurator.DEFAULT_WEBSERVER_PORT;
 
 public class EnterpriseServerIT
 {
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
+    @Rule
+    public DumpPortListenerOnNettyBindFailure dumpPorts = new DumpPortListenerOnNettyBindFailure();
+
     @Test
     public void shouldBeAbleToStartInHAMode() throws Throwable
     {
@@ -44,6 +56,7 @@ public class EnterpriseServerIT
         File tuningFile = createNeo4jProperties();
 
         NeoServer server = EnterpriseServerBuilder.server()
+                .usingDatabaseDir( folder.getRoot().getAbsolutePath() )
                 .withProperty( Configurator.DB_MODE_KEY, "HA" )
                 .withProperty( Configurator.DB_TUNING_PROPERTY_FILE_KEY, tuningFile.getAbsolutePath() )
                 .persistent()
@@ -54,8 +67,13 @@ public class EnterpriseServerIT
             server.start();
             server.getDatabase();
 
-            assertThat( server.getDatabase(), is( EnterpriseDatabase.class ) );
             assertThat( server.getDatabase().getGraph(), is( HighlyAvailableGraphDatabase.class ) );
+
+            Client client = Client.create();
+            ClientResponse r = client.resource( "http://localhost:" + DEFAULT_WEBSERVER_PORT +
+                    "/db/manage/server/ha" ).accept( APPLICATION_JSON ).get( ClientResponse.class );
+            assertEquals( 200, r.getStatus() );
+            assertThat( r.getEntity( String.class ), containsString( "master" ) );
         }
         finally
         {
@@ -63,16 +81,16 @@ public class EnterpriseServerIT
         }
     }
 
-    private File createNeo4jProperties() throws IOException,
-            FileNotFoundException
+    private File createNeo4jProperties() throws IOException
     {
-        File tuningFile = File.createTempFile( "neo4j-test", "properties" );
+        File tuningFile = folder.newFile( "neo4j-test.properties" );
         FileOutputStream fos = new FileOutputStream( tuningFile );
         try
         {
             Properties neo4jProps = new Properties();
 
-            neo4jProps.put( "ha.server_id", "1" );
+            neo4jProps.put( ClusterSettings.server_id.name(), "1" );
+            neo4jProps.put( ClusterSettings.initial_hosts.name(), ":5001" );
 
             neo4jProps.store( fos, "" );
             return tuningFile;
@@ -83,4 +101,9 @@ public class EnterpriseServerIT
         }
     }
 
+    @After
+    public void whoListensOn5001()
+    {
+        dumpPorts.dumpListenersOn( 5001 );
+    }
 }

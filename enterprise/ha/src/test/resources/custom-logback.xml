@@ -1,6 +1,6 @@
 <!--
 
-    Copyright (c) 2002-2013 "Neo Technology,"
+    Copyright (c) 2002-2014 "Neo Technology,"
     Network Engine for Objects in Lund AB [http://neotechnology.com]
 
     This file is part of Neo4j.
@@ -20,11 +20,19 @@
 
 -->
 <included>
-  <!--
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%property{host} %-5level %25c{0}: %message%n</pattern>
+    </encoder>
+  </appender>
+
   <logger name="neo4j.diagnostics" level="debug">
   </logger>
 
   <logger name="org.neo4j.cluster" level="debug">
+<!--
+    <appender-ref ref="CONSOLE"/>
+-->
   </logger>
 
   <logger name="org.neo4j.cluster.NetworkMock" level="warn">
@@ -34,8 +42,11 @@
   </logger>
 
   <root level="debug">
+<!--
+    <appender-ref ref="CONSOLE"/>
+-->
   </root>
+
   <logger name="org.neo4j.kernel.info.DiagnosticsManager" level="warn">
   </logger>
-  -->
 </included>

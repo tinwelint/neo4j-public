@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,32 +19,39 @@
  */
 package org.neo4j.server.rest.repr;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.Rule;
+import org.junit.Test;
+
+import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.cypher.javacompat.ExecutionResult;
+import org.neo4j.cypher.javacompat.PlanDescription;
+import org.neo4j.cypher.javacompat.ProfilerStatistics;
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.test.DatabaseRule;
+import org.neo4j.test.ImpermanentDatabaseRule;
+
 import static java.util.Arrays.asList;
-import static org.apache.commons.collections.IteratorUtils.emptyIterator;
+
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import static org.neo4j.server.rest.domain.JsonHelper.jsonToMap;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.Test;
-import org.neo4j.cypher.javacompat.ExecutionResult;
-import org.neo4j.cypher.javacompat.PlanDescription;
-import org.neo4j.cypher.javacompat.ProfilerStatistics;
-import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.server.rest.domain.JsonParseException;
-import org.neo4j.server.rest.repr.formats.JsonFormat;
 
 public class CypherResultRepresentationTest
 {
+    private static final ResourceIterator EMPTY_ITERATOR = emptyIterator();
 
     @Test
     @SuppressWarnings("unchecked")
@@ -64,13 +71,14 @@ public class CypherResultRepresentationTest
 
         when( plan.getProfilerStatistics() ).thenReturn( stats );
 
-        ExecutionResult result = mock(ExecutionResult.class);
-        when(result.iterator()).thenReturn( emptyIterator());
-        when(result.columns()).thenReturn(new ArrayList<String>());
+        ExecutionResult result = mock( ExecutionResult.class );
+        when( result.iterator() ).thenReturn( EMPTY_ITERATOR );
+        when( result.columns() ).thenReturn( new ArrayList<String>() );
         when( result.executionPlanDescription() ).thenReturn( plan );
 
         // When
-        Map<String, Object> serialized = serialize( new CypherResultRepresentation( result, true ) );
+        Map<String, Object> serialized = serializeToStringThenParseAsToMap( new CypherResultRepresentation( result,
+                /*includeStats=*/false, true ) );
 
         // Then
         Map<String, Object> serializedPlan = (Map<String, Object>) serialized.get( "plan" );
@@ -90,15 +98,68 @@ public class CypherResultRepresentationTest
     public void shouldNotIncludePlanUnlessAskedFor() throws Exception
     {
         // Given
-        ExecutionResult result = mock(ExecutionResult.class);
-        when(result.iterator()).thenReturn( emptyIterator());
-        when(result.columns()).thenReturn(new ArrayList<String>());
+        ExecutionResult result = mock( ExecutionResult.class );
+        when( result.iterator() ).thenReturn( EMPTY_ITERATOR );
+        when( result.columns() ).thenReturn( new ArrayList<String>() );
 
         // When
-        Map<String, Object> serialized = serialize( new CypherResultRepresentation( result, false ) );
+        Map<String, Object> serialized = serializeToStringThenParseAsToMap( new CypherResultRepresentation( result,
+                /*includeStats=*/false, false ) );
 
         // Then
         assertFalse( "Didn't expect to see a plan here", serialized.containsKey( "plan" ) );
+    }
+
+    @Rule
+    public DatabaseRule database = new ImpermanentDatabaseRule();
+
+    @Test
+    public void shouldFormatMapsProperly() throws Exception
+    {
+        ExecutionEngine executionEngine = new ExecutionEngine( database.getGraphDatabaseService() );
+        ExecutionResult result = executionEngine.execute( "RETURN {one:{two:['wait for it...', {three: 'GO!'}]}}" );
+        CypherResultRepresentation representation = new CypherResultRepresentation( result, false, false );
+
+        // When
+        Map<String, Object> serialized = serializeToStringThenParseAsToMap( representation );
+
+        // Then
+        Map one = (Map) ((Map) ((List) ((List) serialized.get( "data" )).get( 0 )).get( 0 )).get( "one" );
+        List two = (List) one.get( "two" );
+        assertThat( (String) two.get( 0 ), is( "wait for it..." ) );
+        Map foo = (Map) two.get( 1 );
+        assertThat( (String) foo.get( "three" ), is( "GO!" ) );
+    }
+
+    @Test
+    public void shouldRenderNestedEntities() throws Exception
+    {
+        try ( Transaction ignored = database.getGraphDatabaseService().beginTx() )
+        {
+            ExecutionEngine executionEngine = new ExecutionEngine( database.getGraphDatabaseService() );
+            executionEngine.execute( "CREATE (n {name: 'Sally'}), (m {age: 42}), n-[r:FOO {drunk: false}]->m" );
+            ExecutionResult result = executionEngine.execute( "MATCH p=n-[r]->m RETURN n, r, p, {node: n, edge: r, " +
+                    "path: p}" );
+            CypherResultRepresentation representation = new CypherResultRepresentation( result, false, false );
+
+            // When
+            Map<String, Object> serialized = serializeToStringThenParseAsToMap( representation );
+
+            // Then
+            Object firstRow = ((List) serialized.get( "data" )).get( 0 );
+            Map nested = (Map) ((List) firstRow).get( 3 );
+            assertThat( nested.get( "node" ), is( equalTo( ((List) firstRow).get( 0 ) ) ) );
+            assertThat( nested.get( "edge" ), is( equalTo( ((List) firstRow).get( 1 ) ) ) );
+            assertThat( nested.get( "path" ), is( equalTo( ((List) firstRow).get( 2 ) ) ) );
+        }
+    }
+
+    private static ResourceIterator<Map<String, Object>> emptyIterator()
+    {
+        @SuppressWarnings("unchecked")
+        ResourceIterator<Map<String, Object>> iterator = mock( ResourceIterator.class );
+        when( iterator.hasNext() ).thenReturn( false );
+        return iterator;
     }
 
     private PlanDescription getMockDescription( String name )
@@ -109,10 +170,9 @@ public class CypherResultRepresentationTest
         return plan;
     }
 
-    private Map<String, Object> serialize( CypherResultRepresentation repr ) throws URISyntaxException, JsonParseException
+    private Map<String, Object> serializeToStringThenParseAsToMap( CypherResultRepresentation repr ) throws Exception
     {
         OutputFormat format = new OutputFormat( new JsonFormat(), new URI( "http://localhost/" ), null );
         return jsonToMap( format.assemble( repr ) );
     }
-
 }

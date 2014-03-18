@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,34 +19,35 @@
  */
 package org.neo4j.server.preflight;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.impl.util.FileUtils.copyRecursively;
-import static org.neo4j.kernel.impl.util.FileUtils.deleteRecursively;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.URL;
 import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.configuration.Configuration;
 import org.junit.Test;
+
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.MapBasedConfiguration;
+import org.neo4j.test.TargetDirectory;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+
+import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.prepareSampleLegacyDatabase;
 
 public class TestPerformUpgradeIfNecessary
 {
-    public static final String HOME_DIRECTORY = "target/" + TestPerformUpgradeIfNecessary.class.getSimpleName();
+    public static final String HOME_DIRECTORY = TargetDirectory.forTest( TestPerformUpgradeIfNecessary.class ).graphDbDir( true ).getAbsolutePath();
     public static final String STORE_DIRECTORY = HOME_DIRECTORY + "/data/graph.db";
 
     @Test
@@ -70,7 +71,7 @@ public class TestPerformUpgradeIfNecessary
     public void shouldGiveHelpfulMessageIfAutoUpgradeParameterNotSet() throws IOException
     {
         Configuration serverProperties = buildProperties( false );
-        prepareSampleLegacyDatabase( new File( STORE_DIRECTORY ) );
+        prepareSampleLegacyDatabase( new DefaultFileSystemAbstraction(), new File( STORE_DIRECTORY ) );
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         PerformUpgradeIfNecessary upgrader = new PerformUpgradeIfNecessary( serverProperties,
@@ -79,7 +80,7 @@ public class TestPerformUpgradeIfNecessary
         boolean exit = upgrader.run();
 
         assertEquals( false, exit );
-        
+
         String[] lines = new String( outputStream.toByteArray() ).split( "\\r?\\n" );
         assertThat( "'" + lines[0] + "' contains '" + "To enable automatic upgrade, please set configuration parameter " +
                 "\"allow_store_upgrade=true\"", lines[0].contains("To enable automatic upgrade, please set configuration parameter " +
@@ -105,7 +106,7 @@ public class TestPerformUpgradeIfNecessary
     public void shouldUpgradeDatabase() throws IOException
     {
         Configuration serverConfig = buildProperties( true );
-        prepareSampleLegacyDatabase( new File( STORE_DIRECTORY ) );
+        prepareSampleLegacyDatabase( new DefaultFileSystemAbstraction(), new File( STORE_DIRECTORY ) );
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         PerformUpgradeIfNecessary upgrader = new PerformUpgradeIfNecessary( serverConfig,
@@ -140,27 +141,11 @@ public class TestPerformUpgradeIfNecessary
 
         return serverProperties;
     }
-    
+
     private Map<String,String> loadNeo4jProperties() throws IOException
     {
         String databasePropertiesFileName = HOME_DIRECTORY + "/conf/neo4j.properties";
         return MapUtil.load(new File(databasePropertiesFileName));
-    }
-
-    public static void prepareSampleLegacyDatabase( File workingDirectory ) throws IOException
-    {
-        File resourceDirectory = findOldFormatStoreDirectory();
-
-        deleteRecursively( workingDirectory );
-        assertTrue( workingDirectory.mkdirs() );
-
-        copyRecursively( resourceDirectory, workingDirectory );
-    }
-
-    public static File findOldFormatStoreDirectory()
-    {
-        URL legacyStoreResource = TestPerformUpgradeIfNecessary.class.getResource( "legacystore/exampledb/neostore" );
-        return new File( legacyStoreResource.getFile() ).getParentFile();
     }
 
     private String dots( int count )

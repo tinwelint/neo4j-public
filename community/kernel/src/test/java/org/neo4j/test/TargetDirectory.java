@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,10 +23,16 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+
+import org.neo4j.kernel.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.util.FileUtils;
+
+import static java.lang.String.format;
 
 public class TargetDirectory
 {
@@ -35,15 +41,14 @@ public class TargetDirectory
         private final boolean clean;
         private File subdir = null;
 
-        @Deprecated
-        public TestDirectory()
-        {
-            this( false );
-        }
-
         private TestDirectory( boolean clean )
         {
             this.clean = clean;
+        }
+
+        public String absolutePath()
+        {
+            return directory().getAbsolutePath();
         }
 
         public File directory()
@@ -55,7 +60,7 @@ public class TargetDirectory
         @Override
         public Statement apply( final Statement base, Description description )
         {
-            subdir = TargetDirectory.this.directory( description.getMethodName(), clean );
+            subdir = directoryForDescription( description, clean );
             return new Statement()
             {
                 @Override
@@ -75,33 +80,27 @@ public class TargetDirectory
             };
         }
 
-        protected void complete( boolean success )
+        @Override
+        public String toString()
+        {
+            String subdirName = subdir == null ? "<uninitialized>" : subdir.toString();
+            return format( "%s[%s]", getClass().getSimpleName(), subdirName );
+        }
+
+        private void complete( boolean success )
         {
             if ( success && subdir != null ) recursiveDelete( subdir );
             subdir = null;
         }
-
-        @Override
-        public String toString()
-        {
-            return getClass().getSimpleName() + "["
-                   + ( subdir == null ? "<uninitialized>" : subdir.toString() ) + "]";
-        }
     }
 
+    private final FileSystemAbstraction fileSystem;
     private final File base;
 
-    private TargetDirectory( File base )
+    private TargetDirectory( FileSystemAbstraction fileSystem, File base )
     {
+        this.fileSystem = fileSystem;
         this.base = base.getAbsoluteFile();
-    }
-
-    public static void recursiveDelete( File file )
-    {
-        File[] files = file.listFiles();
-        if ( files != null ) for ( File each : files )
-            recursiveDelete( each );
-        file.delete();
     }
 
     public File directory( String name )
@@ -112,28 +111,37 @@ public class TargetDirectory
     public File directory( String name, boolean clean )
     {
         File dir = new File( base(), name );
-        if ( clean && dir.exists() ) recursiveDelete( dir );
-        dir.mkdir();
+        if ( clean && fileSystem.fileExists( dir ) )
+        {
+            recursiveDelete( dir );
+        }
+        fileSystem.mkdir( dir );
         return dir;
+    }
+
+    public File directoryForDescription( Description description, boolean clean )
+    {
+        String testName = description.getMethodName();
+        String dirName = DigestUtils.md5Hex( testName );
+        return TargetDirectory.this.registeredDirectory( dirName, testName, clean );
+    }
+
+    private File registeredDirectory( String dirName, String testName, boolean clean )
+    {
+        try
+        {
+            FileUtils.writeToFile( new File( base(), ".register" ), format("%s=%s\n", dirName, testName), true );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+        return directory( dirName, clean );
     }
 
     public File file( String name )
     {
         return new File( base(), name );
-    }
-
-    private File base()
-    {
-        if ( base.exists() )
-        {
-            if ( !base.isDirectory() )
-                throw new IllegalStateException( base + " exists and is not a directory!" );
-        }
-        else
-        {
-            base.mkdirs();
-        }
-        return base;
     }
 
     public TestDirectory testDirectory()
@@ -146,52 +154,6 @@ public class TargetDirectory
         return new TestDirectory( true );
     }
 
-    public static TargetDirectory forTest( Class<?> owningTest )
-    {
-        File target = null;
-        try
-        {
-            File codeSource = new File(
-                    owningTest.getProtectionDomain().getCodeSource().getLocation().toURI() );
-            if ( codeSource.exists() )
-            {
-                if ( codeSource.isFile() )// jarfile
-                {
-                }
-                else if ( codeSource.isDirectory() )// classes dir
-                {
-                    target = codeSource.getParentFile();
-                }
-            }
-        }
-        catch ( URISyntaxException e )
-        {
-        }
-        if ( target == null )
-        {
-            target = new File( "target" );
-            if ( !( target.exists() && target.isDirectory() ) )
-            {
-                // Fall back to temporary directory
-                try
-                {
-                    target = File.createTempFile( "neo4j-test", "target" );
-                }
-                catch ( IOException e )
-                {
-                    throw new IllegalStateException( "Cannot create target directory" );
-                }
-            }
-        }
-        return new TargetDirectory(
-                new File( new File( target, "test-data" ), owningTest.getName() ) );
-    }
-
-    public static TestDirectory testDirForTest( Class<?> owningTest )
-    {
-        return forTest( owningTest ).testDirectory();
-    }
-
     public File graphDbDir( boolean clean )
     {
         return directory( "graph-db", clean );
@@ -199,13 +161,84 @@ public class TargetDirectory
 
     public void cleanup() throws IOException
     {
-        FileUtils.deleteRecursively( base );
+        fileSystem.deleteRecursively( base );
+        fileSystem.mkdirs( base );
     }
 
-    /*
-    public static TargetDirectory forTemporaryFolder( org.junit.rules.TemporaryFolder dir )
+    public static TargetDirectory forTest( Class<?> owningTest )
     {
-        return new TargetDirectory( dir.getRoot() );
+        return forTest( new DefaultFileSystemAbstraction(), owningTest );
     }
-    //*/
+
+    public static TargetDirectory forTest( FileSystemAbstraction fileSystem, Class<?> owningTest )
+    {
+        return new TargetDirectory( fileSystem,
+                new File( new File( locateTarget( owningTest ), "test-data" ), owningTest.getName() ) );
+    }
+
+    public static TestDirectory testDirForTest( FileSystemAbstraction fileSystem, Class<?> owningTest )
+    {
+        return forTest( fileSystem, owningTest ).testDirectory();
+    }
+
+    public static TestDirectory testDirForTest( Class<?> owningTest )
+    {
+        return testDirForTest( new DefaultFileSystemAbstraction(), owningTest );
+    }
+
+    public static TestDirectory cleanTestDirForTest( FileSystemAbstraction fileSystem, Class<?> owningTest )
+    {
+        return forTest( fileSystem, owningTest ).cleanTestDirectory();
+    }
+
+    public static TestDirectory cleanTestDirForTest( Class<?> owningTest )
+    {
+        return cleanTestDirForTest( new DefaultFileSystemAbstraction(), owningTest );
+    }
+
+    private void recursiveDelete( File file )
+    {
+        try
+        {
+            fileSystem.deleteRecursively( file );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private File base()
+    {
+        if ( fileSystem.fileExists( base ) && !fileSystem.isDirectory( base ) )
+            throw new IllegalStateException( base + " exists and is not a directory!" );
+
+        try
+        {
+            fileSystem.mkdirs( base );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+        return base;
+    }
+
+    private static File locateTarget( Class<?> owningTest )
+    {
+        try
+        {
+            File codeSource = new File( owningTest.getProtectionDomain().getCodeSource().getLocation().toURI() );
+            if ( codeSource.isDirectory() )
+            {
+                // code loaded from a directory
+                return codeSource.getParentFile();
+            }
+        }
+        catch ( URISyntaxException e )
+        {
+            // ignored
+        }
+        return new File( "target" );
+    }
 }

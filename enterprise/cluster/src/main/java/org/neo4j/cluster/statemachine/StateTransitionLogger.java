@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,13 @@
  */
 package org.neo4j.cluster.statemachine;
 
-import static org.neo4j.cluster.com.message.Message.CONVERSATION_ID;
-import static org.neo4j.cluster.com.message.Message.FROM;
-
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatState;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.logging.Logging;
+
+import static org.neo4j.cluster.com.message.Message.CONVERSATION_ID;
+import static org.neo4j.cluster.com.message.Message.FROM;
+import static org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE;
 
 /**
  * Logs state transitions in {@link StateMachine}s. Use this for debugging mainly.
@@ -32,16 +33,20 @@ import org.neo4j.kernel.logging.Logging;
 public class StateTransitionLogger
         implements StateTransitionListener
 {
-    private Logging logging;
+    private final Logging logging;
+
+    /** Throttle so don't flood occurences of the same message over and over */
+    private String lastLogMessage = "";
 
     public StateTransitionLogger( Logging logging )
     {
         this.logging = logging;
     }
 
+    @Override
     public void stateTransition( StateTransition transition )
     {
-        StringLogger logger = logging.getLogger( transition.getOldState().getClass() );
+        StringLogger logger = logging.getMessagesLog( transition.getOldState().getClass() );
 
         if ( logger.isDebugEnabled() )
         {
@@ -61,13 +66,32 @@ public class StateTransitionLogger
                 line.append( " from:" + transition.getMessage().getHeader( FROM ) );
             }
 
+            if ( transition.getMessage().hasHeader( INSTANCE ) )
+            {
+                line.append( " instance:" + transition.getMessage().getHeader( INSTANCE ) );
+            }
+
             if ( transition.getMessage().hasHeader( CONVERSATION_ID ) )
             {
                 line.append( " conversation-id:" + transition.getMessage().getHeader( CONVERSATION_ID ) );
             }
 
+            Object payload = transition.getMessage().getPayload();
+            if ( payload != null )
+            {
+                line.append( " payload:" + payload );
+            }
+
+            // Throttle
+            String msg = line.toString();
+            if( msg.equals( lastLogMessage ) )
+            {
+                return;
+            }
+
             // Log it
             logger.debug( line.toString() );
+            lastLogMessage = msg;
         }
     }
 }

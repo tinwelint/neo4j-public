@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,30 @@
  */
 package org.neo4j.unsafe.batchinsert;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.osIsWindows;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-
+import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 
 import org.junit.Test;
+
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.StoreLockException;
+import org.neo4j.kernel.StoreLocker;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.test.ReflectionUtil;
 import org.neo4j.test.TargetDirectory;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import static org.neo4j.helpers.Settings.osIsWindows;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class BatchInserterImplTest
 {
@@ -66,9 +76,49 @@ public class BatchInserterImplTest
         assertFalse( "memory mapped config is active", memoryMappingConfig );
     }
 
+    @Test
+    public void testCreatesStoreLockFile()
+    {
+        // Given
+        File file = TargetDirectory.forTest( getClass() ).graphDbDir( true );
+
+        // When
+        BatchInserter inserter = BatchInserters.inserter( file.getAbsolutePath() );
+
+        // Then
+        assertThat( new File( file, StoreLocker.STORE_LOCK_FILENAME ).exists(), equalTo( true ) );
+        inserter.shutdown();
+    }
+
+    @Test
+    public void testFailsOnExistingStoreLockFile() throws IOException
+    {
+        // Given
+        File parent = TargetDirectory.forTest( getClass() ).graphDbDir( true );
+        StoreLocker lock = new StoreLocker( new DefaultFileSystemAbstraction() );
+        lock.checkLock( parent );
+
+        // When
+        try
+        {
+            BatchInserters.inserter( parent.getAbsolutePath() );
+
+            // Then
+            fail();
+        }
+        catch ( StoreLockException e )
+        {
+            // OK
+        }
+        finally
+        {
+            lock.release();
+        }
+    }
+    
     private Boolean createInserterAndGetMemoryMappingConfig( Map<String, String> initialConfig ) throws Exception
     {
-        BatchInserterImpl inserter = new BatchInserterImpl(
+        BatchInserter inserter = BatchInserters.inserter(
                 TargetDirectory.forTest( getClass() ).graphDbDir( true ).getAbsolutePath(), initialConfig );
         NeoStore neoStore = ReflectionUtil.getPrivateField( inserter, "neoStore", NeoStore.class );
         Config config = ReflectionUtil.getPrivateField( neoStore, "conf", Config.class );

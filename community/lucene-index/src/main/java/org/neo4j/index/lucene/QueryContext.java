@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -178,7 +178,7 @@ public class QueryContext
      * To let those modifications be visible in query results, some rather heavy
      * operations may have to be done, which can be slow to complete.
      *
-     * The default behaviour is that these modifications are visible, but using
+     * The default behavior is that these modifications are visible, but using
      * this method will tell the query to not strive to include the absolutely
      * latest modifications, so that such a performance penalty can be avoided.
      *

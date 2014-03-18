@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,10 +28,10 @@ import org.neo4j.shell.Session;
 
 /**
  * Wraps a {@link org.neo4j.shell.apps.extra.Jsh} in a
- * {@link GraphDatabaseApp} to be wrapped in a transaction among other things.
+ * {@link TransactionProvidingApp} to be wrapped in a transaction among other things.
  */
 @Service.Implementation( App.class )
-public class Jsh extends GraphDatabaseApp
+public class Jsh extends TransactionProvidingApp
 {
     private App sh = new org.neo4j.shell.apps.extra.Jsh();
 

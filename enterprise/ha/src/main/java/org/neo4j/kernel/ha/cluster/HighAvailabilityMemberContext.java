@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,13 +21,15 @@ package org.neo4j.kernel.ha.cluster;
 
 import java.net.URI;
 
+import org.neo4j.cluster.InstanceId;
+
 public interface HighAvailabilityMemberContext
 {
-    URI getMyId();
+    InstanceId getMyId();
 
-    URI getElectedMasterId();
+    InstanceId getElectedMasterId();
 
-    void setElectedMasterId( URI electedMasterId );
+    void setElectedMasterId( InstanceId electedMasterId );
 
     URI getAvailableHaMaster();
 

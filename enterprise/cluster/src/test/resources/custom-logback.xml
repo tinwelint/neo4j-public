@@ -1,6 +1,6 @@
 <!--
 
-    Copyright (c) 2002-2013 "Neo Technology,"
+    Copyright (c) 2002-2014 "Neo Technology,"
     Network Engine for Objects in Lund AB [http://neotechnology.com]
 
     This file is part of Neo4j.
@@ -20,37 +20,34 @@
 
 -->
 <included>
-<!--
+
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
       <pattern>%property{host} %-5level %25c{0}: %message%n</pattern>
     </encoder>
   </appender>
--->
 
   <!--
     Debug Paxos state machines
-    -->
-    <logger name="org.neo4j.cluster.protocol.atomicbroadcast.multipaxos" level="warn">
-    </logger>
 
+    <logger name="org.neo4j.cluster.protocol" level="debug">
+    </logger>
+  -->
   <!--
-    Debug network messages sent -->
+    Debug network messages sent
     <logger name="org.neo4j.cluster.com" level="debug">
       <appender-ref ref="CONSOLE"/>
     </logger>
-
-
+  -->
+  <!--
   <logger name="org.neo4j.kernel.info.DiagnosticsManager" level="warn">
   </logger>
-
-
-<!--
+  -->
+  <!--
   <root level="debug">
     <appender-ref ref="CONSOLE"/>
   </root>
--->
-
+  -->
   <logger name="org.neo4j" level="warn" additive="true">
   </logger>
 

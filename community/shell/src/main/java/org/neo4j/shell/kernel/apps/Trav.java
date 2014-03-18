@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,6 @@
  */
 package org.neo4j.shell.kernel.apps;
 
-import static java.lang.Integer.parseInt;
-import static org.neo4j.graphdb.traversal.Evaluators.toDepth;
-import static org.neo4j.shell.kernel.apps.ScriptEngineViaReflection.decorateWithImports;
-
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +30,7 @@ import java.util.regex.Pattern;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Traverser;
+import org.neo4j.graphdb.traversal.BranchOrderingPolicies;
 import org.neo4j.graphdb.traversal.BranchOrderingPolicy;
 import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.Evaluator;
@@ -52,11 +49,15 @@ import org.neo4j.shell.Output;
 import org.neo4j.shell.Session;
 import org.neo4j.shell.ShellException;
 
+import static java.lang.Integer.parseInt;
+import static org.neo4j.graphdb.traversal.Evaluators.toDepth;
+import static org.neo4j.shell.kernel.apps.ScriptEngineViaReflection.decorateWithImports;
+
 /**
  * Traverses the graph using {@link Traverser}.
  */
 @Service.Implementation( App.class )
-public class Trav extends ReadOnlyGraphDatabaseApp
+public class Trav extends TransactionProvidingApp
 {
     private ScriptEngineViaReflection scripting;
     
@@ -100,7 +101,7 @@ public class Trav extends ReadOnlyGraphDatabaseApp
     @Override
     public String getDescription()
     {
-    	return "Traverses the node space from your current position (pwd). " +
+    	return "Traverses the graph from your current position (pwd). " +
     		"It's a reflection of the neo4j traverser API with some options for filtering " +
     		"which nodes will be returned.";
     }
@@ -248,11 +249,11 @@ public class Trav extends ReadOnlyGraphDatabaseApp
     {
         if ( order.equals( "depth first" ) || "depth first".startsWith( order.toLowerCase() ) )
         {
-            return Traversal.preorderDepthFirst();
+            return BranchOrderingPolicies.PREORDER_DEPTH_FIRST;
         }
         if ( order.equals( "breadth first" ) || "breadth first".startsWith( order.toLowerCase() ) )
         {
-            return Traversal.preorderBreadthFirst();
+            return BranchOrderingPolicies.PREORDER_BREADTH_FIRST;
         }
         
         return (BranchOrderingPolicy) parseEnum( CommonBranchOrdering.class, order, null );

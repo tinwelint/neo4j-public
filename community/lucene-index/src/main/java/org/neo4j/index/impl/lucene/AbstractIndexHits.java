@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.helpers.collection.PrefetchingIterator;
 //TODO this is generic and should move out of the Lucene - component
 public abstract class AbstractIndexHits<T> extends PrefetchingIterator<T> implements IndexHits<T>
 {
-    public Iterator<T> iterator()
+    public IndexHits<T> iterator()
     {
         return this;
     }

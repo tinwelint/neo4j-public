@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.server.NeoServer;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.webadmin.rest.representations.ServerRootRepresentation;
 
-@Path( "/" )
+@Path("/")
 public class RootService
 {
     private final NeoServer neoServer;
@@ -40,7 +40,7 @@ public class RootService
     }
 
     @GET
-    public Response getServiceDefinition(  @Context UriInfo uriInfo, @Context OutputFormat output )
+    public Response getServiceDefinition( @Context UriInfo uriInfo, @Context OutputFormat output )
     {
         ServerRootRepresentation representation =
                 new ServerRootRepresentation( uriInfo.getBaseUri(), neoServer.getServices() );

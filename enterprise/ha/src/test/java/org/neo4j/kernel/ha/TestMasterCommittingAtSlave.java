@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,13 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.kernel.ha;
-
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.kernel.ha.com.master.SlavePriorities.givenOrder;
-import static org.neo4j.kernel.ha.com.master.SlavePriorities.roundRobin;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,14 +41,24 @@ import org.neo4j.kernel.ha.com.master.Slave;
 import org.neo4j.kernel.ha.com.master.SlavePriorities;
 import org.neo4j.kernel.ha.com.master.SlavePriority;
 import org.neo4j.kernel.ha.com.master.Slaves;
+import org.neo4j.kernel.ha.transaction.CommitPusher;
 import org.neo4j.kernel.ha.transaction.MasterTxIdGenerator;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.kernel.impl.transaction.xaframework.LogExtractor;
 import org.neo4j.kernel.impl.transaction.xaframework.XaConnection;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
+import org.neo4j.kernel.impl.util.Neo4jJobScheduler;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.impl.util.TestLogger;
+import org.neo4j.kernel.logging.LogMarker;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.TargetDirectory;
+
+import static org.junit.Assert.*;
+import static org.neo4j.kernel.ha.com.master.SlavePriorities.givenOrder;
+import static org.neo4j.kernel.ha.com.master.SlavePriorities.roundRobin;
 
 public class TestMasterCommittingAtSlave
 {
@@ -195,12 +198,12 @@ public class TestMasterCommittingAtSlave
 
     private void assertNoFailureLogs()
     {
-        assertFalse( "Errors:" + log.errors.toString(), log.anyMessageLogged );
+        assertFalse( "Errors:" + log.errors.toString(), log.unexpectedExceptionLogged );
     }
 
     private void assertFailureLogs()
     {
-        assertTrue( log.anyMessageLogged );
+        assertTrue( log.unexpectedExceptionLogged );
     }
 
     private void assertCalls( FakeSlave slave, long... txs )
@@ -223,6 +226,7 @@ public class TestMasterCommittingAtSlave
         log = new FakeStringLogger();
         Config config = new Config( MapUtil.stringMap(
                 HaSettings.tx_push_factor.name(), "" + replication ) );
+        Neo4jJobScheduler scheduler = new Neo4jJobScheduler( new TestLogger() );
         MasterTxIdGenerator result = new MasterTxIdGenerator( MasterTxIdGenerator.from( config, slavePriority ),
                 log, new Slaves()
         {
@@ -231,10 +235,13 @@ public class TestMasterCommittingAtSlave
             {
                 return slaves;
             }
-        } );
+        }, new CommitPusher( scheduler ) );
         // Life
         try
         {
+            scheduler.init();
+            scheduler.start();
+
             result.init();
             result.start();
         }
@@ -250,7 +257,7 @@ public class TestMasterCommittingAtSlave
         List<Slave> slaves = new ArrayList<Slave>();
         for ( int i = 0; i < count; i++ )
         {
-            slaves.add( new FakeSlave( i < failingSlaves.length ? failingSlaves[i] : false, i ) );
+            slaves.add( new FakeSlave( i < failingSlaves.length && failingSlaves[i], i ) );
         }
         return slaves;
     }
@@ -279,7 +286,7 @@ public class TestMasterCommittingAtSlave
         @Override
         public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
         {
-            return LogExtractor.from( FS, dir, startTxId );
+            return LogExtractor.from( FS, dir, new Monitors().newMonitor( ByteCounterMonitor.class ), startTxId );
         }
 
         @Override
@@ -352,23 +359,32 @@ public class TestMasterCommittingAtSlave
 
     private static class FakeStringLogger extends StringLogger
     {
-        private volatile boolean anyMessageLogged;
+        private volatile boolean unexpectedExceptionLogged;
         private final StringBuilder errors = new StringBuilder();
 
         @Override
-        public void logLongMessage( String msg, Visitor<LineLogger> source, boolean flush )
+        public void logLongMessage( String msg, Visitor<LineLogger, RuntimeException> source, boolean flush )
         {
             addError( msg );
         }
 
         private void addError( String msg )
         {
-            anyMessageLogged = true;
+            if ( !msg.contains( "communication" ) )
+            {
+                unexpectedExceptionLogged = true;
+            }
             errors.append( errors.length() > 0 ? "," : "" ).append( msg );
         }
 
         @Override
         public void logMessage( String msg, boolean flush )
+        {
+            addError( msg );
+        }
+
+        @Override
+        public void logMessage( String msg, LogMarker marker )
         {
             addError( msg );
         }

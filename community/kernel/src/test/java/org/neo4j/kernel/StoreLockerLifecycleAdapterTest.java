@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,86 +19,78 @@
  */
 package org.neo4j.kernel;
 
-import static org.hamcrest.core.Is.is;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestName;
+
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Settings;
+import org.neo4j.test.TargetDirectory;
+
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.kernel.StoreLockerLifecycleAdapter.DATABASE_LOCKED_ERROR_MESSAGE;
-
-import org.junit.Test;
 
 public class StoreLockerLifecycleAdapterTest
 {
-    private static final String DATABASE_NAME_1 = "target/StoreLockerLifecycleAdapterTest/foo";
-    private static final String DATABASE_NAME_2 = "target/StoreLockerLifecycleAdapterTest/bar";
-    private static final String DATABASE_NAME_3 = "target/StoreLockerLifecycleAdapterTest/baz";
+    @Rule public TestName testName = new TestName();
+    private String storeDir;
+    
+    @Before
+    public void before()
+    {
+        storeDir = TargetDirectory.forTest( getClass() ).directory( testName.getMethodName(), true ).getAbsolutePath();
+    }
 
     @Test
     public void shouldAllowDatabasesToUseFilesetsSequentially() throws Exception
     {
-        EmbeddedGraphDatabase embeddedGraphDatabase = null;
-
-        try
-        {
-            embeddedGraphDatabase = new EmbeddedGraphDatabase( DATABASE_NAME_1 );
-        }
-        finally
-        {
-            embeddedGraphDatabase.shutdown();
-        }
-
-        try
-        {
-            embeddedGraphDatabase = new EmbeddedGraphDatabase( DATABASE_NAME_1 );
-        }
-        finally
-        {
-            embeddedGraphDatabase.shutdown();
-        }
+        new GraphDatabaseFactory().newEmbeddedDatabase( storeDir ).shutdown();
+        new GraphDatabaseFactory().newEmbeddedDatabase( storeDir ).shutdown();
     }
 
     @Test
     public void shouldNotAllowDatabasesToUseFilesetsConcurrently() throws Exception
     {
-        EmbeddedGraphDatabase embeddedGraphDatabase = null;
-
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         try
         {
-            embeddedGraphDatabase = new EmbeddedGraphDatabase( DATABASE_NAME_2 );
-
-            new EmbeddedGraphDatabase( DATABASE_NAME_2 );
+            new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
 
             fail();
         }
         catch ( RuntimeException e )
         {
-            assertThat( e.getCause().getCause().getMessage(), is( DATABASE_LOCKED_ERROR_MESSAGE ) );
+            assertThat( e.getCause().getCause(), instanceOf( StoreLockException.class ) );
         }
         finally
         {
-            embeddedGraphDatabase.shutdown();
+            db.shutdown();
         }
     }
 
     @Test
     public void shouldNotAllowDatabasesToUseFilesetsConcurrentlyEvenIfTheyAreInReadOnlyMode() throws Exception
     {
-        EmbeddedGraphDatabase embeddedGraphDatabase = null;
-
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         try
         {
-            embeddedGraphDatabase = new EmbeddedGraphDatabase( DATABASE_NAME_3 );
-
-            new EmbeddedReadOnlyGraphDatabase( DATABASE_NAME_3 );
+            new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir).
+                    setConfig( GraphDatabaseSettings.read_only, Settings.TRUE ).
+                    newGraphDatabase();
 
             fail();
         }
         catch ( RuntimeException e )
         {
-            assertThat( e.getCause().getCause().getMessage(), is( DATABASE_LOCKED_ERROR_MESSAGE ) );
+            assertThat( e.getCause().getCause(), instanceOf( StoreLockException.class ) );
         }
         finally
         {
-            embeddedGraphDatabase.shutdown();
+            db.shutdown();
         }
     }
 }

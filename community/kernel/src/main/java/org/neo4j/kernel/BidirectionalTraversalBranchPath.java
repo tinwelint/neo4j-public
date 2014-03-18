@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.traversal.Paths;
 import org.neo4j.graphdb.traversal.TraversalBranch;
 
 public class BidirectionalTraversalBranchPath implements Path
@@ -210,6 +211,6 @@ public class BidirectionalTraversalBranchPath implements Path
     @Override
     public String toString()
     {
-        return Traversal.defaultPathToString( this );
+        return Paths.defaultPathToString( this );
     }
 }

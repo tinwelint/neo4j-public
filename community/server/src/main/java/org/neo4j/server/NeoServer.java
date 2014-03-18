@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,6 +25,7 @@ import org.apache.commons.configuration.Configuration;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.plugins.PluginManager;
+import org.neo4j.server.rest.transactional.TransactionRegistry;
 import org.neo4j.server.webadmin.rest.AdvertisableService;
 
 public interface NeoServer
@@ -38,6 +39,8 @@ public interface NeoServer
     Configuration getConfiguration();
 
     Database getDatabase();
+
+    TransactionRegistry getTransactionRegistry();
 
     Configurator getConfigurator();
 

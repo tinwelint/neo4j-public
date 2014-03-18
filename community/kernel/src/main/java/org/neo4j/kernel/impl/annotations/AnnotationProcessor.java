@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,9 +20,7 @@
 package org.neo4j.kernel.impl.annotations;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.util.Collections;
@@ -42,6 +40,9 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
+import static org.neo4j.kernel.impl.util.Charsets.UTF_8;
+import static org.neo4j.kernel.impl.util.FileUtils.newFilePrintWriter;
+
 public abstract class AnnotationProcessor extends AbstractProcessor
 {
     private CompilationManipulator manipulator = null;
@@ -52,8 +53,10 @@ public abstract class AnnotationProcessor extends AbstractProcessor
         super.init( processingEnv );
         manipulator = CompilationManipulator.load( this, processingEnv );
         if ( manipulator == null )
+        {
             processingEnv.getMessager().printMessage( Kind.NOTE,
                     "Cannot write values to this compiler: " + processingEnv.getClass().getName() );
+        }
     }
 
     @Override
@@ -160,21 +163,18 @@ public abstract class AnnotationProcessor extends AbstractProcessor
         {
             for ( String previous : nl.split( fo.getCharContent( true ), 0 ) )
             {
-                if ( line.equals( previous ) ) return;
+                if ( line.equals( previous ) )
+                {
+                    return;
+                }
             }
         }
         else
         {
             file.getParentFile().mkdirs();
         }
-        new FileWriter( file, true ).append( line ).append( "\n" ).close();
-    }
 
-    Writer append( String... path ) throws IOException
-    {
-        FileObject file = processingEnv.getFiler().getResource( StandardLocation.CLASS_OUTPUT, "", path( path ) );
-        URI uri = file.toUri();
-        return new FileWriter( new File( uri.toString() ), true );
+        newFilePrintWriter( file, UTF_8 ).append( line ).append( "\n" ).close();
     }
 
     private String path( String[] path )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,15 @@
  */
 package org.neo4j.shell;
 
+import java.lang.reflect.Field;
+
 import org.junit.Test;
 import org.neo4j.test.ProcessStreamHandler;
 
-import static java.lang.Runtime.*;
-import static java.lang.System.*;
+import static java.lang.Runtime.getRuntime;
+import static java.lang.System.getProperty;
 import static org.junit.Assert.*;
-import static org.neo4j.test.TargetDirectory.*;
+import static org.neo4j.test.TargetDirectory.forTest;
 
 public class TestRmiPublication
 {
@@ -43,34 +45,72 @@ public class TestRmiPublication
 
     private int spawnJvm( Class<?> mainClass, String name ) throws Exception
     {
-        String dir = forTest( getClass() ).directory( "client", true ).getAbsolutePath();
+        String dir = forTest( getClass() ).directory( name, true ).getAbsolutePath();
         return waitForExit( getRuntime().exec( new String[] { "java", "-cp", getProperty( "java.class.path" ),
                 mainClass.getName(), dir } ), 20 );
     }
 
     private int waitForExit( Process process, int maxSeconds ) throws InterruptedException
     {
-        long endTime = System.currentTimeMillis() + maxSeconds*1000;
-        ProcessStreamHandler streamHandler = new ProcessStreamHandler( process, false );
-        streamHandler.launch();
         try
         {
-            while ( System.currentTimeMillis() < endTime )
+            long endTime = System.currentTimeMillis() + maxSeconds*1000;
+            ProcessStreamHandler streamHandler = new ProcessStreamHandler( process, false );
+            streamHandler.launch();
+            try
             {
-                try
+                while ( System.currentTimeMillis() < endTime )
                 {
-                    return process.exitValue();
+                    try
+                    {
+                        return process.exitValue();
+                    }
+                    catch ( IllegalThreadStateException e )
+                    {   // OK, not exited yet
+                        Thread.sleep( 100 );
+                    }
                 }
-                catch ( IllegalThreadStateException e )
-                {   // OK, not exited yet
-                    Thread.sleep( 100 );
-                }
+
+                tempHackToGetThreadDump(process);
+
+                throw new RuntimeException( "Process didn't exit on its own." );
             }
-            throw new RuntimeException( "Process didn't exit on its own" );
+            finally
+            {
+                streamHandler.cancel();
+            }
         }
         finally
         {
-            streamHandler.cancel();
+            process.destroy();
+        }
+    }
+
+    private void tempHackToGetThreadDump( Process process )
+    {
+        try
+        {
+            Field pidField = process.getClass().getDeclaredField( "pid" );
+            pidField.setAccessible( true );
+            int pid = (int)pidField.get( process );
+
+            ProcessBuilder processBuilder = new ProcessBuilder( "/bin/sh", "-c", "kill -3 " + pid );
+            processBuilder.redirectErrorStream( true );
+            Process dumpProc = processBuilder.start();
+            ProcessStreamHandler streamHandler = new ProcessStreamHandler(dumpProc, false);
+            streamHandler.launch();
+            try
+            {
+                process.waitFor();
+            }
+            finally
+            {
+                streamHandler.cancel();
+            }
+        }
+        catch( Throwable e )
+        {
+            e.printStackTrace();
         }
     }
 }

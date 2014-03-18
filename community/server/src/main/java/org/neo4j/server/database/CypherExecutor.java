@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.server.database;
 
-import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.cypher.javacompat.internal.ServerExecutionEngine;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.server.logging.Logger;
@@ -30,7 +30,7 @@ public class CypherExecutor implements Lifecycle
 
     private final Database database;
     private final StringLogger logger;
-    private ExecutionEngine executionEngine;
+    private ServerExecutionEngine executionEngine;
 
     public CypherExecutor( Database database, StringLogger logger )
     {
@@ -38,25 +38,25 @@ public class CypherExecutor implements Lifecycle
         this.logger = logger;
     }
 
-	public ExecutionEngine getExecutionEngine()
+	public ServerExecutionEngine getExecutionEngine()
     {
 		return executionEngine;
 	}
 
 	@Override
-	public void init() throws Throwable 
+	public void init() throws Throwable
 	{
-		
+
 	}
 
 	@Override
-	public void start() throws Throwable 
+	public void start() throws Throwable
 	{
-		this.executionEngine = new ExecutionEngine( database.getGraph(), logger );
+		this.executionEngine = new ServerExecutionEngine( database.getGraph(), logger );
 	}
 
 	@Override
-	public void stop() throws Throwable 
+	public void stop() throws Throwable
 	{
 		this.executionEngine = null;
 	}
@@ -64,6 +64,6 @@ public class CypherExecutor implements Lifecycle
     @Override
 	public void shutdown() throws Throwable
     {
-        
+
     }
 }

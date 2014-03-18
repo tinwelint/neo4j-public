@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,6 +37,17 @@ public class JVMCheckerTest
 
         new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "Java HotSpot(TM) 64-Bit Server VM",
                 "1.7.0-b147" ) ).checkJvmCompatibilityAndIssueWarning();
+
+        assertTrue( bufferingLogger.toString().isEmpty() );
+    }
+
+    @Test
+    public void shouldNotIssueWarningWhenUsingHotspotServerVmVersion7InThe32BitVersion() throws Exception
+    {
+        BufferingLogger bufferingLogger = new BufferingLogger();
+
+        new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "Java HotSpot(TM) Server VM",
+                "1.7.0_25-b15" ) ).checkJvmCompatibilityAndIssueWarning();
 
         assertTrue( bufferingLogger.toString().isEmpty() );
     }

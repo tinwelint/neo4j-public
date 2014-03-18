@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,17 +23,22 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.kernel.impl.transaction.xaframework.InMemoryLogBuffer;
 import org.neo4j.kernel.impl.transaction.xaframework.LogExtractor;
+import org.neo4j.kernel.monitoring.Monitors;
 
 public class CompareTxStreams
 {
     public static void main( String[] args ) throws IOException
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
+        Monitors monitors = new Monitors();
         compareLogStreams(
-                LogExtractor.from( fileSystem, new File(args[0]) ),
-                LogExtractor.from( fileSystem, new File( args[1] )) );
+                LogExtractor.from( fileSystem, new File(args[0]),
+                        monitors.newMonitor( ByteCounterMonitor.class, CompareTxStreams.class, "logExtractor1" ) ),
+                LogExtractor.from( fileSystem, new File( args[1]),
+                        monitors.newMonitor( ByteCounterMonitor.class, CompareTxStreams.class, "logExtractor1" ) ));
     }
 
     protected static void compareLogStreams( LogExtractor extractor1, LogExtractor extractor2 ) throws IOException

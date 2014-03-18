@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -40,7 +40,7 @@ public class SystemOutput implements Output
             out = new PrintWriter(new OutputStreamWriter(System.out,"UTF-8"));
         } catch (UnsupportedEncodingException e) {
             System.err.println("Unsupported encoding UTF-8, using "+Charset.defaultCharset()+", error: "+e.getMessage());
-            out = new PrintWriter(System.out);
+            out = new PrintWriter(new OutputStreamWriter(System.out, Charset.defaultCharset()));
         }
     }
 

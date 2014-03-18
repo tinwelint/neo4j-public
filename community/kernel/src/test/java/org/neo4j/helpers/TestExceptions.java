@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,8 @@
 package org.neo4j.helpers;
 
 import static org.junit.Assert.assertEquals;
-
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 public class TestExceptions
@@ -68,6 +69,18 @@ public class TestExceptions
         
         // then
         assertEquals( expected, peeled );
+    }
+    
+    @Test
+    public void shouldDetectContainsOneOfSome() throws Exception
+    {
+        // GIVEN
+        Throwable cause = new ARuntimeException( new AnotherRuntimeException( new NullPointerException( "Some words" ) ) );
+        
+        // THEN
+        assertTrue( Exceptions.contains( cause, NullPointerException.class ) );
+        assertTrue( Exceptions.contains( cause, "words", NullPointerException.class ) );
+        assertFalse( Exceptions.contains( cause, "not", NullPointerException.class ) );
     }
     
     private static class LevelOneException extends Exception

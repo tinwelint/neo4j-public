@@ -1,5 +1,5 @@
 ###
-Copyright (c) 2002-2013 "Neo Technology,"
+Copyright (c) 2002-2014 "Neo Technology,"
 Network Engine for Objects in Lund AB [http://neotechnology.com]
 
 This file is part of Neo4j.
@@ -27,6 +27,8 @@ define(
   
     class Bootstrapper
 
+      injectedModules : []
+
       bootstrap : (modules) ->
 
         # Global html escaper, used by the pre-compiled templates.
@@ -42,8 +44,11 @@ define(
         @appState.set server : new neo4js.GraphDatabase(location.protocol + "//" + location.host)
 
         jQuery =>
-          @_initModule module for module in modules  
+          @_initModule module for module in modules.concat @injectedModules  
           Backbone.history.start()
+
+      inject: (module) ->
+        @injectedModules.push module
 
       _initModule : (module) ->        
         mainMenu = @appState.getMainMenuModel()

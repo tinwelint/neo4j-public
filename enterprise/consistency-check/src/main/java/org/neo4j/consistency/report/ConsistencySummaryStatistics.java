@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -77,8 +77,8 @@ public class ConsistencySummaryStatistics
     {
         if ( errors > 0 )
         {
-            inconsistentRecordCount.get( recordType ).incrementAndGet();
-            totalInconsistencyCount.incrementAndGet();
+            inconsistentRecordCount.get( recordType ).addAndGet( errors );
+            totalInconsistencyCount.addAndGet( errors );
             errorCount.addAndGet( errors );
         }
         if ( warnings > 0 )

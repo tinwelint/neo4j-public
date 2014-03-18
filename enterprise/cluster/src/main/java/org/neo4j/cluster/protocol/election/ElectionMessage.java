@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.cluster.protocol.election;
 
 import java.io.Serializable;
 
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.com.message.MessageType;
 
 /**
@@ -35,12 +36,14 @@ public enum ElectionMessage
     public static class VotedData
         implements Serializable
     {
-        private String role;
-        private Comparable<Object> voteCredentials;
+        private final String role;
+        private final InstanceId instanceId;
+        private final Comparable<Object> voteCredentials;
 
-        public VotedData( String role, Comparable<Object> voteCredentials )
+        public VotedData( String role, InstanceId instanceId, Comparable<Object> voteCredentials )
         {
             this.role = role;
+            this.instanceId = instanceId;
             this.voteCredentials = voteCredentials;
         }
 
@@ -49,9 +52,21 @@ public enum ElectionMessage
             return role;
         }
 
+        public InstanceId getInstanceId()
+        {
+            return instanceId;
+        }
+
         public Comparable<Object> getVoteCredentials()
         {
             return voteCredentials;
+        }
+        
+        @Override
+        public String toString()
+        {
+            return getClass().getSimpleName() + "[role:" + role + ", instance:" + instanceId + ", credentials:" +
+                    voteCredentials + "]";
         }
     }
 }

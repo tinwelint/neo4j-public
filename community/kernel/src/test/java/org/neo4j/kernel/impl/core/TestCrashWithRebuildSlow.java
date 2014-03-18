@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,34 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.neo4j.helpers.collection.IteratorUtil.count;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.Rule;
 import org.junit.Test;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
 import org.neo4j.tooling.GlobalGraphOperations;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+
+import static org.neo4j.graphdb.Neo4jMatchers.hasProperty;
+import static org.neo4j.graphdb.Neo4jMatchers.inTx;
+import static org.neo4j.helpers.collection.IteratorUtil.count;
+import static org.neo4j.test.EphemeralFileSystemRule.shutdownDb;
 
 /**
  * Test for making sure that slow id generator rebuild is exercised and also a problem
@@ -50,41 +57,39 @@ public class TestCrashWithRebuildSlow
     @Test
     public void crashAndRebuildSlowWithDynamicStringDeletions() throws Exception
     {
-        EphemeralFileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
         String storeDir = "dir";
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .setFileSystem( fileSystem ).newImpermanentDatabase( storeDir );
+        final GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+                .setFileSystem( fs.get() ).newImpermanentDatabase( storeDir );
         produceNonCleanDefraggedStringStore( db );
-        EphemeralFileSystemAbstraction snapshot = fileSystem.snapshot();
-        db.shutdown();
-        
+        EphemeralFileSystemAbstraction snapshot = fs.snapshot( shutdownDb( db ) );
+
         // Recover with rebuild_idgenerators_fast=false
         assertNumberOfFreeIdsEquals( storeDir, snapshot, 0 );
-        db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( snapshot )
+        GraphDatabaseAPI newDb = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( snapshot )
                 .newImpermanentDatabaseBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.rebuild_idgenerators_fast, GraphDatabaseSetting.FALSE )
+                .setConfig( GraphDatabaseSettings.rebuild_idgenerators_fast, Settings.FALSE )
                 .newGraphDatabase();
         assertNumberOfFreeIdsEquals( storeDir, snapshot, 4 );
-        
+
+        Transaction transaction = newDb.beginTx();
         try
         {
             int nameCount = 0;
             int relCount = 0;
-            for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
+            for ( Node node : GlobalGraphOperations.at( newDb ).getAllNodes() )
             {
-                if ( node.equals( db.getReferenceNode() ) )
-                    continue;
                 nameCount++;
-                assertNotNull( node.getProperty( "name" ) );
+                assertThat( node, inTx( newDb, hasProperty( "name" )  ) );
                 relCount += count( node.getRelationships( Direction.OUTGOING ) );
             }
-            
+
             assertEquals( 16, nameCount );
             assertEquals( 12, relCount );
         }
         finally
         {
-            db.shutdown();
+            transaction.finish();
+            newDb.shutdown();
         }
     }
 
@@ -108,7 +113,9 @@ public class TestCrashWithRebuildSlow
                 node.setProperty( "name", "a looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong string" );
                 nodes.add( node );
                 if ( previous != null )
+                {
                     previous.createRelationshipTo( node, MyRelTypes.TEST );
+                }
                 previous = node;
             }
             tx.success();
@@ -117,7 +124,7 @@ public class TestCrashWithRebuildSlow
         {
             tx.finish();
         }
-        
+
         // Delete some of them, but leave some in between deletions
         tx = db.beginTx();
         try
@@ -137,7 +144,11 @@ public class TestCrashWithRebuildSlow
     private static void delete( Node node )
     {
         for ( Relationship rel : node.getRelationships() )
+        {
             rel.delete();
+        }
         node.delete();
     }
+
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 }

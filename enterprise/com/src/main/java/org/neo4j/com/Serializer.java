@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,11 +20,10 @@
 package org.neo4j.com;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
 public interface Serializer
 {
-    void write( ChannelBuffer buffer, ByteBuffer readBuffer ) throws IOException;
+    void write( ChannelBuffer buffer ) throws IOException;
 }

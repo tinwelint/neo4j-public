@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,55 +19,59 @@
  */
 package org.neo4j.kernel.impl.cache;
 
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.kernel.ha.HaSettings.server_id;
-
 import org.junit.After;
 import org.junit.Test;
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
 import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.test.TargetDirectory;
+
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.cluster.ClusterSettings.server_id;
 
 public class TestEnterpriseCacheType
 {
     @Test
-    public void defaultEmbeddedGraphDbShouldUseGcr() throws Exception
+    public void defaultEmbeddedGraphDbShouldUseHighPerformanceCache() throws Exception
     {
         // GIVEN
         // -- an embedded graph database with default cache type config
         db = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
 
         // THEN
-        // -- the selected cache type should be GCR
-        assertEquals( GCResistantCache.class, cacheTypeInUse( db ) );
+        // -- the selected cache type should be HPC
+        assertEquals( HighPerformanceCacheProvider.NAME, getCacheTypeUsed() );
     }
     
     @Test
-    public void defaultHaGraphDbShouldUseGcr() throws Exception
+    public void defaultHaGraphDbShouldUseHighPerformanceCache() throws Exception
     {
         // GIVEN
         // -- an HA graph database with default cache type config
         db = (GraphDatabaseAPI) new HighlyAvailableGraphDatabaseFactory().newHighlyAvailableDatabaseBuilder( storeDir )
-                .setConfig( server_id, "1" ).newGraphDatabase();
+                .setConfig( server_id, "1" ).setConfig( ClusterSettings.initial_hosts, ":5001" ).newGraphDatabase();
 
         // THEN
-        // -- the selected cache type should be GCR
-        assertEquals( GCResistantCache.class, cacheTypeInUse( db ) );
+        assertEquals( HighPerformanceCacheProvider.NAME, getCacheTypeUsed() );
     }
-    
+
+    private String getCacheTypeUsed()
+    {
+        return db.getDependencyResolver().resolveDependency( Config.class ).get( GraphDatabaseSettings.cache_type );
+    }
+
     @After
     public void after() throws Exception
     {
         if ( db != null )
+        {
             db.shutdown();
+        }
     }
 
     private String storeDir = TargetDirectory.forTest( getClass() ).graphDbDir( true ).getAbsolutePath();
     private GraphDatabaseAPI db;
-    
-    private Class<?> cacheTypeInUse( GraphDatabaseAPI db )
-    {
-        return db.getNodeManager().caches().iterator().next().getClass();
-    }
 }

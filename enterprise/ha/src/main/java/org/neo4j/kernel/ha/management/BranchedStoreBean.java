@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -140,8 +140,8 @@ public final class BranchedStoreBean extends ManagementBeanProvider
 
         private File extractStorePath( ManagementData management )
         {
-            NeoStoreXaDataSource nioneodb = management.getKernelData().graphDatabase().getXaDataSourceManager()
-                    .getNeoStoreDataSource();
+            NeoStoreXaDataSource nioneodb = management.getKernelData().graphDatabase().getDependencyResolver()
+                    .resolveDependency( XaDataSourceManager.class ).getNeoStoreDataSource();
             File path;
             try
             {

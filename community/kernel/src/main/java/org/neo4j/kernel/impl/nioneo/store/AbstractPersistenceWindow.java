@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,6 @@ abstract class AbstractPersistenceWindow extends LockableWindow
     private final int recordSize;
     private final long position;
     private Buffer buffer = null;
-    private final int totalSize;
     private final int windowSize;
 
     AbstractPersistenceWindow( long position, int recordSize, int totalSize, 
@@ -42,10 +41,8 @@ abstract class AbstractPersistenceWindow extends LockableWindow
         
         this.position = position;
         this.recordSize = recordSize;
-        this.totalSize = totalSize;
         this.windowSize = totalSize / recordSize;
         this.buffer = new Buffer( this, byteBuffer );
-        // this.buffer.setByteBuffer( byteBuffer );
     }
 
     @Override
@@ -98,16 +95,24 @@ abstract class AbstractPersistenceWindow extends LockableWindow
                 + position + "] @[" + position * recordSize + "]", e );
         }
     }
-    
+
     private void writeContents()
     {
-        ByteBuffer byteBuffer = buffer.getBuffer();
+        ByteBuffer byteBuffer = buffer.getBuffer().duplicate();
         byteBuffer.clear();
+
         try
         {
-            int count = getFileChannel().write( byteBuffer,
-                position * recordSize );
-            assert count == totalSize;
+            int written = 0;
+
+            while ( byteBuffer.hasRemaining() ) {
+                int writtenThisTime = getFileChannel().write( byteBuffer, position * recordSize + written );
+
+                if (writtenThisTime == 0)
+                    throw new IOException( "Unable to write to disk, reported bytes written was 0" );
+
+                written += writtenThisTime;
+            }
         }
         catch ( IOException e )
         {
@@ -125,7 +130,11 @@ abstract class AbstractPersistenceWindow extends LockableWindow
     @Override
     public void force()
     {
-        writeContents();
+        if ( isDirty() )
+        {
+            writeContents();
+            setClean();
+        }
     }
 
     @Override

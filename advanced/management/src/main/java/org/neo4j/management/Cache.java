@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,18 +28,10 @@ import org.neo4j.jmx.ManagementInterface;
 @Description( "Information about the caching in Neo4j" )
 public interface Cache
 {
-    final String NAME = "Cache";
+    String NAME = "Cache";
 
     @Description( "The type of cache used by Neo4j" )
     String getCacheType();
-
-    /*
-    @Description( "The number of Nodes currently in cache" )
-    int getNodeCacheSize();
-
-    @Description( "The number of Relationships currently in cache" )
-    int getRelationshipCacheSize();
-    */
 
     @Description( "The size of this cache (nr of entities or total size in bytes)" )
     long getCacheSize();

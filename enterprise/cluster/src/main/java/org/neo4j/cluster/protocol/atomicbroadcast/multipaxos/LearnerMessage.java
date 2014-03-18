@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,7 @@ public enum LearnerMessage
     public static class LearnState
             implements Serializable
     {
-        private Object value;
+        private final Object value;
 
         public LearnState( Object value )
         {
@@ -52,6 +52,34 @@ public enum LearnerMessage
         {
             return value.toString();
         }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+
+            LearnState that = (LearnState) o;
+
+            if ( value != null ? !value.equals( that.value ) : that.value != null )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return value != null ? value.hashCode() : 0;
+        }
     }
 
     public static class LearnRequestState
@@ -59,6 +87,22 @@ public enum LearnerMessage
     {
         public LearnRequestState()
         {
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            if(obj == null)
+            {
+                return false;
+            }
+            return getClass() == obj.getClass();
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return 1;
         }
 
         @Override
@@ -79,6 +123,18 @@ public enum LearnerMessage
         public String toString()
         {
             return "Learn failed";
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return 0;
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            return obj instanceof LearnFailedState;
         }
     }
 }

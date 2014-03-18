@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.xa.Command;
 import org.neo4j.kernel.impl.transaction.TransactionStateFactory;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
 
 public class InterceptingXaLogicalLog extends XaLogicalLog
 {
@@ -35,12 +36,14 @@ public class InterceptingXaLogicalLog extends XaLogicalLog
     private final TransactionInterceptorProviders providers;
 
     public InterceptingXaLogicalLog( File fileName, XaResourceManager xaRm,
-            XaCommandFactory cf, XaTransactionFactory xaTf,
-            TransactionInterceptorProviders providers, LogBufferFactory logBufferFactory,
-            FileSystemAbstraction fileSystem, Logging logging,
-            LogPruneStrategy pruneStrategy, TransactionStateFactory stateFactory )
+                                     XaCommandFactory cf, XaTransactionFactory xaTf,
+                                     TransactionInterceptorProviders providers,
+                                     Monitors monitors, FileSystemAbstraction fileSystem, Logging logging,
+                                     LogPruneStrategy pruneStrategy, TransactionStateFactory stateFactory,
+                                     long rotateAtSize, InjectedTransactionValidator injectedTxValidator )
     {
-        super( fileName, xaRm, cf, xaTf, logBufferFactory, fileSystem, logging, pruneStrategy, stateFactory );
+        super( fileName, xaRm, cf, xaTf, fileSystem, monitors, logging, pruneStrategy,
+                stateFactory, rotateAtSize, injectedTxValidator );
         this.providers = providers;
         this.ds = xaRm.getDataSource();
     }
@@ -51,7 +54,7 @@ public class InterceptingXaLogicalLog extends XaLogicalLog
         // This is created every time because transaction interceptors can be stateful
         final TransactionInterceptor interceptor = providers.resolveChain( ds );
 
-        LogDeserializer toReturn = new LogDeserializer( byteChannel )
+        LogDeserializer toReturn = new LogDeserializer( byteChannel, bufferMonitor )
         {
             @Override
             protected void intercept( List<LogEntry> entries )

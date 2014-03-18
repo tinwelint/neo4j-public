@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,14 +22,10 @@ package org.neo4j.graphdb.mockfs;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
+@SuppressWarnings("deprecation")
 public class LimitedFileSystemGraphDatabase extends ImpermanentGraphDatabase
 {
     private LimitedFilesystemAbstraction fs;
-
-    public LimitedFileSystemGraphDatabase( String storeDir )
-    {
-        super( storeDir );
-    }
 
     @Override
     protected FileSystemAbstraction createFileSystemAbstraction()
@@ -40,10 +36,5 @@ public class LimitedFileSystemGraphDatabase extends ImpermanentGraphDatabase
     public void runOutOfDiskSpaceNao()
     {
         this.fs.runOutOfDiskSpace();
-    }
-
-    public void limitWritesTo( int bytes )
-    {
-        this.fs.limitWritesTo(bytes);
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,13 +20,13 @@
 package org.neo4j.server.rrd.sampler;
 
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.core.NodeManager;
 
 public class RelationshipCountSampleable extends DatabasePrimitivesSampleableBase
 {
-    public RelationshipCountSampleable( GraphDatabaseAPI db )
+    public RelationshipCountSampleable( NodeManager nodeManager )
     {
-        super( db );
+        super( nodeManager );
     }
 
     @Override public String getName()

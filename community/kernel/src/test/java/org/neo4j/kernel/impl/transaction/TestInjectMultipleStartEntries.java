@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,29 +19,27 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource.LOGICAL_LOG_DEFAULT_NAME;
-import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
-
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.transaction.TransactionManager;
 import javax.transaction.xa.Xid;
 
+import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.graphdb.*;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
+import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.LogTestUtils.LogHookAdapter;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+
+import static org.junit.Assert.*;
+import static org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource.LOGICAL_LOG_DEFAULT_NAME;
+import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
 
 public class TestInjectMultipleStartEntries
 {
@@ -50,10 +48,9 @@ public class TestInjectMultipleStartEntries
     {
         // GIVEN
         // -- a database with one additional data source and some initial data
-        EphemeralFileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
         GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .setFileSystem( fileSystem ).newImpermanentDatabase( storeDir );
-        XaDataSourceManager xaDs = db.getXaDataSourceManager();
+                .setFileSystem( fs.get() ).newImpermanentDatabase( storeDir );
+        XaDataSourceManager xaDs = db.getDependencyResolver().resolveDependency( XaDataSourceManager.class );
         XaDataSource additionalDs = new DummyXaDataSource( "dummy", "dummy".getBytes(), new FakeXAResource( "dummy" ) );
         xaDs.registerDataSource( additionalDs );
         Node node = createNodeWithOneRelationshipToIt( db );
@@ -66,15 +63,16 @@ public class TestInjectMultipleStartEntries
 
         // THEN
         // -- the logical log should only contain unique start entries after this transaction
-        filterNeostoreLogicalLog( fileSystem, new File( storeDir, LOGICAL_LOG_DEFAULT_NAME + ".v0" ),
+        filterNeostoreLogicalLog( fs.get(), new File( storeDir, LOGICAL_LOG_DEFAULT_NAME + ".v0" ),
                 new VerificationLogHook() );
     }
     
     private final String storeDir = "dir";
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     
     private static class VerificationLogHook extends LogHookAdapter<LogEntry>
     {
-        private final Set<Xid> startXids = new HashSet<Xid>();
+        private final Set<Xid> startXids = new HashSet<>();
         
         @Override
         public boolean accept( LogEntry item )
@@ -89,7 +87,9 @@ public class TestInjectMultipleStartEntries
             XaDataSource additionalDs, Node node ) throws Exception
     {
         Transaction tx = db.beginTx();
-        additionalDs.getXaConnection().enlistResource( db.getTxManager().getTransaction() );
+        DependencyResolver dependencyResolver = db.getDependencyResolver();
+        TransactionManager transactionManager = dependencyResolver.resolveDependency(TransactionManager.class);
+        additionalDs.getXaConnection().enlistResource( transactionManager.getTransaction() );
         node.delete();
         tx.success();
         try

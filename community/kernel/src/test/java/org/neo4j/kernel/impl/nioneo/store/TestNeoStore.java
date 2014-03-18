@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,6 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,9 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
-import javax.transaction.TransactionManager;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
@@ -42,29 +36,52 @@ import javax.transaction.xa.Xid;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.DependencyResolver.Adapter;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.CombiningIterable;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
+import org.neo4j.kernel.TransactionEventHandlers;
 import org.neo4j.kernel.TransactionInterceptorProviders;
+import org.neo4j.kernel.api.TokenNameLookup;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.core.PropertyIndex;
+import org.neo4j.kernel.impl.api.KernelSchemaStateStore;
+import org.neo4j.kernel.impl.api.SchemaWriteGuard;
+import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.api.scan.InMemoryLabelScanStore;
+import org.neo4j.kernel.impl.api.scan.LabelScanStoreProvider;
+import org.neo4j.kernel.impl.cache.AutoLoadingCache;
+import org.neo4j.kernel.impl.cache.Cache;
+import org.neo4j.kernel.impl.core.LabelTokenHolder;
+import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
+import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
+import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.Token;
+import org.neo4j.kernel.impl.nioneo.xa.NeoStoreTransaction.PropertyReceiver;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaConnection;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
+import org.neo4j.kernel.impl.persistence.PersistenceManager;
+import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.LockManager;
 import org.neo4j.kernel.impl.transaction.LockManagerImpl;
 import org.neo4j.kernel.impl.transaction.PlaceboTm;
 import org.neo4j.kernel.impl.transaction.RagManager;
 import org.neo4j.kernel.impl.transaction.TransactionStateFactory;
 import org.neo4j.kernel.impl.transaction.XidImpl;
-import org.neo4j.kernel.impl.transaction.xaframework.DefaultLogBufferFactory;
 import org.neo4j.kernel.impl.transaction.xaframework.LogPruneStrategies;
 import org.neo4j.kernel.impl.transaction.xaframework.RecoveryVerifier;
 import org.neo4j.kernel.impl.transaction.xaframework.TransactionInterceptorProvider;
@@ -74,17 +91,31 @@ import org.neo4j.kernel.impl.util.ArrayMap;
 import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.logging.DevNullLoggingService;
+import org.neo4j.kernel.logging.SingleLoggingService;
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import static org.neo4j.kernel.impl.util.StringLogger.DEV_NULL;
 
 public class TestNeoStore
 {
     private PropertyStore pStore;
-    private RelationshipTypeStore rtStore;
+    private RelationshipTypeTokenStore rtStore;
     private NeoStoreXaDataSource ds;
     private NeoStoreXaConnection xaCon;
-    private final EphemeralFileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
-    private final String path = "dir";
+    private TargetDirectory targetDirectory;
+    private File path;
+
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    @Rule public TargetDirectory.TestDirectory testDir = TargetDirectory.cleanTestDirForTest( getClass() );
 
     private File file( String name )
     {
@@ -94,84 +125,128 @@ public class TestNeoStore
     @Before
     public void setUpNeoStore() throws Exception
     {
+        targetDirectory = TargetDirectory.forTest( fs.get(), getClass() );
+        path = targetDirectory.directory( "dir", true );
         Config config = new Config( new HashMap<String, String>(), GraphDatabaseSettings.class );
         StoreFactory sf = new StoreFactory( config, new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(),
-                fileSystem, StringLogger.SYSTEM, null );
-        sf.createNeoStore( file( "neo" ) ).close();
+                fs.get(), StringLogger.DEV_NULL, null );
+        sf.createNeoStore( file( NeoStore.DEFAULT_NAME ) ).close();
     }
 
-    private static class MyPropertyIndex extends
-            org.neo4j.kernel.impl.core.PropertyIndex
+    private static class MyPropertyKeyToken extends Token
     {
-        private static Map<String, PropertyIndex> stringToIndex = new HashMap<String, PropertyIndex>();
-        private static Map<Integer, PropertyIndex> intToIndex = new HashMap<Integer, PropertyIndex>();
+        private static Map<String, Token> stringToIndex = new HashMap<>();
+        private static Map<Integer, Token> intToIndex = new HashMap<>();
 
-        protected MyPropertyIndex( String key, int keyId )
+        protected MyPropertyKeyToken( String key, int keyId )
         {
             super( key, keyId );
         }
 
-        public static Iterable<PropertyIndex> index( String key )
+        public static Iterable<Token> index( String key )
         {
             if ( stringToIndex.containsKey( key ) )
             {
-                return Arrays.asList( new PropertyIndex[]{stringToIndex
-                        .get( key )} );
+                return Arrays.asList( stringToIndex.get( key ) );
             }
             return Collections.emptyList();
         }
 
-        public static PropertyIndex getIndexFor( int index )
+        public static Token getIndexFor( int index )
         {
             return intToIndex.get( index );
         }
 
-        public static void add( MyPropertyIndex index )
+        public static void add( MyPropertyKeyToken index )
         {
-            // TODO Auto-generated method stub
-            stringToIndex.put( index.getKey(), index );
-            intToIndex.put( index.getKeyId(), index );
+            stringToIndex.put( index.name(), index );
+            intToIndex.put( index.id(), index );
         }
     }
 
-    private PropertyIndex createDummyIndex( int id, String key )
+    private Token createDummyIndex( int id, String key )
     {
-        MyPropertyIndex index = new MyPropertyIndex( key, id );
-        MyPropertyIndex.add( index );
+        MyPropertyKeyToken index = new MyPropertyKeyToken( key, id );
+        MyPropertyKeyToken.add( index );
         return index;
     }
 
     private void initializeStores() throws IOException
     {
-        TransactionManager txManager = new PlaceboTm( null, TxIdGenerator.DEFAULT );
-        
-        LockManager lockManager = new LockManagerImpl( new RagManager( txManager ) );
+        LockManager lockManager = new LockManagerImpl( new RagManager() );
 
         final Config config = new Config( MapUtil.stringMap(
-                InternalAbstractGraphDatabase.Configuration.store_dir.name(), path,
+                InternalAbstractGraphDatabase.Configuration.store_dir.name(), path.getPath(),
                 InternalAbstractGraphDatabase.Configuration.neo_store.name(), "neo",
                 InternalAbstractGraphDatabase.Configuration.logical_log.name(), file( "nioneo_logical.log" ).getPath() ),
                 GraphDatabaseSettings.class );
         StoreFactory sf = new StoreFactory( config, new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(),
-                fileSystem, StringLogger.DEV_NULL, null );
+                fs.get(), StringLogger.DEV_NULL, null );
 
-        ds = new NeoStoreXaDataSource(config, sf, lockManager, StringLogger.DEV_NULL,
-                new XaFactory(config, TxIdGenerator.DEFAULT, new PlaceboTm( lockManager, TxIdGenerator.DEFAULT ),
-                        new DefaultLogBufferFactory(), fileSystem, new DevNullLoggingService(), RecoveryVerifier.ALWAYS_VALID,
+        NodeManager nodeManager = mock(NodeManager.class);
+        @SuppressWarnings( "rawtypes" )
+        List caches = Arrays.asList(
+                (Cache) mock( AutoLoadingCache.class ),
+                (Cache) mock( AutoLoadingCache.class ) );
+        when( nodeManager.caches() ).thenReturn( caches );
+
+        ds = new NeoStoreXaDataSource(config, sf, StringLogger.DEV_NULL,
+                new XaFactory( config, TxIdGenerator.DEFAULT, new PlaceboTm( lockManager, TxIdGenerator.DEFAULT ),
+                        fs.get(), new Monitors(), new DevNullLoggingService(), RecoveryVerifier.ALWAYS_VALID,
                         LogPruneStrategies.NO_PRUNING ), TransactionStateFactory.noStateFactory( new DevNullLoggingService() ),
-                        new TransactionInterceptorProviders( Collections.<TransactionInterceptorProvider>emptyList(), new DependencyResolver()
-        {
-            @Override
-            public <T> T resolveDependency( Class<T> type ) throws IllegalArgumentException
-            {
-                return (T) config;
-            }
-        } ), null );
+                        new TransactionInterceptorProviders( Collections.<TransactionInterceptorProvider>emptyList(),
+                                dependencyResolverForConfig( config ) ), null, new SingleLoggingService( DEV_NULL ),
+                                new KernelSchemaStateStore(),
+                mock(TokenNameLookup.class),
+                dependencyResolverForNoIndexProvider( nodeManager ), mock( AbstractTransactionManager.class),
+                mock( PropertyKeyTokenHolder.class ), mock(LabelTokenHolder.class),
+                mock( RelationshipTypeTokenHolder.class), mock(PersistenceManager.class), mock(LockManager.class),
+                mock( SchemaWriteGuard.class), mock( TransactionEventHandlers.class), IndexingService.NO_MONITOR );
+        ds.init();
         ds.start();
 
         xaCon = ds.getXaConnection();
         pStore = xaCon.getPropertyStore();
         rtStore = xaCon.getRelationshipTypeStore();
+    }
+
+    private DependencyResolver dependencyResolverForNoIndexProvider( final NodeManager nodeManager )
+    {
+        return new DependencyResolver.Adapter()
+        {
+            private final LabelScanStoreProvider labelScanStoreProvider =
+                    new LabelScanStoreProvider( new InMemoryLabelScanStore(), 10 );
+
+            @Override
+            public <T> T resolveDependency( Class<T> type, SelectionStrategy selector ) throws IllegalArgumentException
+            {
+                if ( SchemaIndexProvider.class.isAssignableFrom( type ) )
+                {
+                    return type.cast( SchemaIndexProvider.NO_INDEX_PROVIDER );
+                }
+                else if ( NodeManager.class.isAssignableFrom( type ) )
+                {
+                    return type.cast( nodeManager );
+                }
+                else if ( LabelScanStoreProvider.class.isAssignableFrom( type ) )
+                {
+                    return type.cast( labelScanStoreProvider );
+                }
+                throw new IllegalArgumentException( type.toString() );
+            }
+        };
+    }
+
+    private Adapter dependencyResolverForConfig( final Config config )
+    {
+        return new DependencyResolver.Adapter()
+      {
+         @Override
+         public <T> T resolveDependency( Class<T> type, SelectionStrategy selector )
+         {
+            return type.cast( config );
+         }
+      };
     }
 
     private Xid dummyXid;
@@ -199,6 +274,7 @@ public class TestNeoStore
         for ( String file : new String[] {
                 "neo",
                 "neo.nodestore.db",
+                "neo.nodestore.db.labels",
                 "neo.propertystore.db",
                 "neo.propertystore.db.index",
                 "neo.propertystore.db.index.keys",
@@ -207,33 +283,34 @@ public class TestNeoStore
                 "neo.relationshipstore.db",
                 "neo.relationshiptypestore.db",
                 "neo.relationshiptypestore.db.names",
+                "neo.schemastore.db",
         } )
         {
-            fileSystem.deleteFile( file( file ) );
-            fileSystem.deleteFile( file( file + ".id" ) );
+            fs.get().deleteFile( file( file ) );
+            fs.get().deleteFile( file( file + ".id" ) );
         }
-        
+
         File file = new File( "." );
-        for ( File nioFile : fileSystem.listFiles( file ) )
+        for ( File nioFile : fs.get().listFiles( file ) )
         {
             if ( nioFile.getName().startsWith( "nioneo_logical.log" ) )
             {
-                fileSystem.deleteFile( nioFile );
+                fs.get().deleteFile( nioFile );
             }
         }
     }
 
-    private PropertyIndex index( String key )
+    private int index( String key )
     {
-        Iterator<PropertyIndex> itr = MyPropertyIndex.index( key ).iterator();
+        Iterator<Token> itr = MyPropertyKeyToken.index( key ).iterator();
         if ( !itr.hasNext() )
         {
-            int id = (int) ds.nextId( PropertyIndex.class );
-            PropertyIndex index = createDummyIndex( id, key );
-            xaCon.getWriteTransaction().createPropertyIndex( key, id );
-            return index;
+            int id = (int) ds.nextId( PropertyKeyTokenRecord.class );
+            createDummyIndex( id, key );
+            xaCon.getTransaction().createPropertyKeyToken( key, id );
+            return id;
         }
-        return itr.next();
+        return itr.next().id();
     }
 
     @Test
@@ -243,44 +320,46 @@ public class TestNeoStore
         startTx();
         // setup test population
         long node1 = ds.nextId( Node.class );
-        xaCon.getWriteTransaction().nodeCreate( node1 );
+        xaCon.getTransaction().nodeCreate( node1 );
         long node2 = ds.nextId( Node.class );
-        xaCon.getWriteTransaction().nodeCreate( node2 );
-        PropertyData n1prop1 = xaCon.getWriteTransaction().nodeAddProperty(
+        xaCon.getTransaction().nodeCreate( node2 );
+        DefinedProperty n1prop1 = xaCon.getTransaction().nodeAddProperty(
                 node1, index( "prop1" ), "string1" );
-        PropertyData n1prop2 = xaCon.getWriteTransaction().nodeAddProperty(
+        DefinedProperty n1prop2 = xaCon.getTransaction().nodeAddProperty(
                 node1, index( "prop2" ), 1 );
-        PropertyData n1prop3 = xaCon.getWriteTransaction().nodeAddProperty(
+        DefinedProperty n1prop3 = xaCon.getTransaction().nodeAddProperty(
                 node1, index( "prop3" ), true );
 
-        PropertyData n2prop1 = xaCon.getWriteTransaction().nodeAddProperty(
+        DefinedProperty n2prop1 = xaCon.getTransaction().nodeAddProperty(
                 node2, index( "prop1" ), "string2" );
-        PropertyData n2prop2 = xaCon.getWriteTransaction().nodeAddProperty(
+        DefinedProperty n2prop2 = xaCon.getTransaction().nodeAddProperty(
                 node2, index( "prop2" ), 2 );
-        PropertyData n2prop3 = xaCon.getWriteTransaction().nodeAddProperty(
+        DefinedProperty n2prop3 = xaCon.getTransaction().nodeAddProperty(
                 node2, index( "prop3" ), false );
 
         int relType1 = (int) ds.nextId( RelationshipType.class );
-        xaCon.getWriteTransaction().createRelationshipType( relType1, "relationshiptype1" );
+        String typeName1 = "relationshiptype1";
+        xaCon.getTransaction().createRelationshipTypeToken( relType1, typeName1 );
         int relType2 = (int) ds.nextId( RelationshipType.class );
-        xaCon.getWriteTransaction().createRelationshipType( relType2, "relationshiptype2" );
+        String typeName2 = "relationshiptype2";
+        xaCon.getTransaction().createRelationshipTypeToken( relType2, typeName2 );
         long rel1 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel1, relType1, node1, node2 );
+        xaCon.getTransaction().relationshipCreate( rel1, relType1, node1, node2 );
         long rel2 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel2, relType2, node2, node1 );
+        xaCon.getTransaction().relationshipCreate( rel2, relType2, node2, node1 );
 
-        PropertyData r1prop1 = xaCon.getWriteTransaction().relAddProperty(
+        DefinedProperty r1prop1 = xaCon.getTransaction().relAddProperty(
                 rel1, index( "prop1" ), "string1" );
-        PropertyData r1prop2 = xaCon.getWriteTransaction().relAddProperty(
+        DefinedProperty r1prop2 = xaCon.getTransaction().relAddProperty(
                 rel1, index( "prop2" ), 1 );
-        PropertyData r1prop3 = xaCon.getWriteTransaction().relAddProperty(
+        DefinedProperty r1prop3 = xaCon.getTransaction().relAddProperty(
                 rel1, index( "prop3" ), true );
 
-        PropertyData r2prop1 = xaCon.getWriteTransaction().relAddProperty(
+        DefinedProperty r2prop1 = xaCon.getTransaction().relAddProperty(
                 rel2, index( "prop1" ), "string2" );
-        PropertyData r2prop2 = xaCon.getWriteTransaction().relAddProperty(
+        DefinedProperty r2prop2 = xaCon.getTransaction().relAddProperty(
                 rel2, index( "prop2" ), 2 );
-        PropertyData r2prop3 = xaCon.getWriteTransaction().relAddProperty(
+        DefinedProperty r2prop3 = xaCon.getTransaction().relAddProperty(
                 rel2, index( "prop3" ), false );
         commitTx();
         ds.stop();
@@ -314,8 +393,8 @@ public class TestNeoStore
 
         initializeStores();
         startTx();
-        assertNull( xaCon.getWriteTransaction().nodeLoadLight( node1 ) );
-        assertNull( xaCon.getWriteTransaction().nodeLoadLight( node2 ) );
+        assertNull( xaCon.getTransaction().nodeLoadLight( node1 ) );
+        assertNull( xaCon.getTransaction().nodeLoadLight( node2 ) );
         testGetRels( new long[]{rel1, rel2} );
         // testGetProps( neoStore, new int[] {
         // n1prop1, n1prop2, n1prop3, n2prop1, n2prop2, n2prop3,
@@ -325,82 +404,137 @@ public class TestNeoStore
         for ( int i = 0; i < 3; i++ )
         {
             nodeIds[i] = ds.nextId( Node.class );
-            xaCon.getWriteTransaction().nodeCreate( nodeIds[i] );
-            xaCon.getWriteTransaction().nodeAddProperty( nodeIds[i],
+            xaCon.getTransaction().nodeCreate( nodeIds[i] );
+            xaCon.getTransaction().nodeAddProperty( nodeIds[i],
                     index( "nisse" ), new Integer( 10 - i ) );
         }
         for ( int i = 0; i < 2; i++ )
         {
             long id = ds.nextId( Relationship.class );
-            xaCon.getWriteTransaction().relationshipCreate( id, relType1, nodeIds[i], nodeIds[i + 1] );
-            xaCon.getWriteTransaction().relDelete( id );
+            xaCon.getTransaction().relationshipCreate( id, relType1, nodeIds[i], nodeIds[i + 1] );
+            xaCon.getTransaction().relDelete( id );
         }
         for ( int i = 0; i < 3; i++ )
         {
-            AtomicLong pos = getPosition( xaCon, nodeIds[i] );
+            MutableRelationshipLoadingPosition pos = getPosition( xaCon, nodeIds[i] );
             for ( RelationshipRecord rel : getMore( xaCon, nodeIds[i], pos ) )
             {
-                xaCon.getWriteTransaction().relDelete( rel.getId() );
+                xaCon.getTransaction().relDelete( rel.getId() );
             }
-            xaCon.getWriteTransaction().nodeDelete( nodeIds[i] );
+            xaCon.getTransaction().nodeDelete( nodeIds[i] );
         }
         commitTx();
         ds.stop();
     }
 
-    private AtomicLong getPosition( NeoStoreXaConnection xaCon, long node )
+    private MutableRelationshipLoadingPosition getPosition( NeoStoreXaConnection xaCon, long node )
     {
-        return new AtomicLong( xaCon.getWriteTransaction().getRelationshipChainPosition( node ) );
+        return new MutableRelationshipLoadingPosition(
+                xaCon.getTransaction().getRelationshipChainPosition( node ));
     }
 
-    @SuppressWarnings("unchecked")
-    private Iterable<RelationshipRecord> getMore( NeoStoreXaConnection xaCon, long node, AtomicLong pos )
+    private static class MutableRelationshipLoadingPosition implements RelationshipLoadingPosition
     {
-        Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, Long> rels =
-                xaCon.getWriteTransaction().getMoreRelationships( node, pos.get() );
-        pos.set( rels.other() );
-        List<Iterable<RelationshipRecord>> list = new ArrayList<Iterable<RelationshipRecord>>();
+        private RelationshipLoadingPosition actual;
+
+        MutableRelationshipLoadingPosition( RelationshipLoadingPosition actual )
+        {
+            this.actual = actual;
+        }
+
+        void setActual( RelationshipLoadingPosition actual )
+        {
+            this.actual = actual;
+        }
+
+        @Override
+        public void updateFirst( long first )
+        {
+            actual.updateFirst( first );
+        }
+
+        @Override
+        public long position( DirectionWrapper direction, int[] types )
+        {
+            return actual.position( direction, types );
+        }
+
+        @Override
+        public long nextPosition( long position, DirectionWrapper direction, int[] types )
+        {
+            return actual.nextPosition( position, direction, types );
+        }
+
+        @Override
+        public boolean hasMore( DirectionWrapper direction, int[] types )
+        {
+            return actual.hasMore( direction, types );
+        }
+
+        @Override
+        public void compareAndAdvance( long relIdDeleted, long nextRelId )
+        {
+            actual.compareAndAdvance( relIdDeleted, nextRelId );
+        }
+
+        @Override
+        public RelationshipLoadingPosition clone()
+        {
+            return actual.clone();
+        }
+    }
+
+    private Iterable<RelationshipRecord> getMore( NeoStoreXaConnection xaCon, long node,
+            MutableRelationshipLoadingPosition position )
+    {
+        Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, RelationshipLoadingPosition> rels =
+                xaCon.getTransaction().getMoreRelationships( node, position, DirectionWrapper.BOTH,
+                        new int[0] );
+        List<Iterable<RelationshipRecord>> list = new ArrayList<>();
         for ( Map.Entry<DirectionWrapper, Iterable<RelationshipRecord>> entry : rels.first().entrySet() )
         {
             list.add( entry.getValue() );
         }
-        return new CombiningIterable<RelationshipRecord>( list );
+        position.setActual( rels.other() );
+        return new CombiningIterable<>( list );
     }
 
-    private void validateNodeRel1( long node, PropertyData prop1,
-                                   PropertyData prop2, PropertyData prop3, long rel1, long rel2,
-                                   int relType1, int relType2 ) throws IOException
+    private void validateNodeRel1( long node, DefinedProperty prop1,
+            DefinedProperty prop2, DefinedProperty prop3, long rel1, long rel2,
+            int relType1, int relType2 ) throws IOException
     {
-        NodeRecord nodeRecord = xaCon.getWriteTransaction().nodeLoadLight( node );
+        NodeRecord nodeRecord = xaCon.getTransaction().nodeLoadLight( node );
         assertTrue( nodeRecord != null );
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().nodeLoadProperties( node, false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        PropertyReceiver receiver = newPropertyReceiver( props );
+        xaCon.getTransaction().nodeLoadProperties( node, false, receiver );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "string1", data.getValue() );
-                xaCon.getWriteTransaction().nodeChangeProperty( node, prop1, "-string1" );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "string1", data.value() );
+                xaCon.getTransaction().nodeChangeProperty( node, prop1.propertyKeyId(), "-string1" );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( 1 ), data.getValue() );
-                xaCon.getWriteTransaction().nodeChangeProperty( node, prop2, new Integer( -1 ) );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( 1, data.value() );
+                xaCon.getTransaction().nodeChangeProperty( node, prop2.propertyKeyId(), new Integer( -1 ) );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( true ), data.getValue() );
-                xaCon.getWriteTransaction().nodeChangeProperty( node, prop3, new Boolean( false ) );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( true, data.value() );
+                xaCon.getTransaction().nodeChangeProperty( node, prop3.propertyKeyId(), false );
             }
             else
             {
@@ -410,7 +544,7 @@ public class TestNeoStore
         }
         assertEquals( 3, count );
         count = 0;
-        AtomicLong pos = getPosition( xaCon, node );
+        MutableRelationshipLoadingPosition pos = getPosition( xaCon, node );
         while ( true )
         {
             Iterable<RelationshipRecord> relData = getMore( xaCon, node, pos );
@@ -440,40 +574,53 @@ public class TestNeoStore
         assertEquals( 2, count );
     }
 
-    private void validateNodeRel2( long node, PropertyData prop1,
-                                   PropertyData prop2, PropertyData prop3,
-                                   long rel1, long rel2, int relType1, int relType2 ) throws IOException
+    private PropertyReceiver newPropertyReceiver( final ArrayMap<Integer, Pair<DefinedProperty, Long>> props )
     {
-        NodeRecord nodeRecord = xaCon.getWriteTransaction().nodeLoadLight( node );
+        return new PropertyReceiver()
+        {
+            @Override
+            public void receive( DefinedProperty property, long propertyRecordId )
+            {
+                props.put( property.propertyKeyId(), Pair.of( property, propertyRecordId ) );
+            }
+        };
+    }
+
+    private void validateNodeRel2( long node, DefinedProperty prop1,
+            DefinedProperty prop2, DefinedProperty prop3,
+            long rel1, long rel2, int relType1, int relType2 ) throws IOException
+    {
+        NodeRecord nodeRecord = xaCon.getTransaction().nodeLoadLight( node );
         assertTrue( nodeRecord != null );
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().nodeLoadProperties( node, false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().nodeLoadProperties( node, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "string2", data.getValue() );
-                xaCon.getWriteTransaction().nodeChangeProperty( node, prop1, "-string2" );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "string2", data.value() );
+                xaCon.getTransaction().nodeChangeProperty( node, prop1.propertyKeyId(), "-string2" );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( 2 ), data.getValue() );
-                xaCon.getWriteTransaction().nodeChangeProperty( node, prop2, new Integer( -2 ) );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( 2, data.value() );
+                xaCon.getTransaction().nodeChangeProperty( node, prop2.propertyKeyId(), new Integer( -2 ) );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( false ), data.getValue() );
-                xaCon.getWriteTransaction().nodeChangeProperty( node, prop3, new Boolean( true ) );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( false, data.value() );
+                xaCon.getTransaction().nodeChangeProperty( node, prop3.propertyKeyId(), true );
             }
             else
             {
@@ -484,7 +631,7 @@ public class TestNeoStore
         assertEquals( 3, count );
         count = 0;
 
-        AtomicLong pos = getPosition( xaCon, node );
+        MutableRelationshipLoadingPosition pos = getPosition( xaCon, node );
         while ( true )
         {
             Iterable<RelationshipRecord> relData = getMore( xaCon, node, pos );
@@ -514,39 +661,39 @@ public class TestNeoStore
         assertEquals( 2, count );
     }
 
-    private void validateRel1( long rel, PropertyData prop1,
-                               PropertyData prop2, PropertyData prop3,
-                               long firstNode, long secondNode, int relType ) throws IOException
+    private void validateRel1( long rel, DefinedProperty prop1,
+            DefinedProperty prop2, DefinedProperty prop3,
+            long firstNode, long secondNode, int relType ) throws IOException
     {
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().relLoadProperties( rel,
-                false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().relLoadProperties( rel, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "string1", data.getValue() );
-                xaCon.getWriteTransaction().relChangeProperty( rel, prop1, "-string1" );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "string1", data.value() );
+                xaCon.getTransaction().relChangeProperty( rel, prop1.propertyKeyId(), "-string1" );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( 1 ), data.getValue() );
-                xaCon.getWriteTransaction().relChangeProperty( rel, prop2, new Integer( -1 ) );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( 1, data.value() );
+                xaCon.getTransaction().relChangeProperty( rel, prop2.propertyKeyId(), new Integer( -1 ) );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( true ), data.getValue() );
-                xaCon.getWriteTransaction().relChangeProperty( rel, prop3, new Boolean( false ) );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( true, data.value() );
+                xaCon.getTransaction().relChangeProperty( rel, prop3.propertyKeyId(), false );
             }
             else
             {
@@ -555,45 +702,45 @@ public class TestNeoStore
             count++;
         }
         assertEquals( 3, count );
-        RelationshipRecord relData = xaCon.getWriteTransaction().relLoadLight( rel );
+        RelationshipRecord relData = xaCon.getTransaction().relLoadLight( rel );
         assertEquals( firstNode, relData.getFirstNode() );
         assertEquals( secondNode, relData.getSecondNode() );
         assertEquals( relType, relData.getType() );
     }
 
-    private void validateRel2( long rel, PropertyData prop1,
-                               PropertyData prop2, PropertyData prop3,
-                               long firstNode, long secondNode, int relType ) throws IOException
+    private void validateRel2( long rel, DefinedProperty prop1,
+            DefinedProperty prop2, DefinedProperty prop3,
+            long firstNode, long secondNode, int relType ) throws IOException
     {
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().relLoadProperties( rel,
-                false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().relLoadProperties( rel, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "string2", data.getValue() );
-                xaCon.getWriteTransaction().relChangeProperty( rel, prop1, "-string2" );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "string2", data.value() );
+                xaCon.getTransaction().relChangeProperty( rel, prop1.propertyKeyId(), "-string2" );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( 2 ), data.getValue() );
-                xaCon.getWriteTransaction().relChangeProperty( rel, prop2, new Integer( -2 ) );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( 2, data.value() );
+                xaCon.getTransaction().relChangeProperty( rel, prop2.propertyKeyId(), new Integer( -2 ) );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( false ), data.getValue() );
-                xaCon.getWriteTransaction().relChangeProperty( rel, prop3, new Boolean( true ) );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( false, data.value() );
+                xaCon.getTransaction().relChangeProperty( rel, prop3.propertyKeyId(), true );
             }
             else
             {
@@ -602,7 +749,7 @@ public class TestNeoStore
             count++;
         }
         assertEquals( 3, count );
-        RelationshipRecord relData = xaCon.getWriteTransaction().relLoadLight( rel );
+        RelationshipRecord relData = xaCon.getTransaction().relLoadLight( rel );
         assertEquals( firstNode, relData.getFirstNode() );
         assertEquals( secondNode, relData.getSecondNode() );
         assertEquals( relType, relData.getType() );
@@ -611,25 +758,25 @@ public class TestNeoStore
     private void validateRelTypes( int relType1, int relType2 )
             throws IOException
     {
-        NameData data = rtStore.getName( relType1 );
-        assertEquals( relType1, data.getId() );
-        assertEquals( "relationshiptype1", data.getName() );
-        data = rtStore.getName( relType2 );
-        assertEquals( relType2, data.getId() );
-        assertEquals( "relationshiptype2", data.getName() );
-        NameData allData[] = rtStore.getNames( Integer.MAX_VALUE );
+        Token data = rtStore.getToken( relType1 );
+        assertEquals( relType1, data.id() );
+        assertEquals( "relationshiptype1", data.name() );
+        data = rtStore.getToken( relType2 );
+        assertEquals( relType2, data.id() );
+        assertEquals( "relationshiptype2", data.name() );
+        Token allData[] = rtStore.getTokens( Integer.MAX_VALUE );
         assertEquals( 2, allData.length );
         for ( int i = 0; i < 2; i++ )
         {
-            if ( allData[i].getId() == relType1 )
+            if ( allData[i].id() == relType1 )
             {
-                assertEquals( relType1, allData[i].getId() );
-                assertEquals( "relationshiptype1", allData[i].getName() );
+                assertEquals( relType1, allData[i].id() );
+                assertEquals( "relationshiptype1", allData[i].name() );
             }
-            else if ( allData[i].getId() == relType2 )
+            else if ( allData[i].id() == relType2 )
             {
-                assertEquals( relType2, allData[i].getId() );
-                assertEquals( "relationshiptype2", allData[i].getName() );
+                assertEquals( relType2, allData[i].id() );
+                assertEquals( "relationshiptype2", allData[i].name() );
             }
             else
             {
@@ -638,37 +785,37 @@ public class TestNeoStore
         }
     }
 
-    private void deleteRel1( long rel, PropertyData prop1, PropertyData prop2,
-                             PropertyData prop3,
-                             long firstNode, long secondNode, int relType ) throws IOException
+    private void deleteRel1( long rel, DefinedProperty prop1, DefinedProperty prop2,
+            DefinedProperty prop3, long firstNode, long secondNode, int relType )
+                    throws IOException
     {
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().relLoadProperties( rel,
-                false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().relLoadProperties( rel, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "-string1", data.getValue() );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "-string1", data.value() );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( -1 ), data.getValue() );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( -1, data.value() );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( false ), data.getValue() );
-                xaCon.getWriteTransaction().relRemoveProperty( rel, prop3 );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( false, data.value() );
+                xaCon.getTransaction().relRemoveProperty( rel, prop3.propertyKeyId() );
             }
             else
             {
@@ -677,53 +824,65 @@ public class TestNeoStore
             count++;
         }
         assertEquals( 3, count );
-        assertEquals( 3, xaCon.getWriteTransaction().relLoadProperties( rel, false ).size() );
-        RelationshipRecord relData = xaCon.getWriteTransaction().relLoadLight( rel );
+        CountingPropertyReceiver propertyCounter = new CountingPropertyReceiver();
+        xaCon.getTransaction().relLoadProperties( rel, false, propertyCounter );
+        assertEquals( 3, propertyCounter.count );
+        RelationshipRecord relData = xaCon.getTransaction().relLoadLight( rel );
         assertEquals( firstNode, relData.getFirstNode() );
         assertEquals( secondNode, relData.getSecondNode() );
         assertEquals( relType, relData.getType() );
-        xaCon.getWriteTransaction().relDelete( rel );
-        AtomicLong firstPos = getPosition( xaCon, firstNode );
+        xaCon.getTransaction().relDelete( rel );
+        MutableRelationshipLoadingPosition firstPos = getPosition( xaCon, firstNode );
         Iterator<RelationshipRecord> first = getMore( xaCon, firstNode, firstPos ).iterator();
         first.next();
-        AtomicLong secondPos = getPosition( xaCon, secondNode );
+        MutableRelationshipLoadingPosition secondPos = getPosition( xaCon, secondNode );
         Iterator<RelationshipRecord> second = getMore( xaCon, secondNode, secondPos ).iterator();
         second.next();
         assertTrue( first.hasNext() );
         assertTrue( second.hasNext() );
     }
 
-    private void deleteRel2( long rel, PropertyData prop1, PropertyData prop2,
-                             PropertyData prop3,
-                             long firstNode, long secondNode, int relType ) throws IOException
+    private static class CountingPropertyReceiver implements PropertyReceiver
     {
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().relLoadProperties( rel,
-                false );
+        private int count;
+
+        @Override
+        public void receive( DefinedProperty property, long propertyRecordId )
+        {
+            count++;
+        }
+    }
+
+    private void deleteRel2( long rel, DefinedProperty prop1, DefinedProperty prop2,
+            DefinedProperty prop3, long firstNode, long secondNode, int relType ) throws IOException
+    {
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().relLoadProperties( rel, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "-string2", data.getValue() );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "-string2", data.value() );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( -2 ), data.getValue() );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( -2, data.value() );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( true ), data.getValue() );
-                xaCon.getWriteTransaction().relRemoveProperty( rel, prop3 );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( true, data.value() );
+                xaCon.getTransaction().relRemoveProperty( rel, prop3.propertyKeyId() );
             }
             else
             {
@@ -732,50 +891,53 @@ public class TestNeoStore
             count++;
         }
         assertEquals( 3, count );
-        assertEquals( 3, xaCon.getWriteTransaction().relLoadProperties( rel, false ).size() );
-        RelationshipRecord relData = xaCon.getWriteTransaction().relLoadLight( rel );
+        CountingPropertyReceiver propertyCounter = new CountingPropertyReceiver();
+        xaCon.getTransaction().relLoadProperties( rel, false, propertyCounter );
+        assertEquals( 3, propertyCounter.count );
+        RelationshipRecord relData = xaCon.getTransaction().relLoadLight( rel );
         assertEquals( firstNode, relData.getFirstNode() );
         assertEquals( secondNode, relData.getSecondNode() );
         assertEquals( relType, relData.getType() );
-        xaCon.getWriteTransaction().relDelete( rel );
-        AtomicLong firstPos = getPosition( xaCon, firstNode );
+        xaCon.getTransaction().relDelete( rel );
+        MutableRelationshipLoadingPosition firstPos = getPosition( xaCon, firstNode );
         Iterator<RelationshipRecord> first = getMore( xaCon, firstNode, firstPos ).iterator();
-        AtomicLong secondPos = getPosition( xaCon, secondNode );
+        MutableRelationshipLoadingPosition secondPos = getPosition( xaCon, secondNode );
         Iterator<RelationshipRecord> second = getMore( xaCon, secondNode, secondPos ).iterator();
         assertTrue( first.hasNext() );
         assertTrue( second.hasNext() );
     }
 
-    private void deleteNode1( long node, PropertyData prop1,
-                              PropertyData prop2, PropertyData prop3 )
+    private void deleteNode1( long node, DefinedProperty prop1,
+            DefinedProperty prop2, DefinedProperty prop3 )
             throws IOException
     {
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().nodeLoadProperties( node, false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().nodeLoadProperties( node, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "-string1", data.getValue() );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "-string1", data.value() );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( -1 ), data.getValue() );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( -1, data.value() );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( false ), data.getValue() );
-                xaCon.getWriteTransaction().nodeRemoveProperty( node, prop3 );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( false, data.value() );
+                xaCon.getTransaction().nodeRemoveProperty( node, prop3.propertyKeyId() );
             }
             else
             {
@@ -784,43 +946,46 @@ public class TestNeoStore
             count++;
         }
         assertEquals( 3, count );
-        assertEquals( 3, xaCon.getWriteTransaction().nodeLoadProperties( node, false ).size() );
-        AtomicLong pos = getPosition( xaCon, node );
+        CountingPropertyReceiver propertyCounter = new CountingPropertyReceiver();
+        xaCon.getTransaction().nodeLoadProperties( node, false, propertyCounter );
+        assertEquals( 3, propertyCounter.count );
+        MutableRelationshipLoadingPosition pos = getPosition( xaCon, node );
         Iterator<RelationshipRecord> rels = getMore( xaCon, node, pos ).iterator();
         assertTrue( rels.hasNext() );
-        xaCon.getWriteTransaction().nodeDelete( node );
+        xaCon.getTransaction().nodeDelete( node );
     }
 
-    private void deleteNode2( long node, PropertyData prop1,
-                              PropertyData prop2, PropertyData prop3 )
+    private void deleteNode2( long node, DefinedProperty prop1,
+            DefinedProperty prop2, DefinedProperty prop3 )
             throws IOException
     {
-        ArrayMap<Integer, PropertyData> props = xaCon.getWriteTransaction().nodeLoadProperties( node, false );
+        ArrayMap<Integer, Pair<DefinedProperty,Long>> props = new ArrayMap<>();
+        xaCon.getTransaction().nodeLoadProperties( node, false, newPropertyReceiver( props ) );
         int count = 0;
         for ( int keyId : props.keySet() )
         {
-            long id = props.get( keyId ).getId();
+            long id = props.get( keyId ).other();
             PropertyRecord record = pStore.getRecord( id );
-            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).getIndex() );
-            PropertyData data = block.newPropertyData( record );
-            if ( data.getIndex() == prop1.getIndex() )
+            PropertyBlock block = record.getPropertyBlock( props.get( keyId ).first().propertyKeyId() );
+            DefinedProperty data = block.newPropertyData( pStore );
+            if ( data.propertyKeyId() == prop1.propertyKeyId() )
             {
-                assertEquals( "prop1", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( "-string2", data.getValue() );
+                assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( "-string2", data.value() );
             }
-            else if ( data.getIndex() == prop2.getIndex() )
+            else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
-                assertEquals( "prop2", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Integer( -2 ), data.getValue() );
+                assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( -2, data.value() );
             }
-            else if ( data.getIndex() == prop3.getIndex() )
+            else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
-                assertEquals( "prop3", MyPropertyIndex.getIndexFor(
-                        keyId ).getKey() );
-                assertEquals( new Boolean( true ), data.getValue() );
-                xaCon.getWriteTransaction().nodeRemoveProperty( node, prop3 );
+                assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
+                        keyId ).name() );
+                assertEquals( true, data.value() );
+                xaCon.getTransaction().nodeRemoveProperty( node, prop3.propertyKeyId() );
             }
             else
             {
@@ -829,18 +994,20 @@ public class TestNeoStore
             count++;
         }
         assertEquals( 3, count );
-        assertEquals( 3, xaCon.getWriteTransaction().nodeLoadProperties( node, false ).size() );
-        AtomicLong pos = getPosition( xaCon, node );
+        CountingPropertyReceiver propertyCounter = new CountingPropertyReceiver();
+        xaCon.getTransaction().nodeLoadProperties( node, false, propertyCounter );
+        assertEquals( 3, propertyCounter.count );
+        MutableRelationshipLoadingPosition pos = getPosition( xaCon, node );
         Iterator<RelationshipRecord> rels = getMore( xaCon, node, pos ).iterator();
         assertTrue( rels.hasNext() );
-        xaCon.getWriteTransaction().nodeDelete( node );
+        xaCon.getTransaction().nodeDelete( node );
     }
 
     private void testGetRels( long relIds[] )
     {
         for ( long relId : relIds )
         {
-            assertEquals( null, xaCon.getWriteTransaction().relLoadLight( relId ) );
+            assertEquals( null, xaCon.getTransaction().relLoadLight( relId ) );
         }
     }
 
@@ -850,30 +1017,31 @@ public class TestNeoStore
         initializeStores();
         startTx();
         int relType1 = (int) ds.nextId( RelationshipType.class );
-        xaCon.getWriteTransaction().createRelationshipType( relType1, "relationshiptype1" );
+        String typeName = "relationshiptype1";
+        xaCon.getTransaction().createRelationshipTypeToken( relType1, typeName );
         long nodeIds[] = new long[3];
         for ( int i = 0; i < 3; i++ )
         {
             nodeIds[i] = ds.nextId( Node.class );
-            xaCon.getWriteTransaction().nodeCreate( nodeIds[i] );
-            xaCon.getWriteTransaction().nodeAddProperty( nodeIds[i],
+            xaCon.getTransaction().nodeCreate( nodeIds[i] );
+            xaCon.getTransaction().nodeAddProperty( nodeIds[i],
                     index( "nisse" ), new Integer( 10 - i ) );
         }
         for ( int i = 0; i < 2; i++ )
         {
-            xaCon.getWriteTransaction().relationshipCreate( ds.nextId( Relationship.class ),
+            xaCon.getTransaction().relationshipCreate( ds.nextId( Relationship.class ),
                     relType1, nodeIds[i], nodeIds[i + 1] );
         }
         commitTx();
         startTx();
         for ( int i = 0; i < 3; i += 2 )
         {
-            AtomicLong pos = getPosition( xaCon, nodeIds[i] );
+            MutableRelationshipLoadingPosition pos = getPosition( xaCon, nodeIds[i] );
             for ( RelationshipRecord rel : getMore( xaCon, nodeIds[i], pos ) )
             {
-                xaCon.getWriteTransaction().relDelete( rel.getId() );
+                xaCon.getTransaction().relDelete( rel.getId() );
             }
-            xaCon.getWriteTransaction().nodeDelete( nodeIds[i] );
+            xaCon.getTransaction().nodeDelete( nodeIds[i] );
         }
         commitTx();
         ds.stop();
@@ -886,32 +1054,33 @@ public class TestNeoStore
         initializeStores();
         startTx();
         int relType1 = (int) ds.nextId( RelationshipType.class );
-        xaCon.getWriteTransaction().createRelationshipType( relType1, "relationshiptype1" );
+        String typeName = "relationshiptype1";
+        xaCon.getTransaction().createRelationshipTypeToken( relType1, typeName );
         long nodeIds[] = new long[3];
         for ( int i = 0; i < 3; i++ )
         {
             nodeIds[i] = ds.nextId( Node.class );
-            xaCon.getWriteTransaction().nodeCreate( nodeIds[i] );
-            xaCon.getWriteTransaction().nodeAddProperty( nodeIds[i],
+            xaCon.getTransaction().nodeCreate( nodeIds[i] );
+            xaCon.getTransaction().nodeAddProperty( nodeIds[i],
                     index( "nisse" ), new Integer( 10 - i ) );
         }
         for ( int i = 0; i < 2; i++ )
         {
-            xaCon.getWriteTransaction().relationshipCreate( ds.nextId( Relationship.class ),
+            xaCon.getTransaction().relationshipCreate( ds.nextId( Relationship.class ),
                     relType1, nodeIds[i], nodeIds[i + 1] );
         }
-        xaCon.getWriteTransaction().relationshipCreate( ds.nextId( Relationship.class ),
+        xaCon.getTransaction().relationshipCreate( ds.nextId( Relationship.class ),
                 relType1, nodeIds[0], nodeIds[2] );
         commitTx();
         startTx();
         for ( int i = 0; i < 3; i++ )
         {
-            AtomicLong pos = getPosition( xaCon, nodeIds[i] );
+            MutableRelationshipLoadingPosition pos = getPosition( xaCon, nodeIds[i] );
             for ( RelationshipRecord rel : getMore( xaCon, nodeIds[i], pos ) )
             {
-                xaCon.getWriteTransaction().relDelete( rel.getId() );
+                xaCon.getTransaction().relDelete( rel.getId() );
             }
-            xaCon.getWriteTransaction().nodeDelete( nodeIds[i] );
+            xaCon.getTransaction().nodeDelete( nodeIds[i] );
         }
         commitTx();
         ds.stop();
@@ -924,46 +1093,41 @@ public class TestNeoStore
         initializeStores();
         startTx();
         int relType1 = (int) ds.nextId( RelationshipType.class );
-        xaCon.getWriteTransaction().createRelationshipType( relType1, "relationshiptype1" );
+        xaCon.getTransaction().createRelationshipTypeToken( relType1, "relationshiptype1" );
         long nodeIds[] = new long[8];
         for ( int i = 0; i < nodeIds.length; i++ )
         {
             nodeIds[i] = ds.nextId( Node.class );
-            xaCon.getWriteTransaction().nodeCreate( nodeIds[i] );
+            xaCon.getTransaction().nodeCreate( nodeIds[i] );
         }
         for ( int i = 0; i < nodeIds.length / 2; i++ )
         {
-            xaCon.getWriteTransaction().relationshipCreate( ds.nextId( Relationship.class ),
+            xaCon.getTransaction().relationshipCreate( ds.nextId( Relationship.class ),
                     relType1, nodeIds[i], nodeIds[i * 2] );
         }
         long rel5 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel5, relType1, nodeIds[0], nodeIds[5] );
+        xaCon.getTransaction().relationshipCreate( rel5, relType1, nodeIds[0], nodeIds[5] );
         long rel2 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel2, relType1, nodeIds[1], nodeIds[2] );
+        xaCon.getTransaction().relationshipCreate( rel2, relType1, nodeIds[1], nodeIds[2] );
         long rel3 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel3, relType1, nodeIds[1], nodeIds[3] );
+        xaCon.getTransaction().relationshipCreate( rel3, relType1, nodeIds[1], nodeIds[3] );
         long rel6 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel6, relType1, nodeIds[1], nodeIds[6] );
+        xaCon.getTransaction().relationshipCreate( rel6, relType1, nodeIds[1], nodeIds[6] );
         long rel1 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel1, relType1, nodeIds[0], nodeIds[1] );
+        xaCon.getTransaction().relationshipCreate( rel1, relType1, nodeIds[0], nodeIds[1] );
         long rel4 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel4, relType1, nodeIds[0], nodeIds[4] );
+        xaCon.getTransaction().relationshipCreate( rel4, relType1, nodeIds[0], nodeIds[4] );
         long rel7 = ds.nextId( Relationship.class );
-        xaCon.getWriteTransaction().relationshipCreate( rel7, relType1, nodeIds[0], nodeIds[7] );
+        xaCon.getTransaction().relationshipCreate( rel7, relType1, nodeIds[0], nodeIds[7] );
         commitTx();
         startTx();
-        xaCon.getWriteTransaction().relDelete( rel7 );
-        xaCon.getWriteTransaction().relDelete( rel4 );
-        xaCon.getWriteTransaction().relDelete( rel1 );
-        xaCon.getWriteTransaction().relDelete( rel6 );
-        xaCon.getWriteTransaction().relDelete( rel3 );
-        xaCon.getWriteTransaction().relDelete( rel2 );
-        xaCon.getWriteTransaction().relDelete( rel5 );
-        // xaCon.getWriteTransaction().nodeDelete( nodeIds[2] );
-        // xaCon.getWriteTransaction().nodeDelete( nodeIds[3] );
-        // xaCon.getWriteTransaction().nodeDelete( nodeIds[1] );
-        // xaCon.getWriteTransaction().nodeDelete( nodeIds[4] );
-        // xaCon.getWriteTransaction().nodeDelete( nodeIds[0] );
+        xaCon.getTransaction().relDelete( rel7 );
+        xaCon.getTransaction().relDelete( rel4 );
+        xaCon.getTransaction().relDelete( rel1 );
+        xaCon.getTransaction().relDelete( rel6 );
+        xaCon.getTransaction().relDelete( rel3 );
+        xaCon.getTransaction().relDelete( rel2 );
+        xaCon.getTransaction().relDelete( rel5 );
         commitTx();
         ds.stop();
     }
@@ -974,19 +1138,18 @@ public class TestNeoStore
         initializeStores();
         startTx();
         long nodeId = ds.nextId( Node.class );
-        xaCon.getWriteTransaction().nodeCreate( nodeId );
-        long propertyId = pStore.nextId();
-        PropertyData prop = xaCon.getWriteTransaction().nodeAddProperty(
+        xaCon.getTransaction().nodeCreate( nodeId );
+        pStore.nextId();
+        DefinedProperty prop = xaCon.getTransaction().nodeAddProperty(
                 nodeId, index( "nisse" ),
                 new Integer( 10 ) );
         commitTx();
         ds.stop();
         initializeStores();
         startTx();
-        xaCon.getWriteTransaction().nodeChangeProperty( nodeId, prop,
-                new Integer( 5 ) );
-        xaCon.getWriteTransaction().nodeRemoveProperty( nodeId, prop );
-        xaCon.getWriteTransaction().nodeDelete( nodeId );
+        xaCon.getTransaction().nodeChangeProperty( nodeId, prop.propertyKeyId(), new Integer( 5 ) );
+        xaCon.getTransaction().nodeRemoveProperty( nodeId, prop.propertyKeyId() );
+        xaCon.getTransaction().nodeDelete( nodeId );
         commitTx();
         ds.stop();
     }
@@ -994,12 +1157,12 @@ public class TestNeoStore
     @Test
     public void testSetBlockSize() throws Exception
     {
-        tearDownNeoStore();
+        targetDirectory.cleanup();
 
         Config config = new Config( MapUtil.stringMap( "string_block_size", "62", "array_block_size", "302" ),
                 GraphDatabaseSettings.class );
         StoreFactory sf = new StoreFactory( config, new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(),
-                fileSystem, StringLogger.DEV_NULL, null );
+                fs.get(), StringLogger.DEV_NULL, null );
         sf.createNeoStore( file( "neo" ) ).close();
 
         initializeStores();
@@ -1014,15 +1177,49 @@ public class TestNeoStore
     public void setVersion() throws Exception
     {
         String storeDir = "target/test-data/set-version";
-        new TestGraphDatabaseFactory().setFileSystem( fileSystem ).newImpermanentDatabase( storeDir ).shutdown();
-        assertEquals( 1, NeoStore.setVersion( fileSystem, new File( storeDir ), 10 ) );
-        assertEquals( 10, NeoStore.setVersion( fileSystem, new File( storeDir ), 12 ) );
+        new TestGraphDatabaseFactory().setFileSystem( fs.get() ).newImpermanentDatabase( storeDir ).shutdown();
+        assertEquals( 1, NeoStore.setVersion( fs.get(), new File( storeDir, NeoStore.DEFAULT_NAME ), 10 ) );
+        assertEquals( 10, NeoStore.setVersion( fs.get(), new File( storeDir, NeoStore.DEFAULT_NAME ), 12 ) );
 
         StoreFactory sf = new StoreFactory( new Config( new HashMap<String, String>(), GraphDatabaseSettings.class ),
-                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fileSystem, StringLogger.DEV_NULL, null );
+                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), fs.get(), StringLogger.DEV_NULL, null );
 
         NeoStore neoStore = sf.newNeoStore( new File( storeDir, NeoStore.DEFAULT_NAME ) );
         assertEquals( 12, neoStore.getVersion() );
         neoStore.close();
     }
+
+    @Test
+    public void testSetLatestConstraintTx() throws Exception
+    {
+        // given
+        new GraphDatabaseFactory().newEmbeddedDatabase( testDir.absolutePath() ).shutdown();
+        StoreFactory sf = new StoreFactory( new Config( new HashMap<String, String>(), GraphDatabaseSettings.class ),
+                new DefaultIdGeneratorFactory(), new DefaultWindowPoolFactory(), new DefaultFileSystemAbstraction(),
+                StringLogger.DEV_NULL, null );
+
+        // when
+        NeoStore neoStore = sf.newNeoStore( new File( testDir.absolutePath(), NeoStore.DEFAULT_NAME ) );
+
+        // then the default is 0
+        assertEquals( 0l, neoStore.getLatestConstraintIntroducingTx() );
+
+
+        // when
+        neoStore.setLatestConstraintIntroducingTx( 10l );
+
+        // then
+        assertEquals( 10l, neoStore.getLatestConstraintIntroducingTx() );
+
+
+        // when
+        neoStore.flushAll();
+        neoStore.close();
+        neoStore = sf.newNeoStore( new File( testDir.absolutePath(), NeoStore.DEFAULT_NAME ) );
+
+        // then the value should have been stored
+        assertEquals( 10l, neoStore.getLatestConstraintIntroducingTx() );
+        neoStore.close();
+    }
+
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,22 +25,22 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.advanced.modules.JMXManagementModule;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.modules.ServerModule;
 
-public class AdvancedNeoServer extends CommunityNeoServer {
-
-    protected AdvancedNeoServer()
+public class AdvancedNeoServer extends CommunityNeoServer
+{
+    public AdvancedNeoServer( Configurator configurator, Database.Factory dbFactory )
     {
-    	
+        super(configurator, dbFactory);
     }
-    
+
 	public AdvancedNeoServer( Configurator configurator )
     {
-        this.configurator = configurator;
-        init();
+        super( configurator );
     }
-    
-	@Override
+
+    @Override
 	@SuppressWarnings("unchecked")
 	protected Iterable<ServerModule> createServerModules() 
 	{   

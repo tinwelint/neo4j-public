@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -80,7 +80,6 @@ public abstract class AbstractWebadminTest extends SharedServerTestBase {
             try
             {
                 File screenshotFile = ((TakesScreenshot)webDriver).getScreenshotAs(FILE);
-                System.out.println(screenshotFile.getAbsolutePath());
                 File dir = new File("target/docs/webadmin/images");
                 dir.mkdirs();
                 String imageName = string+".png";

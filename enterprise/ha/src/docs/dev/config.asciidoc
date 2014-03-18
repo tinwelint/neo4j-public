@@ -4,56 +4,68 @@ Setup and configuration
 
 Neo4j HA can be set up to accommodate differing requirements for load, fault tolerance and available hardware.
 
-Within a cluster, Neo4j HA uses its own Paxos implementation for all cluster membership related tasks, from instances joining/leaving a cluster to master election and availability information propagation.
-Read operations through the +GraphDatabaseService+ API will always work, whereas write operations requires an available master.
-
-For reaching quorum among the members in the cluster the number of members should be odd.
-
-== Installation Notes ==
+In HA mode, Neo4j instances form a cluster.
+The instances monitor each others' availability to take account of instances joining and leaving the cluster.
+They elect one instance to be the master, and designate the other instances to be slaves.
 
 For installation instructions of a High Availability cluster see <<ha-setup-tutorial>>.
 
-Note that while the HA version of Neo4j supports the same API as the single instance embedded version, it does have additional configuration parameters.
-Although there are many parameters, most of them have defaults that should work in most cases.
+== Specifying cluster members ==
 
-.HA configuration parameters
-[options="header", cols="<33m,<25,<25m,<20"]
+Specify the instances that should form the cluster by supplying +ha.initial_hosts+, a comma-separated list of URLs.
+When each instance starts, if it can contact any of the initial hosts, then it will form a cluster with them,
+otherwise it will start its own cluster.
+
+Note that the parameter is called +ha.initial_hosts+ because it's only used when instances initially join the cluster.
+This means that you can extend the cluster without changing the configuration of existing instances.
+
+== Server configuration ==
+
+If you are running Neo4j server, specify +org.neo4j.server.database.mode=HA+ in 'neo4j-server.properties'.
+
+.HA server configuration parameters
+[options="header", cols="<33m,<35,<20m,<12"]
+|==============================================================================================================
+| Parameter Name                 | Description                                      | Example value | Required?
+| org.neo4j.server.database.mode | Whether to run as a single server or in HA mode. | single or HA  | yes
+|==============================================================================================================
+
+== Database configuration ==
+
+HA configuration parameters should be supplied alongside general Neo4j parameters in 'neo4j.properties'.
+There are many configurable parameters, most in most cases it isn't necessary to modify the default values.
+The only parameters that need to be specified are +ha.server_id+ and +ha.initial_hosts+.
+
+.HA database configuration parameters
+[options="header", cols="<33m,<35,<20m,<12"]
 |========================================================================================
 | Parameter Name        | Description                                     | Example value  | Required?
-| ha.server_id          | integer >= 0 and has to be unique in the cluster | 1 | yes
-| ha.server             | (auto-discovered) host & port to bind when acting as master | my-domain.com:6001 | no
-| ha.discovery.enabled  | whether or not to use the resource of ha.discovery.url to define the cluster | true | no
-| ha.discovery.url      | if ha.discovery.enabled is true, used to define the cluster | file://my.server:8080/my-cluster | no
-| ha.initial_hosts      | if ha.discovery.enabled is false, a comma-separated list of other members of the cluster to join. If no members are reachable a new cluster will be created. | my-server:5001 | no
-| ha.cluster_server     | (auto-discovered) host & port to bind the cluster management communication | |
-| ha.pull_interval      | interval for, as slave, pulling updates from the master. Default is to not pull updates regularly, only during write transactions | 30s or 1500ms | no
-| ha.read_timeout       | how long a slave will wait for response from master before giving up (default 20) | 20 | no
-| ha.lock_read_timeout  | how long a slave lock acquisition request will wait for response from master before giving up (defaults to what ha.read_timeout is, or its default if absent) | 40 | no
-| ha.state_switch_timeout | how long max time to gracefully await a slave/master role switch | 20s | no
-| ha.max_concurrent_channels_per_slave | max number of concurrent communication channels each slave has to its master. Increase if there's high contention on few nodes | 100 | no
-| ha.branched_data_policy | what to do with the db that is considered branched and will be replaced with a fresh copy from the master {keep_all(default),keep_last,keep_none,shutdown} | keep_none | no
-| ha.tx_push_factor     | amount of slaves the master will push each committed transaction to | 1 (default) | no
-| ha.tx_push_strategy   | the strategy for selecting which slaves to push committed transactions to. "fixed" (default) will push to slaves with descending server_id order; "round_robin" will have slaves take turn receiving the transactions | fixed | no
+| ha.server_id          | Id for a cluster instance. Must be unique within the cluster. | 1 | yes
+| ha.initial_hosts      | A comma-separated list of other members of the cluster to join. | server1:5001,server2:5001 | yes
+| ha.cluster_server     | Host & port to bind the cluster management communication. | server1:5001 | no
+| ha.allow_init_cluster | Whether to allow this instance to create a cluster if unable to join. | true | no
+| ha.default_timeout    | Default timeout used for clustering timeouts. Override specific timeout settings with proper values if necessary. This value is the default value for settings ha.heartbeat_interval, ha.paxos_timeout and ha.learn_timeout. | 5s | no
+| ha.heartbeat_interval | How often heartbeat messages should be sent. Defaults to ha.default_timeout. | 5s | no
+| ha.heartbeat_timeout  | Timeout for heartbeats between cluster members. Should be at least twice that of ha.heartbeat_interval. | 11s | no
+| ha.broadcast_timeout  | Timeout for broadcasting values in cluster. Must consider end-to-end duration of Paxos algorithm. This value is the default value for settings ha.join_timeout and ha.leave_timeout. | 30s | no
+| ha.join_timeout       | Timeout for joining a cluster. Defaults to ha.broadcast_timeout. | 30s | no
+| ha.configuration_timeout | Timeout for waiting for configuration from an existing cluster member during cluster join. | 1s | no
+| ha.leave_timeout      | Timeout for waiting for cluster leave to finish. Defaults to ha.broadcast_timeout. | 30s | no
+| ha.paxos_timeout      | Default timeout for all Paxos timeouts. Defaults to ha.default_timeout. This value is the default value for settings ha.phase1_timeout, ha.phase2_timeout and ha.election_timeout. | 5s | no
+| ha.phase1_timeout     | Timeout for Paxos phase 1. Defaults to ha.paxos_timeout. | 5s | no
+| ha.phase2_timeout     | Timeout for Paxos phase 2. Defaults to ha.paxos_timeout. | 5s | no
+| ha.learn_timeout      | Timeout for learning values. Defaults to ha.default_timeout. | 5s | no
+| ha.election_timeout   | Timeout for waiting for other members to finish a role election. Defaults to ha.paxos_timeout. | 5s | no
+| ha.read_timeout       | How long a slave will wait for response from master before giving up. | 20s | no
+| ha.state_switch_timeout | Timeout for waiting for instance to become master or slave. | 20s | no
+| ha.lock_read_timeout  | Timeout for taking remote (write) locks on slaves. Defaults to ha.read_timeout. | 20s | no
+| ha.max_concurrent_channels_per_slave | Maximum number of connections a slave can have to the master. | 20 | no
+| ha.server             | Hostname and port to bind the HA server. | my-domain.com:6001 | no
+| ha.slave_only         | Whether this instance should only participate as slave in cluster. If set to true, it will never be elected as master. | false | no
+| ha.branched_data_policy | Policy for how to handle branched data. | keep_last or keep_all or keep_none | no
+| ha.com_chunk_size     | Max size of the data chunks that flows between master and slaves in HA. Bigger size may increase throughput, but may be more sensitive to variations in bandwidth, whereas lower size increases tolerance for bandwidth variations. | 2M | no
+| ha.pull_interval      | Interval of pulling updates from master. | 10s | no
+| ha.tx_push_factor     | The amount of slaves the master will ask to replicate a committed transaction. | 1 | no
+| ha.tx_push_strategy   | Push strategy of a transaction to a slave during commit. | fixed or round_robin | no
 |========================================================================================
 
-[NOTE]
-Note that the +org.neo4j.server.database.mode+ setting in the 'neo4j-server.properties' file has to be set to +HA+ to run Neo4j in High Availability mode.
-
-== Different methods for participating in a cluster ==
-
-There are currently multiple ways of telling your database instance which cluster to create/join, different ways for different occasions.
-
-=== Knowing at least one other member ===
-
-A database instance can join a cluster by supplying +ha.initial_hosts+ a comma-separated list of URLs to at least one other cluster member of the cluster to join.
-It's called initial hosts since it's only for joining the cluster. After an instance joins it gets aware of all the members of the cluster.
-It will take turn contacting each one in the list until it gets a response, where it will await a decision by the existing cluster members to have it join.
-If it cannot contact any of the members in the URL list it will create a new cluster with itself as master.
-This option requires +ha.discovery.enabled+ be set to +false+.
-
-=== Discovery ===
-
-A database instance can point to URL acting as a live list of members in a cluster, by setting +ha.discovery.url+ to a valid and accessible URL.
-If the resource pointed out by that URL exists it will take turn contacting each member in that list until it gets a response, where it will await a decision by the existing cluster members to have it join.
-If the resource pointed out by the discovery URL doesn't exist it will create it and with it a cluster having itself as initial master.
-This option requires +ha.discovery.enabled+ be set to +true+.

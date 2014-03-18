@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,8 @@
  */
 package org.neo4j.backup;
 
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.graphdb.factory.GraphDatabaseSetting.osIsWindows;
-
 import java.io.File;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,21 +29,28 @@ import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.TargetDirectory;
+
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.helpers.Settings.osIsWindows;
 
 public class BackupEmbeddedIT
 {
     public static final File PATH = TargetDirectory.forTest( BackupEmbeddedIT.class ).directory( "db" );
     public static final File BACKUP_PATH = TargetDirectory.forTest( BackupEmbeddedIT.class ).directory( "backup-db" );
+
     private GraphDatabaseService db;
+    private String ip;
 
     @Before
     public void before() throws Exception
@@ -53,14 +58,16 @@ public class BackupEmbeddedIT
         if ( osIsWindows() ) return;
         FileUtils.deleteDirectory( PATH );
         FileUtils.deleteDirectory( BACKUP_PATH  );
+        ip = InetAddress.getLocalHost().getHostAddress();
     }
 
+    @SuppressWarnings("deprecation")
     public static DbRepresentation createSomeData( GraphDatabaseService db )
     {
         Transaction tx = db.beginTx();
         Node node = db.createNode();
         node.setProperty( "name", "Neo" );
-        db.getReferenceNode().createRelationshipTo( node, DynamicRelationshipType.withName( "KNOWS" ) );
+        db.createNode().createRelationshipTo( node, DynamicRelationshipType.withName( "KNOWS" ) );
         tx.success();
         tx.finish();
         return DbRepresentation.of( db );
@@ -80,15 +87,14 @@ public class BackupEmbeddedIT
         startDb( null );
         assertEquals(
                 0,
-                runBackupToolFromOtherJvmToGetExitCode( "-full", "-from",
-                        BackupTool.DEFAULT_SCHEME + "://localhost", "-to",
+                runBackupToolFromOtherJvmToGetExitCode( "-from",
+                        BackupTool.DEFAULT_SCHEME + "://"+ ip, "-to",
                         BACKUP_PATH.getPath() ) );
         assertEquals( DbRepresentation.of( db ), DbRepresentation.of( BACKUP_PATH ) );
         createSomeData( db );
         assertEquals(
                 0,
-                runBackupToolFromOtherJvmToGetExitCode( "-incremental",
-                        "-from", BackupTool.DEFAULT_SCHEME + "://localhost",
+                runBackupToolFromOtherJvmToGetExitCode( "-from", BackupTool.DEFAULT_SCHEME + "://"+ ip,
                         "-to", BACKUP_PATH.getPath() ) );
         assertEquals( DbRepresentation.of( db ), DbRepresentation.of( BACKUP_PATH ) );
     }
@@ -101,20 +107,19 @@ public class BackupEmbeddedIT
         startDb( "" + port );
         assertEquals(
                 1,
-                runBackupToolFromOtherJvmToGetExitCode( "-full", "-from",
-                        BackupTool.DEFAULT_SCHEME + "://localhost", "-to",
+                runBackupToolFromOtherJvmToGetExitCode( "-from",
+                        BackupTool.DEFAULT_SCHEME + "://" + ip, "-to",
                         BACKUP_PATH.getPath() ) );
         assertEquals(
                 0,
-                runBackupToolFromOtherJvmToGetExitCode( "-full", "-from",
-                        BackupTool.DEFAULT_SCHEME + "://localhost:" + port,
+                runBackupToolFromOtherJvmToGetExitCode( "-from",
+                        BackupTool.DEFAULT_SCHEME + "://"+ ip +":" + port,
                         "-to", BACKUP_PATH.getPath() ) );
         assertEquals( DbRepresentation.of( db ), DbRepresentation.of( BACKUP_PATH ) );
         createSomeData( db );
         assertEquals(
                 0,
-                runBackupToolFromOtherJvmToGetExitCode( "-incremental",
-                        "-from", BackupTool.DEFAULT_SCHEME + "://localhost:"
+                runBackupToolFromOtherJvmToGetExitCode( "-from", BackupTool.DEFAULT_SCHEME + "://"+ ip +":"
                                  + port, "-to",
                         BACKUP_PATH.getPath() ) );
         assertEquals( DbRepresentation.of( db ), DbRepresentation.of( BACKUP_PATH ) );
@@ -122,9 +127,14 @@ public class BackupEmbeddedIT
 
     private void startDb( String backupPort )
     {
-        db = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( PATH.getPath() ).
-            setConfig( OnlineBackupSettings.online_backup_enabled, GraphDatabaseSetting.TRUE ).
-            setConfig( OnlineBackupSettings.online_backup_server, ":"+backupPort ).newGraphDatabase();
+        GraphDatabaseBuilder dbBuild = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( PATH
+                .getPath() ).
+                setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE );
+        if(backupPort != null)
+        {
+            dbBuild = dbBuild.setConfig( OnlineBackupSettings.online_backup_server, ip +":" + backupPort );
+        }
+        db = dbBuild.newGraphDatabase();
         createSomeData( db );
     }
 

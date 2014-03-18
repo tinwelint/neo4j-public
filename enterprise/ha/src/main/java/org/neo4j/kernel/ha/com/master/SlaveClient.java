@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,6 @@ import static org.neo4j.com.Protocol.readString;
 import static org.neo4j.com.Protocol.writeString;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.neo4j.com.Client;
@@ -40,18 +39,19 @@ import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.com.slave.SlaveServer;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
 
 public class SlaveClient extends Client<Slave> implements Slave
 {
     private final int machineId;
 
-    public SlaveClient( int machineId, String hostNameOrIp, int port, Logging logging, StoreId storeId,
-                        int maxConcurrentChannels, int chunkSize )
+    public SlaveClient( int machineId, String hostNameOrIp, int port, Logging logging, Monitors monitors,
+                        StoreId storeId, int maxConcurrentChannels, int chunkSize )
     {
-        super( hostNameOrIp, port, logging, storeId, Protocol.DEFAULT_FRAME_LENGTH,
+        super( hostNameOrIp, port, logging, monitors, storeId, Protocol.DEFAULT_FRAME_LENGTH,
                 SlaveServer.APPLICATION_PROTOCOL_VERSION,
                 HaSettings.read_timeout.apply( Functions.<String, String>nullFunction() ),
-                maxConcurrentChannels, maxConcurrentChannels, chunkSize );
+                maxConcurrentChannels, chunkSize );
         this.machineId = machineId;
     }
 
@@ -61,7 +61,7 @@ public class SlaveClient extends Client<Slave> implements Slave
         return sendRequest( SlaveRequestType.PULL_UPDATES, RequestContext.EMPTY, new Serializer()
         {
             @Override
-            public void write( ChannelBuffer buffer, ByteBuffer readBuffer ) throws IOException
+            public void write( ChannelBuffer buffer ) throws IOException
             {
                 writeString( buffer, resource );
                 buffer.writeLong( upToAndIncludingTxId );

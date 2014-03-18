@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,7 @@
 package org.neo4j.cluster.com.message;
 
 import java.io.Serializable;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,23 +32,12 @@ import java.util.Map;
 public class Message<MESSAGETYPE extends MessageType>
         implements Serializable
 {
-    public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> broadcast( MESSAGETYPE messageType )
-    {
-        return broadcast( messageType, null );
-    }
-
-    public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> broadcast( MESSAGETYPE messageType,
-                                                                                    Object payload )
-    {
-        return new Message<MESSAGETYPE>( messageType, payload ).setHeader( TO, BROADCAST );
-    }
-
-    public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> to( MESSAGETYPE messageType, Object to )
+    public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> to( MESSAGETYPE messageType, URI to )
     {
         return to( messageType, to, null );
     }
 
-    public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> to( MESSAGETYPE messageType, Object to,
+    public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> to( MESSAGETYPE messageType, URI to,
                                                                              Object payload )
     {
         return new Message<MESSAGETYPE>( messageType, payload ).setHeader( TO, to.toString() );
@@ -56,7 +46,9 @@ public class Message<MESSAGETYPE extends MessageType>
     public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> respond( MESSAGETYPE messageType,
                                                                                   Message<?> message, Object payload )
     {
-        return new Message<MESSAGETYPE>( messageType, payload ).setHeader( TO, message.getHeader( Message.FROM ) );
+        return message.hasHeader( Message.FROM ) ?
+                new Message<MESSAGETYPE>( messageType, payload ).setHeader( TO, message.getHeader( Message.FROM ) ) :
+                internal( messageType, payload );
     }
 
     public static <MESSAGETYPE extends MessageType> Message<MESSAGETYPE> internal( MESSAGETYPE message )
@@ -88,8 +80,7 @@ public class Message<MESSAGETYPE extends MessageType>
     public static final String CREATED_BY = "created-by";
     public static final String FROM = "from";
     public static final String TO = "to";
-
-    public static final String BROADCAST = "*";
+    public static final String INSTANCE_ID = "instance-id";
 
     final private MESSAGETYPE messageType;
     final private Object payload;
@@ -132,11 +123,6 @@ public class Message<MESSAGETYPE extends MessageType>
         return !headers.containsKey( Message.TO );
     }
 
-    public boolean isBroadcast()
-    {
-        return !isInternal() && getHeader( Message.TO ).equals( BROADCAST );
-    }
-
     public String getHeader( String name )
             throws IllegalArgumentException
     {
@@ -173,6 +159,45 @@ public class Message<MESSAGETYPE extends MessageType>
             }
         }
         return message;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+
+        Message message = (Message) o;
+
+        if ( headers != null ? !headers.equals( message.headers ) : message.headers != null )
+        {
+            return false;
+        }
+        if ( messageType != null ? !messageType.equals( message.messageType ) : message.messageType != null )
+        {
+            return false;
+        }
+        if ( payload != null ? !payload.equals( message.payload ) : message.payload != null )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = messageType != null ? messageType.hashCode() : 0;
+        result = 31 * result + (payload != null ? payload.hashCode() : 0);
+        result = 31 * result + (headers != null ? headers.hashCode() : 0);
+        return result;
     }
 
     @Override

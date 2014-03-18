@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import org.neo4j.kernel.impl.nioneo.store.DynamicRecord;
 import org.neo4j.kernel.impl.nioneo.store.NeoStoreRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 
 /**
@@ -50,6 +51,8 @@ public interface DiffRecordAccess extends RecordAccess
 
     RecordReference<NeoStoreRecord> previousGraph();
 
+    DynamicRecord changedSchema( long id );
+
     NodeRecord changedNode( long id );
 
     RelationshipRecord changedRelationship( long id );
@@ -59,4 +62,6 @@ public interface DiffRecordAccess extends RecordAccess
     DynamicRecord changedString( long id );
 
     DynamicRecord changedArray( long id );
+
+    RelationshipGroupRecord changedRelationshipGroup( long id );
 }

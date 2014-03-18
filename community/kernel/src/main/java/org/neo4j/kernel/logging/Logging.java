@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,11 +20,16 @@
 package org.neo4j.kernel.logging;
 
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
  * Logging service that is used for creating loggers with specific names.
  */
-public interface Logging
+public interface Logging extends Lifecycle
 {
-    StringLogger getLogger( Class loggingClass );
+    StringLogger getMessagesLog( Class loggingClass );
+
+    // TODO: In our primary implementations of this, console log seems to be the same thing as messages log.
+    // Consolidate these two methods into one getLogger() method instead.
+    ConsoleLogger getConsoleLog( Class loggingClass );
 }

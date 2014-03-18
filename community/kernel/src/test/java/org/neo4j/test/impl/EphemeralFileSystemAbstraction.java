@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,16 @@
  */
 package org.neo4j.test.impl;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.util.Arrays.asList;
-import static org.neo4j.helpers.collection.IteratorUtil.loop;
-
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Writer;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
@@ -40,54 +39,61 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import org.neo4j.helpers.Function;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.nioneo.store.FileLock;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
-import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Lifecycle
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.util.Arrays.asList;
+
+import static org.neo4j.helpers.collection.IteratorUtil.loop;
+
+public class EphemeralFileSystemAbstraction extends LifecycleAdapter implements FileSystemAbstraction
 {
+    private final Set<File> directories = Collections.newSetFromMap( new ConcurrentHashMap<File, Boolean>() );
     private final Map<File, EphemeralFileData> files;
-    
+
     public EphemeralFileSystemAbstraction()
     {
-        files = new HashMap<File, EphemeralFileData>();
+        this.files = new ConcurrentHashMap<>();
     }
-    
-    private EphemeralFileSystemAbstraction( Map<File, EphemeralFileData> files )
+
+    private EphemeralFileSystemAbstraction( Set<File> directories, Map<File, EphemeralFileData> files )
     {
-        this.files = files;
-    }
-    
-    @Override
-    public void init()
-    {
+        this.files = new ConcurrentHashMap<>( files );
+        this.directories.addAll( directories );
+        this.files.putAll( files );
     }
 
     @Override
-    public void start()
+    public synchronized void shutdown()
     {
-    }
-
-    @Override
-    public void stop()
-    {
-    }
-
-    @Override
-    public void shutdown()
-    {
-        for (EphemeralFileData file : files.values()) free(file);
+        for ( EphemeralFileData file : files.values() )
+            free( file );
         files.clear();
+
+        for ( ThirdPartyFileSystem thirdPartyFileSystem : thirdPartyFileSystems.values() )
+        {
+            thirdPartyFileSystem.close();
+        }
+        thirdPartyFileSystems.clear();
     }
 
     @Override
@@ -99,7 +105,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
 
     public void assertNoOpenFiles() throws Exception
     {
-        List<FileStillOpenException> open = new ArrayList<FileStillOpenException>();
+        List<FileStillOpenException> open = new ArrayList<>();
         for ( EphemeralFileData file : files.values() )
         {
             for ( EphemeralFileChannel channel : loop( file.getOpenChannels() ) )
@@ -110,12 +116,75 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         MultipleExceptionsStrategy.assertEmptyExceptions( open );
     }
 
+    public void dumpZip( OutputStream output ) throws IOException
+    {
+        try ( ZipOutputStream zip = new ZipOutputStream( output ) )
+        {
+            String prefix = null;
+            for ( Map.Entry<File, EphemeralFileData> entry : files.entrySet() )
+            {
+                File file = entry.getKey();
+                String parent = file.getParentFile().getAbsolutePath();
+                if ( prefix == null || prefix.startsWith( parent ) )
+                {
+                    prefix = parent;
+                }
+                zip.putNextEntry( new ZipEntry( file.getAbsolutePath() ) );
+                entry.getValue().dumpTo( zip );
+                zip.closeEntry();
+            }
+            for ( ThirdPartyFileSystem fs : thirdPartyFileSystems.values() )
+            {
+                fs.dumpToZip( zip, EphemeralFileData.SCRATCH_PAD.get() );
+            }
+            if ( prefix != null )
+            {
+                File directory = new File( prefix );
+                if ( directory.exists() ) // things ended up on the file system...
+                {
+                    addRecursively( zip, directory );
+                }
+            }
+        }
+    }
+
+    private void addRecursively( ZipOutputStream output, File input ) throws IOException
+    {
+        if ( input.isFile() )
+        {
+            output.putNextEntry( new ZipEntry( input.getAbsolutePath() ) );
+            byte[] scratchPad = EphemeralFileData.SCRATCH_PAD.get();
+            try ( FileInputStream source = new FileInputStream( input ) )
+            {
+                for ( int read; 0 <= (read = source.read( scratchPad )); )
+                {
+                    output.write( scratchPad, 0, read );
+                }
+            }
+            output.closeEntry();
+        }
+        else
+        {
+            File[] children = input.listFiles();
+            if ( children != null )
+            {
+                for ( File child : children )
+                {
+                    addRecursively( output, child );
+                }
+            }
+        }
+    }
+
     @SuppressWarnings( "serial" )
     private static class FileStillOpenException extends Exception
     {
+        private final String filename;
+
         FileStillOpenException( String filename )
         {
             super( "File still open: [" + filename + "]" );
+            this.filename = filename;
         }
     }
 
@@ -130,50 +199,57 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         EphemeralFileData data = files.get( fileName );
         return data != null ? new EphemeralFileChannel( data, new FileStillOpenException( fileName.getPath() ) ) : create( fileName );
     }
-    
+
     @Override
     public OutputStream openAsOutputStream( File fileName, boolean append ) throws IOException
     {
         return new ChannelOutputStream( open( fileName, "rw" ), append );
     }
-    
+
     @Override
     public InputStream openAsInputStream( File fileName ) throws IOException
     {
         return new ChannelInputStream( open( fileName, "r" ) );
     }
-    
+
     @Override
     public Reader openAsReader( File fileName, String encoding ) throws IOException
     {
         return new InputStreamReader( openAsInputStream( fileName ), encoding );
     }
-    
+
     @Override
-    public FileLock tryLock(File fileName, FileChannel channel) throws IOException
+    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
     {
-        if ( channel instanceof EphemeralFileChannel )
-        {
-            EphemeralFileChannel efc = (EphemeralFileChannel) channel;
-            final java.nio.channels.FileLock lock = efc.tryLock();
-            return new FileLock()
-            {
-                @Override
-                public void release() throws IOException
-                {
-                    lock.release();
-                }
-            };
-        }
-        System.err.println("WARNING: locking non-ephemeral FileChannel[" + channel + "] through EphemeralFileSystem, for: " + fileName);
-        return FileLock.getOsSpecificFileLock(fileName, channel);
+        return new OutputStreamWriter( openAsOutputStream( fileName, append ), encoding );
     }
 
     @Override
-    public synchronized FileChannel create(File fileName) throws IOException
+    public FileLock tryLock(File fileName, FileChannel channel) throws IOException
     {
+        final java.nio.channels.FileLock lock = channel.tryLock();
+        return new FileLock()
+        {
+            @Override
+            public void release() throws IOException
+            {
+                lock.release();
+            }
+        };
+    }
+
+    @Override
+    public synchronized FileChannel create( File fileName ) throws IOException
+    {
+        File parentFile = fileName.getParentFile();
+        if ( parentFile != null /*means that this is the 'default location'*/ && !fileExists( parentFile ) )
+        {
+            throw new FileNotFoundException( "'" + fileName
+                    + "' (The system cannot find the path specified)" );
+        }
+
         EphemeralFileData data = new EphemeralFileData();
-        free(files.put(fileName, data));
+        free( files.put( fileName, data ) );
         return new EphemeralFileChannel( data, new FileStillOpenException( fileName.getPath() ) );
     }
 
@@ -185,21 +261,39 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
     }
 
     @Override
-    public boolean fileExists(File fileName)
+    public boolean fileExists( File file )
     {
-        return files.containsKey(fileName);
+        return directories.contains( file.getAbsoluteFile() ) || files.containsKey( file );
     }
-    
+
     @Override
-    public boolean mkdir( File fileName )
+    public boolean isDirectory( File file )
     {
+        return directories.contains( file.getAbsoluteFile() );
+    }
+
+    @Override
+    public boolean mkdir( File directory )
+    {
+        if ( fileExists( directory ) )
+        {
+            return false;
+        }
+
+        directories.add( directory.getAbsoluteFile() );
         return true;
     }
-    
+
     @Override
-    public boolean mkdirs( File fileName )
+    public void mkdirs( File directory )
     {
-        return true;
+        File currentDirectory = directory.getAbsoluteFile();
+
+        while ( currentDirectory != null )
+        {
+            mkdir( currentDirectory );
+            currentDirectory = currentDirectory.getParentFile();
+        }
     }
 
     @Override
@@ -209,7 +303,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         free( removed );
         return removed != null;
     }
-    
+
     @Override
     public void deleteRecursively( File directory ) throws IOException
     {
@@ -233,20 +327,14 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
     }
 
     @Override
-    public void autoCreatePath( File path )
-    {
-        // no op, all paths exist
-    }
-    
-    @Override
     public File[] listFiles( File directory )
     {
         if ( files.containsKey( directory ) )
             // This means that you're trying to list files on a file, not a directory.
             return null;
-        
+
         List<String> directoryPathItems = splitPath( directory );
-        List<File> found = new ArrayList<File>();
+        List<File> found = new ArrayList<>();
         for ( Map.Entry<File, EphemeralFileData> file : files.entrySet() )
         {
             File fileName = file.getKey();
@@ -255,13 +343,6 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
                 found.add( constructPath( fileNamePathItems, directoryPathItems.size()+1 ) );
         }
         return found.toArray( new File[found.size()] );
-    }
-    
-    @Override
-    public boolean isDirectory( File file )
-    {
-        // Just a guess though. If it's in the file list then it's a file, otherwise it might be a directory.
-        return !files.containsKey( file );
     }
 
     private File constructPath( List<String> pathItems, int count )
@@ -274,8 +355,8 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
 
     private boolean directoryMatches( List<String> directoryPathItems, List<String> fileNamePathItems )
     {
-        return fileNamePathItems.size() > directoryPathItems.size() ?
-                fileNamePathItems.subList( 0, directoryPathItems.size() ).equals( directoryPathItems ) : false;
+        return fileNamePathItems.size() > directoryPathItems.size() &&
+               fileNamePathItems.subList( 0, directoryPathItems.size() ).equals( directoryPathItems );
     }
 
     private List<String> splitPath( File path )
@@ -283,11 +364,64 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         return asList( path.getPath().replaceAll( "\\\\", "/" ).split( "/" ) );
     }
 
-    private static class EphemeralFileChannel extends FileChannel
+    @Override
+    public void moveToDirectory( File file, File toDirectory ) throws IOException
+    {
+        EphemeralFileData fileToMove = files.remove( file );
+        if ( fileToMove == null )
+            throw new FileNotFoundException( file.getPath() );
+        files.put( new File( toDirectory, file.getName() ), fileToMove );
+    }
+
+    @Override
+    public void copyFile( File from, File to ) throws IOException
+    {
+        EphemeralFileData data = files.get( from );
+        if ( data == null )
+            throw new FileNotFoundException( "File " + from + " not found" );
+        copyFile( from, this, to, newCopyBuffer() );
+    }
+
+    @Override
+    public void copyRecursively( File fromDirectory, File toDirectory ) throws IOException
+    {
+        copyRecursivelyFromOtherFs( fromDirectory, this, toDirectory, newCopyBuffer() );
+    }
+
+    interface Positionable
+    {
+        long pos();
+
+        void pos( long position );
+    }
+
+    static class LocalPosition implements Positionable
+    {
+        private long position;
+
+        public LocalPosition( long position )
+        {
+            this.position = position;
+        }
+
+        @Override
+        public long pos()
+        {
+            return position;
+        }
+
+        @Override
+        public void pos( long position )
+        {
+            this.position = position;
+        }
+    }
+
+    private static class EphemeralFileChannel extends FileChannel implements Positionable
     {
         final FileStillOpenException openedAt;
         private final EphemeralFileData data;
-        long position = 0;
+        private long position = 0;
 
         EphemeralFileChannel( EphemeralFileData data, FileStillOpenException opened )
         {
@@ -297,13 +431,19 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         }
 
         @Override
+        public String toString()
+        {
+            return String.format( "%s[%s]", getClass().getSimpleName(), openedAt.filename );
+        }
+
+        @Override
         public int read( ByteBuffer dst )
         {
             return data.read( this, dst );
         }
 
         @Override
-        public long read(ByteBuffer[] dsts, int offset, int length)
+        public long read( ByteBuffer[] dsts, int offset, int length )
         {
             throw new UnsupportedOperationException();
         }
@@ -315,7 +455,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         }
 
         @Override
-        public long write(ByteBuffer[] srcs, int offset, int length)
+        public long write( ByteBuffer[] srcs, int offset, int length )
         {
             throw new UnsupportedOperationException();
         }
@@ -388,31 +528,13 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         @Override
         public int read( ByteBuffer dst, long position ) throws IOException
         {
-            long prev = this.position;
-            this.position = position;
-            try
-            {
-                return data.read( this, dst );
-            }
-            finally
-            {
-                this.position = prev;
-            }
+            return data.read( new LocalPosition( position ), dst );
         }
 
         @Override
         public int write( ByteBuffer src, long position ) throws IOException
         {
-            long prev = this.position;
-            this.position = position;
-            try
-            {
-                return data.write( this, src );
-            }
-            finally
-            {
-                this.position = prev;
-            }
+            return data.write( new LocalPosition( position ), src );
         }
 
         @Override
@@ -424,15 +546,27 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         @Override
         public java.nio.channels.FileLock lock( long position, long size, boolean shared ) throws IOException
         {
-            if ( !data.lock() ) return null;
-            return new EphemeralFileLock( this, data );
+            synchronized ( data.channels )
+            {
+                if ( !data.lock() )
+                {
+                    return null;
+                }
+                return new EphemeralFileLock( this, data );
+            }
         }
 
         @Override
         public java.nio.channels.FileLock tryLock( long position, long size, boolean shared ) throws IOException
         {
-            if ( !data.lock() ) throw new IOException( "Locked" );
-            return new EphemeralFileLock( this, data );
+            synchronized ( data.channels )
+            {
+                if ( !data.lock() )
+                {
+                    throw new IOException( "Locked" );
+                }
+                return new EphemeralFileLock( this, data );
+            }
         }
 
         @Override
@@ -440,65 +574,124 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         {
             data.close( this );
         }
+
+        @Override
+        public long pos()
+        {
+            return position;
+        }
+
+        @Override
+        public void pos( long position )
+        {
+            this.position = position;
+        }
     }
 
     private static class EphemeralFileData
     {
+        private static final ThreadLocal<byte[]> SCRATCH_PAD = new ThreadLocal<byte[]>()
+        {
+            @Override
+            protected byte[] initialValue()
+            {
+                return new byte[1024];
+            }
+        };
         private final DynamicByteBuffer fileAsBuffer;
-        private final byte[] scratchPad = new byte[1024];
-        private final Collection<WeakReference<EphemeralFileChannel>> channels = new LinkedList<WeakReference<EphemeralFileChannel>>();
+        private final Collection<WeakReference<EphemeralFileChannel>> channels = new LinkedList<>();
         private int size;
         private int locked;
-        
+
         public EphemeralFileData()
         {
             this( new DynamicByteBuffer() );
         }
-        
+
         private EphemeralFileData( DynamicByteBuffer data )
         {
             this.fileAsBuffer = data;
         }
 
-        int read( EphemeralFileChannel fc, ByteBuffer dst )
+        int read( Positionable fc, ByteBuffer dst )
         {
             int wanted = dst.limit();
-            int available = min(wanted, (int) (size - fc.position));
+            int available = min(wanted, (int) (size() - fc.pos()));
             if ( available == 0 ) return -1; // EOF
             int pending = available;
             // Read up until our internal size
+            byte[] scratchPad = SCRATCH_PAD.get();
             while (pending > 0)
             {
                 int howMuchToReadThisTime = min(pending, scratchPad.length);
-                fileAsBuffer.get((int)fc.position, scratchPad, 0, howMuchToReadThisTime);
-                fc.position += howMuchToReadThisTime;
+                long pos = fc.pos();
+                fileAsBuffer.get((int) pos, scratchPad, 0, howMuchToReadThisTime);
+                fc.pos( pos + howMuchToReadThisTime );
                 dst.put(scratchPad, 0, howMuchToReadThisTime);
                 pending -= howMuchToReadThisTime;
             }
             return available; // return how much data was read
         }
 
-        @Override
-        public EphemeralFileData clone()
+        int write( Positionable fc, ByteBuffer src )
         {
-            EphemeralFileData copy = new EphemeralFileData( fileAsBuffer.clone() );
-            copy.size = size;
-            return copy;
+            int wanted = src.limit();
+            int pending = wanted;
+            byte[] scratchPad = SCRATCH_PAD.get();
+            while ( pending > 0 )
+            {
+                int howMuchToWriteThisTime = min( pending, scratchPad.length );
+                src.get( scratchPad, 0, howMuchToWriteThisTime );
+                long pos = fc.pos();
+                fileAsBuffer.put( (int) pos, scratchPad, 0, howMuchToWriteThisTime );
+                fc.pos( pos += howMuchToWriteThisTime );
+                pending -= howMuchToWriteThisTime;
+            }
+
+            synchronized ( fileAsBuffer )
+            {
+                // If we just made a jump in the file fill the rest of the gap with zeros
+                int newSize = max( size, (int) fc.pos() );
+                int intermediaryBytes = newSize - wanted - size;
+                if ( intermediaryBytes > 0 )
+                {
+                    fileAsBuffer.fillWithZeros( size, intermediaryBytes );
+                }
+
+                size = newSize;
+            }
+            return wanted;
+        }
+
+        EphemeralFileData copy()
+        {
+            synchronized ( fileAsBuffer )
+            {
+                EphemeralFileData copy = new EphemeralFileData( fileAsBuffer.copy() );
+                copy.size = size;
+                return copy;
+            }
         }
 
         void open( EphemeralFileChannel channel )
         {
-            channels.add( new WeakReference<EphemeralFileChannel>( channel ) );
+            synchronized ( channels )
+            {
+                channels.add( new WeakReference<>( channel ) );
+            }
         }
 
         void close( EphemeralFileChannel channel )
         {
-            locked = 0; // Regular file systems seems to release all file locks when closed...
-            for ( Iterator<EphemeralFileChannel> iter = getOpenChannels(); iter.hasNext(); )
+            synchronized ( channels )
             {
-                if ( iter.next() == channel )
+                locked = 0; // Regular file systems seems to release all file locks when closed...
+                for ( Iterator<EphemeralFileChannel> iter = getOpenChannels(); iter.hasNext(); )
                 {
-                    iter.remove();
+                    if ( iter.next() == channel )
+                    {
+                        iter.remove();
+                    }
                 }
             }
         }
@@ -528,46 +721,34 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
             };
         }
 
-        int write(EphemeralFileChannel fc, ByteBuffer src)
-        {
-            int wanted = src.limit();
-            int pending = wanted;
-            while (pending > 0)
-            {
-                int howMuchToWriteThisTime = min(pending, scratchPad.length);
-                src.get(scratchPad, 0, howMuchToWriteThisTime);
-                fileAsBuffer.put((int)fc.position, scratchPad, 0, howMuchToWriteThisTime);
-                fc.position += howMuchToWriteThisTime;
-                pending -= howMuchToWriteThisTime;
-            }
-
-            // If we just made a jump in the file fill the rest of the gap with zeros
-            int newSize = max(size, (int) fc.position);
-            int intermediaryBytes = newSize-wanted-size;
-            if ( intermediaryBytes > 0 )
-            {
-                fileAsBuffer.fillWithZeros(size, intermediaryBytes);
-                fileAsBuffer.buf.position( size );
-                //fillWithZeros( fileAsBuffer.buf, intermediaryBytes );
-            }
-
-            size = newSize;
-            return wanted;
-        }
-
         long size()
         {
-            return size;
+            synchronized ( fileAsBuffer )
+            {
+                return size;
+            }
         }
 
-        void truncate(long newSize)
+        void truncate( long newSize )
         {
-            this.size = (int) newSize;
+            synchronized ( fileAsBuffer )
+            {
+                this.size = (int) newSize;
+            }
         }
 
         boolean lock()
         {
             return locked == 0;
+        }
+
+        void dumpTo( OutputStream target ) throws IOException
+        {
+            byte[] scratchPad = SCRATCH_PAD.get();
+            synchronized ( fileAsBuffer )
+            {
+                fileAsBuffer.dump( target, scratchPad, size );
+            }
         }
     }
 
@@ -591,9 +772,15 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         @Override
         public void release() throws IOException
         {
-            if (file == null || file.locked == 0) return;
-            file.locked--;
-            file = null;
+            synchronized ( file.channels )
+            {
+                if ( file == null || file.locked == 0 )
+                {
+                    return;
+                }
+                file.locked--;
+                file = null;
+            }
         }
     }
 
@@ -614,10 +801,9 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         private static volatile AtomicReferenceArray<Queue<Reference<ByteBuffer>>> POOLS;
         private static final byte[] zeroBuffer = new byte[1024];
 
-        @Override
-        public DynamicByteBuffer clone()
+        synchronized DynamicByteBuffer copy()
         {
-            return new DynamicByteBuffer( buf );
+            return new DynamicByteBuffer( buf ); // invoke "copy constructor"
         }
 
         static
@@ -625,7 +811,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
             int K = 1024;
             SIZES = new int[] { 64 * K, 128 * K, 256 * K, 512 * K, 1024 * K };
 
-            POOLS = new AtomicReferenceArray<Queue<Reference<ByteBuffer>>>( SIZES.length );
+            POOLS = new AtomicReferenceArray<>( SIZES.length );
             for ( int sizeIndex = 0; sizeIndex < SIZES.length; sizeIndex++ )
                 POOLS.set( sizeIndex, new ConcurrentLinkedQueue<Reference<ByteBuffer>>() );
         }
@@ -637,6 +823,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
             buf = allocate( 0 );
         }
 
+        /** This is a copying constructor, the input buffer is just read from, never stored in 'this'. */
         private DynamicByteBuffer( ByteBuffer toClone )
         {
             int sizeIndex = sizeIndexFor( toClone.capacity() );
@@ -647,23 +834,14 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         private void copyByteBufferContents( ByteBuffer from, ByteBuffer to )
         {
             int positionBefore = from.position();
-            int limitBefore = from.limit();
-            byte[] scratchPad = new byte[8096];
             try
             {
                 from.position( 0 );
-                while ( from.remaining() > 0 )
-                {
-                    int bytes = Math.min( scratchPad.length, from.remaining() );
-                    from.get( scratchPad, 0, bytes );
-                    to.put( scratchPad, 0, bytes );
-                }
+                to.put( from );
             }
             finally
             {
-                from.limit( limitBefore );
                 from.position( positionBefore );
-                to.limit( limitBefore );
                 to.position( 0 );
             }
         }
@@ -713,7 +891,7 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
                 AtomicReferenceArray<Queue<Reference<ByteBuffer>>> pools = POOLS;
                 // Use soft references to the buffers to allow the GC to reclaim
                 // unused buffers if memory gets scarce.
-                SoftReference<ByteBuffer> ref = new SoftReference<ByteBuffer>( buf );
+                SoftReference<ByteBuffer> ref = new SoftReference<>( buf );
 
                 // Put our buffer into a pool, create a pool for the buffer size if one does not exist
                 ( sizeIndex < pools.length() ? pools.get( sizeIndex ) : getOrCreatePoolForSize( sizeIndex ) ).add( ref );
@@ -727,10 +905,12 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         private static synchronized Queue<Reference<ByteBuffer>> getOrCreatePoolForSize( int sizeIndex )
         {
             AtomicReferenceArray<Queue<Reference<ByteBuffer>>> pools = POOLS;
-            if ( sizeIndex >= pools.length()) {
+            if ( sizeIndex >= pools.length() )
+            {
                 int newSize = pools.length();
-                while ( sizeIndex >= newSize ) newSize <<= 1;
-                AtomicReferenceArray<Queue<Reference<ByteBuffer>>> newPool = new AtomicReferenceArray<Queue<Reference<ByteBuffer>>>( newSize );
+                while ( sizeIndex >= newSize )
+                    newSize <<= 1;
+                AtomicReferenceArray<Queue<Reference<ByteBuffer>>> newPool = new AtomicReferenceArray<>( newSize );
                 for ( int i = 0; i < pools.length(); i++ )
                     newPool.set( i, pools.get( i ) );
                 for ( int i = pools.length(); i < newPool.length(); i++ )
@@ -740,20 +920,27 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
             return pools.get( sizeIndex );
         }
 
-        void put(int pos, byte[] bytes, int offset, int length)
+        synchronized void put( int pos, byte[] bytes, int offset, int length )
         {
-            buf.position( pos );
-            verifySize(length);
+            verifySize( pos+length );
+            try
+            {
+                buf.position( pos );
+            }
+            catch ( IllegalArgumentException e )
+            {
+                throw new IllegalArgumentException( buf + ", " + pos, e );
+            }
             buf.put( bytes, offset, length );
         }
 
-        void get(int pos, byte[] scratchPad, int i, int howMuchToReadThisTime)
+        synchronized void get( int pos, byte[] scratchPad, int i, int howMuchToReadThisTime )
         {
             buf.position( pos );
-            buf.get(scratchPad, i, howMuchToReadThisTime);
+            buf.get( scratchPad, i, howMuchToReadThisTime );
         }
 
-        void fillWithZeros( int pos, int bytes )
+        synchronized void fillWithZeros( int pos, int bytes )
         {
             buf.position( pos );
             while ( bytes > 0 )
@@ -762,14 +949,15 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
                 buf.put( zeroBuffer, 0, howMuchToReadThisTime );
                 bytes -= howMuchToReadThisTime;
             }
+            buf.position( pos );
         }
 
         /**
          * Checks if more space needs to be allocated.
          */
-        private void verifySize(int amount)
+        private void verifySize( int totalAmount )
         {
-            if (buf.remaining() >= amount)
+            if ( buf.capacity() >= totalAmount )
             {
                 return;
             }
@@ -777,24 +965,27 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
             // Double size each time, but after 1M only increase by 1M at a time, until required amount is reached.
             int newSize = buf.capacity();
             int sizeIndex = sizeIndexFor( newSize );
-            for ( int required = newSize + amount - buf.remaining();
-                  newSize < required;
-                  newSize += Math.min( newSize, 1024 * 1024 ), sizeIndex++ );
+            while ( newSize < totalAmount )
+            {
+                newSize += Math.min( newSize, 1024 * 1024 );
+                sizeIndex++;
+            }
             int oldPosition = this.buf.position();
             ByteBuffer buf = allocate( sizeIndex );
-            this.buf.position(0);
-            buf.put(this.buf);
+            this.buf.position( 0 );
+            buf.put( this.buf );
             this.buf = buf;
-            this.buf.position(oldPosition);
+            this.buf.position( oldPosition );
         }
-        
+
         private static int sizeIndexFor( int capacity )
         {
             // Double size each time, but after 1M only increase by 1M at a time, until required amount is reached.
             int sizeIndex = capacity / SIZES[SIZES.length - 1];
             if (sizeIndex == 0) for ( ; sizeIndex < SIZES.length; sizeIndex++ )
             {
-                if (capacity == SIZES[sizeIndex]) break;
+                if ( capacity == SIZES[sizeIndex] )
+                    break;
             }
             else
             {
@@ -807,15 +998,90 @@ public class EphemeralFileSystemAbstraction implements FileSystemAbstraction, Li
         {
             this.buf.clear();
         }
+
+        void dump( OutputStream target, byte[] scratchPad, int size ) throws IOException
+        {
+            buf.position( 0 );
+            while ( size > 0 )
+            {
+                int read = min( size, scratchPad.length );
+                buf.get( scratchPad, 0, read );
+                size -= read;
+                target.write( scratchPad, 0, read );
+            }
+        }
     }
-    
+
     public EphemeralFileSystemAbstraction snapshot()
     {
-        Map<File, EphemeralFileData> copiedFiles = new HashMap<File, EphemeralFileData>();
+        Map<File, EphemeralFileData> copiedFiles = new HashMap<>();
         for ( Map.Entry<File, EphemeralFileData> file : files.entrySet() )
         {
-            copiedFiles.put( file.getKey(), file.getValue().clone() );
+            copiedFiles.put( file.getKey(), file.getValue().copy() );
         }
-        return new EphemeralFileSystemAbstraction( copiedFiles );
+        return new EphemeralFileSystemAbstraction( directories, copiedFiles );
+    }
+
+    public void copyRecursivelyFromOtherFs( File from, FileSystemAbstraction fromFs, File to ) throws IOException
+    {
+        copyRecursivelyFromOtherFs( from, fromFs, to, newCopyBuffer() );
+    }
+
+    private ByteBuffer newCopyBuffer()
+    {
+        return ByteBuffer.allocate( 1024*1024 );
+    }
+
+    private void copyRecursivelyFromOtherFs( File from, FileSystemAbstraction fromFs, File to, ByteBuffer buffer )
+            throws IOException
+    {
+        this.mkdirs( to );
+        for ( File fromFile : fromFs.listFiles( from ) )
+        {
+            File toFile = new File( to, fromFile.getName() );
+            if ( fromFs.isDirectory( fromFile ) )
+                copyRecursivelyFromOtherFs( fromFile, fromFs, toFile );
+            else
+                copyFile( fromFile, fromFs, toFile, buffer );
+        }
+    }
+
+    private void copyFile( File from, FileSystemAbstraction fromFs, File to, ByteBuffer buffer ) throws IOException
+    {
+        FileChannel source = fromFs.open( from, "r" );
+        FileChannel sink = this.open( to, "rw" );
+        try
+        {
+            for ( int available; (available = (int) (source.size() - source.position())) > 0; )
+            {
+                buffer.clear();
+                buffer.limit( min( available, buffer.capacity() ) );
+                source.read( buffer );
+                buffer.flip();
+                sink.write( buffer );
+            }
+        }
+        finally
+        {
+            if ( source != null )
+                source.close();
+            if ( sink != null )
+                sink.close();
+        }
+    }
+
+    private final Map<Class<? extends ThirdPartyFileSystem>, ThirdPartyFileSystem> thirdPartyFileSystems =
+            new HashMap<>();
+
+    @Override
+    public synchronized <K extends ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem(
+            Class<K> clazz, Function<Class<K>, K> creator )
+    {
+        ThirdPartyFileSystem fileSystem = thirdPartyFileSystems.get( clazz );
+        if (fileSystem == null)
+        {
+            thirdPartyFileSystems.put( clazz, fileSystem = creator.apply( clazz ) );
+        }
+        return clazz.cast( fileSystem );
     }
 }

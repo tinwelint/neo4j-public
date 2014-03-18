@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -46,5 +46,5 @@ public abstract class PrimitiveRecord extends Abstract64BitRecord
         return isCreated() ? Record.NO_NEXT_PROPERTY.intValue() : committedNextProp;
     }
 
-    abstract void setIdTo( PropertyRecord property );
+    public abstract void setIdTo( PropertyRecord property );
 }

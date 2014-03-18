@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,11 +30,15 @@ public class LockElement implements Lock
     private Object resource;
     private final LockType lockType;
     private final LockManager lockManager;
+    private final Transaction tx;
 
-    public LockElement( Object resource, LockType type, LockManager lockManager )
+    public LockElement( Object resource, Transaction tx, LockType type, LockManager lockManager )
     {
         if ( resource == null )
             throw new IllegalArgumentException( "Null resource" );
+        if ( tx == null )
+            throw new IllegalArgumentException( "Null tx" );
+        this.tx = tx;
         this.resource = resource;
         this.lockType = type;
         this.lockManager = lockManager;
@@ -46,13 +50,6 @@ public class LockElement implements Lock
     }
 
     public boolean releaseIfAcquired()
-    {
-        // Assume that we are in a tx context, and will be able 
-        // to figure out the tx when we actually end up needing it. 
-        return releaseIfAcquired( null );
-    }
-
-    public boolean releaseIfAcquired( Transaction tx )
     {
         if ( released() )
             return false;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.graphalgo.impl.ancestor;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipExpander;
@@ -34,8 +35,6 @@ public class AncestorsUtil {
     /**
      * 
      * @param nodeSet Set of nodes for which the LCA will be found.
-     * @param relationshipType Relationship type used to look for the LCA
-     * @param relationshipDirection Direction of the relationships used (seen from the descendant node)
      * @return The LCA node if there's one, null otherwise.
      */
     public static Node lowestCommonAncestor(List<Node> nodeSet,

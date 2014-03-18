@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -271,7 +271,7 @@ public abstract class PropertyTypeDispatcher<K, T>
     protected abstract T dispatchBooleanProperty( boolean property, K param );
     
     protected T dispatchOtherProperty( Object property, K param) {
-        throw new IllegalArgumentException( "Unsupported property array type: "
+        throw new IllegalArgumentException( "Unsupported property type: "
                 + property.getClass() );
     }
 

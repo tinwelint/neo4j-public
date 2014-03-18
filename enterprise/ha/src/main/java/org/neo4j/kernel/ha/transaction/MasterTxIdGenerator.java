@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,8 +32,8 @@ import java.util.concurrent.Future;
 
 import javax.transaction.xa.XAException;
 
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.com.ComException;
-import org.neo4j.com.Response;
 import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.FilteringIterator;
@@ -72,7 +72,7 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
             @Override
             public int getServerId()
             {
-                return config.get( HaSettings.server_id );
+                return config.get( ClusterSettings.server_id );
             }
 
             @Override
@@ -106,7 +106,7 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
             @Override
             public int getServerId()
             {
-                return config.get( HaSettings.server_id );
+                return config.get( ClusterSettings.server_id );
             }
 
             @Override
@@ -123,12 +123,14 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
     private final StringLogger log;
     private final Configuration config;
     private final Slaves slaves;
+    private final CommitPusher pusher;
 
-    public MasterTxIdGenerator( Configuration config, StringLogger log, Slaves slaves )
+    public MasterTxIdGenerator( Configuration config, StringLogger log, Slaves slaves, CommitPusher pusher )
     {
         this.config = config;
         this.log = log;
         this.slaves = slaves;
+        this.pusher = pusher;
     }
 
     @Override
@@ -173,9 +175,10 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
         {
             return;
         }
-        Collection<Future<Void>> committers = new HashSet<Future<Void>>();
+        Collection<Future<Void>> committers = new HashSet<>();
         try
         {
+            // TODO: Move this logic into {@link CommitPusher}
             // Commit at the configured amount of slaves in parallel.
             int successfulReplications = 0;
             Iterator<Slave> slaveList = filter( replicationStrategy.prioritize( slaves.getSlaves() ).iterator(),
@@ -185,14 +188,14 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
             // Start as many initial committers as needed
             for ( int i = 0; i < replicationFactor && slaveList.hasNext(); i++ )
             {
-                committers.add( slaveCommitters.submit( slaveCommitter( dataSource, identifier, slaveList.next(),
+                committers.add( slaveCommitters.submit( slaveCommitter( dataSource, slaveList.next(),
                         txId, notifier ) ) );
             }
 
             // Wait for them and perhaps spawn new ones for failing committers until we're done
             // or until we have no more slaves to try out.
-            Collection<Future<Void>> toAdd = new ArrayList<Future<Void>>();
-            Collection<Future<Void>> toRemove = new ArrayList<Future<Void>>();
+            Collection<Future<Void>> toAdd = new ArrayList<>();
+            Collection<Future<Void>> toRemove = new ArrayList<>();
             while ( !committers.isEmpty() && successfulReplications < replicationFactor )
             {
                 toAdd.clear();
@@ -204,7 +207,7 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
                         continue;
                     }
 
-                    if ( isSuccessfull( committer ) )
+                    if ( isSuccessful( committer ) )
                     // This committer was successful, increment counter
                     {
                         successfulReplications++;
@@ -212,7 +215,7 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
                     else if ( slaveList.hasNext() )
                     // This committer failed, spawn another one
                     {
-                        toAdd.add( slaveCommitters.submit( slaveCommitter( dataSource, identifier, slaveList.next(),
+                        toAdd.add( slaveCommitters.submit( slaveCommitter( dataSource, slaveList.next(),
                                 txId, notifier ) ) );
                     }
                     toRemove.add( committer );
@@ -247,7 +250,6 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
         }
         catch ( Throwable t )
         {
-            t.printStackTrace();
             log.logMessage( "Unknown error commit master transaction at slave", t );
         }
         finally
@@ -272,7 +274,7 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
         } );
     }
 
-    private boolean isSuccessfull( Future<Void> committer )
+    private boolean isSuccessful( Future<Void> committer )
     {
         try
         {
@@ -285,11 +287,8 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
         }
         catch ( ExecutionException e )
         {
-            if ( !(e.getCause() instanceof ComException) )
-            {
-                log.error( "Slave commit threw exception", e.getCause() );
-            }
-
+            log.error( "Slave commit threw " + (e.getCause() instanceof ComException ? "communication" : "" )
+                    + " exception", e );
             return false;
         }
         catch ( CancellationException e )
@@ -334,9 +333,17 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
                 notified = false;
             }
         }
+
+        @Override
+        public String toString()
+        {
+            return "CompletionNotifier{id=" + System.identityHashCode( this ) +
+                    ",notified=" + notified +
+                    '}';
+        }
     }
 
-    private Callable<Void> slaveCommitter( final XaDataSource dataSource, final int identifier,
+    private Callable<Void> slaveCommitter( final XaDataSource dataSource,
                                            final Slave slave, final long txId, final CompletionNotifier notifier )
     {
         return new Callable<Void>()
@@ -346,7 +353,7 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
             {
                 try
                 {
-                    commitAtSlave( dataSource, identifier, slave, txId );
+                    pusher.queuePush( dataSource, slave, txId );
                     return null;
                 }
                 finally
@@ -355,13 +362,6 @@ public class MasterTxIdGenerator implements TxIdGenerator, Lifecycle
                 }
             }
         };
-    }
-
-    private void commitAtSlave( final XaDataSource dataSource, final int identifier, Slave slave, final long txId )
-    {
-        // Go for plain ping-the-slave-to-pull-updates
-        Response<Void> response = slave.pullUpdates( dataSource.getName(), txId );
-        response.close();
     }
 
     public int getCurrentMasterId()

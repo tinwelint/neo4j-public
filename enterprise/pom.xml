@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>1.9-SNAPSHOT</version>
+    <version>2.1-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.neo4j.build</groupId>
   <artifactId>enterprise-build</artifactId>
-  <version>1.9-SNAPSHOT</version>
+  <version>2.1-SNAPSHOT</version>
+
   <name>Neo4j Enterprise Build</name>
   <packaging>pom</packaging>
   <description>Project that builds the Neo4j Enterprise distribution.</description>
@@ -19,12 +19,14 @@
 
   <properties>
     <short-name>enterprise-build</short-name>
+    <maven.site.skip>true</maven.site.skip>
+    <maven.site.deploy.skip>true</maven.site.deploy.skip>
   </properties>
 
   <scm>
-    <connection>scm:git:git://github.com/neo4j/enterprise.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/enterprise.git</developerConnection>
-    <url>https://github.com/neo4j/enterprise</url>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+	<url>https://github.com/neo4j/neo4j/tree/master/enterprise</url>
   </scm>
 
   <modules>
@@ -61,7 +63,7 @@ terms of the relevant Commercial Agreement.
   <distributionManagement>
     <site>
       <id>neo4j-site</id>
-      <url>scpexe://static.neo4j.org/var/www/components.neo4j.org/${project.artifactId}/${project.version}</url>
+      <url>scpexe://docs.neo4j.org/data/www/doc/components.neo4j.org/${project.artifactId}/${project.version}</url>
     </site>
   </distributionManagement>
 
@@ -90,6 +92,10 @@ terms of the relevant Commercial Agreement.
                     <include>org.neo4j:*</include>
                     <include>org.neo4j.app:*</include>
                   </includes>
+                  <excludes>
+                    <exclude>org.neo4j:neo4j-cypher-compiler-1.9</exclude>
+                    <exclude>org.neo4j:neo4j-cypher-compiler-2.0</exclude>
+                  </excludes>
                 </configuration>
               </execution>
               <execution>

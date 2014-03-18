@@ -25,13 +25,13 @@ Using Maven as a dependency manager you would typically add this dependency toge
   <dependency>
    <groupId>junit</groupId>
    <artifactId>junit-dep</artifactId>
-   <version>4.10</version>
+   <version>4.11</version>
    <scope>test</scope>
   </dependency>
   <dependency>
    <groupId>org.hamcrest</groupId>
    <artifactId>hamcrest-all</artifactId>
-   <version>1.1</version>
+   <version>1.3</version>
    <scope>test</scope>
   </dependency>
   ...
@@ -40,11 +40,14 @@ Using Maven as a dependency manager you would typically add this dependency toge
 </project>
 --------------------------------------------
 
+Observe that the `<type>test-jar</type>` is crucial.
+Without it you would get the common `neo4j-kernel` jar, not the one containing the testing facilities.
+
 With that in place, we're ready to code our tests.
 
 [TIP]
 For the full source code of this example see:
-https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/embedded-examples/src/test/java/org/neo4j/examples/Neo4jBasicTest.java[Neo4jBasicTest.java]
+https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/embedded-examples/src/test/java/org/neo4j/examples/Neo4jBasicDocTest.java[Neo4jBasicDocTest.java]
 
 
 Before each test, create a fresh database:
@@ -52,7 +55,7 @@ Before each test, create a fresh database:
 [snippet,java]
 ----
 component=neo4j-examples
-source=org/neo4j/examples/Neo4jBasicTest.java
+source=org/neo4j/examples/Neo4jBasicDocTest.java
 classifier=test-sources
 tag=beforeTest
 ----
@@ -62,7 +65,7 @@ After the test has executed, the database should be shut down:
 [snippet,java]
 ----
 component=neo4j-examples
-source=org/neo4j/examples/Neo4jBasicTest.java
+source=org/neo4j/examples/Neo4jBasicDocTest.java
 classifier=test-sources
 tag=afterTest
 ----
@@ -72,7 +75,7 @@ During a test, create nodes and check to see that they are there, while enclosin
 [snippet,java]
 ----
 component=neo4j-examples
-source=org/neo4j/examples/Neo4jBasicTest.java
+source=org/neo4j/examples/Neo4jBasicDocTest.java
 classifier=test-sources
 tag=unitTest
 ----
@@ -82,7 +85,7 @@ If you want to set configuration parameters at database creation, it's done like
 [snippet,java]
 ----
 component=neo4j-examples
-source=org/neo4j/examples/Neo4jBasicTest.java
+source=org/neo4j/examples/Neo4jBasicDocTest.java
 classifier=test-sources
 tag=startDbWithConfig
 ----

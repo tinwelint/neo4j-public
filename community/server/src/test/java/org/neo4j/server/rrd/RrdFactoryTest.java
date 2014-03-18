@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,6 @@
  */
 package org.neo4j.server.rrd;
 
-import static java.lang.Double.NaN;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,16 +29,26 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.kernel.AbstractGraphDatabase;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.database.Database;
-import org.neo4j.server.database.WrappingDatabase;
+import org.neo4j.server.database.RrdDbWrapper;
+import org.neo4j.server.database.WrappedDatabase;
 import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.test.Mute;
 import org.neo4j.test.TargetDirectory;
 import org.rrd4j.ConsolFun;
 import org.rrd4j.DsType;
 import org.rrd4j.core.RrdDb;
 import org.rrd4j.core.RrdDef;
+
+import static java.lang.Double.NaN;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+import static org.neo4j.test.Mute.muteAll;
 
 public class RrdFactoryTest
 {
@@ -54,12 +59,14 @@ public class RrdFactoryTest
 
     @Rule
     public TargetDirectory.TestDirectory testDirectory = target.cleanTestDirectory();
+    @Rule
+    public Mute mute = muteAll();
 
     @Before
     public void setUp() throws IOException
     {
         config = new MapConfiguration( new HashMap<String, String>() );
-        db = new WrappingDatabase( new ImpermanentGraphDatabase(
+        db = new WrappedDatabase( new ImpermanentGraphDatabase(
                 TargetDirectory.forTest( getClass() ).directory( "rrd", true ).getAbsolutePath()) );
     }
 
@@ -106,7 +113,7 @@ public class RrdFactoryTest
 
 
         //When
-        RrdDb rrdDbAndSampler = factory.createRrdDbAndSampler( db, new NullJobScheduler() );
+        RrdDbWrapper rrdDbAndSampler = factory.createRrdDbAndSampler( db, new NullJobScheduler() );
 
 
         //Then
@@ -127,7 +134,7 @@ public class RrdFactoryTest
     }
 
     @Test
-    public void shouldCreateRrdDirInTempLocationForImpermanentDatabases() throws IOException
+    public void shouldCreateRrdFileInTempLocationForImpermanentDatabases() throws IOException
     {
         // Given
         String expected = testDirectory.directory().getAbsolutePath();
@@ -144,7 +151,8 @@ public class RrdFactoryTest
     public void shouldCreateRrdFileInDbSubdirectory() throws Exception
     {
         String storeDir = testDirectory.directory().getAbsolutePath();
-        db = new WrappingDatabase( new EmbeddedGraphDatabase( storeDir ) );
+        db = new WrappedDatabase( (AbstractGraphDatabase)
+                new GraphDatabaseFactory().newEmbeddedDatabase( storeDir ) );
         TestableRrdFactory factory = createRrdFactory();
 
         // When
@@ -171,39 +179,38 @@ public class RrdFactoryTest
         fail( String.format( "Didn't find [%s] in [%s]", directoryThatShouldExist, directoryUsed ) );
     }
 
-
     private TestableRrdFactory createRrdFactory()
     {
-        return new TestableRrdFactory( config, testDirectory.directory().getAbsolutePath() );
+        return new TestableRrdFactory( config, new File( testDirectory.directory(), "rrd" ).getAbsolutePath() );
     }
 
-    private TestableRrdFactory createRrdFactory(String tempDir)
+    private TestableRrdFactory createRrdFactory( String tempRrdFile )
     {
-        return new TestableRrdFactory( config, tempDir );
+        return new TestableRrdFactory( config, tempRrdFile );
     }
 
     private static class TestableRrdFactory extends RrdFactory
     {
         public String directoryUsed;
-        private final String tempDir;
+        private final String tempRrdFile;
 
-        public TestableRrdFactory( Configuration config, String tempDir )
+        public TestableRrdFactory( Configuration config, String tempRrdFile )
         {
             super( config );
-            this.tempDir = tempDir;
+            this.tempRrdFile = tempRrdFile;
         }
 
         @Override
-        protected String tempDir() throws IOException
+        protected String tempRrdFile() throws IOException
         {
-            return tempDir;
+            return tempRrdFile;
         }
 
         @Override
-        protected RrdDb createRrdb( String inDirectory, Sampleable... sampleables )
+        protected RrdDbWrapper createRrdb( String inDirectory, boolean ephemeral, Sampleable... sampleables )
         {
             directoryUsed = inDirectory;
-            return super.createRrdb( inDirectory, sampleables );
+            return super.createRrdb( inDirectory, ephemeral, sampleables );
         }
     }
 

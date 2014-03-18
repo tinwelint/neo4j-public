@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -70,7 +70,7 @@ public class AutoIndexConfigIT
         String propertyToIndex = "programmatic-property";
 
         // Given
-        startCluster( 2 );
+        startCluster( 3 );
         HighlyAvailableGraphDatabase originalMaster = cluster.getMaster();
 
         AutoIndexer<Node> originalAutoIndex = originalMaster.index().getNodeAutoIndexer();

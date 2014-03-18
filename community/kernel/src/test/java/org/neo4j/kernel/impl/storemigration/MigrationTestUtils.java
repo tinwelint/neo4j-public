@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,8 @@
  */
 package org.neo4j.kernel.impl.storemigration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.readAndFlip;
-
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
@@ -33,10 +28,18 @@ import java.util.Map;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.UTF8;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
 import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.test.Unzip;
+import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.readAndFlip;
 
 public class MigrationTestUtils
 {
@@ -75,7 +78,7 @@ public class MigrationTestUtils
     {
         byte[] versionBytes = UTF8.encode( versionString );
         FileChannel fileChannel = fileSystem.open( storeFile, "rw" );
-        fileChannel.position( storeFile.length() - versionBytes.length );
+        fileChannel.position( fileSystem.getFileSize( storeFile ) - versionBytes.length );
         fileChannel.write( ByteBuffer.wrap( versionBytes ) );
         fileChannel.close();
     }
@@ -85,7 +88,7 @@ public class MigrationTestUtils
     {
         byte[] versionBytes = UTF8.encode( suffixToDetermineTruncationLength );
         FileChannel fileChannel = fileSystem.open( storeFile, "rw" );
-        fileChannel.truncate( storeFile.length() - versionBytes.length );
+        fileChannel.truncate( fileSystem.getFileSize( storeFile ) - versionBytes.length );
         fileChannel.close();
     }
 
@@ -95,6 +98,13 @@ public class MigrationTestUtils
         FileChannel fileChannel = fileSystem.open( storeFile, "rw" );
         fileChannel.truncate( newLength );
         fileChannel.close();
+    }
+
+    public static void prepareSampleLegacyDatabase( EphemeralFileSystemAbstraction workingFs,
+            File workingDirectory ) throws IOException
+    {
+        File resourceDirectory = findOldFormatStoreDirectory();
+        workingFs.copyRecursivelyFromOtherFs( resourceDirectory, new DefaultFileSystemAbstraction(), workingDirectory );
     }
 
     public static void prepareSampleLegacyDatabase( FileSystemAbstraction workingFs, File workingDirectory ) throws IOException
@@ -108,18 +118,17 @@ public class MigrationTestUtils
         FileUtils.copyRecursively( resourceDirectory, workingDirectory );
     }
 
-    public static File findOldFormatStoreDirectory()
+    public static File findOldFormatStoreDirectory() throws IOException
     {
-        URL legacyStoreResource = LegacyStore.class.getResource( "exampledb/neostore" );
-        return new File( legacyStoreResource.getFile() ).getParentFile();
+        return Unzip.unzip( LegacyStore.class, "exampledb.zip" );
     }
 
     public static boolean allStoreFilesHaveVersion( FileSystemAbstraction fileSystem, File workingDirectory,
             String version ) throws IOException
     {
-        for ( String fileName : StoreFiles.fileNames )
+        for ( StoreFile storeFile : StoreFile.legacyStoreFiles() )
         {
-            FileChannel channel = fileSystem.open( new File( workingDirectory, fileName ), "r" );
+            FileChannel channel = fileSystem.open( new File( workingDirectory, storeFile.storeFileName() ), "r" );
             int length = UTF8.encode( version ).length;
             byte[] bytes = new byte[length];
             ByteBuffer buffer = ByteBuffer.wrap( bytes );
@@ -134,6 +143,31 @@ public class MigrationTestUtils
             }
         }
         return true;
+    }
+
+    public static boolean containsAnyLogicalLogs( FileSystemAbstraction fileSystem, File directory )
+    {
+        boolean containsLogicalLog = false;
+        for ( File workingFile : fileSystem.listFiles( directory ) )
+        {
+            if ( workingFile.getName().contains( "nioneo_logical" ))
+            {
+                containsLogicalLog = true;
+            }
+        }
+        return containsLogicalLog;
+    }
+
+    public static boolean containsAnyStoreFiles( FileSystemAbstraction fileSystem, File directory )
+    {
+        for ( StoreFile file : StoreFile.values() )
+        {
+            if ( fileSystem.fileExists( new File( directory, file.storeFileName() ) ) )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void verifyFilesHaveSameContent( FileSystemAbstraction fileSystem, File original,
@@ -152,11 +186,15 @@ public class MigrationTestUtils
                     while( true )
                     {
                         if ( !readAndFlip( originalChannel, buffer, 1 ) )
+                        {
                             break;
+                        }
                         int originalByte = buffer.get();
-                        
+
                         if ( !readAndFlip( otherChannel, buffer, 1 ) )
+                        {
                             fail( "Files have different sizes" );
+                        }
                         assertEquals( "Different content in " + originalFile.getName(), originalByte, buffer.get() );
                     }
                 }
@@ -180,5 +218,10 @@ public class MigrationTestUtils
     public static UpgradeConfiguration alwaysAllowed()
     {
         return new AlwaysAllowedUpgradeConfiguration();
+    }
+
+    public static File isolatedMigrationDirectoryOf( File dbDirectory )
+    {
+        return new File( dbDirectory, "upgrade" );
     }
 }

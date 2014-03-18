@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,33 @@
  */
 package org.neo4j.ha;
 
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
-
 import java.io.File;
 
+import org.junit.After;
 import org.junit.Test;
+
+import org.neo4j.cluster.ClusterSettings;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.ha.BranchedDataPolicy;
-import org.neo4j.kernel.ha.HaSettings;
+import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.ha.ClusterManager;
+import org.neo4j.test.ha.ClusterManager.ManagedCluster;
+import org.neo4j.test.ha.ClusterManager.RepairKit;
+
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.test.ha.ClusterManager.allSeesAllAsAvailable;
+import static org.neo4j.test.ha.ClusterManager.clusterOfSize;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.neo4j.helpers.SillyUtils.nonNull;
 
 public class TestBranchedData
 {
@@ -51,7 +64,9 @@ public class TestBranchedData
 
         new HighlyAvailableGraphDatabaseFactory().
                 newHighlyAvailableDatabaseBuilder( dir.getAbsolutePath() )
-                .setConfig( HaSettings.server_id, "1" ).newGraphDatabase().shutdown();
+                .setConfig( ClusterSettings.server_id, "1" )
+                .setConfig( ClusterSettings.initial_hosts, ":5001" )
+                .newGraphDatabase().shutdown();
         // It should have migrated those to the new location. Verify that.
         for ( long timestamp : timestamps )
         {
@@ -61,15 +76,79 @@ public class TestBranchedData
                     BranchedDataPolicy.getBranchedDataDirectory( dir, timestamp ).exists() );
         }
     }
+    
+    @Test
+    public void shouldCopyStoreFromMasterIfBranched() throws Throwable
+    {
+        // GIVEN
+        ClusterManager clusterManager = life.add( new ClusterManager( clusterOfSize( 3 ), dir, stringMap() ) );
+        life.start();
+        ManagedCluster cluster = clusterManager.getDefaultCluster();
+        cluster.await( allSeesAllAsAvailable() );
+        createNode( cluster.getMaster(), "A" );
+        cluster.sync();
+        
+        // WHEN
+        HighlyAvailableGraphDatabase slave = cluster.getAnySlave();
+        String storeDir = slave.getStoreDir();
+        RepairKit starter = cluster.shutdown( slave );
+        HighlyAvailableGraphDatabase master = cluster.getMaster();
+        HighlyAvailableGraphDatabase otherSlave = cluster.getAnySlave();
+        createNode( master, "B1" );
+        createNode( master, "C" );
+        createTransaction( storeDir, "B2" );
+        starter.repair();
+        
+        // THEN
+        cluster.await( allSeesAllAsAvailable() );
+        slave = cluster.getAnySlave( otherSlave );
+        slave.beginTx().finish();
+    }
+    
+    private final LifeSupport life = new LifeSupport();
+    
+    @After
+    public void after()
+    {
+        life.shutdown();
+    }
+
+    private void createTransaction( String storeDir, String name )
+    {
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+        try
+        {
+            createNode( db, name );
+        }
+        finally
+        {
+            db.shutdown();
+        }
+    }
+
+    private void createNode( GraphDatabaseService db, String name )
+    {
+        Transaction tx = db.beginTx();
+        try
+        {
+            db.createNode().setProperty( "name", name );
+            tx.success();
+        }
+        finally
+        {
+            tx.finish();
+        }
+    }
 
     private long moveAwayToLookLikeOldBranchedDirectory()
     {
         long timestamp = System.currentTimeMillis();
         File branchDir = new File( dir, "branched-" + timestamp );
-        branchDir.mkdirs();
-        for ( File file : dir.listFiles() )
+        assertTrue( "create directory: " + branchDir, branchDir.mkdirs() );
+        for ( File file : nonNull( dir.listFiles() ) )
         {
-            if ( !file.equals( StringLogger.DEFAULT_NAME ) && !file.getName().startsWith( "branched-" ) )
+            String fileName = file.getName();
+            if ( !fileName.equals( StringLogger.DEFAULT_NAME ) && !file.getName().startsWith( "branched-" ) )
             {
                 assertTrue( FileUtils.renameFile( file, new File( branchDir, file.getName() ) ) );
             }
@@ -79,7 +158,7 @@ public class TestBranchedData
 
     private void startDbAndCreateNode()
     {
-        EmbeddedGraphDatabase db = new EmbeddedGraphDatabase( dir.getAbsolutePath() );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( dir.getAbsolutePath() );
         Transaction tx = db.beginTx();
         db.createNode();
         tx.success();

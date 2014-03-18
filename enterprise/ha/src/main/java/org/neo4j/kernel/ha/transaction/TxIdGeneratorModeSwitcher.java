@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,32 +21,38 @@ package org.neo4j.kernel.ha.transaction;
 
 import java.net.URI;
 
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.DelegateInvocationHandler;
-import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HaXaDataSourceManager;
-import org.neo4j.kernel.ha.com.master.Master;
-import org.neo4j.kernel.ha.com.RequestContextFactory;
-import org.neo4j.kernel.ha.com.master.Slaves;
 import org.neo4j.kernel.ha.cluster.AbstractModeSwitcher;
-import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberStateMachine;
+import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
+import org.neo4j.kernel.ha.com.RequestContextFactory;
+import org.neo4j.kernel.ha.com.master.Master;
+import org.neo4j.kernel.ha.com.master.Slaves;
+import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.xaframework.TxIdGenerator;
+import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.impl.util.StringLogger;
 
 public class TxIdGeneratorModeSwitcher extends AbstractModeSwitcher<TxIdGenerator>
 {
     private final HaXaDataSourceManager xaDsm;
-    private final Master master;
+    private final DelegateInvocationHandler<Master> master;
     private final RequestContextFactory requestContextFactory;
-    private StringLogger msgLog;
-    private Config config;
-    private Slaves slaves;
+    private final StringLogger msgLog;
+    private final Config config;
+    private final Slaves slaves;
+    private final AbstractTransactionManager tm;
+    private final JobScheduler scheduler;
 
     public TxIdGeneratorModeSwitcher( HighAvailabilityMemberStateMachine stateMachine,
                                       DelegateInvocationHandler<TxIdGenerator> delegate, HaXaDataSourceManager xaDsm,
-                                      Master master, RequestContextFactory requestContextFactory,
-                                      StringLogger msgLog, Config config, Slaves slaves
+                                      DelegateInvocationHandler<Master> master,
+                                      RequestContextFactory requestContextFactory,
+                                      StringLogger msgLog, Config config, Slaves slaves, AbstractTransactionManager tm,
+                                      JobScheduler scheduler
     )
     {
         super( stateMachine, delegate );
@@ -56,18 +62,20 @@ public class TxIdGeneratorModeSwitcher extends AbstractModeSwitcher<TxIdGenerato
         this.msgLog = msgLog;
         this.config = config;
         this.slaves = slaves;
+        this.tm = tm;
+        this.scheduler = scheduler;
     }
 
     @Override
     protected TxIdGenerator getMasterImpl()
     {
-        return new MasterTxIdGenerator( MasterTxIdGenerator.from( config ), msgLog, slaves );
+        return new MasterTxIdGenerator( MasterTxIdGenerator.from( config ), msgLog, slaves, new CommitPusher( scheduler ) );
     }
 
     @Override
     protected TxIdGenerator getSlaveImpl( URI serverHaUri )
     {
-        return new SlaveTxIdGenerator( config.get( HaSettings.server_id ), master,
-                HighAvailabilityModeSwitcher.getServerId( serverHaUri ), requestContextFactory, xaDsm );
+        return new SlaveTxIdGenerator( config.get( ClusterSettings.server_id ), master.cement(),
+                HighAvailabilityModeSwitcher.getServerId( serverHaUri ), requestContextFactory, xaDsm, tm);
     }
 }

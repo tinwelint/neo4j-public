@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,33 @@
  */
 package org.neo4j.test.server;
 
+import java.util.concurrent.Callable;
+
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
+import org.neo4j.test.Mute;
+
+import static org.neo4j.test.Mute.muteAll;
 
 public class ExclusiveServerTestBase
 {
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
+    @Rule
+    public Mute mute = muteAll();
+
     @BeforeClass
-    public static final void ensureServerNotRunning()
+    public static final void ensureServerNotRunning() throws Exception
     {
-        ServerHolder.ensureNotRunning();
+        muteAll().call( new Callable<Void>()
+        {
+            @Override
+            public Void call() throws Exception
+            {
+                ServerHolder.ensureNotRunning();
+                return null;
+            }
+        } );
     }
 }

@@ -24,7 +24,7 @@ classifier=sources
 ----
 
 If the status of the response is +200 OK+, then we know the server is running fine and we can continue.
-If the code fails to conenct to the server, then please have a look at <<server>>. 
+If the code fails to conenct to the server, then please have a look at <<operations>>. 
 
 NOTE: If you get any other response than +200 OK+ (particularly +4xx+ or +5xx+ responses) then please check your configuration and look in the log files in the 'data/log' directory.
 
@@ -207,7 +207,7 @@ In the future though we expect that idiomatic language bindings will appear to t
 == Appendix: the code ==
 
  * https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/server-examples/src/main/java/org/neo4j/examples/server/CreateSimpleGraph.java[CreateSimpleGraph.java]
- * https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/server-examples/src/main/java/org/neo4j/examples/server/Relationship.java[Relationship.java]
- * https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/server-examples/src/main/java/org/neo4j/examples/server/TraversalDescription.java[TraversalDescription.java]
+ * https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/server-examples/src/main/java/org/neo4j/examples/server/Relation.java[Relation.java]
+ * https://github.com/neo4j/neo4j/blob/{neo4j-git-tag}/community/server-examples/src/main/java/org/neo4j/examples/server/TraversalDefinition.java[TraversalDefinition.java]
 
 

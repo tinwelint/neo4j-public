@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,6 @@ package org.neo4j.kernel.impl.core;
 
 import java.util.Iterator;
 
-import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.DynamicRelationshipType;
@@ -34,6 +33,8 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Triplet;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.test.ImpermanentDatabaseRule;
+
+import static org.neo4j.helpers.collection.Iterables.toList;
 
 /**
  * Tests a specific case of cache poisoning that involves the relationship chain of a node, the index the node has on it
@@ -66,12 +67,6 @@ public class TestConcurrentModificationOfRelationshipChains
         }
     };
 
-    @After
-    public void shutdown()
-    {
-        graphDb.shutdown();
-    }
-
     @Test
     public void relationshipChainPositionCachePoisoningFromSameThreadReReadNode()
     {
@@ -81,10 +76,12 @@ public class TestConcurrentModificationOfRelationshipChains
 
         deleteRelationshipInSameThread( db, firstFromSecondBatch );
 
+        Transaction transaction = db.beginTx();
         for ( Relationship rel : db.getNodeById( relsCreated.second() ).getRelationships() )
         {
             rel.getId();
         }
+        transaction.finish();
     }
 
     @Test
@@ -96,10 +93,12 @@ public class TestConcurrentModificationOfRelationshipChains
 
         deleteRelationshipInDifferentThread( db, firstFromSecondBatch );
 
+        Transaction transaction = db.beginTx();
         for ( Relationship rel : db.getNodeById( relsCreated.second() ).getRelationships() )
         {
             rel.getId();
         }
+        transaction.finish();
     }
 
     @Test
@@ -172,7 +171,10 @@ public class TestConcurrentModificationOfRelationshipChains
         tx.success();
         tx.finish();
 
-        db.getNodeManager().clearCache();
-        return Triplet.of( node1.getRelationships(), node1.getId(), firstFromSecondBatch );
+        db.getDependencyResolver().resolveDependency( NodeManager.class ).clearCache();
+        Transaction transaction = db.beginTx();
+        Iterable<Relationship> relationships = toList( node1.getRelationships() );
+        transaction.finish();
+        return Triplet.of( relationships, node1.getId(), firstFromSecondBatch );
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,18 +21,31 @@ package org.neo4j.kernel.impl.nioneo.store;
 
 public class RelationshipRecord extends PrimitiveRecord
 {
-    private final long firstNode;
-    private final long secondNode;
-    private final int type;
-    private long firstPrevRel = Record.NO_PREV_RELATIONSHIP.intValue();
+    private long firstNode;
+    private long secondNode;
+    private int type;
+    private long firstPrevRel = 1;
     private long firstNextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
-    private long secondPrevRel = Record.NO_PREV_RELATIONSHIP.intValue();
+    private long secondPrevRel = 1;
     private long secondNextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
+    private boolean firstInFirstChain = true;
+    private boolean firstInSecondChain = true;
 
     public RelationshipRecord( long id, long firstNode, long secondNode, int type )
     {
-        // TODO take firstProp in here
+        this( id );
+        this.firstNode = firstNode;
+        this.secondNode = secondNode;
+        this.type = type;
+    }
+
+    public RelationshipRecord( long id )
+    {
         super( id, Record.NO_NEXT_PROPERTY.intValue() );
+    }
+
+    public void setLinks( long firstNode, long secondNode, int type )
+    {
         this.firstNode = firstNode;
         this.secondNode = secondNode;
         this.type = type;
@@ -93,18 +106,41 @@ public class RelationshipRecord extends PrimitiveRecord
         this.secondNextRel = secondNextRel;
     }
 
+    public boolean isFirstInFirstChain()
+    {
+        return firstInFirstChain;
+    }
+
+    public void setFirstInFirstChain( boolean firstInFirstChain )
+    {
+        this.firstInFirstChain = firstInFirstChain;
+    }
+
+    public boolean isFirstInSecondChain()
+    {
+        return firstInSecondChain;
+    }
+
+    public void setFirstInSecondChain( boolean firstInSecondChain )
+    {
+        this.firstInSecondChain = firstInSecondChain;
+    }
+
     @Override
     public String toString()
     {
         return new StringBuilder( "Relationship[" ).append( getId() ).append( ",used=" ).append( inUse() ).append(
                 ",source=" ).append( firstNode ).append( ",target=" ).append( secondNode ).append( ",type=" ).append(
                 type ).append( ",sPrev=" ).append( firstPrevRel ).append( ",sNext=" ).append( firstNextRel ).append(
-                ",tPrev=" ).append( secondPrevRel ).append( ",tNext=" ).append( secondNextRel ).append( ",prop=" ).append(
-                getNextProp() ).append( "]" ).toString();
+                ",tPrev=" ).append( secondPrevRel ).append( ",tNext=" ).append( secondNextRel ).append( ",prop=" )
+                .append( getNextProp() )
+                .append( firstInFirstChain ? ",sFirst" : "" )
+                .append( firstInSecondChain ? ",tFirst" : "" )
+                .append( "]" ).toString();
     }
 
     @Override
-    void setIdTo( PropertyRecord property )
+    public void setIdTo( PropertyRecord property )
     {
         property.setRelId( getId() );
     }

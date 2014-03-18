@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,8 +29,10 @@ public abstract class LogEntry
 {
     /* version 1 as of 2011-02-22
      * version 2 as of 2011-10-17
+     * version 3 as of 2013-02-09: neo4j 2.0 Labels & Indexing
+     * version 4 as of 2014-02-06: neo4j 2.1 Dense nodes, split by type/direction into groups
      */
-    static final byte CURRENT_VERSION = (byte) 2;
+    static final byte CURRENT_VERSION = (byte) 3;
     // empty record due to memory mapped file
     public static final byte EMPTY = (byte) 0;
     public static final byte TX_START = (byte) 1;
@@ -51,21 +53,24 @@ public abstract class LogEntry
     {
         return identifier;
     }
-    
+
     public String toString( TimeZone timeZone )
     {
         return toString();
     }
 
-    public static class Start extends LogEntry
+    public static class
+            Start extends LogEntry
     {
         private final Xid xid;
         private final int masterId;
         private final int myId;
         private final long timeWritten;
+        private final long lastCommittedTxWhenTransactionStarted;
         private long startPosition;
 
-        Start( Xid xid, int identifier, int masterId, int myId, long startPosition, long timeWritten )
+        Start( Xid xid, int identifier, int masterId, int myId, long startPosition, long timeWritten,
+               long lastCommittedTxWhenTransactionStarted )
         {
             super( identifier );
             this.xid = xid;
@@ -73,13 +78,14 @@ public abstract class LogEntry
             this.myId = myId;
             this.startPosition = startPosition;
             this.timeWritten = timeWritten;
+            this.lastCommittedTxWhenTransactionStarted = lastCommittedTxWhenTransactionStarted;
         }
 
         public Xid getXid()
         {
             return xid;
         }
-        
+
         public int getMasterId()
         {
             return masterId;
@@ -99,12 +105,17 @@ public abstract class LogEntry
         {
             this.startPosition = position;
         }
-        
+
         public long getTimeWritten()
         {
             return timeWritten;
         }
-        
+
+        public long getLastCommittedTxWhenTransactionStarted()
+        {
+            return lastCommittedTxWhenTransactionStarted;
+        }
+
         /**
          * @return combines necessary state to get a unique checksum to identify this transaction uniquely.
          */
@@ -121,15 +132,17 @@ public abstract class LogEntry
         {
             return toString( Format.DEFAULT_TIME_ZONE );
         }
-        
+
         @Override
         public String toString( TimeZone timeZone )
         {
-            return "Start[" + getIdentifier() + ",xid=" + xid + ",master=" + masterId + ",me=" + myId + ",time=" + timestamp( timeWritten, timeZone ) + "]";
+            return "Start[" + getIdentifier() + ",xid=" + xid + ",master=" + masterId + ",me=" + myId + ",time=" +
+                    timestamp( timeWritten, timeZone ) + ",lastCommittedTxWhenTransactionStarted="+
+                    lastCommittedTxWhenTransactionStarted+"]";
         }
     }
-    
-    static class Prepare extends LogEntry
+
+    public static class Prepare extends LogEntry
     {
         private final long timeWritten;
 
@@ -138,7 +151,7 @@ public abstract class LogEntry
             super( identifier );
             this.timeWritten = timeWritten;
         }
-        
+
         public long getTimeWritten()
         {
             return timeWritten;
@@ -149,7 +162,7 @@ public abstract class LogEntry
         {
             return toString( Format.DEFAULT_TIME_ZONE );
         }
-        
+
         @Override
         public String toString( TimeZone timeZone )
         {
@@ -175,18 +188,18 @@ public abstract class LogEntry
         {
             return txId;
         }
-        
+
         public long getTimeWritten()
         {
             return timeWritten;
         }
-        
+
         @Override
         public String toString()
         {
             return toString( Format.DEFAULT_TIME_ZONE );
         }
-        
+
         @Override
         public String toString( TimeZone timeZone )
         {
@@ -223,7 +236,7 @@ public abstract class LogEntry
             return "Done[" + getIdentifier() + "]";
         }
     }
-    
+
     public static class Command extends LogEntry
     {
         private final XaCommand command;

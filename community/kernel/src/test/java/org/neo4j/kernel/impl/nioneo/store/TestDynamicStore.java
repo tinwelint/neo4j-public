@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.nioneo.store;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.helpers.collection.IteratorUtil.first;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,9 +34,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.MapUtil;
@@ -45,7 +45,7 @@ import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.windowpool.WindowPoolFactory;
 import org.neo4j.kernel.impl.util.StringLogger;
-import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
+import org.neo4j.test.EphemeralFileSystemRule;
 
 public class TestDynamicStore
 {
@@ -53,14 +53,13 @@ public class TestDynamicStore
             new DefaultIdGeneratorFactory();
     public static WindowPoolFactory WINDOW_POOL_FACTORY =
             new DefaultWindowPoolFactory();
-    public FileSystemAbstraction FILE_SYSTEM =
-            new EphemeralFileSystemAbstraction();
+    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 
     private File path()
     {
         String path = "dynamicstore";
         File file = new File( path );
-        FILE_SYSTEM.mkdirs( file );
+        fs.get().mkdirs( file );
         return file;
     }
 
@@ -118,14 +117,14 @@ public class TestDynamicStore
 
     private void createEmptyStore( File fileName, int blockSize )
     {
-        new StoreFactory( config(), ID_GENERATOR_FACTORY, new DefaultWindowPoolFactory(), FILE_SYSTEM,
-                StringLogger.SYSTEM, null ).createDynamicArrayStore( fileName, blockSize );
+        new StoreFactory( config(), ID_GENERATOR_FACTORY, new DefaultWindowPoolFactory(), fs.get(),
+                StringLogger.DEV_NULL, null ).createDynamicArrayStore( fileName, blockSize );
     }
 
     private DynamicArrayStore newStore()
     {
         return new DynamicArrayStore( dynamicStoreFile(), config(), IdType.ARRAY_BLOCK, ID_GENERATOR_FACTORY,
-                WINDOW_POOL_FACTORY, FILE_SYSTEM, StringLogger.SYSTEM );
+                WINDOW_POOL_FACTORY, fs.get(), StringLogger.DEV_NULL );
     }
 
     private void deleteBothFiles()
@@ -145,13 +144,10 @@ public class TestDynamicStore
     @Test
     public void testStickyStore() throws IOException
     {
-        Logger log = Logger.getLogger( CommonAbstractStore.class.getName() );
-        Level level = log.getLevel();
         try
         {
-            log.setLevel( Level.OFF );
             createEmptyStore( dynamicStoreFile(), 30 );
-            FileChannel fileChannel = FILE_SYSTEM.open( dynamicStoreFile(), "rw" );
+            FileChannel fileChannel = fs.get().open( dynamicStoreFile(), "rw" );
             fileChannel.truncate( fileChannel.size() - 2 );
             fileChannel.close();
             DynamicArrayStore store = newStore();
@@ -160,7 +156,6 @@ public class TestDynamicStore
         }
         finally
         {
-            log.setLevel( level );
             deleteBothFiles();
         }
     }
@@ -179,9 +174,8 @@ public class TestDynamicStore
         {
             createEmptyStore( dynamicStoreFile(), 30 );
             DynamicArrayStore store = newStore();
-            long blockId = store.nextBlockId();
-            Collection<DynamicRecord> records = store.allocateRecords( blockId,
-                    new byte[10] );
+            Collection<DynamicRecord> records = store.allocateRecordsFromBytes( new byte[10] );
+            long blockId = first( records ).getId();
             for ( DynamicRecord record : records )
             {
                 store.updateRecord( record );
@@ -194,7 +188,7 @@ public class TestDynamicStore
              */
             try
             {
-                PropertyStore.getArrayFor( blockId, store.getRecords( blockId ), store );
+                store.getArrayFor( store.getRecords( blockId ) );
                 fail( "Closed store should throw exception" );
             }
             catch ( RuntimeException e )
@@ -223,11 +217,9 @@ public class TestDynamicStore
             final String STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
             createEmptyStore( dynamicStoreFile(), 30 );
             DynamicArrayStore store = newStore();
-            long blockId = store.nextBlockId();
             char[] chars = new char[STR.length()];
             STR.getChars( 0, STR.length(), chars, 0 );
-            Collection<DynamicRecord> records = store.allocateRecords( blockId,
-                    chars );
+            Collection<DynamicRecord> records = store.allocateRecords( chars );
             for ( DynamicRecord record : records )
             {
                 store.updateRecord( record );
@@ -264,7 +256,7 @@ public class TestDynamicStore
                     long blockId = idsTaken.remove(
                             random.nextInt( currentCount ) );
                     store.getLightRecords( blockId );
-                    byte[] bytes = (byte[]) PropertyStore.getArrayFor( blockId, store.getRecords( blockId ), store );
+                    byte[] bytes = (byte[]) store.getArrayFor( store.getRecords( blockId ) );
                     validateData( bytes, byteData.remove( blockId ) );
                     Collection<DynamicRecord> records = store
                             .getLightRecords( blockId );
@@ -279,15 +271,14 @@ public class TestDynamicStore
                 else
                 {
                     byte bytes[] = createRandomBytes( random );
-                    long blockId = store.nextBlockId();
-                    Collection<DynamicRecord> records = store.allocateRecords(
-                            blockId, (Object) bytes );
+                    Collection<DynamicRecord> records = store.allocateRecords( bytes );
                     for ( DynamicRecord record : records )
                     {
                         assert !set.contains( record.getId() );
                         store.updateRecord( record );
                         set.add( record.getId() );
                     }
+                    long blockId = first( records ).getId();
                     idsTaken.add( blockId );
                     byteData.put( blockId, bytes );
                     currentCount++;
@@ -366,14 +357,12 @@ public class TestDynamicStore
 
     private long create( DynamicArrayStore store, Object arrayToStore )
     {
-        long blockId = store.nextBlockId();
-        Collection<DynamicRecord> records = store.allocateRecords( blockId,
-                arrayToStore );
+        Collection<DynamicRecord> records = store.allocateRecords( arrayToStore );
         for ( DynamicRecord record : records )
         {
             store.updateRecord( record );
         }
-        return blockId;
+        return first( records ).getId();
     }
 
     @Test
@@ -386,7 +375,7 @@ public class TestDynamicStore
             byte[] emptyToWrite = createBytes( 0 );
             long blockId = create( store, emptyToWrite );
             store.getLightRecords( blockId );
-            byte[] bytes = (byte[]) PropertyStore.getArrayFor( blockId, store.getRecords( blockId ), store );
+            byte[] bytes = (byte[]) store.getArrayFor( store.getRecords( blockId ) );
             assertEquals( 0, bytes.length );
 
             Collection<DynamicRecord> records = store.getLightRecords( blockId );
@@ -412,8 +401,7 @@ public class TestDynamicStore
         {
             long blockId = create( store, new String[0] );
             store.getLightRecords( blockId );
-            String[] readBack = (String[]) PropertyStore.getArrayFor( blockId,
-                    store.getRecords( blockId ), store );
+            String[] readBack = (String[]) store.getArrayFor( store.getRecords( blockId ) );
             assertEquals( 0, readBack.length );
 
             Collection<DynamicRecord> records = store.getLightRecords( blockId );

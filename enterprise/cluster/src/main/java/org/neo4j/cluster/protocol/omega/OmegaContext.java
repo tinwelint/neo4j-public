@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -44,17 +44,17 @@ public class OmegaContext
 
     public Iterable<? extends URI> getServers()
     {
-        return clusterContext.configuration.getMembers();
+        return clusterContext.getMemberURIs();
     }
 
     public State getMyState()
     {
-        return registry.get( clusterContext.getMe() );
+        return registry.get( clusterContext.getMyId() );
     }
 
     public View getMyView()
     {
-        return views.get( clusterContext.getMe() );
+        return views.get( clusterContext.getMyId() );
     }
 
     public int getMyProcessId()
@@ -189,7 +189,7 @@ public class OmegaContext
 
     public int getClusterNodeCount()
     {
-        return getClusterContext().getConfiguration().getMembers().size();
+        return getClusterContext().getConfiguration().getMemberURIs().size();
     }
 
     public Map<URI, State> getRegistry()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,23 +22,26 @@ package org.neo4j.server.webadmin.rest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
-import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
-import org.neo4j.kernel.ha.cluster.member.ClusterMember;
-import org.neo4j.kernel.ha.cluster.member.ClusterMembers;
 import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-@Path( MasterInfoService.BASE_PATH )
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
+import static javax.ws.rs.core.Response.status;
+import static javax.ws.rs.core.Response.Status.FORBIDDEN;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.OK;
+
+@Path(MasterInfoService.BASE_PATH)
 public class MasterInfoService implements AdvertisableService
 {
-    public static final String BASE_PATH = "/server/ha";
-    public static final String ISMASTER_PATH = "/isMaster";
-    public static final String GETMASTER_PATH = "/getMaster";
+    public static final String BASE_PATH = "server/ha";
+    public static final String IS_MASTER_PATH = "/master";
+    public static final String IS_SLAVE_PATH = "/slave";
+    public static final String IS_AVAILABLE_PATH = "/available";
 
     private final OutputFormat output;
     private final HighlyAvailableGraphDatabase haDb;
@@ -61,58 +64,98 @@ public class MasterInfoService implements AdvertisableService
     {
         if ( haDb == null )
         {
-            return Response.status( Response.Status.FORBIDDEN ).build();
+            return status( FORBIDDEN ).build();
         }
-        String isMasterUri = "isMaster";
-        String getMasterUri = "getMaster";
 
-        HaDiscoveryRepresentation dr = new HaDiscoveryRepresentation( isMasterUri, getMasterUri );
+        String isMasterUri = IS_MASTER_PATH;
+        String isSlaveUri = IS_SLAVE_PATH;
+
+        HaDiscoveryRepresentation dr = new HaDiscoveryRepresentation( BASE_PATH, isMasterUri, isSlaveUri );
         return output.ok( dr );
     }
 
     @GET
-    @Path( ISMASTER_PATH )
+    @Path(IS_MASTER_PATH)
     public Response isMaster() throws BadInputException
     {
         if ( haDb == null )
         {
-            return Response.status( Response.Status.FORBIDDEN ).build();
+            return status( FORBIDDEN ).build();
         }
-        if ( haDb.isMaster() )
+
+        String role = haDb.role().toLowerCase();
+        if ( role.equals( "master" ))
         {
-            return Response.status( Response.Status.OK ).entity( Boolean.toString( true ).getBytes()).build();
+            return positiveResponse();
         }
-        else
+
+        if ( role.equals( "slave" ))
         {
-            return Response.status( Response.Status.SEE_OTHER ).entity( Boolean.toString( false ).getBytes() ).header(
-                    HttpHeaders.LOCATION, getMasterUriAsString() ).build();
+            return negativeResponse();
         }
+
+        return unknownResponse();
     }
 
     @GET
-    @Path( GETMASTER_PATH )
-    public Response getMaster() throws BadInputException
+    @Path(IS_SLAVE_PATH)
+    public Response isSlave() throws BadInputException
     {
         if ( haDb == null )
         {
-            return Response.status( Response.Status.FORBIDDEN ).build();
+            return status( FORBIDDEN ).build();
         }
-        String masterURI = getMasterUriAsString();
-        return Response.status( Response.Status.SEE_OTHER ).entity( Boolean.toString( false ).getBytes() ).header(
-                HttpHeaders.LOCATION, masterURI ).build();
+
+        String role = haDb.role().toLowerCase();
+        if ( role.equals( "slave" ))
+        {
+            return positiveResponse();
+        }
+
+        if ( role.equals( "master" ))
+        {
+            return negativeResponse();
+        }
+
+        return unknownResponse();
     }
 
-    private String getMasterUriAsString()
+    @GET
+    @Path( IS_AVAILABLE_PATH )
+    public Response isAvailable()
     {
-        String masterURI = "not found";
-        for (ClusterMember member : haDb.getDependencyResolver().resolveDependency( ClusterMembers.class ).getMembers() )
+        if ( haDb == null )
         {
-            if ( HighAvailabilityModeSwitcher.MASTER.equals( member.getHARole() ) )
-            {
-                masterURI = member.getHAUri().getHost() + ":" + member.getHAUri().getPort();
-            }
+            return status( FORBIDDEN ).build();
         }
-        return masterURI;
+
+        String role = haDb.role().toLowerCase();
+        if ( "slave".equals( role ) || "master".equals( role ))
+        {
+            return plainTextResponse( OK, role );
+        }
+
+        return unknownResponse();
+    }
+
+    private Response negativeResponse()
+    {
+        return plainTextResponse( NOT_FOUND, "false" );
+    }
+
+    private Response positiveResponse()
+    {
+        return plainTextResponse( OK, "true" );
+    }
+
+    private Response unknownResponse()
+    {
+        return plainTextResponse( NOT_FOUND, "UNKNOWN" );
+    }
+
+    private Response plainTextResponse( Response.Status status, String entityBody )
+    {
+        return status( status ).type( TEXT_PLAIN_TYPE ).entity( entityBody ).build();
     }
 
     @Override

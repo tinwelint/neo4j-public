@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,12 @@ import java.io.IOException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.neo4j.helpers.HostnamePort;
+import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.kernel.logging.DevNullLoggingService;
+import org.neo4j.kernel.monitoring.Monitors;
+
+import static org.neo4j.com.Protocol.readString;
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
 
 public class MadeUpServer extends Server<MadeUpCommunicationInterface, Void>
 {
@@ -61,7 +66,8 @@ public class MadeUpServer extends Server<MadeUpCommunicationInterface, Void>
             {
                 return new HostnamePort( null, port );
             }
-        }, new DevNullLoggingService(), FRAME_LENGTH, applicationProtocolVersion, txVerifier );
+        }, new DevNullLoggingService(), FRAME_LENGTH, applicationProtocolVersion, txVerifier, SYSTEM_CLOCK,
+                new Monitors());
         this.internalProtocolVersion = internalProtocolVersion;
     }
 
@@ -164,6 +170,17 @@ public class MadeUpServer extends Server<MadeUpCommunicationInterface, Void>
                                            RequestContext context, ChannelBuffer input, ChannelBuffer target )
             {
                 return master.throwException( readString( input ) );
+            }
+        }, Protocol.VOID_SERIALIZER ),
+
+        CAUSE_READ_CONTEXT_EXCEPTION( new TargetCaller<MadeUpCommunicationInterface, Integer>()
+        {
+            @Override
+            public Response<Integer> call( MadeUpCommunicationInterface master,
+                RequestContext context, ChannelBuffer input, ChannelBuffer target )
+            {
+                throw new ThisShouldNotHappenError( "Jake", "Test should not reach this far, " +
+                    "it should fail while reading the request context." );
             }
         }, Protocol.VOID_SERIALIZER );
 

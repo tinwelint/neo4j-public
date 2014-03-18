@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,6 +25,7 @@ import java.util.HashSet;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 
@@ -143,5 +144,17 @@ class TransactionDataImpl implements TransactionData
     void deleted( Relationship relationship )
     {
         this.deletedRelationships.add( relationship );
+    }
+
+    @Override
+    public Iterable<LabelEntry> assignedLabels()
+    {
+        throw new UnsupportedOperationException(  );
+    }
+
+    @Override
+    public Iterable<LabelEntry> removedLabels()
+    {
+        throw new UnsupportedOperationException(  );
     }
 }

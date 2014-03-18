@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -334,7 +334,7 @@ public class TestCommonIterators
         File file = createTextFileWithLines( lines );
         try
         {
-            Iterable<String> iterable = IteratorUtil.asIterable( file );
+            Iterable<String> iterable = IteratorUtil.asIterable( file, "UTF-8" );
             assertEquals( Arrays.asList( lines ), IteratorUtil.asCollection( iterable ) );
         }
         finally

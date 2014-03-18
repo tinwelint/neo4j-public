@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,9 @@
  */
 package org.neo4j.test;
 
-import static java.util.Arrays.asList;
-import static java.util.concurrent.Executors.newSingleThreadExecutor;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
-import java.util.Arrays;
+import java.io.Closeable;
+import java.io.PrintStream;
+import java.lang.Thread.State;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -35,19 +32,25 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.impl.util.StringLogger.LineLogger;
+
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Executes {@link WorkerCommand}s in another thread. Very useful for writing
  * tests which handles two simultaneous transactions and interleave them,
  * f.ex for testing locking and data visibility.
- * 
- * @author Mattias Persson
  *
  * @param <T>
+ * @author Mattias Persson
  */
-public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger>
+public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger, RuntimeException>, Closeable
 {
     private final ExecutorService commandExecutor = newSingleThreadExecutor( this );
     protected final T state;
@@ -56,19 +59,61 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
     private final String name;
     private final long timeout;
     private Exception lastExecutionTrigger;
-    
+
+    private static final class AnyThreadState implements Predicate<Thread>
+    {
+        private final Set<State> possibleStates;
+        private final Set<Thread.State> seenStates = new HashSet<>();
+
+        private AnyThreadState( State... possibleStates )
+        {
+            this.possibleStates = new HashSet<>( asList( possibleStates ) );
+        }
+
+        @Override
+        public boolean accept( Thread thread )
+        {
+            State threadState = thread.getState();
+            seenStates.add( threadState );
+            return possibleStates.contains( threadState );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "Any of thread states " + possibleStates + ", but saw " + seenStates;
+        }
+    }
+
+    public static Predicate<Thread> anyThreadState( State... possibleStates )
+    {
+        return new AnyThreadState( possibleStates );
+    }
+
+    public Predicate<Thread> orExecutionCompleted( final Predicate<Thread> actual )
+    {
+        return new Predicate<Thread>()
+        {
+            @Override
+            public boolean accept( Thread thread )
+            {
+                return actual.accept( thread ) || executionState == ExecutionState.EXECUTED;
+            }
+        };
+    }
+
     private static enum ExecutionState
     {
         REQUESTED_EXECUTION,
         EXECUTING,
-        EXECUTED;
+        EXECUTED
     }
 
     public OtherThreadExecutor( String name, T initialState )
     {
         this( name, 10, SECONDS, initialState );
     }
-    
+
     public OtherThreadExecutor( String name, long timeout, TimeUnit unit, T initialState )
     {
         this.name = name;
@@ -76,14 +121,14 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
         this.timeout = MILLISECONDS.convert( timeout, unit );
     }
 
-    public <R> Future<R> executeDontWait( final WorkerCommand<T, R> cmd ) throws Exception
+    public <R> Future<R> executeDontWait( final WorkerCommand<T, R> cmd )
     {
         lastExecutionTrigger = new Exception();
         executionState = ExecutionState.REQUESTED_EXECUTION;
         return commandExecutor.submit( new Callable<R>()
         {
             @Override
-            public R call()
+            public R call() throws Exception
             {
                 executionState = ExecutionState.EXECUTING;
                 try
@@ -97,7 +142,7 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
             }
         } );
     }
-    
+
     public <R> R execute( WorkerCommand<T, R> cmd ) throws Exception
     {
         return executeDontWait( cmd ).get();
@@ -109,6 +154,7 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
         boolean success = false;
         try
         {
+            awaitStartExecuting();
             R result = future.get( timeout, unit );
             success = true;
             return result;
@@ -116,18 +162,28 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
         finally
         {
             if ( !success )
+            {
                 future.cancel( true );
+            }
         }
     }
-    
+
+    void awaitStartExecuting() throws InterruptedException
+    {
+        while ( executionState == ExecutionState.REQUESTED_EXECUTION )
+        {
+            Thread.sleep( 10 );
+        }
+    }
+
     public <R> R awaitFuture( Future<R> future ) throws InterruptedException, ExecutionException, TimeoutException
     {
         return future.get( timeout, MILLISECONDS );
     }
-    
+
     public interface WorkerCommand<T, R>
     {
-        R doWork( T state );
+        R doWork( T state ) throws Exception;
     }
 
     @Override
@@ -151,24 +207,35 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
         this.thread = thread;
         return thread;
     }
-    
+
     @Override
     public String toString()
     {
-        return getClass().getSimpleName() + ":" + name;
+        Thread thread = this.thread;
+        return format( "%s[%s,state=%s]", getClass().getSimpleName(), name,
+                       thread == null ? "dead" : thread.getState() );
     }
 
-    public void waitUntilWaiting() throws TimeoutException
+    public WaitDetails waitUntilWaiting() throws TimeoutException
     {
-        waitUntilThreadState( Thread.State.WAITING );
+        return waitUntilThreadState( Thread.State.WAITING );
     }
-    
-    public void waitUntilThreadState( Thread.State... possibleStates ) throws TimeoutException
+
+    public WaitDetails waitUntilBlocked() throws TimeoutException
     {
-        Set<Thread.State> stateSet = new HashSet<Thread.State>( asList( possibleStates ) );
+        return waitUntilThreadState( Thread.State.BLOCKED );
+    }
+
+    public WaitDetails waitUntilThreadState( final Thread.State... possibleStates ) throws TimeoutException
+    {
+        return waitUntil( new AnyThreadState( possibleStates ) );
+    }
+
+    public WaitDetails waitUntil( Predicate<Thread> condition ) throws TimeoutException
+    {
         long end = System.currentTimeMillis() + timeout;
         Thread thread = getThread();
-        while ( !stateSet.contains( thread.getState() ) || executionState == ExecutionState.REQUESTED_EXECUTION )
+        while ( !condition.accept( thread ) || executionState == ExecutionState.REQUESTED_EXECUTION )
         {
             try
             {
@@ -178,46 +245,79 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
             {
                 // whatever
             }
-            
+
             if ( System.currentTimeMillis() > end )
             {
-                throw new TimeoutException( "The executor didn't enter any of states " +
-                        Arrays.toString( possibleStates ) + " inside an executing command for " +
-                        timeout + " ms" );
+                throw new TimeoutException( "The executor didn't meet condition '" + condition +
+                        "' inside an executing command for " + timeout + " ms" );
             }
         }
+        return new WaitDetails( thread.getStackTrace() );
     }
-    
+
+    public static class WaitDetails
+    {
+        private final StackTraceElement[] stackTrace;
+
+        public WaitDetails( StackTraceElement[] stackTrace )
+        {
+            this.stackTrace = stackTrace;
+        }
+
+        @Override
+        public String toString()
+        {
+            StringBuilder builder = new StringBuilder();
+            for ( StackTraceElement element : stackTrace )
+            {
+                builder.append( format( element.toString() + "%n" ) );
+            }
+            return builder.toString();
+        }
+    }
+
+    public Thread.State state()
+    {
+        return thread.getState();
+    }
+
     private Thread getThread()
     {
         Thread thread = null;
-        while (thread == null) thread = this.thread;
+        while ( thread == null )
+        {
+            thread = this.thread;
+        }
         return thread;
     }
-    
-    public void shutdown()
+
+    @Override
+    public void close()
     {
         commandExecutor.shutdown();
         try
         {
-            commandExecutor.awaitTermination( 1000, TimeUnit.SECONDS );
+            commandExecutor.awaitTermination( 10, TimeUnit.SECONDS );
         }
-        catch ( InterruptedException e )
-        {   // OK
+        catch ( Exception e )
+        {
+            commandExecutor.shutdownNow();
         }
     }
-    
+
     @Override
     public boolean visit( LineLogger logger )
     {
         logger.logLine( getClass().getName() + ", " + this + " state:" + state + " thread:" + thread +
-                " execution:" + executionState );
+                        " execution:" + executionState );
         if ( thread != null )
         {
             logger.logLine( "Thread state:" + thread.getState() );
             logger.logLine( "" );
             for ( StackTraceElement element : thread.getStackTrace() )
+            {
                 logger.logLine( element.toString() );
+            }
         }
         else
         {
@@ -228,8 +328,20 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Visitor<LineLogger
             logger.logLine( "" );
             logger.logLine( "Last execution triggered from:" );
             for ( StackTraceElement element : lastExecutionTrigger.getStackTrace() )
+            {
                 logger.logLine( element.toString() );
+            }
         }
         return true;
+    }
+
+    void printStackTrace( PrintStream out )
+    {
+        Thread thread = getThread();
+        out.println( thread );
+        for ( StackTraceElement trace : thread.getStackTrace() )
+        {
+            out.println( "\tat " + trace );
+        }
     }
 }

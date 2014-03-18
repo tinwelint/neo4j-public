@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,5 +25,5 @@ package org.neo4j.cluster.com.message;
  */
 public interface MessageProcessor
 {
-    void process( Message<? extends MessageType> message );
+    boolean process( Message<? extends MessageType> message );
 }

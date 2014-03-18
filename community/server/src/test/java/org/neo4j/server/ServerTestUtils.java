@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,36 +26,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.server.database.GraphDatabaseFactory;
-import org.neo4j.test.TestGraphDatabaseFactory;
-
 public class ServerTestUtils
 {
-    public static final GraphDatabaseFactory EMBEDDED_GRAPH_DATABASE_FACTORY = new GraphDatabaseFactory()
-    {
-        @Override
-        public GraphDatabaseAPI createDatabase( String databaseStoreDirectory,
-                Map<String, String> databaseProperties )
-        {
-            return (GraphDatabaseAPI) new org.neo4j.graphdb.factory.GraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseStoreDirectory ).setConfig( databaseProperties ).newGraphDatabase();
-        }
-    };
-
-    public static final GraphDatabaseFactory EPHEMERAL_GRAPH_DATABASE_FACTORY = new GraphDatabaseFactory()
-    {
-        @Override
-        public GraphDatabaseAPI createDatabase( String databaseStoreDirectory,
-                Map<String, String> databaseProperties )
-        {
-            return (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder().setConfig( databaseProperties ).newGraphDatabase();
-        }
-    };
-    
     public static File createTempDir() throws IOException
     {
         File d = File.createTempFile( "neo4j-test", "dir" );
@@ -67,12 +44,15 @@ public class ServerTestUtils
         {
             throw new RuntimeException( "temp config directory not created" );
         }
+        d.deleteOnExit();
         return d;
     }
 
     public static File createTempPropertyFile() throws IOException
     {
-        return createTempPropertyFile( createTempDir() );
+        File file = File.createTempFile( "neo4j", "properties" );
+        file.delete();
+        return file;
     }
 
     public static void writePropertiesToFile( String outerPropertyName, Map<String, String> properties,
@@ -80,7 +60,7 @@ public class ServerTestUtils
     {
         writePropertyToFile( outerPropertyName, asOneLine( properties ), propertyFile );
     }
-    
+
     public static void writePropertiesToFile( Map<String, String> properties, File propertyFile )
     {
         Properties props = loadProperties( propertyFile );
@@ -167,6 +147,31 @@ public class ServerTestUtils
 
     public static File createTempPropertyFile( File parentDir ) throws IOException
     {
-        return new File( parentDir, "test-" + new Random().nextInt() + ".properties" );
+        File file = new File( parentDir, "test-" + new Random().nextInt() + ".properties" );
+        file.deleteOnExit();
+        return file;
+    }
+
+    public interface BlockWithCSVFileURL {
+        void execute(String url) throws Exception;
+    }
+
+    public static void withCSVFile( int rowCount, BlockWithCSVFileURL block ) throws Exception
+    {
+        File file = File.createTempFile( "file", ".csv", null );
+        try {
+            try ( PrintWriter writer = new PrintWriter( file ) ) {
+                for (int i = 0; i < rowCount; ++i) {
+                    writer.println("1,2,3");
+                }
+            }
+
+            String url = file.toURI().toURL().toString().replace( "\\", "\\\\" );
+            block.execute( url );
+        }
+        finally
+        {
+            file.delete();
+        }
     }
 }

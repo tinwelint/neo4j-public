@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -159,30 +159,28 @@ public abstract class XaTransaction
      * Commits the transaction, loop through all commands and invoke 
      * <CODE>execute()</CODE>.
      * 
-     * @throws XAEXception
+     * @throws XAException
      *             If unable to commit
      */
     protected abstract void doCommit() throws XAException;
 
-    private final int identifier;
+    private int identifier = -1;
     private final XaLogicalLog log;
-    private final TransactionState state;
+    private final TxIdGenerator txIdGenerator;
     private boolean isRecovered = false;
     private boolean committed = false;
     private boolean rolledback = false;
     private boolean prepared = false;
-    
     private long commitTxId = -1;
-
-    public XaTransaction( int identifier, XaLogicalLog log, TransactionState state )
+    
+    public XaTransaction( XaLogicalLog log, TransactionState txState )
     {
         if ( log == null )
         {
             throw new IllegalArgumentException( "LogicalLog is null" );
         }
-        this.identifier = identifier;
         this.log = log;
-        this.state = state;
+        this.txIdGenerator = txState.getTxIdGenerator();
     }
 
     /**
@@ -204,6 +202,12 @@ public abstract class XaTransaction
     {
         return isRecovered;
     }
+    
+    public final void setIdentifier( int identifier )
+    {
+        assert this.identifier == -1;
+        this.identifier = identifier;
+    }
 
     /**
      * Returns the "internal" identifier for this transaction. See
@@ -213,6 +217,7 @@ public abstract class XaTransaction
      */
     public final int getIdentifier()
     {
+        assert identifier != -1;
         return identifier;
     }
 
@@ -242,7 +247,7 @@ public abstract class XaTransaction
         doAddCommand( command );
         try
         {
-            log.writeCommand( command, identifier );
+            log.writeCommand( command, getIdentifier() );
         }
         catch ( IOException e )
         {
@@ -339,6 +344,6 @@ public abstract class XaTransaction
     
     public final TxIdGenerator getTxIdGenerator()
     {
-        return state.getTxIdGenerator();
+        return txIdGenerator;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -52,7 +52,8 @@ public final class TransactionManagerBean extends ManagementBeanProvider
         TransactionManagerImpl( ManagementData management ) throws NotCompliantMBeanException
         {
             super( management );
-            this.txManager = (TxManager) management.getKernelData().graphDatabase().getTxManager();
+            this.txManager = management.getKernelData().graphDatabase().getDependencyResolver()
+                    .resolveDependency( TxManager.class );
             this.xadsm = management.getKernelData().graphDatabase().getDependencyResolver().resolveDependency(
                     XaDataSourceManager.class );
         }

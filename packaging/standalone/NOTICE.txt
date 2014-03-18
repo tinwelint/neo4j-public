@@ -1,5 +1,5 @@
 Neo4j
-Copyright © 2002-2013 Network Engine for Objects in Lund AB (referred to
+Copyright © 2002-2014 Network Engine for Objects in Lund AB (referred to
 in this notice as "Neo Technology")
    [http://neotechnology.com]
 
@@ -53,6 +53,8 @@ Apache Software License, Version 2.0
   Jetty Utilities
   JTA 1.1
   Lucene Core
+  parboiled-core
+  parboiled-scala
   RRD4J
   Servlet Specification API
   StAX API

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
-import org.neo4j.kernel.impl.batchinsert.BatchInserter;
 
 /**
  * The {@link BatchInserter} version of {@link Index}. Additions/updates to a
@@ -44,7 +43,7 @@ public interface BatchInserterIndex
     /**
      * Adds key/value pairs for {@code entity} to the index. If there's a
      * previous index for {@code entity} it will co-exist with this new one.
-     * This behaviour is because of performance reasons, to not being forced to
+     * This behavior is because of performance reasons, to not being forced to
      * check if indexing for {@code entity} already exists or not. If you need
      * to update indexing for {@code entity} and it's ok with a slower indexing
      * process use {@link #updateOrAdd(long, Map)} instead.

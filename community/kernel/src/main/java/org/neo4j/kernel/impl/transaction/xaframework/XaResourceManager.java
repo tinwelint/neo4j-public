@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,34 +22,46 @@ package org.neo4j.kernel.impl.transaction.xaframework;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
+import org.neo4j.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.impl.nioneo.xa.NeoStoreTransaction;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry.Start;
 import org.neo4j.kernel.impl.util.ArrayMap;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.monitoring.Monitors;
 
 // make package access?
 public class XaResourceManager
 {
-    private final ArrayMap<XAResource,Xid> xaResourceMap =
-        new ArrayMap<XAResource,Xid>();
-    private final ArrayMap<Xid,XidStatus> xidMap =
-        new ArrayMap<Xid,XidStatus>();
+    private static class ResourceTransaction
+    {
+        private Xid xid;
+        private final XaTransaction xaTx;
+
+        ResourceTransaction( XaTransaction xaTx )
+        {
+            this.xaTx = xaTx;
+        }
+    }
+
+    private final ArrayMap<XAResource,ResourceTransaction> xaResourceMap = new ArrayMap<>();
+    private final ArrayMap<Xid,XidStatus> xidMap = new ArrayMap<>();
+    private final TransactionMonitor transactionMonitor;
     private int recoveredTxCount = 0;
-    private final Set<TransactionInfo> recoveredTransactions = new HashSet<TransactionInfo>();
+    private final Map<Integer, TransactionInfo> recoveredTransactions = new HashMap<>();
 
     private XaLogicalLog log = null;
     private final XaTransactionFactory tf;
@@ -62,7 +74,7 @@ public class XaResourceManager
 
     public XaResourceManager( XaDataSource dataSource, XaTransactionFactory tf,
             TxIdGenerator txIdGenerator, AbstractTransactionManager transactionManager,
-            RecoveryVerifier recoveryVerifier, String name )
+            RecoveryVerifier recoveryVerifier, String name, Monitors monitors )
     {
         this.dataSource = dataSource;
         this.tf = tf;
@@ -70,56 +82,78 @@ public class XaResourceManager
         this.transactionManager = transactionManager;
         this.recoveryVerifier = recoveryVerifier;
         this.name = name;
+        this.transactionMonitor = monitors.newMonitor( TransactionMonitor.class, getClass(), dataSource.getName() );
     }
 
     public synchronized void setLogicalLog( XaLogicalLog log )
     {
         this.log = log;
-        if ( log != null )
+        this.msgLog = log.getStringLogger();
+    }
+
+    /**
+     * Creates a transaction that can be used for read operations, but is not yet
+     * {@link #start(XAResource, Xid) started} and hasn't got an identifier associated with it.
+     * A call to {@link #start(XAResource, Xid)} after a call to this method will start the transaction
+     * created here. Otherwise if there's no {@link #createTransaction(XAResource)} call prior to a
+     * {@link #start(XAResource, Xid)} call the transaction will be created there instead.
+     *
+     * @param xaResource the {@link XAResource} to create the transaction for.
+     * @return the created transaction.
+     * @throws XAException if the {@code resource} was already associated with another transaction.
+     */
+    synchronized XaTransaction createTransaction( XAResource xaResource )
+            throws XAException
+    {
+        if ( xaResourceMap.get( xaResource ) != null )
         {
-            this.msgLog = log.getStringLogger();
+            throw new XAException( "Resource[" + xaResource + "] already enlisted or suspended" );
         }
-        else
-        {
-            this.msgLog = StringLogger.SYSTEM;
-        }
+
+        XaTransaction xaTx = tf.create( dataSource.getLastCommittedTxId(), transactionManager.getTransactionState() );
+        xaResourceMap.put( xaResource, new ResourceTransaction( xaTx ) );
+        return xaTx;
     }
 
     synchronized XaTransaction getXaTransaction( XAResource xaRes )
-        throws XAException
+            throws XAException
     {
-        XidStatus status = xidMap.get( xaResourceMap.get( xaRes ) );
+        XidStatus status = xidMap.get( xaResourceMap.get( xaRes ).xid );
         if ( status == null )
         {
             throw new XAException( "Resource[" + xaRes + "] not enlisted" );
         }
         return status.getTransactionStatus().getTransaction();
     }
-    
+
     synchronized void start( XAResource xaResource, Xid xid )
-        throws XAException
+            throws XAException
     {
-        if ( xaResourceMap.get( xaResource ) != null )
+        ResourceTransaction tx = xaResourceMap.get( xaResource );
+        if ( tx == null )
         {
-            throw new XAException( "Resource[" + xaResource
-                + "] already enlisted or suspended" );
+            // Why allow creating the transaction here? See javadoc about createTransaction.
+            createTransaction( xaResource );
+            tx = xaResourceMap.get( xaResource );
         }
-        xaResourceMap.put( xaResource, xid );
-        if ( xidMap.get( xid ) == null )
+
+        if ( xidMap.get( xid ) == null ) // TODO why are we allowing this?
         {
-            int identifier = log.start( xid, txIdGenerator.getCurrentMasterId(), txIdGenerator.getMyId() );
-            XaTransaction xaTx = tf.create( identifier, transactionManager.getTransactionState() );
-            xidMap.put( xid, new XidStatus( xaTx ) );
+            int identifier = log.start( xid, txIdGenerator.getCurrentMasterId(), txIdGenerator.getMyId(),
+                    dataSource.getLastCommittedTxId() );
+            tx.xaTx.setIdentifier( identifier );
+            xidMap.put( xid, new XidStatus( tx.xaTx ) );
+            tx.xid = xid;
         }
     }
 
     synchronized void injectStart( Xid xid, XaTransaction tx )
-        throws IOException
+            throws IOException
     {
         if ( xidMap.get( xid ) != null )
         {
             throw new IOException( "Inject start failed, xid: " + xid
-                + " already injected" );
+                    + " already injected" );
         }
         xidMap.put( xid, new XidStatus( tx ) );
         recoveredTxCount++;
@@ -149,15 +183,17 @@ public class XaResourceManager
         if ( xaResourceMap.get( xaResource ) != null )
         {
             throw new XAException( "Resource[" + xaResource
-                + "] already enlisted" );
+                    + "] already enlisted" );
         }
-        xaResourceMap.put( xaResource, xid );
+
+        ResourceTransaction tx = new ResourceTransaction( null /* TODO hmm */ );
+        tx.xid = xid;
+        xaResourceMap.put( xaResource, tx );
     }
 
     synchronized void end( XAResource xaResource, Xid xid ) throws XAException
     {
-        Xid xidEntry = xaResourceMap.remove( xaResource );
-        if ( xidEntry == null )
+        if ( xaResourceMap.remove( xaResource ) == null )
         {
             throw new XAException( "Resource[" + xaResource + "] not enlisted" );
         }
@@ -179,23 +215,23 @@ public class XaResourceManager
 
     synchronized void fail( XAResource xaResource, Xid xid ) throws XAException
     {
-        if ( xidMap.get( xid ) == null )
+        XidStatus xidStatus = xidMap.get( xid );
+        if ( xidStatus == null )
         {
             throw new XAException( "Unknown xid[" + xid + "]" );
         }
-        Xid xidEntry = xaResourceMap.remove( xaResource );
-        if ( xidEntry == null )
+        if ( xaResourceMap.remove( xaResource ) == null )
         {
             throw new XAException( "Resource[" + xaResource + "] not enlisted" );
         }
-        XidStatus status = xidMap.get( xid );
-        status.getTransactionStatus().markAsRollback();
+        xidStatus.getTransactionStatus().markAsRollback();
     }
 
     synchronized void validate( XAResource xaResource ) throws XAException
     {
-        XidStatus status = xidMap.get( xaResourceMap.get( xaResource ) );
-        if ( status == null )
+        ResourceTransaction tx = xaResourceMap.get( xaResource );
+        XidStatus status = null;
+        if ( tx == null || (status = xidMap.get( tx.xid )) == null )
         {
             throw new XAException( "Resource[" + xaResource + "] not enlisted" );
         }
@@ -284,7 +320,7 @@ public class XaResourceManager
         {
             return startWritten;
         }
-        
+
         void markStartWritten()
         {
             this.startWritten = true;
@@ -299,8 +335,8 @@ public class XaResourceManager
         public String toString()
         {
             return "TransactionStatus[" + xaTransaction.getIdentifier()
-                + ", prepared=" + prepared + ", commitStarted=" + commitStarted
-                + ", rolledback=" + rollback + "]";
+                    + ", prepared=" + prepared + ", commitStarted=" + commitStarted
+                    + ", rolledback=" + rollback + "]";
         }
     }
 
@@ -314,34 +350,55 @@ public class XaResourceManager
         }
     }
 
-    synchronized int prepare( Xid xid ) throws XAException
+    /*synchronized(this) in the method*/ int prepare( Xid xid ) throws XAException
     {
-        XidStatus status = xidMap.get( xid );
-        if ( status == null )
+        XidStatus status;
+        XaTransaction xaTransaction;
+        TransactionStatus txStatus;
+
+        synchronized ( this )
         {
-            throw new XAException( "Unknown xid[" + xid + "]" );
-        }
-        TransactionStatus txStatus = status.getTransactionStatus();
-        XaTransaction xaTransaction = txStatus.getTransaction();
-        checkStartWritten( txStatus, xaTransaction );
-        if ( xaTransaction.isReadOnly() )
-        {
-            log.done( xaTransaction.getIdentifier() );
-            xidMap.remove( xid );
-            if ( xaTransaction.isRecovered() )
+            status = xidMap.get( xid );
+            if ( status == null )
             {
-                recoveredTxCount--;
-                checkIfRecoveryComplete();
+                throw new XAException( "Unknown xid[" + xid + "]" );
             }
-            return XAResource.XA_RDONLY;
+            txStatus = status.getTransactionStatus();
+            xaTransaction = txStatus.getTransaction();
         }
-        else
+
+        prepareKernelTx( xaTransaction );
+
+        synchronized ( this )
         {
-            xaTransaction.prepare();
-            log.prepare( xaTransaction.getIdentifier() );
-            txStatus.markAsPrepared();
-            return XAResource.XA_OK;
+            checkStartWritten( txStatus, xaTransaction );
+            if ( xaTransaction.isReadOnly() )
+            {
+                // Called here to release locks of two-phase read-only transactions
+                // cf. TransactionImpl.doCommit() and commit()
+                commitKernelTx( xaTransaction );
+                log.done( xaTransaction.getIdentifier() );
+                xidMap.remove( xid );
+                if ( xaTransaction.isRecovered() )
+                {
+                    oneMoreTransactionRecovered();
+                }
+                return XAResource.XA_RDONLY;
+            }
+            else
+            {
+                xaTransaction.prepare();
+                log.prepare( xaTransaction.getIdentifier() );
+                txStatus.markAsPrepared();
+                return XAResource.XA_OK;
+            }
         }
+    }
+
+    private void oneMoreTransactionRecovered()
+    {
+        recoveredTxCount--;
+        checkIfRecoveryComplete();
     }
 
     // called from XaResource internal recovery
@@ -360,8 +417,7 @@ public class XaResourceManager
             xidMap.remove( xid );
             if ( xaTransaction.isRecovered() )
             {
-                recoveredTxCount--;
-                checkIfRecoveryComplete();
+                oneMoreTransactionRecovered();
             }
             return true;
         }
@@ -373,7 +429,7 @@ public class XaResourceManager
         }
     }
 
-    private final Map<Xid,Integer> txOrderMap = new HashMap<Xid,Integer>();
+    private final Map<Xid,Integer> txOrderMap = new HashMap<>();
     private int nextTxOrder = 0;
 
     // called during recovery
@@ -391,6 +447,7 @@ public class XaResourceManager
         txStatus.markCommitStarted();
         XaTransaction xaTransaction = txStatus.getTransaction();
         xaTransaction.commit();
+        transactionMonitor.injectOnePhaseCommit( xid );
     }
 
     synchronized void injectTwoPhaseCommit( Xid xid ) throws XAException
@@ -406,6 +463,7 @@ public class XaResourceManager
         txStatus.markCommitStarted();
         XaTransaction xaTransaction = txStatus.getTransaction();
         xaTransaction.commit();
+        transactionMonitor.injectTwoPhaseCommit( xid );
     }
 
     synchronized XaTransaction getXaTransaction( Xid xid ) throws XAException
@@ -421,9 +479,10 @@ public class XaResourceManager
     }
 
     /*synchronized(this) in the method*/ XaTransaction commit( Xid xid, boolean onePhase )
-        throws XAException
+            throws XAException
     {
         XaTransaction xaTransaction;
+        TransactionStatus txStatus;
         boolean isReadOnly;
 
         synchronized ( this )
@@ -433,83 +492,135 @@ public class XaResourceManager
             {
                 throw new XAException( "Unknown xid[" + xid + "]" );
             }
-            TransactionStatus txStatus = status.getTransactionStatus();
+            txStatus = status.getTransactionStatus();
             xaTransaction = txStatus.getTransaction();
-            TxIdGenerator txIdGenerator = xaTransaction.getTxIdGenerator();
-            checkStartWritten( txStatus, xaTransaction );
             isReadOnly = xaTransaction.isReadOnly();
-            if ( onePhase )
-            {
-                txStatus.markAsPrepared();
-                if ( !isReadOnly )
-                {
-                    if ( !xaTransaction.isRecovered() )
-                    {
-                        xaTransaction.prepare();
+        }
 
-                        long txId = txIdGenerator.generate( dataSource,
-                                xaTransaction.getIdentifier() );
-                        xaTransaction.setCommitTxId( txId );
-                        log.commitOnePhase( xaTransaction.getIdentifier(),
-                                xaTransaction.getCommitTxId(), getForceMode() );
-                    }
-                }
-            }
-            if ( !txStatus.prepared() || txStatus.rollback() )
+        if ( onePhase && (!isReadOnly && !xaTransaction.isRecovered()) )
+        {
+            prepareKernelTx( xaTransaction );
+        }
+
+        synchronized ( this )
+        {
+            if(isReadOnly)
             {
-                throw new XAException( "Transaction not prepared or "
-                    + "(marked as) rolledbacked" );
+                // called for one-phase read-only transactions since they skip prepare
+                // cf. TransactionImpl.doCommit() and prepare()
+                commitReadTx( xid, onePhase, xaTransaction, txStatus );
             }
-            if ( !isReadOnly )
+            else
             {
-                if ( !xaTransaction.isRecovered() )
-                {
-                    if ( !onePhase )
-                    {
-                        long txId = txIdGenerator.generate( dataSource,
-                                xaTransaction.getIdentifier() );
-                        xaTransaction.setCommitTxId( txId );
-                        log.commitTwoPhase( xaTransaction.getIdentifier(),
-                                xaTransaction.getCommitTxId(), getForceMode() );
-                    }
-                }
-                txStatus.markCommitStarted();
-                if ( xaTransaction.isRecovered() && xaTransaction.getCommitTxId() == -1 )
-                {
-                    boolean previousRecoveredValue = dataSource.setRecovered( true );
-                    try
-                    {
-                        xaTransaction.setCommitTxId( dataSource.getLastCommittedTxId() + 1 );
-                    }
-                    finally
-                    {
-                        dataSource.setRecovered( previousRecoveredValue );
-                    }
-                }
-                xaTransaction.commit();
-            }
-            if ( !xaTransaction.isRecovered() )
-            {
-                log.done( xaTransaction.getIdentifier() );
-            }
-            else if ( !log.scanIsComplete() || recoveredTxCount > 0 )
-            {
-                int identifier = xaTransaction.getIdentifier();
-                Start startEntry = log.getStartEntry( identifier );
-                recoveredTransactions.add( new TransactionInfo( identifier, onePhase,
-                        xaTransaction.getCommitTxId(), startEntry.getMasterId(), startEntry.getChecksum() ) );
-            }
-            xidMap.remove( xid );
-            if ( xaTransaction.isRecovered() )
-            {
-                recoveredTxCount--;
-                checkIfRecoveryComplete();
+                commitWriteTx( xid, onePhase, xaTransaction, txStatus, txIdGenerator );
             }
         }
 
+        commitKernelTx( xaTransaction );
+
         if ( !xaTransaction.isRecovered() && !isReadOnly )
+        {
             txIdGenerator.committed( dataSource, xaTransaction.getIdentifier(), xaTransaction.getCommitTxId(), null );
+        }
         return xaTransaction;
+    }
+
+    private void commitReadTx( Xid xid, boolean onePhase, XaTransaction xaTransaction,
+                               TransactionStatus txStatus ) throws XAException
+    {
+        if ( onePhase )
+        {
+            txStatus.markAsPrepared();
+        }
+        if ( !txStatus.prepared() || txStatus.rollback() )
+        {
+            throw new XAException( "Transaction not prepared or "
+                    + "(marked as) rolledbacked" );
+        }
+
+        if ( !xaTransaction.isRecovered() )
+        {
+            log.forget( xaTransaction.getIdentifier() );
+        }
+
+        xidMap.remove( xid );
+        if ( xaTransaction.isRecovered() )
+        {
+            oneMoreTransactionRecovered();
+        }
+    }
+
+    private void commitWriteTx( Xid xid, boolean onePhase, XaTransaction xaTransaction,
+                                TransactionStatus txStatus, TxIdGenerator txIdGenerator ) throws XAException
+    {
+        checkStartWritten( txStatus, xaTransaction );
+
+        if ( onePhase )
+        {
+            txStatus.markAsPrepared();
+            if ( !xaTransaction.isRecovered() )
+            {
+                xaTransaction.prepare();
+
+                long txId = txIdGenerator.generate( dataSource,
+                        xaTransaction.getIdentifier() );
+                xaTransaction.setCommitTxId( txId );
+                log.commitOnePhase( xaTransaction.getIdentifier(),
+                        xaTransaction.getCommitTxId(), getForceMode() );
+            }
+        }
+
+        if ( !txStatus.prepared() || txStatus.rollback() )
+        {
+            throw new XAException( "Transaction not prepared or "
+                    + "(marked as) rolledbacked" );
+        }
+
+        if ( !onePhase && !xaTransaction.isRecovered() )
+        {
+            long txId = txIdGenerator.generate( dataSource,
+                    xaTransaction.getIdentifier() );
+            xaTransaction.setCommitTxId( txId );
+            log.commitTwoPhase( xaTransaction.getIdentifier(),
+                    xaTransaction.getCommitTxId(), getForceMode() );
+        }
+
+        txStatus.markCommitStarted();
+
+        if ( xaTransaction.isRecovered() && xaTransaction.getCommitTxId() == -1 )
+        {
+            boolean previousRecoveredValue = dataSource.setRecovered( true );
+            try
+            {
+                xaTransaction.setCommitTxId( dataSource.getLastCommittedTxId() + 1 );
+            }
+            finally
+            {
+                dataSource.setRecovered( previousRecoveredValue );
+            }
+        }
+
+        xaTransaction.commit();
+
+        if ( !xaTransaction.isRecovered() )
+        {
+            log.done( xaTransaction.getIdentifier() );
+        }
+        else if ( !log.scanIsComplete() || recoveredTxCount > 0 )
+        {
+            int identifier = xaTransaction.getIdentifier();
+            Start startEntry = log.getStartEntry( identifier );
+            recoveredTransactions.put( identifier, new TransactionInfo( identifier, onePhase,
+                    xaTransaction.getCommitTxId(), startEntry.getMasterId(), startEntry.getChecksum() ) );
+        }
+
+        xidMap.remove( xid );
+
+        if ( xaTransaction.isRecovered() )
+        {
+            oneMoreTransactionRecovered();
+        }
+        transactionMonitor.transactionCommitted( xid, xaTransaction.isRecovered() );
     }
 
     private ForceMode getForceMode()
@@ -532,14 +643,17 @@ public class XaResourceManager
             throw new XAException( "Transaction already started commit" );
         }
         txStatus.markAsRollback();
+
         xaTransaction.rollback();
+        rollbackKernelTx( xaTransaction );
+
         log.done( xaTransaction.getIdentifier() );
         xidMap.remove( xid );
         if ( xaTransaction.isRecovered() )
         {
-            recoveredTxCount--;
-            checkIfRecoveryComplete();
+            oneMoreTransactionRecovered();
         }
+
         return txStatus.getTransaction();
     }
 
@@ -547,31 +661,25 @@ public class XaResourceManager
     {
         XidStatus status = xidMap.get( xid );
         if ( status == null )
+        {
             // START record has not been applied,
             // so we don't have a transaction
             return null;
+        }
         TransactionStatus txStatus = status.getTransactionStatus();
         XaTransaction xaTransaction = txStatus.getTransaction();
-        checkStartWritten( txStatus, xaTransaction );
-        log.done( xaTransaction.getIdentifier() );
+
+        if(!xaTransaction.isReadOnly())
+        {
+            checkStartWritten( txStatus, xaTransaction );
+            log.done( xaTransaction.getIdentifier() );
+        }
         xidMap.remove( xid );
         if ( xaTransaction.isRecovered() )
         {
-            recoveredTxCount--;
-            checkIfRecoveryComplete();
+            oneMoreTransactionRecovered();
         }
         return xaTransaction;
-    }
-
-    synchronized void markAsRollbackOnly( Xid xid ) throws XAException
-    {
-        XidStatus status = xidMap.get( xid );
-        if ( status == null )
-        {
-            throw new XAException( "Unknown xid[" + xid + "]" );
-        }
-        TransactionStatus txStatus = status.getTransactionStatus();
-        txStatus.markAsRollback();
     }
 
     synchronized Xid[] recover( int flag ) throws XAException
@@ -599,25 +707,7 @@ public class XaResourceManager
         if ( xaTransaction.isRecovered() )
         {
             recoveredTransactions.remove( xaTransaction.getIdentifier() );
-            recoveredTxCount--;
-            checkIfRecoveryComplete();
-        }
-    }
-
-    synchronized void pruneXidIfExist( Xid xid ) throws IOException
-    {
-        XidStatus status = xidMap.get( xid );
-        if ( status == null )
-        {
-            return;
-        }
-        TransactionStatus txStatus = status.getTransactionStatus();
-        XaTransaction xaTransaction = txStatus.getTransaction();
-        xidMap.remove( xid );
-        if ( xaTransaction.isRecovered() )
-        {
-            recoveredTxCount--;
-            checkIfRecoveryComplete();
+            oneMoreTransactionRecovered();
         }
     }
 
@@ -626,7 +716,7 @@ public class XaResourceManager
         msgLog.logMessage( "XaResourceManager[" + name + "] sorting " +
                 xidMap.size() + " xids" );
         Iterator<Xid> keyIterator = xidMap.keySet().iterator();
-        LinkedList<Xid> xids = new LinkedList<Xid>();
+        LinkedList<Xid> xids = new LinkedList<>();
         while ( keyIterator.hasNext() )
         {
             xids.add( keyIterator.next() );
@@ -690,17 +780,17 @@ public class XaResourceManager
         }
         checkIfRecoveryComplete();
     }
-    
+
     private void checkIfRecoveryComplete()
     {
         if ( log.scanIsComplete() && recoveredTxCount == 0 )
         {
-            msgLog.logMessage( "XaResourceManager[" + name + "] checkRecoveryComplete " + xidMap.size() + " xids" );
+            msgLog.info( "XaResourceManager[" + name + "] checkRecoveryComplete " + xidMap.size() + " xids" );
             // log.makeNewLog();
             tf.recoveryComplete();
             try
             {
-                for ( TransactionInfo recoveredTx : sortByTxId( recoveredTransactions ) )
+                for ( TransactionInfo recoveredTx : sortByTxId( recoveredTransactions.values() ) )
                 {
                     if ( recoveryVerifier != null && !recoveryVerifier.isValid( recoveredTx ) )
                     {
@@ -715,23 +805,18 @@ public class XaResourceManager
                 }
                 recoveredTransactions.clear();
             }
-            catch ( IOException e )
+            catch ( IOException | XAException e )
             {
-                // TODO Why only printStackTrace?
-                e.printStackTrace();
+                // TODO: Why are we not throwing this?
+                msgLog.error( "Recovery error while committing unrecovered exception.", e );
             }
-            catch ( XAException e )
-            {
-                // TODO Why only printStackTrace?
-                e.printStackTrace();
-            }
-            msgLog.logMessage( "XaResourceManager[" + name + "] recovery completed." );
+            msgLog.info( "XaResourceManager[" + name + "] recovery completed." );
         }
     }
 
-    private Iterable<TransactionInfo> sortByTxId( Set<TransactionInfo> set )
+    private Iterable<TransactionInfo> sortByTxId( Collection<TransactionInfo> set )
     {
-        List<TransactionInfo> list = new ArrayList<TransactionInfo>( set );
+        List<TransactionInfo> list = new ArrayList<>( set );
         Collections.sort( list );
         return list;
     }
@@ -787,7 +872,7 @@ public class XaResourceManager
             throw new RuntimeException( e );
         }
     }
-    
+
     public synchronized long rotateLogicalLog() throws IOException
     {
         return log.rotate();
@@ -796,5 +881,56 @@ public class XaResourceManager
     XaDataSource getDataSource()
     {
         return dataSource;
+    }
+
+    private void prepareKernelTx( XaTransaction xaTransaction ) throws XAException
+    {
+        if ( !(xaTransaction instanceof NeoStoreTransaction) )
+        {
+            return;
+        }
+
+        try
+        {
+            ((NeoStoreTransaction)xaTransaction).kernelTransaction().prepare();
+        }
+        catch ( TransactionFailureException e )
+        {
+            throw e.unBoxedForCommit();
+        }
+    }
+
+    private void commitKernelTx( XaTransaction xaTransaction ) throws XAException
+    {
+        if ( !(xaTransaction instanceof NeoStoreTransaction) )
+        {
+            return;
+        }
+        try
+        {
+            NeoStoreTransaction neoStoreTransaction = (NeoStoreTransaction)xaTransaction;
+            neoStoreTransaction.kernelTransaction().commit();
+        }
+        catch ( TransactionFailureException e )
+        {
+            throw e.unBoxedForCommit();
+        }
+    }
+
+    private void rollbackKernelTx( XaTransaction xaTransaction ) throws XAException
+    {
+        // Hack until the WriteTx/KernelTx structure is sorted out
+        if ( !(xaTransaction instanceof NeoStoreTransaction) )
+        {
+            return;
+        }
+        try
+        {
+            ((NeoStoreTransaction)xaTransaction).kernelTransaction().rollback();
+        }
+        catch ( TransactionFailureException e )
+        {
+            throw e.unBoxedForCommit();
+        }
     }
 }

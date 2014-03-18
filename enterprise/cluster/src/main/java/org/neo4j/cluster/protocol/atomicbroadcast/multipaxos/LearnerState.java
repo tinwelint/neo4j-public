@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,18 +24,21 @@ import java.util.List;
 
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageHolder;
+import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastSerializer;
+import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.cluster.statemachine.State;
+import org.neo4j.kernel.impl.util.StringLogger;
 
 /**
  * State machine for Paxos Learner
  */
 public enum LearnerState
-        implements State<MultiPaxosContext, LearnerMessage>
+        implements State<LearnerContext, LearnerMessage>
 {
     start
             {
                 @Override
-                public LearnerState handle( MultiPaxosContext context,
+                public LearnerState handle( LearnerContext context,
                                             Message<LearnerMessage> message,
                                             MessageHolder outgoing
                 )
@@ -56,7 +59,7 @@ public enum LearnerState
     learner
             {
                 @Override
-                public LearnerState handle( MultiPaxosContext context,
+                public LearnerState handle( LearnerContext context,
                                             Message<LearnerMessage> message,
                                             MessageHolder outgoing
                 )
@@ -67,66 +70,90 @@ public enum LearnerState
                         case learn:
                         {
                             LearnerMessage.LearnState learnState = message.getPayload();
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
+
+                            StringLogger logger = context.getLogger( getClass() );
 
                             // Skip if we already know about this
-                            if ( instanceId.getId() <= context.learnerContext
-                                    .getLastDeliveredInstanceId() )
+                            if ( instanceId.getId() <= context.getLastDeliveredInstanceId() )
                             {
                                 break;
                             }
 
-                            context.learnerContext.learnedInstanceId( instanceId.getId() );
+                            context.learnedInstanceId( instanceId.getId() );
 
                             instance.closed( learnState.getValue(), message.getHeader( Message.CONVERSATION_ID ) );
 
+                            /*
+                             * The conditional below is simply so that no expensive deserialization will happen if we
+                             * are not to print anything anyway if debug is not enabled.
+                             */
+                            if ( logger.isDebugEnabled() )
+                            {
+                                String description;
+                                if ( instance.value_2 instanceof Payload )
+                                {
+                                    AtomicBroadcastSerializer atomicBroadcastSerializer = context.newSerializer();
+
+                                    description = atomicBroadcastSerializer.receive( (Payload) instance.value_2 ).toString();
+                                }
+                                else
+                                {
+                                    description = instance.value_2.toString();
+                                }
+                                logger.debug(
+                                        "Learned and closed instance "+instance.id +
+                                                " from conversation " +
+                                                instance.conversationIdHeader +
+                                                " and the content was " +
+                                                description );
+                            }
                             // If this is the next instance to be learned, then do so and check if we have anything
-                            // pending to be learnt
-                            if ( instanceId.getId() == context.learnerContext.getLastDeliveredInstanceId() + 1 )
+                            // pending to be learned
+                            if ( instanceId.getId() == context.getLastDeliveredInstanceId() + 1 )
                             {
                                 instance.delivered();
                                 outgoing.offer( Message.internal( AtomicBroadcastMessage.broadcastResponse,
                                         learnState.getValue() ) );
-                                context.learnerContext.setLastDeliveredInstanceId( instanceId.getId() );
+                                context.setLastDeliveredInstanceId( instanceId.getId() );
 
                                 long checkInstanceId = instanceId.getId() + 1;
-                                while ( (instance = context.getPaxosInstances().getPaxosInstance( new InstanceId(
+                                while ( (instance = context.getPaxosInstance( new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId(
                                         checkInstanceId ) )).isState( PaxosInstance.State.closed ) )
                                 {
                                     instance.delivered();
-                                    context.learnerContext.setLastDeliveredInstanceId( checkInstanceId );
+                                    context.setLastDeliveredInstanceId( checkInstanceId );
                                     Message<AtomicBroadcastMessage> learnMessage = Message.internal(
                                             AtomicBroadcastMessage.broadcastResponse, instance.value_2 )
-                                            .setHeader( InstanceId.INSTANCE, instance.id.toString() )
+                                            .setHeader( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE, instance.id.toString() )
                                             .setHeader( Message.CONVERSATION_ID, instance.conversationIdHeader );
                                     outgoing.offer( learnMessage );
 
                                     checkInstanceId++;
                                 }
 
-                                if ( checkInstanceId == context.learnerContext.getLastKnownLearnedInstanceInCluster()
+                                if ( checkInstanceId == context.getLastKnownLearnedInstanceInCluster()
                                         + 1 )
                                 {
                                     // No hole - all is ok
                                     // Cancel potential timeout, if one is active
-                                    context.timeouts.cancelTimeout( "learn" );
+                                    context.cancelTimeout( "learn" );
                                 }
                                 else
                                 {
                                     // Found hole - we're waiting for this to be filled, i.e. timeout already set
-                                    context.clusterContext.getLogger( LearnerState.class ).debug( "*** HOLE! WAITING " +
-                                            "FOR " + (context.learnerContext.getLastDeliveredInstanceId() + 1) );
+                                    context.getLogger( LearnerState.class ).debug( "*** HOLE! WAITING " +
+                                            "FOR " + (context.getLastDeliveredInstanceId() + 1) );
                                 }
                             }
                             else
                             {
                                 // Found hole - we're waiting for this to be filled, i.e. timeout already set
-                                context.clusterContext.getLogger( LearnerState.class ).debug( "*** GOT " + instanceId
-                                        + ", WAITING FOR " + (context.learnerContext.getLastDeliveredInstanceId() +
-                                        1) );
+                                context.getLogger( LearnerState.class ).debug( "*** GOT " + instanceId
+                                        + ", WAITING FOR " + (context.getLastDeliveredInstanceId() + 1) );
 
-                                context.timeouts.setTimeout( "learn", Message.timeout( LearnerMessage.learnTimedout,
+                                context.setTimeout( "learn", Message.timeout( LearnerMessage.learnTimedout,
                                         message ) );
                             }
                             break;
@@ -135,24 +162,26 @@ public enum LearnerState
                         case learnTimedout:
                         {
                             // Timed out waiting for learned values - send explicit request to everyone that is not failed
-                            if ( !context.learnerContext.hasDeliveredAllKnownInstances() )
+                            if ( !context.hasDeliveredAllKnownInstances() )
                             {
-                                for ( long instanceId = context.learnerContext.getLastDeliveredInstanceId() + 1;
-                                      instanceId < context.learnerContext.getLastKnownLearnedInstanceInCluster();
+                                for ( long instanceId = context.getLastDeliveredInstanceId() + 1;
+                                      instanceId < context.getLastKnownLearnedInstanceInCluster();
                                       instanceId++ )
                                 {
-                                    InstanceId id = new InstanceId( instanceId );
-                                    PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( id );
+                                    org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId id =
+                                            new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( instanceId );
+                                    PaxosInstance instance = context.getPaxosInstance( id );
                                     if ( !instance.isState( PaxosInstance.State.closed ) && !instance.isState(
                                             PaxosInstance.State.delivered ) )
                                     {
-                                        for ( URI node : context.heartbeatContext.getAlive() )
+                                        for ( org.neo4j.cluster.InstanceId node : context.getAlive() )
                                         {
-                                            if ( !node.equals( context.clusterContext.getMe() ) )
+                                            URI nodeUri = context.getUriForId( node );
+                                            if ( !node.equals( context.getMyId() ) )
                                             {
-                                                outgoing.offer( Message.to( LearnerMessage.learnRequest, node,
+                                                outgoing.offer( Message.to( LearnerMessage.learnRequest, nodeUri,
                                                         new LearnerMessage.LearnRequestState() ).setHeader(
-                                                        InstanceId.INSTANCE,
+                                                        org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE,
                                                         id.toString() ) );
                                             }
                                         }
@@ -160,7 +189,7 @@ public enum LearnerState
                                 }
 
                                 // Set another timeout
-                                context.timeouts.setTimeout( "learn", Message.timeout( LearnerMessage.learnTimedout,
+                                context.setTimeout( "learn", Message.timeout( LearnerMessage.learnTimedout,
                                         message ) );
                             }
                             break;
@@ -169,45 +198,43 @@ public enum LearnerState
                         case learnRequest:
                         {
                             // Someone wants to learn a value that we might have
-                            LearnerMessage.LearnRequestState state = message.getPayload();
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
-                            if ( instance.isState( PaxosInstance.State.closed ) || instance.isState( PaxosInstance
-                                    .State.delivered ) )
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId =
+                                    new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
+                            if ( instance.isState( PaxosInstance.State.closed )
+                              || instance.isState( PaxosInstance.State.delivered ) )
                             {
                                 outgoing.offer( Message.respond( LearnerMessage.learn, message,
                                         new LearnerMessage.LearnState( instance.value_2 ) ).
-                                        setHeader( InstanceId.INSTANCE, instanceId.toString() ).
+                                        setHeader( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE, instanceId.toString() ).
                                         setHeader( Message.CONVERSATION_ID, instance.conversationIdHeader ) );
                             }
                             else
                             {
-                                context.clusterContext.getLogger( LearnerState.class ).debug( "Did not have learned " +
-                                        "value for instance " + instanceId );
+                                context.notifyLearnMiss(instanceId);
                                 outgoing.offer( message.copyHeadersTo( Message.respond( LearnerMessage.learnFailed,
                                         message,
-                                        new LearnerMessage.LearnFailedState() ), InstanceId.INSTANCE ) );
+                                        new LearnerMessage.LearnFailedState() ), org.neo4j.cluster.protocol
+                                  .atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                             }
                             break;
                         }
 
                         case learnFailed:
                         {
-                            LearnerMessage.LearnFailedState state = message.getPayload();
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
                             if ( !(instance.isState( PaxosInstance.State.closed ) || instance.isState( PaxosInstance
                                     .State.delivered )) )
                             {
-                                List<URI> nodes = context.clusterContext.getConfiguration().getMembers();
+                                List<URI> nodes = context.getMemberURIs();
                                 URI learnDeniedNode = new URI( message.getHeader( Message.FROM ) );
                                 int nextPotentialLearnerIndex = (nodes.indexOf( learnDeniedNode ) + 1) % nodes.size();
-                                URI learnerNode = context.clusterContext.getConfiguration().getMembers().get(
-                                        nextPotentialLearnerIndex );
+                                URI learnerNode = nodes.get( nextPotentialLearnerIndex );
 
                                 outgoing.offer( message.copyHeadersTo( Message.to( LearnerMessage.learnRequest,
                                         learnerNode,
-                                        new LearnerMessage.LearnRequestState() ), InstanceId.INSTANCE ) );
+                                        new LearnerMessage.LearnRequestState() ), org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                             }
 
                             break;
@@ -217,41 +244,41 @@ public enum LearnerState
                         {
                             Long catchUpTo = message.getPayload();
 
-                            if ( context.learnerContext.getLastKnownLearnedInstanceInCluster() < catchUpTo )
+                            if ( context.getLastKnownLearnedInstanceInCluster() < catchUpTo )
                             {
-                                context.proposerContext.nextInstanceId = catchUpTo + 1;
+                                context.setNextInstanceId(catchUpTo + 1);
 
                                 // Try to get up to date
-                                for ( long instanceId = context.learnerContext.getLastLearnedInstanceId() + 1;
+                                for ( long instanceId = context.getLastLearnedInstanceId() + 1;
                                       instanceId <= catchUpTo; instanceId++ )
                                 {
-                                    InstanceId id = new InstanceId( instanceId );
-                                    PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( id );
-                                    if ( !instance.isState( PaxosInstance.State.closed ) && !instance.isState(
-                                            PaxosInstance.State.delivered ) )
+                                    org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId id = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( instanceId );
+                                    PaxosInstance instance = context.getPaxosInstance( id );
+                                    if ( !instance.isState( PaxosInstance.State.closed ) && !instance.isState( PaxosInstance.State.delivered ) )
                                     {
-                                        for ( URI node : context.heartbeatContext.getAlive() )
-                                        {
-                                            if ( !node.equals( context.clusterContext.getMe() ) )
-                                            {
-                                                outgoing.offer( Message.to( LearnerMessage.learnRequest, node,
-                                                        new LearnerMessage.LearnRequestState() ).setHeader(
-                                                        InstanceId.INSTANCE,
-                                                        id.toString() ) );
-                                                break;
-                                            }
-                                        }
+                                        URI nodeUri = context.getUriForId( context.getLastKnownAliveUpToDateInstance() );
+
+
+                                        outgoing.offer( Message.to( LearnerMessage.learnRequest,
+                                                nodeUri,
+                                                new LearnerMessage.LearnRequestState() ).setHeader(
+                                                org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE,
+                                                id.toString() ) );
+                                        context.setTimeout( "learn",
+                                                Message.timeout( LearnerMessage.learnTimedout, message ) );
+                                        break;
                                     }
                                 }
 
-                                context.learnerContext.setLastKnownLearnedInstanceInCluster( catchUpTo );
+                                context.setLastKnownLearnedInstanceInCluster( catchUpTo,
+                                        context.getIdForUri( new URI(message.getHeader( Message.FROM )) ) );
                             }
                             break;
                         }
 
                         case leave:
                         {
-                            context.learnerContext.leave();
+                            context.leave();
                             return start;
                         }
                     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ import org.neo4j.shell.Session;
 import org.neo4j.shell.ShellException;
 
 @Service.Implementation( App.class )
-public class Rmnode extends GraphDatabaseApp
+public class Rmnode extends TransactionProvidingApp
 {
     public Rmnode()
     {

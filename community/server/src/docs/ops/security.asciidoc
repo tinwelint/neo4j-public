@@ -25,7 +25,7 @@ If you need to enable access from external hosts, configure the Web server in th
 
 By default, the Neo4j Server comes with some places where arbitrary code code execution can happen. These are the <<rest-api-traverse>> REST endpoints.
 To secure these, either disable them completely by removing offending plugins from the server classpath, or secure access to these URLs through proxies or Authorization Rules.
-Also, the http://docs.oracle.com/javase/1.4.2/docs/api/java/lang/SecurityManager.html[Java Security Manager] can be used to secure parts of the codebase.
+Also, the Java Security Manager, see http://docs.oracle.com/javase/7/docs/technotes/guides/security/index.html can be used to secure parts of the codebase.
 
 == HTTPS support ==
 
@@ -46,6 +46,9 @@ org.neo4j.server.webserver.https.key.location=ssl/snakeoil.key
 
 Note that the key should be unencrypted. 
 Make sure you set correct permissions on the private key, so that only the Neo4j server user can read/write it.
+
+Neo4j also supports chained SSL certificates. 
+This requires to have all certificates in PEM format combined in one file and the private key needs to be in DER format.
 
 You can set what port the HTTPS connector should bind to in the same configuration file, as well as turn HTTPS off:
 

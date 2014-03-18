@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,24 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.transaction.xa.Xid;
 
 import org.junit.Test;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.transaction.TxLog.Record;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
+import org.neo4j.kernel.monitoring.Monitors;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.*;
 
 public class TestTxLog
 {
@@ -61,6 +66,13 @@ public class TestTxLog
     {
         return file( "tx_test_log.tx" );
     }
+
+    private File tmpFile() throws IOException
+    {
+        File file = File.createTempFile( "tx_test_log.tx.", ".tmp", path() );
+        file.deleteOnExit();
+        return file;
+    }
     
     @Test
     public void testTxLog() throws IOException
@@ -72,7 +84,7 @@ public class TestTxLog
         }
         try
         {
-            TxLog txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction() );
+            TxLog txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction(), new Monitors() );
             assertTrue( !txLog.getDanglingRecords().iterator().hasNext() );
             byte globalId[] = new byte[64];
             byte branchId[] = new byte[45];
@@ -97,7 +109,7 @@ public class TestTxLog
             txLog.markAsCommitting( globalId, ForceMode.unforced );
             assertEquals( 3, txLog.getRecordCount() );
             txLog.close();
-            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction() );
+            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction(), new Monitors() );
             assertEquals( 0, txLog.getRecordCount() );
             lists = getRecordLists( txLog.getDanglingRecords() );
             assertEquals( 1, lists.length );
@@ -122,7 +134,7 @@ public class TestTxLog
             assertEquals( 0,
                 getRecordLists( txLog.getDanglingRecords() ).length );
             txLog.close();
-            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction() );
+            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction(), new Monitors() );
             assertEquals( 0,
                 getRecordLists( txLog.getDanglingRecords() ).length );
             txLog.close();
@@ -139,7 +151,7 @@ public class TestTxLog
 
     private List<?>[] getRecordLists( Iterable<List<Record>> danglingRecords )
     {
-        List<List<?>> list = new ArrayList<List<?>>();
+        List<List<?>> list = new ArrayList<>();
         for ( List<Record> txs : danglingRecords )
         {
             list.add( txs );
@@ -157,7 +169,7 @@ public class TestTxLog
         }
         try
         {
-            TxLog txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction() );
+            TxLog txLog = new TxLog( txFile(), fs, new Monitors() );
             byte globalId[] = new byte[64];
             byte branchId[] = new byte[45];
             txLog.txStart( globalId );
@@ -167,12 +179,12 @@ public class TestTxLog
             assertEquals( 0,
                 getRecordLists( txLog.getDanglingRecords() ).length );
             txLog.close();
-            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction() );
+            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction(), new Monitors() );
             txLog.txStart( globalId );
             txLog.addBranch( globalId, branchId );
             txLog.markAsCommitting( globalId, ForceMode.unforced );
             txLog.close();
-            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction() );
+            txLog = new TxLog( txFile(), new DefaultFileSystemAbstraction(), new Monitors() );
             assertEquals( 1,
                 getRecordLists( txLog.getDanglingRecords() ).length );
             txLog.truncate();
@@ -190,8 +202,77 @@ public class TestTxLog
     }
 
     @Test
-    public void testTxRecovery()
+    public void logFilesInflatedWithZerosShouldStillBeAbleToRotate() throws IOException
     {
-        // TODO
+        // Given
+        File logFile = tmpFile();
+        File rotationTarget = tmpFile();
+        zeroPad( logFile, fs, TxLog.SCAN_WINDOW_SIZE / 2 );
+
+        TxLog log = new TxLog( logFile, fs, new Monitors() );
+        writeStartRecords( log, 2000, 0 );
+        log.force();
+
+        // When
+        log.switchToLogFile( rotationTarget );
+
+        // Then
+        assertThat( log.getRecordCount(), is( 2000 ) );
+    }
+
+    @Test
+    public void logFilesInflatedWithZerosShouldNotSkipLastEntries() throws IOException
+    {
+        // Given
+        File logFile = tmpFile();
+        TxLog log = new TxLog( logFile, fs, new Monitors() );
+        writeStartRecords( log, 1, 0);
+        log.force();
+        log.close();
+
+        // And given we then pad it enough that records will misalign with the scan window size
+        zeroPad( logFile, fs, TxLog.SCAN_WINDOW_SIZE - 2 );
+
+        // And add more records
+        log = new TxLog( logFile, fs, new Monitors() );
+        writeStartRecords( log, 1, 1 );
+        log.force();
+
+        File rotationTarget = tmpFile();
+
+        // When
+        log.switchToLogFile( rotationTarget );
+
+        // Then
+        assertThat( log.getRecordCount(), is( 2 ) );
+    }
+
+    private void writeStartRecords( TxLog log, int numberOfStartRecords, int startId ) throws IOException
+    {
+        for (int i = startId; i < numberOfStartRecords + startId; i++)
+        {
+            log.txStart( globalId( i )  );
+        }
+    }
+
+    private byte[] globalId( int i )
+    {
+        globalIdBuffer.putInt(0, i);
+        byte[] bytes = new byte[ Xid.MAXGTRIDSIZE ];
+        globalIdBuffer.position( 0 );
+        globalIdBuffer.get( bytes );
+        return bytes;
+    }
+
+    private final ByteBuffer globalIdBuffer = ByteBuffer.allocate( Xid.MAXGTRIDSIZE );
+    private final DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+
+    private void zeroPad( File logFile, DefaultFileSystemAbstraction fileSystem, int numberOfNulls ) throws IOException
+    {
+        FileChannel ch = fileSystem.open(logFile, "rw");
+        ch.position( ch.size() );
+        ch.write( ByteBuffer.allocate( numberOfNulls ));
+        ch.force(false);
+        ch.close();
     }
 }

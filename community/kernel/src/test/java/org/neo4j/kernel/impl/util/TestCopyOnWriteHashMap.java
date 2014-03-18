@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.impl.util;
 
-import static org.neo4j.kernel.impl.traversal.AbstractTestBase.assertContains;
+import static org.neo4j.kernel.impl.traversal.TraversalTestBase.assertContains;
 
 import java.util.Iterator;
 import java.util.Map;

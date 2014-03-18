@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,29 @@
  */
 package org.neo4j.kernel.ha.cluster;
 
-import static org.neo4j.helpers.Functions.withDefaults;
-import static org.neo4j.helpers.Settings.INTEGER;
-import static org.neo4j.helpers.Uris.parameter;
-import static org.neo4j.kernel.impl.nioneo.store.NeoStore.isStorePresent;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
+import javax.transaction.TransactionManager;
+
+import org.neo4j.cluster.BindingListener;
+import org.neo4j.cluster.ClusterSettings;
+import org.neo4j.cluster.com.BindingNotifier;
 import org.neo4j.cluster.member.ClusterMemberAvailability;
+import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
 import org.neo4j.com.Server;
+import org.neo4j.com.ServerUtil;
+import org.neo4j.com.storecopy.RemoteStoreCopier;
+import org.neo4j.com.storecopy.StoreWriter;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Functions;
 import org.neo4j.helpers.HostnamePort;
@@ -41,44 +49,65 @@ import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.StoreLockerLifecycleAdapter;
+import org.neo4j.kernel.TransactionEventHandlers;
 import org.neo4j.kernel.TransactionInterceptorProviders;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.ha.BranchDetectingTxVerifier;
 import org.neo4j.kernel.ha.BranchedDataException;
 import org.neo4j.kernel.ha.BranchedDataPolicy;
 import org.neo4j.kernel.ha.DelegateInvocationHandler;
-import org.neo4j.kernel.ha.id.HaIdGeneratorFactory;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HaXaDataSourceManager;
-import org.neo4j.kernel.ha.com.master.Master;
-import org.neo4j.kernel.ha.com.slave.MasterClient18;
-import org.neo4j.kernel.ha.com.master.MasterImpl;
-import org.neo4j.kernel.ha.com.master.MasterServer;
-import org.neo4j.kernel.ha.com.RequestContextFactory;
-import org.neo4j.kernel.ha.com.master.Slave;
-import org.neo4j.kernel.ha.com.slave.SlaveImpl;
-import org.neo4j.kernel.ha.com.slave.SlaveServer;
-import org.neo4j.kernel.ha.SlaveStoreWriter;
 import org.neo4j.kernel.ha.StoreOutOfDateException;
 import org.neo4j.kernel.ha.StoreUnableToParticipateInClusterException;
+import org.neo4j.kernel.ha.com.RequestContextFactory;
+import org.neo4j.kernel.ha.com.master.HandshakeResult;
+import org.neo4j.kernel.ha.com.master.Master;
+import org.neo4j.kernel.ha.com.master.MasterImpl;
+import org.neo4j.kernel.ha.com.master.MasterServer;
+import org.neo4j.kernel.ha.com.master.Slave;
+import org.neo4j.kernel.ha.com.slave.MasterClient;
+import org.neo4j.kernel.ha.com.slave.MasterClientResolver;
+import org.neo4j.kernel.ha.com.slave.SlaveImpl;
+import org.neo4j.kernel.ha.com.slave.SlaveServer;
+import org.neo4j.kernel.ha.id.HaIdGeneratorFactory;
+import org.neo4j.kernel.impl.api.NonTransactionalTokenNameLookup;
+import org.neo4j.kernel.impl.api.SchemaWriteGuard;
+import org.neo4j.kernel.impl.api.UpdateableSchemaState;
+import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.core.LabelTokenHolder;
 import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
+import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.index.IndexStore;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.MismatchingStoreIdException;
 import org.neo4j.kernel.impl.nioneo.store.StoreFactory;
+import org.neo4j.kernel.impl.nioneo.store.StoreId;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
+import org.neo4j.kernel.impl.persistence.PersistenceManager;
+import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.LockManager;
 import org.neo4j.kernel.impl.transaction.TransactionStateFactory;
-import org.neo4j.kernel.impl.transaction.TxManager;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.MissingLogDataException;
 import org.neo4j.kernel.impl.transaction.xaframework.NoSuchLogVersionException;
 import org.neo4j.kernel.impl.transaction.xaframework.XaFactory;
 import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog;
+import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleStatus;
+import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
+
+import static org.neo4j.helpers.Functions.withDefaults;
+import static org.neo4j.helpers.Settings.INTEGER;
+import static org.neo4j.helpers.Uris.parameter;
+import static org.neo4j.kernel.impl.nioneo.store.NeoStore.isStorePresent;
 
 /**
  * Performs the internal switches from pending to slave/master, by listening for
@@ -90,15 +119,19 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
     // TODO solve this with lifecycle instance grouping or something
     @SuppressWarnings( "rawtypes" )
     private static final Class[] SERVICES_TO_RESTART_FOR_STORE_COPY = new Class[] {
-        XaDataSourceManager.class,
-        TxManager.class,
-        NodeManager.class,
-        IndexStore.class,
-        StoreLockerLifecycleAdapter.class
+            StoreLockerLifecycleAdapter.class,
+            XaDataSourceManager.class,
+            TransactionManager.class,
+            NodeManager.class,
+            IndexStore.class
     };
 
     public static final String MASTER = "master";
     public static final String SLAVE = "slave";
+    private URI masterHaURI;
+    public static final String INADDR_ANY = "0.0.0.0";
+    private URI slaveHaURI;
+    private BindingListener bindingListener;
 
     public static int getServerId( URI haUri )
     {
@@ -110,67 +143,122 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
     private URI availableMasterId;
 
     private final HighAvailabilityMemberStateMachine stateHandler;
-    private final DelegateInvocationHandler delegateHandler;
+    private final BindingNotifier bindingNotifier;
+    private final DelegateInvocationHandler<Master> masterDelegateHandler;
     private final ClusterMemberAvailability clusterMemberAvailability;
     private final GraphDatabaseAPI graphDb;
     private final Config config;
-    private LifeSupport life;
+    private LifeSupport haCommunicationLife;
     private final StringLogger msgLog;
+    private final ConsoleLogger console;
+
     private final HaIdGeneratorFactory idGeneratorFactory;
     private final Logging logging;
 
-    public HighAvailabilityModeSwitcher( DelegateInvocationHandler delegateHandler,
+    private final UpdateableSchemaState updateableSchemaState;
+    private final Iterable<KernelExtensionFactory<?>> kernelExtensions;
+    private final Monitors monitors;
+    private final RequestContextFactory requestContextFactory;
+    private MasterClientResolver masterClientResolver;
+
+    private ScheduledExecutorService scheduledExecutorService;
+
+    private volatile URI me;
+
+    public HighAvailabilityModeSwitcher( BindingNotifier bindingNotifier,
+                                         DelegateInvocationHandler<Master> delegateHandler,
                                          ClusterMemberAvailability clusterMemberAvailability,
                                          HighAvailabilityMemberStateMachine stateHandler, GraphDatabaseAPI graphDb,
-                                         HaIdGeneratorFactory idGeneratorFactory, Config config, Logging logging )
+                                         HaIdGeneratorFactory idGeneratorFactory, Config config, Logging logging,
+                                         UpdateableSchemaState updateableSchemaState,
+                                         Iterable<KernelExtensionFactory<?>> kernelExtensions, Monitors monitors,
+                                         RequestContextFactory requestContextFactory )
     {
-        this.delegateHandler = delegateHandler;
+        this.bindingNotifier = bindingNotifier;
+        this.masterDelegateHandler = delegateHandler;
         this.clusterMemberAvailability = clusterMemberAvailability;
         this.graphDb = graphDb;
         this.idGeneratorFactory = idGeneratorFactory;
         this.config = config;
         this.logging = logging;
-        this.msgLog = logging.getLogger( getClass() );
-        this.life = new LifeSupport();
+        this.updateableSchemaState = updateableSchemaState;
+        this.kernelExtensions = kernelExtensions;
+        this.monitors = monitors;
+        this.requestContextFactory = requestContextFactory;
+        this.msgLog = logging.getMessagesLog( getClass() );
+        this.haCommunicationLife = new LifeSupport();
         this.stateHandler = stateHandler;
+
+        this.console = logging.getConsoleLog( getClass() );
     }
 
     @Override
     public synchronized void init() throws Throwable
     {
+        scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(  );
+
         stateHandler.addHighAvailabilityMemberListener( this );
-        life.init();
+        bindingListener = new BindingListener()
+        {
+            @Override
+            public void listeningAt( URI myUri )
+            {
+                me = myUri;
+            }
+        };
+        bindingNotifier.addBindingListener( bindingListener );
+        haCommunicationLife.init();
     }
 
     @Override
     public synchronized void start() throws Throwable
     {
-        life.start();
+        haCommunicationLife.start();
     }
 
     @Override
     public synchronized void stop() throws Throwable
     {
-        life.stop();
+        haCommunicationLife.stop();
     }
 
     @Override
     public synchronized void shutdown() throws Throwable
     {
         stateHandler.removeHighAvailabilityMemberListener( this );
-        life.shutdown();
+        bindingNotifier.removeBindingListener( bindingListener );
+
+        scheduledExecutorService.shutdown();
+
+        scheduledExecutorService.awaitTermination( 60, TimeUnit.SECONDS );
+
+        haCommunicationLife.shutdown();
     }
 
     @Override
     public void masterIsElected( HighAvailabilityMemberChangeEvent event )
     {
-        stateChanged( event );
+        if ( event.getNewState() == event.getOldState() && event.getOldState() == HighAvailabilityMemberState.MASTER )
+        {
+            clusterMemberAvailability.memberIsAvailable( MASTER, masterHaURI );
+        }
+        else
+        {
+            stateChanged( event );
+        }
     }
 
     @Override
     public void masterIsAvailable( HighAvailabilityMemberChangeEvent event )
     {
-        stateChanged( event );
+        if ( event.getNewState() == event.getOldState() && event.getOldState() == HighAvailabilityMemberState.SLAVE )
+        {
+            clusterMemberAvailability.memberIsAvailable( SLAVE, slaveHaURI );
+        }
+        else
+        {
+            stateChanged( event );
+        }
     }
 
     @Override
@@ -195,8 +283,8 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
         switch ( event.getNewState() )
         {
             case TO_MASTER:
-                life.shutdown();
-                life = new LifeSupport();
+                haCommunicationLife.shutdown();
+                haCommunicationLife = new LifeSupport();
 
                 if ( event.getOldState().equals( HighAvailabilityMemberState.SLAVE ) )
                 {
@@ -206,8 +294,7 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
                 switchToMaster();
                 break;
             case TO_SLAVE:
-                life.shutdown();
-                life = new LifeSupport();
+                haCommunicationLife.shutdown();
                 switchToSlave();
                 break;
             case PENDING:
@@ -220,8 +307,8 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
                     clusterMemberAvailability.memberIsUnavailable( MASTER );
                 }
 
-                life.shutdown();
-                life = new LifeSupport();
+                haCommunicationLife.shutdown();
+                haCommunicationLife = new LifeSupport();
                 break;
             default:
                 // do nothing
@@ -230,120 +317,175 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
 
     private void switchToMaster()
     {
-        msgLog.logMessage( "I am " + config.get( HaSettings.server_id ) + ", moving to master" );
+        msgLog.logMessage( "I am " + config.get( ClusterSettings.server_id ) + ", moving to master" );
         try
         {
-            MasterImpl masterImpl = new MasterImpl( graphDb, logging, config );
-            
-            MasterServer masterServer = new MasterServer( masterImpl, logging, serverConfig(),
-                    new BranchDetectingTxVerifier( graphDb ) );
-            life.add( masterImpl );
-            life.add( masterServer );
-            delegateHandler.setDelegate( masterImpl );
             DependencyResolver resolver = graphDb.getDependencyResolver();
-            HaXaDataSourceManager xaDsm = resolver.resolveDependency( HaXaDataSourceManager.class );
-            
-            idGeneratorFactory.switchToMaster();
-            synchronized ( xaDsm )
+            HaXaDataSourceManager xaDataSourceManager = resolver.resolveDependency( HaXaDataSourceManager.class );
+            synchronized ( xaDataSourceManager )
             {
-                ensureDataSourceStarted( xaDsm, resolver );
-            }
-            life.start();
+                //noinspection SynchronizationOnLocalVariableOrMethodParameter
+                final TransactionManager txManager = graphDb.getDependencyResolver()
+                        .resolveDependency( TransactionManager.class );
 
-            URI haUri = URI.create( "ha://" + masterServer.getSocketAddress().getHostName() + ":" +
-                    masterServer.getSocketAddress().getPort() + "?serverId=" +
-                    config.get( HaSettings.server_id ) );
-            clusterMemberAvailability.memberIsAvailable( MASTER, haUri );
-            msgLog.logMessage( "I am " + config.get( HaSettings.server_id ) +
-                    ", successfully moved to master" );
+                idGeneratorFactory.switchToMaster();
+
+                Monitors monitors = graphDb.getDependencyResolver().resolveDependency( Monitors.class );
+
+                MasterImpl.SPI spi = new DefaultMasterImplSPI( graphDb, logging, txManager, monitors );
+
+                MasterImpl masterImpl = new MasterImpl( spi, monitors.newMonitor( MasterImpl.Monitor.class ),
+                        logging, config );
+
+                MasterServer masterServer = new MasterServer( masterImpl, logging, serverConfig(),
+                        new BranchDetectingTxVerifier( graphDb ),
+                        monitors );
+                haCommunicationLife.add( masterImpl );
+                haCommunicationLife.add( masterServer );
+                assignMaster( masterImpl );
+                idGeneratorFactory.switchToMaster();
+
+                haCommunicationLife.start();
+
+                masterHaURI = URI.create( "ha://" + (ServerUtil.getHostString( masterServer.getSocketAddress() ).contains
+                        ( "0.0.0.0" ) ? me.getHost() : ServerUtil.getHostString( masterServer.getSocketAddress() )) + ":" +
+                        masterServer.getSocketAddress().getPort() + "?serverId=" +
+                        config.get( ClusterSettings.server_id ) );
+                clusterMemberAvailability.memberIsAvailable( MASTER, masterHaURI );
+                msgLog.logMessage( "I am " + config.get( ClusterSettings.server_id ) +
+                        ", successfully moved to master" );
+            }
         }
         catch ( Throwable e )
         {
             msgLog.logMessage( "Failed to switch to master", e );
-            return;
         }
+    }
+
+    private void assignMaster( Master master )
+    {
+        masterDelegateHandler.setDelegate( master );
+    }
+
+    private URI createHaURI( Server<?,?> server )
+    {
+        String hostString = ServerUtil.getHostString( server.getSocketAddress() );
+        int port = server.getSocketAddress().getPort();
+        Integer serverId = config.get( ClusterSettings.server_id );
+        String host = hostString.contains( INADDR_ANY ) ? me.getHost() : hostString;
+        return URI.create( "ha://" + host + ":" + port + "?serverId=" + serverId );
     }
 
     private void switchToSlave()
     {
-        for ( int tries = 5; tries-- > 0; )
+        this.masterClientResolver = new MasterClientResolver( logging,
+                config.get( HaSettings.read_timeout ).intValue(),
+                config.get( HaSettings.lock_read_timeout ).intValue(),
+                config.get( HaSettings.max_concurrent_channels_per_slave ).intValue(),
+                config.get( HaSettings.com_chunk_size ).intValue()  );
+
+        // Do this with a scheduler, so that if it fails, it can retry later with an exponential backoff with max wait time.
+        final AtomicLong wait = new AtomicLong();
+        scheduledExecutorService.schedule( new Runnable()
         {
-            try
+            @Override
+            public void run()
             {
-                URI masterUri = availableMasterId;
-
-                msgLog.logMessage( "I am " + config.get( HaSettings.server_id ) + ", moving to slave for master " +
-                        masterUri );
-
-                assert masterUri != null; // since we are here it must already have been set from outside
-                DependencyResolver resolver = graphDb.getDependencyResolver();
-                HaXaDataSourceManager xaDataSourceManager = resolver.resolveDependency(
-                        HaXaDataSourceManager.class );
-                idGeneratorFactory.switchToSlave();
-                synchronized ( xaDataSourceManager )
+                if (haCommunicationLife.getStatus() == LifecycleStatus.STARTED)
                 {
-                    if ( !isStorePresent( resolver.resolveDependency( FileSystemAbstraction.class ), config ) )
-                    {
-                        if ( !copyStoreFromMaster( masterUri ) )
-                            continue; // to the outer loop for a retry
-                    }
-                    
-                    NeoStoreXaDataSource nioneoDataSource = ensureDataSourceStarted( xaDataSourceManager, resolver );
-                    if ( !checkDataConsistency( xaDataSourceManager, nioneoDataSource, masterUri ) )
-                        continue; // to the outer loop for a retry
-
-                    if ( !startHaCommunication( xaDataSourceManager, nioneoDataSource, masterUri ) )
-                        continue; // to the outer loop for a retry
-
-                    msgLog.logMessage( "I am " + config.get( HaSettings.server_id ) +
-                            ", successfully moved to slave for master " + masterUri );
-                    break; // from the retry loop
+                    return; // Already switched - this can happen if a second master becomes available while waiting
                 }
+
+                try
+                {
+                    haCommunicationLife = new LifeSupport();
+
+                    URI masterUri = availableMasterId;
+
+                    console.log( "ServerId " + config.get( ClusterSettings.server_id ) + ", moving to slave for master " +
+                            masterUri  );
+
+                    assert masterUri != null; // since we are here it must already have been set from outside
+                    DependencyResolver resolver = graphDb.getDependencyResolver();
+                    HaXaDataSourceManager xaDataSourceManager = resolver.resolveDependency(
+                            HaXaDataSourceManager.class );
+                    idGeneratorFactory.switchToSlave();
+                    synchronized ( xaDataSourceManager )
+                    {
+                        if ( !isStorePresent( resolver.resolveDependency( FileSystemAbstraction.class ), config ) )
+                        {
+                            copyStoreFromMaster( masterUri );
+                        }
+
+                        /*
+                         * We get here either with a fresh store from the master copy above so we need to start the ds
+                         * or we already had a store, so we have already started the ds. Either way, make sure it's there.
+                         */
+                        NeoStoreXaDataSource nioneoDataSource = ensureDataSourceStarted( xaDataSourceManager, resolver );
+                        if ( checkDataConsistency( xaDataSourceManager,
+                                resolver.resolveDependency( RequestContextFactory.class ), nioneoDataSource, masterUri ) )
+                        {
+                            if ( startHaCommunication( xaDataSourceManager, nioneoDataSource, masterUri ) )
+                            {
+                                console.log( "ServerId " + config.get( ClusterSettings.server_id ) +
+                                        ", successfully moved to slave for master " + masterUri );
+                                return; // Done
+                            }
+                        }
+                    }
+                }
+                catch ( Throwable t )
+                {
+                    msgLog.logMessage( "Error while trying to switch to slave", t );
+                }
+
+                haCommunicationLife.shutdown();
+
+                // Try again later
+                wait.set( (1 + wait.get()*2) ); // Exponential backoff
+                wait.set(Math.min(wait.get(), 5*60)); // Wait maximum 5 minutes
+
+                scheduledExecutorService.schedule( this, wait.get(), TimeUnit.SECONDS );
+
+                msgLog.logMessage( "Attempting to switch to slave in "+wait.get()+"s");
             }
-            catch ( Throwable t )
-            {
-                msgLog.logMessage( "Unable to switch to slave", t );
-            }
-        }
+        }, wait.get(), TimeUnit.SECONDS);
     }
 
-    private boolean startHaCommunication( HaXaDataSourceManager xaDataSourceManager, NeoStoreXaDataSource nioneoDataSource, URI masterUri )
+    private boolean startHaCommunication( HaXaDataSourceManager xaDataSourceManager,
+            NeoStoreXaDataSource nioneoDataSource, URI masterUri )
     {
         try
         {
-            MasterClient18 master = new MasterClient18( masterUri, logging,
-                    nioneoDataSource.getStoreId(), config );
+            MasterClient master = newMasterClient( masterUri, nioneoDataSource.getStoreId(), haCommunicationLife );
 
             Slave slaveImpl = new SlaveImpl( nioneoDataSource.getStoreId(), master,
                     new RequestContextFactory( getServerId( masterUri ), xaDataSourceManager,
                             graphDb.getDependencyResolver() ), xaDataSourceManager );
-            
-            SlaveServer server = new SlaveServer( slaveImpl, serverConfig(), logging );
-            delegateHandler.setDelegate( master );
-            life.add( master );
-            life.add( slaveImpl );
-            life.add( server );
-            life.start();
 
-            URI haUri = URI.create( "ha://" + server.getSocketAddress().getHostName() + ":" +
-                    server.getSocketAddress().getPort() + "?serverId=" +
-                    config.get( HaSettings.server_id ) );
-            clusterMemberAvailability.memberIsAvailable( SLAVE, haUri );
+            SlaveServer server = new SlaveServer( slaveImpl, serverConfig(), logging,
+                    graphDb.getDependencyResolver().resolveDependency( Monitors.class ) );
+            assignMaster( master );
+            haCommunicationLife.add( slaveImpl );
+            haCommunicationLife.add( server );
+            haCommunicationLife.start();
+
+            slaveHaURI = createHaURI( server );
+            clusterMemberAvailability.memberIsAvailable( SLAVE, slaveHaURI );
             return true;
         }
         catch ( Throwable t )
         {
             msgLog.logMessage( "Got exception while starting HA communication", t );
-            life.shutdown();
-            life = new LifeSupport();
-            nioneoDataSource.stop();
+            haCommunicationLife.shutdown();
+            haCommunicationLife = new LifeSupport();
         }
         return false;
     }
 
     private Server.Configuration serverConfig()
     {
-        Server.Configuration serverConfig = new Server.Configuration()
+        return new Server.Configuration()
         {
             @Override
             public long getOldChannelThreshold()
@@ -369,30 +511,43 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
                 return config.get( HaSettings.ha_server );
             }
         };
-        return serverConfig;
     }
 
-    private boolean checkDataConsistency( XaDataSourceManager xaDataSourceManager,
-            NeoStoreXaDataSource nioneoDataSource, URI masterUri ) throws Throwable
+    private boolean checkDataConsistency( HaXaDataSourceManager xaDataSourceManager,
+                                          RequestContextFactory requestContextFactory,
+                                          NeoStoreXaDataSource nioneoDataSource, URI masterUri ) throws Throwable
     {
         // Must be called under lock on XaDataSourceManager
         LifeSupport checkConsistencyLife = new LifeSupport();
         try
         {
-            MasterClient18 checkConsistencyMaster = new MasterClient18( masterUri,
-                    logging, nioneoDataSource.getStoreId(), config );
-            checkConsistencyLife.add( checkConsistencyMaster );
+            MasterClient checkConsistencyMaster = newMasterClient( masterUri, nioneoDataSource.getStoreId(),
+                    checkConsistencyLife );
             checkConsistencyLife.start();
+            console.log( "Checking store consistency with master" );
             checkDataConsistencyWithMaster( checkConsistencyMaster, nioneoDataSource );
+            console.log( "Store is consistent" );
+
+            /*
+             * Pull updates, since the store seems happy and everything. No matter how far back we are, this is just
+             * one thread doing the pulling, while the guard is up. This will prevent a race between all transactions
+             * that may start the moment the database becomes available, where all of them will pull the same txs from
+             * the master but eventually only one will get to apply them.
+             */
+            console.log( "Catching up with master" );
+            RequestContext context = requestContextFactory.newRequestContext( -1 );
+            xaDataSourceManager.applyTransactions( checkConsistencyMaster.pullUpdates( context ) );
+            console.log( "Now consistent with master" );
             return true;
         }
         catch ( StoreUnableToParticipateInClusterException upe )
         {
+            console.log( "The store is inconsistent. Will treat it as branched and fetch a new one from the master" );
             msgLog.warn( "Current store is unable to participate in the cluster; fetching new store from master", upe );
             try
             {
                 // Unregistering from a running DSManager stops the datasource
-                xaDataSourceManager.unregisterDataSource( Config.DEFAULT_DATA_SOURCE_NAME );
+                xaDataSourceManager.unregisterDataSource( NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME );
                 stopServicesAndHandleBranchedStore( config.get( HaSettings.branched_data_policy ) );
             }
             catch ( IOException e )
@@ -402,6 +557,7 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
         }
         catch ( MismatchingStoreIdException e )
         {
+            console.log( "The store does not represent the same database as master. Will remove and fetch a new one from master" );
             if ( nioneoDataSource.getNeoStore().getLastCommittedTx() == 1 )
             {
                 msgLog.warn( "Found and deleting empty store with mismatching store id " + e.getMessage() );
@@ -425,99 +581,112 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
     }
 
     private NeoStoreXaDataSource ensureDataSourceStarted( XaDataSourceManager xaDataSourceManager, DependencyResolver resolver )
-            throws IOException
     {
         // Must be called under lock on XaDataSourceManager
-        NeoStoreXaDataSource nioneoDataSource = (NeoStoreXaDataSource) xaDataSourceManager.getXaDataSource( Config.DEFAULT_DATA_SOURCE_NAME );
+        NeoStoreXaDataSource nioneoDataSource = (NeoStoreXaDataSource) xaDataSourceManager.getXaDataSource(
+                NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME );
         if ( nioneoDataSource == null )
         {
-            try
-            {
-                nioneoDataSource = new NeoStoreXaDataSource( config,
-                        resolver.resolveDependency( StoreFactory.class ),
-                        resolver.resolveDependency( LockManager.class ),
-                        resolver.resolveDependency( StringLogger.class ),
-                        resolver.resolveDependency( XaFactory.class ),
-                        resolver.resolveDependency( TransactionStateFactory.class ),
-                        resolver.resolveDependency( TransactionInterceptorProviders.class ),
-                        resolver );
-                xaDataSourceManager.registerDataSource( nioneoDataSource );
-            }
-            catch ( IOException e )
-            {
-                msgLog.logMessage( "Failed while trying to create datasource", e );
-                throw e;
-            }
+            nioneoDataSource = new NeoStoreXaDataSource( config,
+                    resolver.resolveDependency( StoreFactory.class ),
+                    resolver.resolveDependency( StringLogger.class ),
+                    resolver.resolveDependency( XaFactory.class ),
+                    resolver.resolveDependency( TransactionStateFactory.class ),
+                    resolver.resolveDependency( TransactionInterceptorProviders.class ),
+                    resolver.resolveDependency( JobScheduler.class ),
+                    logging,
+                    updateableSchemaState,
+                    new NonTransactionalTokenNameLookup(
+                            resolver.resolveDependency( LabelTokenHolder.class ),
+                            resolver.resolveDependency( PropertyKeyTokenHolder.class ) ),
+                    resolver,
+                    resolver.resolveDependency( AbstractTransactionManager.class ),
+                    resolver.resolveDependency( PropertyKeyTokenHolder.class ),
+                    resolver.resolveDependency( LabelTokenHolder.class ),
+                    resolver.resolveDependency( RelationshipTypeTokenHolder.class ),
+                    resolver.resolveDependency( PersistenceManager.class ),
+                    resolver.resolveDependency( LockManager.class ),
+                    (SchemaWriteGuard)graphDb,
+                    resolver.resolveDependency( TransactionEventHandlers.class ),
+                    monitors.newMonitor( IndexingService.Monitor.class ));
+            xaDataSourceManager.registerDataSource( nioneoDataSource );
+                /*
+                 * CAUTION: The next line may cause severe eye irritation, mental instability and potential
+                 * emotional breakdown. On the plus side, it is correct.
+                 * See, it is quite possible to get here without the NodeManager having stopped, because we don't
+                 * properly manage lifecycle in this class (this is the cause of this ugliness). So, after we
+                 * register the datasource with the DsMgr we need to make sure that NodeManager re-reads the reltype
+                 * and propindex information. Normally, we would have shutdown everything before getting here.
+                 */
+            resolver.resolveDependency( NodeManager.class ).start();
         }
         return nioneoDataSource;
     }
 
-    private boolean copyStoreFromMaster( URI masterUri )
+    private void copyStoreFromMaster( URI masterUri ) throws Throwable
     {
+        FileSystemAbstraction fs = graphDb.getDependencyResolver().resolveDependency( FileSystemAbstraction.class );
         // Must be called under lock on XaDataSourceManager
         LifeSupport life = new LifeSupport();
         try
         {
             // Remove the current store - neostore file is missing, nothing we can really do
             stopServicesAndHandleBranchedStore( BranchedDataPolicy.keep_none );
-            MasterClient18 copyMaster =
-                    new MasterClient18( masterUri, logging, null, config );
-
-            life.add( copyMaster );
+            final MasterClient copyMaster = newMasterClient( masterUri, null, life );
             life.start();
 
             // This will move the copied db to the graphdb location
-            msgLog.logMessage( "Copying store from master" );
-            new SlaveStoreWriter( config ).copyStore( copyMaster );
+            console.log( "Copying store from master" );
+            new RemoteStoreCopier( config, kernelExtensions, console,
+                    fs ).copyStore( new RemoteStoreCopier.StoreCopyRequester()
+
+            {
+                @Override
+                public Response<?> copyStore( StoreWriter writer )
+                {
+                    return copyMaster.copyStore( new RequestContext( 0,
+                            config.get( ClusterSettings.server_id ), 0, new RequestContext.Tx[0], 0, 0 ), writer );
+                }
+            } );
 
             startServicesAgain();
-            msgLog.logMessage( "Finished copying store from master" );
-            return true;
-        }
-        catch ( Throwable e )
-        {
-            msgLog.logMessage( "Failed to copy store from master", e );
+            console.log( "Finished copying store from master" );
         }
         finally
         {
             life.stop();
         }
-        return false;
+    }
+
+    private MasterClient newMasterClient( URI masterUri, StoreId storeId, LifeSupport life )
+    {
+        return masterClientResolver.instantiate( masterUri.getHost(), masterUri.getPort(),
+                graphDb.getDependencyResolver().resolveDependency( Monitors.class ), storeId, life );
     }
 
     private void startServicesAgain() throws Throwable
     {
         @SuppressWarnings( "rawtypes" )
-        List<Class> services = new ArrayList<Class>( Arrays.asList( SERVICES_TO_RESTART_FOR_STORE_COPY ) );
-        Collections.reverse( services );
-        for ( Class<Lifecycle> serviceClass : services )
-            graphDb.getDependencyResolver().resolveDependency( serviceClass ).start();
+        List<Class> services = new ArrayList<>( Arrays.asList( SERVICES_TO_RESTART_FOR_STORE_COPY ) );
+        for ( Class<?> serviceClass : services )
+        {
+            Lifecycle service = (Lifecycle) graphDb.getDependencyResolver().resolveDependency( serviceClass );
+            service.start();
+        }
     }
 
-    @SuppressWarnings( "unchecked" )
-    private void stopServicesAndHandleBranchedStore( BranchedDataPolicy branchPolicy )
-            throws Throwable
+    private void stopServicesAndHandleBranchedStore( BranchedDataPolicy branchPolicy ) throws Throwable
     {
-        for ( Class<Lifecycle> serviceClass : SERVICES_TO_RESTART_FOR_STORE_COPY )
-            graphDb.getDependencyResolver().resolveDependency( serviceClass ).stop();
-        
+        List<Class> services = new ArrayList<>( Arrays.asList( SERVICES_TO_RESTART_FOR_STORE_COPY ) );
+        Collections.reverse( services );
+        for ( Class<?> serviceClass : services )
+        {
+            Lifecycle service = (Lifecycle) graphDb.getDependencyResolver().resolveDependency( serviceClass );
+            service.stop();
+        }
+
         branchPolicy.handle( config.get( InternalAbstractGraphDatabase.Configuration.store_dir ) );
     }
-
-    /* Those left here for posterity, all data source start-stop cycles must happen through XaDSManager
-    private void startOtherDataSources() throws Throwable
-    {
-        LuceneKernelExtension lucene = graphDb.getDependencyResolver().resolveDependency(
-                KernelExtensions.class ).resolveDependency( LuceneKernelExtension.class );
-        lucene.start();
-    }
-
-    private void stopOtherDataSources() throws Throwable
-    {
-        LuceneKernelExtension lucene = graphDb.getDependencyResolver().resolveDependency(
-                KernelExtensions.class ).resolveDependency( LuceneKernelExtension.class );
-        lucene.stop();
-    } */
 
     private void checkDataConsistencyWithMaster( Master master, NeoStoreXaDataSource nioneoDataSource )
     {
@@ -549,12 +718,16 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
                     + myLastCommittedTx + ".", e );
         }
 
-        Response<Pair<Integer, Long>> response = null;
-        Pair<Integer, Long> mastersMaster;
-        try
+        HandshakeResult handshake;
+        try ( Response<HandshakeResult> response = master.handshake( myLastCommittedTx, nioneoDataSource.getStoreId() ) )
         {
-            response = master.getMasterIdForCommittedTx( myLastCommittedTx, nioneoDataSource.getStoreId() );
-            mastersMaster = response.response();
+            handshake = response.response();
+            requestContextFactory.setEpoch( handshake.epoch() );
+        }
+        catch( BranchedDataException e )
+        {
+            // Rethrow wrapped in a branched data exception on our side, to clarify where the problem originates.
+            throw new BranchedDataException( "Master detected branched data for this machine.", e );
         }
         catch ( RuntimeException e )
         {
@@ -571,26 +744,16 @@ public class HighAvailabilityModeSwitcher implements HighAvailabilityMemberListe
                 throw new StoreOutOfDateException( "The master is missing the log required to complete the " +
                         "consistency check", e.getCause() );
             }
-            else
-            {
-                throw e;
-            }
-        }
-        finally
-        {
-            if ( response != null )
-            {
-                response.close();
-            }
+            throw e;
         }
 
-        if ( myMaster.first() != XaLogicalLog.MASTER_ID_REPRESENTING_NO_MASTER
-                && !myMaster.equals( mastersMaster ) )
+        if ( myMaster.first() != XaLogicalLog.MASTER_ID_REPRESENTING_NO_MASTER &&
+                (myMaster.first() != handshake.txAuthor() || myMaster.other() != handshake.txChecksum()) )
         {
-            String msg = "Branched data, I (machineId:" + config.get( HaSettings.server_id ) + ") think machineId for" +
+            String msg = "Branched data, I (machineId:" + config.get( ClusterSettings.server_id ) + ") think machineId for" +
                     " txId (" +
                     myLastCommittedTx + ") is " + myMaster + ", but master (machineId:" +
-                    getServerId( availableMasterId ) + ") says that it's " + mastersMaster;
+                    getServerId( availableMasterId ) + ") says that it's " + handshake;
             throw new BranchedDataException( msg );
         }
         msgLog.logMessage( "Master id for last committed tx ok with highestTxId=" +

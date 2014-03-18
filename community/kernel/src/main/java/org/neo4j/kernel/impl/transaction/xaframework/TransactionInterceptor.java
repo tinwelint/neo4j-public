@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -43,7 +43,7 @@ public interface TransactionInterceptor extends CommandRecordVisitor
      * must be calling complete() on the following member of the chain, if
      * present.
      */
-    public void complete();
+    void complete();
 
     /**
      * Set, if available, the log start entry for this transaction. The
@@ -54,7 +54,7 @@ public interface TransactionInterceptor extends CommandRecordVisitor
      * 
      * @param entry The start log entry for this transaction
      */
-    public void setStartEntry( LogEntry.Start entry );
+    void setStartEntry( LogEntry.Start entry );
 
     /**
      * Set, if available, the log commit entry for this transaction. The
@@ -65,5 +65,5 @@ public interface TransactionInterceptor extends CommandRecordVisitor
      * 
      * @param entry The commit log entry for this transaction
      */
-    public void setCommitEntry( LogEntry.Commit entry );
+    void setCommitEntry( LogEntry.Commit entry );
 }

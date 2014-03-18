@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,5 +23,5 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 public interface TargetCaller<T, R>
 {
-    Response<R> call( T requestTarget, RequestContext context, ChannelBuffer input, ChannelBuffer target );
+    Response<R> call( T requestTarget, RequestContext context, ChannelBuffer input, ChannelBuffer target ) throws Exception;
 }

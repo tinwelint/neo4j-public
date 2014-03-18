@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,11 +21,11 @@ package org.neo4j.cluster.protocol.cluster;
 
 import java.io.Serializable;
 import java.net.URI;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.com.message.MessageType;
-import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId;
 
 /**
  * Messages to implement the Cluster API state machine
@@ -43,17 +43,89 @@ public enum ClusterMessage
 
     // Protocol messages
     joining, joiningTimeout,
-    configurationRequest, configurationResponse, configurationTimeout, configurationChanged, joinFailure, leaveTimedout;
+    configurationRequest, configurationResponse, configurationTimeout, configurationChanged,
+    joinDenied, joinFailure, leaveTimedout;
+
+    public static class ConfigurationRequestState implements Serializable, Comparable<ConfigurationRequestState>
+    {
+        private static final long serialVersionUID = -221752558518247157L;
+
+        private InstanceId joiningId;
+        private URI joiningUri;
+
+        public ConfigurationRequestState( InstanceId joiningId, URI joiningUri )
+        {
+            this.joiningId = joiningId;
+            this.joiningUri = joiningUri;
+        }
+
+        public InstanceId getJoiningId()
+        {
+            return joiningId;
+        }
+
+        public URI getJoiningUri()
+        {
+            return joiningUri;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+
+            ConfigurationRequestState that = (ConfigurationRequestState) o;
+
+            if ( !joiningId.equals( that.joiningId ) )
+            {
+                return false;
+            }
+            if ( !joiningUri.equals( that.joiningUri ) )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = joiningId.hashCode();
+            result = 31 * result + joiningUri.hashCode();
+            return result;
+        }
+
+        @Override
+        public int compareTo( ConfigurationRequestState o )
+        {
+            return this.joiningId.compareTo( o.joiningId );
+        }
+
+        @Override
+        public String toString()
+        {
+            return joiningId + ":" + joiningUri;
+        }
+    }
 
     public static class ConfigurationResponseState
             implements Serializable
     {
-        private List<URI> nodes;
-        private InstanceId latestReceivedInstanceId;
-        private Map<String, URI> roles;
-        private String clusterName;
+        private final Map<InstanceId, URI> nodes;
+        private final org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId latestReceivedInstanceId;
+        private final Map<String, InstanceId> roles;
+        private final String clusterName;
 
-        public ConfigurationResponseState( Map<String, URI> roles, List<URI> nodes, InstanceId latestReceivedInstanceId,
+        public ConfigurationResponseState( Map<String, InstanceId> roles, Map<InstanceId, URI> nodes,
+                                           org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId latestReceivedInstanceId,
                                           String clusterName )
         {
             this.roles = roles;
@@ -62,17 +134,17 @@ public enum ClusterMessage
             this.clusterName = clusterName;
         }
 
-        public List<URI> getMembers()
+        public Map<InstanceId, URI> getMembers()
         {
             return nodes;
         }
 
-        public Map<String, URI> getRoles()
+        public Map<String, InstanceId> getRoles()
         {
             return roles;
         }
 
-        public InstanceId getLatestReceivedInstanceId()
+        public org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId getLatestReceivedInstanceId()
         {
             return latestReceivedInstanceId;
         }
@@ -81,39 +153,118 @@ public enum ClusterMessage
         {
             return clusterName;
         }
+
+        public ConfigurationResponseState snapshot()
+        {
+            return new ConfigurationResponseState( new HashMap<>(roles), new HashMap<>(nodes),
+                    latestReceivedInstanceId, clusterName );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "ConfigurationResponseState{" +
+                    "nodes=" + nodes +
+                    ", latestReceivedInstanceId=" + latestReceivedInstanceId +
+                    ", roles=" + roles +
+                    ", clusterName='" + clusterName + '\'' +
+                    '}';
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+
+            ConfigurationResponseState that = (ConfigurationResponseState) o;
+
+            if ( clusterName != null ? !clusterName.equals( that.clusterName ) : that.clusterName != null )
+            {
+                return false;
+            }
+            if ( latestReceivedInstanceId != null ? !latestReceivedInstanceId.equals( that.latestReceivedInstanceId )
+                    : that.latestReceivedInstanceId != null )
+            {
+                return false;
+            }
+            if ( nodes != null ? !nodes.equals( that.nodes ) : that.nodes != null )
+            {
+                return false;
+            }
+            if ( roles != null ? !roles.equals( that.roles ) : that.roles != null )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = nodes != null ? nodes.hashCode() : 0;
+            result = 31 * result + (latestReceivedInstanceId != null ? latestReceivedInstanceId.hashCode() : 0);
+            result = 31 * result + (roles != null ? roles.hashCode() : 0);
+            result = 31 * result + (clusterName != null ? clusterName.hashCode() : 0);
+            return result;
+        }
     }
 
     public static class ConfigurationChangeState
             implements Serializable
     {
-        private URI join;
-        private URI leave;
+        private InstanceId join;
+        private URI joinUri;
 
-        private String role;
-        private URI winner;
+        private InstanceId leave;
 
-        public void join( URI uri )
+        private String roleWon;
+        private InstanceId winner;
+
+        private String roleLost;
+        private InstanceId loser;
+
+        public void join( InstanceId join, URI joinUri )
         {
-            this.join = uri;
+            this.join = join;
+            this.joinUri = joinUri;
         }
 
-        public void leave( URI uri )
+        public void leave( InstanceId uri )
         {
             this.leave = uri;
         }
 
-        public void elected( String role, URI winner )
+        public void elected( String role, InstanceId winner )
         {
-            this.role = role;
+            this.roleWon = role;
             this.winner = winner;
         }
 
-        public URI getJoin()
+        public void unelected( String role, InstanceId unelected )
+        {
+            roleLost = role;
+            loser = unelected;
+        }
+
+        public InstanceId getJoin()
         {
             return join;
         }
 
-        public URI getLeave()
+        public URI getJoinUri()
+        {
+            return joinUri;
+        }
+
+        public InstanceId getLeave()
         {
             return leave;
         }
@@ -122,7 +273,7 @@ public enum ClusterMessage
         {
             if ( join != null )
             {
-                context.joined( join );
+                context.joined( join, joinUri );
             }
 
             if ( leave != null )
@@ -130,13 +281,18 @@ public enum ClusterMessage
                 context.left( leave );
             }
 
-            if ( role != null )
+            if ( roleWon != null )
             {
-                context.elected( role, winner );
+                context.elected( roleWon, winner );
+            }
+
+            if ( roleLost != null )
+            {
+                context.unelected( roleLost, loser );
             }
         }
 
-        public boolean isLeaving( URI me )
+        public boolean isLeaving( InstanceId me )
         {
             return me.equals( leave );
         }
@@ -153,7 +309,69 @@ public enum ClusterMessage
                 return "Change cluster config, leave:" + leave;
             }
 
-            return "Change cluster config, elected:" + winner + " as " + role;
+            if (roleWon != null)
+                return "Change cluster config, elected:" + winner + " as " + roleWon;
+            else
+                return "Change cluster config, unelected:" + loser + " as " + roleWon;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+
+            ConfigurationChangeState that = (ConfigurationChangeState) o;
+
+            if ( join != null ? !join.equals( that.join ) : that.join != null )
+            {
+                return false;
+            }
+            if ( joinUri != null ? !joinUri.equals( that.joinUri ) : that.joinUri != null )
+            {
+                return false;
+            }
+            if ( leave != null ? !leave.equals( that.leave ) : that.leave != null )
+            {
+                return false;
+            }
+            if ( loser != null ? !loser.equals( that.loser ) : that.loser != null )
+            {
+                return false;
+            }
+            if ( roleLost != null ? !roleLost.equals( that.roleLost ) : that.roleLost != null )
+            {
+                return false;
+            }
+            if ( roleWon != null ? !roleWon.equals( that.roleWon ) : that.roleWon != null )
+            {
+                return false;
+            }
+            if ( winner != null ? !winner.equals( that.winner ) : that.winner != null )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = join != null ? join.hashCode() : 0;
+            result = 31 * result + (joinUri != null ? joinUri.hashCode() : 0);
+            result = 31 * result + (leave != null ? leave.hashCode() : 0);
+            result = 31 * result + (roleWon != null ? roleWon.hashCode() : 0);
+            result = 31 * result + (winner != null ? winner.hashCode() : 0);
+            result = 31 * result + (roleLost != null ? roleLost.hashCode() : 0);
+            result = 31 * result + (loser != null ? loser.hashCode() : 0);
+            return result;
         }
     }
 
@@ -167,6 +385,34 @@ public enum ClusterMessage
         }
 
         public int getRemainingPings()
+        {
+            return remainingPings;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+
+            ConfigurationTimeoutState that = (ConfigurationTimeoutState) o;
+
+            if ( remainingPings != that.remainingPings )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
         {
             return remainingPings;
         }

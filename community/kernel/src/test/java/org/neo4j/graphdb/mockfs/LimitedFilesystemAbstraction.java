@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,9 +24,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.channels.FileChannel;
 
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.impl.nioneo.store.FileLock;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.test.impl.ChannelInputStream;
@@ -65,6 +68,12 @@ public class LimitedFilesystemAbstraction implements FileSystemAbstraction
     public Reader openAsReader( File fileName, String encoding ) throws IOException
     {
         return new InputStreamReader( openAsInputStream( fileName ), encoding );
+    }
+    
+    @Override
+    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    {
+        return new OutputStreamWriter( openAsOutputStream( fileName, append ) );
     }
 
     @Override
@@ -111,9 +120,10 @@ public class LimitedFilesystemAbstraction implements FileSystemAbstraction
     }
     
     @Override
-    public boolean mkdirs( File fileName )
+    public void mkdirs( File fileName ) throws IOException
     {
-        return inner.mkdirs( fileName );
+        ensureHasSpace();
+        inner.mkdirs( fileName );
     }
 
     @Override
@@ -121,13 +131,6 @@ public class LimitedFilesystemAbstraction implements FileSystemAbstraction
     {
         ensureHasSpace();
         return inner.renameFile( from, to );
-    }
-
-    @Override
-    public void autoCreatePath( File path ) throws IOException
-    {
-        ensureHasSpace();
-        inner.autoCreatePath( path );
     }
 
     public void runOutOfDiskSpace()
@@ -158,5 +161,30 @@ public class LimitedFilesystemAbstraction implements FileSystemAbstraction
     public boolean isDirectory( File file )
     {
         return inner.isDirectory( file );
+    }
+    
+    @Override
+    public void moveToDirectory( File file, File toDirectory ) throws IOException
+    {
+        inner.moveToDirectory( file, toDirectory );
+    }
+    
+    @Override
+    public void copyFile( File from, File to ) throws IOException
+    {
+        inner.copyFile( from, to );
+    }
+    
+    @Override
+    public void copyRecursively( File fromDirectory, File toDirectory ) throws IOException
+    {
+        inner.copyRecursively( fromDirectory, toDirectory );
+    }
+
+    @Override
+    public <K extends ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem(
+            Class<K> clazz, Function<Class<K>, K> creator )
+    {
+        return inner.getOrCreateThirdPartyFileSystem( clazz, creator );
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,14 @@
  */
 package org.neo4j.ha;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.neo4j.test.ha.ClusterManager.fromXml;
-
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.Test;
+
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.client.ClusterClient;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatListener;
@@ -39,6 +37,12 @@ import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.ha.ClusterManager;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertThat;
+
+import static org.neo4j.test.ha.ClusterManager.fromXml;
+import static org.neo4j.test.ha.ClusterManager.masterAvailable;
 
 public class TestSlaveOnlyCluster
 {
@@ -55,18 +59,20 @@ public class TestSlaveOnlyCluster
         {
             clusterManager.start();
 
+            clusterManager.getDefaultCluster().await( ClusterManager.allSeesAllAsAvailable() );
+
             final CountDownLatch failedLatch = new CountDownLatch( 2 );
             final CountDownLatch electedLatch = new CountDownLatch( 2 );
             HeartbeatListener masterDownListener = new HeartbeatListener()
             {
                 @Override
-                public void failed( URI server )
+                public void failed( InstanceId server )
                 {
                     failedLatch.countDown();
                 }
 
                 @Override
-                public void alive( URI server )
+                public void alive( InstanceId server )
                 {
                 }
             };
@@ -80,7 +86,7 @@ public class TestSlaveOnlyCluster
                     highlyAvailableGraphDatabase.getDependencyResolver().resolveDependency( ClusterClient.class ).addClusterListener( new ClusterListener.Adapter()
                     {
                         @Override
-                        public void elected( String role, URI electedMember )
+                        public void elected( String role, InstanceId electedMember, URI availableAtUri )
                         {
                             electedLatch.countDown();
                         }
@@ -98,16 +104,19 @@ public class TestSlaveOnlyCluster
             electedLatch.await();
 
             HighlyAvailableGraphDatabase slaveDatabase = clusterManager.getDefaultCluster().getAnySlave(  );
-            Transaction tx = slaveDatabase.beginTx();
-            Node node = slaveDatabase.createNode();
-            node.setProperty( "foo", "bar" );
-            long nodeId = node.getId();
-            tx.success();
-            tx.finish();
+            long nodeId;
+            try ( Transaction tx = slaveDatabase.beginTx() )
+            {
+                Node node = slaveDatabase.createNode();
+                node.setProperty( "foo", "bar" );
+                nodeId = node.getId();
+                tx.success();
+            }
 
-            node = master.getNodeById( nodeId );
-
-            Assert.assertThat(node.getProperty( "foo" ).toString(), equalTo( "bar" ));
+            try ( Transaction ignore = master.beginTx() )
+            {
+                assertThat( master.getNodeById( nodeId ).getProperty( "foo" ).toString(), equalTo( "bar" ) );
+            }
         }
         finally
         {
@@ -123,13 +132,15 @@ public class TestSlaveOnlyCluster
                 MapUtil.<Integer, Map<String, String>>genericMap( 1, MapUtil.stringMap( HaSettings.slave_only.name(), "true" ),
                                        2, MapUtil.stringMap( HaSettings.slave_only.name(), "true" )) );
 
-
         try
         {
             clusterManager.start();
 
-            HighlyAvailableGraphDatabase master = clusterManager.getDefaultCluster().getMaster();
-            Assert.assertThat( clusterManager.getDefaultCluster().getServerId( master ), CoreMatchers.equalTo( 3 ));
+            ClusterManager.ManagedCluster cluster = clusterManager.getDefaultCluster();
+            cluster.await( masterAvailable( cluster.getMemberByServerId( 1 ), cluster.getMemberByServerId( 2 ) ) );
+
+            HighlyAvailableGraphDatabase master = cluster.getMaster();
+            assertThat( cluster.getServerId( master ), CoreMatchers.equalTo( 3 ) );
         }
         finally
         {

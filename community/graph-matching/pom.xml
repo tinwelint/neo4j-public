@@ -3,13 +3,14 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>1.9-SNAPSHOT</version>
+    <version>2.1-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <properties>
     <bundle.namespace>org.neo4j.graphmatching</bundle.namespace>
     <short-name>graph-matching</short-name>
+    <version-package>graphmatching.impl</version-package>
     <license-text.header>GPL-3-header.txt</license-text.header>
     <licensing.prepend.text>notice-gpl-prefix.txt</licensing.prepend.text>
   </properties>
@@ -17,13 +18,14 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.neo4j</groupId>
   <artifactId>neo4j-graph-matching</artifactId>
-  <version>1.9-SNAPSHOT</version>
+  <version>2.1-SNAPSHOT</version>
+
   <name>Neo4j - Graph Matching</name>
   <description>A graph pattern matcher for Neo4j.</description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <scm>
-    <url>https://github.com/neo4j/community/tree/master/graph-matching</url>
+	  <url>https://github.com/neo4j/neo4j/tree/master/community/graph-matching</url>
   </scm>
 
   <licenses>
@@ -99,7 +101,7 @@
   <distributionManagement>
     <site>
       <id>neo4j-site</id>
-      <url>scpexe://static.neo4j.org/var/www/components.neo4j.org/${project.artifactId}/${project.version}</url>
+      <url>scpexe://docs.neo4j.org/data/www/doc/components.neo4j.org/${project.artifactId}/${project.version}</url>
     </site>
   </distributionManagement>
 

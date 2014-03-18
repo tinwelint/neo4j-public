@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,10 +28,10 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.traversal.BranchState;
 import org.neo4j.graphdb.traversal.Evaluation;
+import org.neo4j.graphdb.traversal.Paths;
 import org.neo4j.graphdb.traversal.TraversalBranch;
 import org.neo4j.graphdb.traversal.TraversalContext;
 import org.neo4j.helpers.collection.PrefetchingIterator;
-import org.neo4j.kernel.Traversal;
 
 class TraversalBranchImpl implements TraversalBranch
 {
@@ -111,7 +111,8 @@ class TraversalBranchImpl implements TraversalBranch
     
     protected Iterator<Relationship> expandRelationshipsWithoutChecks( PathExpander expander )
     {
-        return expander.expand( this, BranchState.NO_STATE ).iterator();
+        Iterable<Relationship> iterable = expander.expand( this, BranchState.NO_STATE );
+        return iterable.iterator();
     }
 
     protected boolean hasExpandedRelationships()
@@ -262,7 +263,7 @@ class TraversalBranchImpl implements TraversalBranch
                         }
                         finally
                         {
-                            branch = branch.parent();
+                            branch = branch != null ? branch.parent() : null;
                         }
                     }
                 };
@@ -378,7 +379,7 @@ class TraversalBranchImpl implements TraversalBranch
     @Override
     public String toString()
     {
-        return Traversal.defaultPathToString( this );
+        return Paths.defaultPathToString( this );
     }
     
     @Override

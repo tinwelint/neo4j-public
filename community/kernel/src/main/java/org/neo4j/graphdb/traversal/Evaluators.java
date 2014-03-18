@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,6 @@
  */
 package org.neo4j.graphdb.traversal;
 
-import static java.util.Arrays.asList;
-import static org.neo4j.graphdb.traversal.Evaluation.INCLUDE_AND_CONTINUE;
-
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -30,6 +26,10 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+
+import static java.util.Arrays.asList;
+
+import static org.neo4j.graphdb.traversal.Evaluation.INCLUDE_AND_CONTINUE;
 
 /**
  * Common {@link Evaluator}s useful during common traversals.
@@ -365,7 +365,7 @@ public abstract class Evaluators
         }
         else
         {
-            final Set<Node> fullSet = new HashSet<Node>( Arrays.asList( nodes ) );
+            final Set<Node> fullSet = new HashSet<Node>( asList( nodes ) );
             return new PathEvaluator.Adapter()
             {
                 @Override

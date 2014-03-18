@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -75,6 +76,7 @@ public class Script extends ConfigurationParser
                         }
                         catch ( NoSuchMethodException fallthrough )
                         {
+                            // Ignore
                         }
                     }
                 }
@@ -137,14 +139,9 @@ public class Script extends ConfigurationParser
         GraphvizWriter writer = new GraphvizWriter( styles() );
         try
         {
-            Transaction tx = graphdb.beginTx();
-            try
+            try ( Transaction tx = graphdb.beginTx() )
             {
                 writer.emit( outfile, createGraphWalker( graphdb ) );
-            }
-            finally
-            {
-                tx.finish();
             }
         }
         catch ( IOException e )

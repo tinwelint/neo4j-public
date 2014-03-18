@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,9 @@
  */
 package org.neo4j.kernel.ha.management;
 
-import java.net.URI;
-
 import org.neo4j.helpers.Functions;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.ha.LastUpdateTime;
-import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
 import org.neo4j.kernel.ha.cluster.member.ClusterMember;
 import org.neo4j.kernel.ha.cluster.member.ClusterMembers;
 import org.neo4j.kernel.impl.core.LastTxIdGetter;
@@ -51,17 +48,10 @@ public class ClusterDatabaseInfoProvider
         if (self == null)
             return null;
 
-        URI haUri = self.getHAUri();
-        int serverId = -1;
-        if ( haUri != null )
-        {
-            serverId = HighAvailabilityModeSwitcher.getServerId( haUri );
-        }
-
-        return new ClusterDatabaseInfo( new ClusterMemberInfo( self.getClusterUri().toString(), self.getHAUri() != null,
+        return new ClusterDatabaseInfo( new ClusterMemberInfo( self.getMemberId().toString(), self.getHAUri() != null,
                 true, self.getHARole(),
                 Iterables.toArray(String.class, Iterables.map( Functions.TO_STRING, self.getRoleURIs() ) ),
                 Iterables.toArray(String.class, Iterables.map( Functions.TO_STRING, self.getRoles() ) ) ),
-                txIdGetter.getLastTxId(), lastUpdateTime.getLastUpdateTime(), serverId );
+                txIdGetter.getLastTxId(), lastUpdateTime.getLastUpdateTime() );
     }
 }

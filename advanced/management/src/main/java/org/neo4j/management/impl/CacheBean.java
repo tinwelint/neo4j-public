@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,8 +41,9 @@ public class CacheBean extends ManagementBeanProvider
     protected Iterable<? extends Neo4jMBean> createMBeans( ManagementData management )
             throws NotCompliantMBeanException
     {
-        NodeManager nm = management.getKernelData().graphDatabase().getNodeManager();
-        Collection<CacheManager> cacheBeans = new LinkedList<CacheBean.CacheManager>();
+        NodeManager nm = management.getKernelData().graphDatabase().getDependencyResolver()
+                .resolveDependency( NodeManager.class );
+        Collection<CacheManager> cacheBeans = new LinkedList<>();
         for ( Cache<?> cache : nm.caches() )
         {
             cacheBeans.add( new CacheManager( management, nm, cache ) );

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,19 +29,23 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.member.paxos.PaxosClusterMemberEvents.ClusterMembersSnapshot;
 
+@Ignore("Ignored temporarily, pending review for extracting useful bits. The bulk of the test is now in HA, HaNewSnapshotFunctionTest")
 public class ClusterMembersSnapshotTest
 {
     @Test
-    public void snapshot_list_prunes_same_member_on_identical_availability_events() throws Exception
+    public void snapshotListPrunesSameMemberOnIdenticalAvailabilityEvents() throws Exception
     {
         // GIVEN
         // -- a snapshot containing one member with a role
-        ClusterMembersSnapshot snapshot = new ClusterMembersSnapshot();
+        ClusterMembersSnapshot snapshot = new ClusterMembersSnapshot( new PaxosClusterMemberEvents.UniqueRoleFilter(ROLE_1) );
         URI clusterUri = new URI( URI );
-        MemberIsAvailable memberIsAvailable = new MemberIsAvailable( ROLE_1, clusterUri, new URI( URI + "?something" ) );
+        InstanceId instanceId = new InstanceId( 1 );
+        MemberIsAvailable memberIsAvailable = new MemberIsAvailable( ROLE_1, instanceId, clusterUri, new URI( URI + "?something" ) );
         snapshot.availableMember( memberIsAvailable );
 
         // WHEN
@@ -50,9 +54,9 @@ public class ClusterMembersSnapshotTest
 
         // THEN
         // -- getting the snapshot list should only reveal the last one
-        assertEquals( 1, count( snapshot.getCurrentAvailable( clusterUri ) ) );
+        assertEquals( 1, count( snapshot.getCurrentAvailable( instanceId ) ) );
         assertThat(
-                snapshot.getCurrentAvailable( clusterUri ),
+                snapshot.getCurrentAvailable( instanceId ),
                 CoreMatchers.<MemberIsAvailable>hasItem( memberIsAvailable( memberIsAvailable ) ) );
         assertEquals( 1, count( snapshot.getCurrentAvailableMembers() ) );
         assertThat(
@@ -61,25 +65,26 @@ public class ClusterMembersSnapshotTest
     }
     
     @Test
-    public void snapshot_list_can_contain_multiple_events_with_same_member_with_different_roles() throws Exception
+    public void snapshotListCanContainMultipleEventsWithSameMemberWithDifferentRoles() throws Exception
     {
         // GIVEN
         // -- a snapshot containing one member with a role
-        ClusterMembersSnapshot snapshot = new ClusterMembersSnapshot();
+        ClusterMembersSnapshot snapshot = new ClusterMembersSnapshot(null);
         URI clusterUri = new URI( URI );
-        MemberIsAvailable event1 = new MemberIsAvailable( ROLE_1, clusterUri, new URI( URI + "?something" ) );
+        InstanceId instanceId = new InstanceId( 1 );
+        MemberIsAvailable event1 = new MemberIsAvailable( ROLE_1, instanceId, clusterUri, new URI( URI + "?something" ) );
         snapshot.availableMember( event1 );
 
         // WHEN
         // -- the same member, although different role, gets added to the snapshot
-        MemberIsAvailable event2 = new MemberIsAvailable( ROLE_2, clusterUri, new URI( URI + "?something" ) );
+        MemberIsAvailable event2 = new MemberIsAvailable( ROLE_2, instanceId, clusterUri, new URI( URI + "?something" ) );
         snapshot.availableMember( event2 );
 
         // THEN
         // -- getting the snapshot list should reveal both
-        assertEquals( 2, count( snapshot.getCurrentAvailable( clusterUri ) ) );
+        assertEquals( 2, count( snapshot.getCurrentAvailable( instanceId ) ) );
         assertThat(
-                snapshot.getCurrentAvailable( clusterUri ),
+                snapshot.getCurrentAvailable( instanceId ),
                 CoreMatchers.<MemberIsAvailable>hasItems(
                         memberIsAvailable( event1 ), memberIsAvailable( event2 ) ) );
         assertEquals( 2, count( snapshot.getCurrentAvailableMembers() ) );
@@ -90,26 +95,28 @@ public class ClusterMembersSnapshotTest
     }
     
     @Test
-    public void snapshot_list_prunes_other_member_with_same_role() throws Exception
+    public void snapshotListPrunesOtherMemberWithSameRole() throws Exception
     {
         // GIVEN
         // -- a snapshot containing one member with a role
-        ClusterMembersSnapshot snapshot = new ClusterMembersSnapshot();
+        ClusterMembersSnapshot snapshot = new ClusterMembersSnapshot(null);
         URI clusterUri = new URI( URI );
-        MemberIsAvailable event = new MemberIsAvailable( ROLE_1, clusterUri, new URI( URI + "?something1" ) );
+        InstanceId instanceId = new InstanceId( 1 );
+        MemberIsAvailable event = new MemberIsAvailable( ROLE_1, instanceId, clusterUri, new URI( URI + "?something1" ) );
         snapshot.availableMember( event );
 
         // WHEN
         // -- another member, but with same role, gets added to the snapshot
         URI otherClusterUri = new URI( URI );
-        MemberIsAvailable otherEvent = new MemberIsAvailable( ROLE_1, otherClusterUri, new URI( URI + "?something2" ) );
+        InstanceId otherInstanceId = new InstanceId( 2 );
+        MemberIsAvailable otherEvent = new MemberIsAvailable( ROLE_1, otherInstanceId, otherClusterUri, new URI( URI + "?something2" ) );
         snapshot.availableMember( otherEvent );
 
         // THEN
         // -- getting the snapshot list should only reveal the last member added, as it had the same role
-        assertEquals( 1, count( snapshot.getCurrentAvailable( clusterUri ) ) );
+        assertEquals( 1, count( snapshot.getCurrentAvailable( otherInstanceId ) ) );
         assertThat(
-                snapshot.getCurrentAvailable( clusterUri ),
+                snapshot.getCurrentAvailable( otherInstanceId ),
                 CoreMatchers.<MemberIsAvailable>hasItems( memberIsAvailable( otherEvent ) ) );
         assertEquals( 1, count( snapshot.getCurrentAvailableMembers() ) );
         assertThat(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,24 +24,26 @@ import org.neo4j.server.rest.repr.MappingSerializer;
 
 public class HaDiscoveryRepresentation extends MappingRepresentation
 {
-    private static final String DATA_URI_KEY = "isMaster";
-    private static final String MANAGEMENT_URI_KEY = "getMaster";
+    private static final String MASTER_KEY = "master";
+    private static final String SLAVE_KEY = "slave";
     private static final String DISCOVERY_REPRESENTATION_TYPE = "discovery";
-    private final String isMasterUri;
-    private final String getMasterUri;
 
-    public HaDiscoveryRepresentation( String isMasterUri, String getMasterUri )
+    private final String basePath;
+    private final String isMasterUri;
+    private final String isSlaveUri;
+
+    public HaDiscoveryRepresentation( String basePath, String isMasterUri, String isSlaveUri )
     {
         super( DISCOVERY_REPRESENTATION_TYPE );
+        this.basePath = basePath;
         this.isMasterUri = isMasterUri;
-        this.getMasterUri = getMasterUri;
+        this.isSlaveUri = isSlaveUri;
     }
 
     @Override
     protected void serialize( MappingSerializer serializer )
     {
-        serializer.putUri( MANAGEMENT_URI_KEY, isMasterUri );
-        serializer.putUri( DATA_URI_KEY, getMasterUri );
+        serializer.putUri( MASTER_KEY, basePath + isMasterUri );
+        serializer.putUri( SLAVE_KEY, basePath + isSlaveUri );
     }
-
 }

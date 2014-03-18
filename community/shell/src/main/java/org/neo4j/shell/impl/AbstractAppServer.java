@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -40,7 +40,6 @@ import org.neo4j.shell.Session;
 import org.neo4j.shell.ShellException;
 import org.neo4j.shell.TabCompletion;
 import org.neo4j.shell.TextUtil;
-import org.neo4j.shell.apps.Alias;
 
 /**
  * A common implementation of an {@link AppShellServer}. The server can be given
@@ -48,10 +47,10 @@ import org.neo4j.shell.apps.Alias;
  * common apps exist. All classes in those packages which implements the
  * {@link App} interface will be available to execute.
  */
-public abstract class AbstractAppServer extends AbstractServer
+public abstract class AbstractAppServer extends SimpleAppServer
 	implements AppShellServer
 {
-    private final Map<String, App> apps = new TreeMap<String, App>();
+    private final Map<String, App> apps = new TreeMap<>();
 
 	/**
 	 * Constructs a new server.
@@ -80,6 +79,7 @@ public abstract class AbstractAppServer extends AbstractServer
         }
     }
 
+    @Override
     public App findApp( String command )
 	{
         return apps.get( command );
@@ -102,7 +102,9 @@ public abstract class AbstractAppServer extends AbstractServer
 	{
         Session session = getClientSession( clientId );
 		if ( line == null || line.trim().length() == 0 )
-			return new Response( getPrompt( session ), Continuation.INPUT_COMPLETE );
+        {
+            return new Response( getPrompt( session ), Continuation.INPUT_COMPLETE );
+        }
 
         try
         {
@@ -125,13 +127,12 @@ public abstract class AbstractAppServer extends AbstractServer
     protected String replaceAlias( String line, Session session )
     {
 	    boolean changed = true;
-	    Set<String> appNames = new HashSet<String>();
+	    Set<String> appNames = new HashSet<>();
 	    while ( changed )
 	    {
 	        changed = false;
     	    String appName = AppCommandParser.parseOutAppName( line );
-    	    String prefixedKey = Alias.ALIAS_PREFIX + appName;
-    	    String alias = ( String ) session.get( prefixedKey );
+            String alias = session.getAlias( appName );
     	    if ( alias != null && appNames.add( alias ) )
     	    {
     	        changed = true;
@@ -178,7 +179,7 @@ public abstract class AbstractAppServer extends AbstractServer
 
     private static List<String> quote( List<String> candidates )
     {
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         for ( String candidate : candidates )
         {
             candidate = candidate.replaceAll( " ", "\\\\ " );

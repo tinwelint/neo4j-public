@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,45 +21,47 @@ package org.neo4j.kernel.ha.transaction;
 
 import java.net.URI;
 
-import javax.transaction.TransactionManager;
-
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.ha.DelegateInvocationHandler;
 import org.neo4j.kernel.ha.HaXaDataSourceManager;
-import org.neo4j.kernel.ha.com.master.Master;
-import org.neo4j.kernel.ha.com.RequestContextFactory;
 import org.neo4j.kernel.ha.cluster.AbstractModeSwitcher;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberStateMachine;
-import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
-import org.neo4j.kernel.impl.transaction.TxHook;
+import org.neo4j.kernel.ha.com.RequestContextFactory;
+import org.neo4j.kernel.ha.com.master.Master;
+import org.neo4j.kernel.impl.transaction.RemoteTxHook;
+import org.neo4j.kernel.impl.util.StringLogger;
 
-public class TxHookModeSwitcher extends AbstractModeSwitcher<TxHook>
+public class TxHookModeSwitcher extends AbstractModeSwitcher<RemoteTxHook>
 {
-    private final Master master;
+    private final DelegateInvocationHandler<Master> master;
     private final RequestContextFactoryResolver requestContextFactory;
+    private final StringLogger log;
     private final DependencyResolver resolver;
 
     public TxHookModeSwitcher( HighAvailabilityMemberStateMachine stateMachine,
-                               DelegateInvocationHandler<TxHook> delegate, Master master,
-                               RequestContextFactoryResolver requestContextFactory, DependencyResolver resolver )
+                               DelegateInvocationHandler<RemoteTxHook> delegate,
+                               DelegateInvocationHandler<Master> master,
+                               RequestContextFactoryResolver requestContextFactory, StringLogger log,
+                               DependencyResolver resolver )
     {
         super( stateMachine, delegate );
         this.master = master;
         this.requestContextFactory = requestContextFactory;
+        this.log = log;
         this.resolver = resolver;
     }
 
     @Override
-    protected TxHook getMasterImpl()
+    protected RemoteTxHook getMasterImpl()
     {
         return new MasterTxHook();
     }
 
     @Override
-    protected TxHook getSlaveImpl( URI serverHaUri )
+    protected RemoteTxHook getSlaveImpl( URI serverHaUri )
     {
-        return new SlaveTxHook( master, resolver.resolveDependency( HaXaDataSourceManager.class ),
-                requestContextFactory, (AbstractTransactionManager)resolver.resolveDependency( TransactionManager.class ) );
+        return new SlaveTxHook( master.cement(), resolver.resolveDependency( HaXaDataSourceManager.class ),
+                requestContextFactory, log );
     }
 
     public interface RequestContextFactoryResolver

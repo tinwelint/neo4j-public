@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,8 +21,8 @@ package org.neo4j.server.rrd;
 
 import javax.ws.rs.ext.Provider;
 
-import org.neo4j.server.database.Database;
 import org.neo4j.server.database.InjectableProvider;
+import org.neo4j.server.database.RrdDbWrapper;
 import org.rrd4j.core.RrdDb;
 
 import com.sun.jersey.api.core.HttpContext;
@@ -30,17 +30,17 @@ import com.sun.jersey.api.core.HttpContext;
 @Provider
 public class RrdDbProvider extends InjectableProvider<RrdDb>
 {
-    private Database database;
+    private final RrdDbWrapper rrdDbWrapper;
 
-    public RrdDbProvider( Database database )
+    public RrdDbProvider( RrdDbWrapper rrdDbWrapper )
     {
         super( RrdDb.class );
-        this.database = database;
+        this.rrdDbWrapper = rrdDbWrapper;
     }
 
     @Override
     public RrdDb getValue( HttpContext c )
     {
-        return database.rrdDb();
+        return rrdDbWrapper.get();
     }
 }

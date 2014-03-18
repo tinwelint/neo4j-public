@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,9 +35,9 @@ import org.neo4j.shell.OptionDefinition;
 import org.neo4j.shell.OptionValueType;
 import org.neo4j.shell.Output;
 import org.neo4j.shell.Session;
-import org.neo4j.shell.kernel.apps.ReadOnlyGraphDatabaseApp;
+import org.neo4j.shell.kernel.apps.NonTransactionProvidingApp;
 
-public class PathShellApp extends ReadOnlyGraphDatabaseApp
+public class PathShellApp extends NonTransactionProvidingApp
 {
     {
         addOptionDefinition( "a", new OptionDefinition( OptionValueType.MUST, "Which algorithm to use" ) );

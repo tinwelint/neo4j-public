@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,10 +23,12 @@ import java.io.File;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
+/**
+ * @deprecated This will be moved to internal packages in the next major release.
+ */
+@Deprecated
 public class StoreLockerLifecycleAdapter extends LifecycleAdapter
 {
-    public static final String DATABASE_LOCKED_ERROR_MESSAGE = "Database locked.";
-
     private final StoreLocker storeLocker;
     private final File storeDir;
 
@@ -39,7 +41,7 @@ public class StoreLockerLifecycleAdapter extends LifecycleAdapter
     @Override
     public void start() throws Throwable
     {
-        if (! storeLocker.lock( storeDir )) throw new IllegalStateException( DATABASE_LOCKED_ERROR_MESSAGE );
+        storeLocker.checkLock( storeDir );
     }
 
     @Override

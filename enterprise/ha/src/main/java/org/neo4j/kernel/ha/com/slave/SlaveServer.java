@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,9 @@
  */
 package org.neo4j.kernel.ha.com.slave;
 
+import static org.neo4j.com.Protocol.DEFAULT_FRAME_LENGTH;
 import static org.neo4j.com.TxChecksumVerifier.ALWAYS_MATCH;
-
-import java.io.IOException;
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
 
 import org.jboss.netty.channel.Channel;
 import org.neo4j.com.RequestContext;
@@ -30,15 +30,17 @@ import org.neo4j.com.Server;
 import org.neo4j.kernel.ha.com.master.Slave;
 import org.neo4j.kernel.ha.com.master.SlaveClient.SlaveRequestType;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
+
 
 public class SlaveServer extends Server<Slave, Void>
 {
     public static final byte APPLICATION_PROTOCOL_VERSION = 1;
 
-    public SlaveServer( Slave requestTarget, Configuration config, Logging logging )
-            throws IOException
+    public SlaveServer( Slave requestTarget, Configuration config, Logging logging, Monitors monitors )
     {
-        super( requestTarget, config, logging, DEFAULT_FRAME_LENGTH, APPLICATION_PROTOCOL_VERSION, ALWAYS_MATCH );
+        super( requestTarget, config, logging, DEFAULT_FRAME_LENGTH, APPLICATION_PROTOCOL_VERSION, ALWAYS_MATCH,
+                SYSTEM_CLOCK, monitors );
     }
 
     @Override

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2002-2013 "Neo Technology,"
+    Copyright (c) 2002-2014 "Neo Technology,"
     Network Engine for Objects in Lund AB [http://neotechnology.com]
 
     This file is part of Neo4j.
@@ -31,7 +31,7 @@
     <fileSet>
       <directory>src/main/distribution/text/advanced</directory>
       <outputDirectory>/</outputDirectory>
-      <lineEnding>unix</lineEnding>
+      <lineEnding>keep</lineEnding>
       <filtered>true</filtered>
       <excludes>
         <exclude>conf/jmx.*</exclude>
@@ -67,9 +67,11 @@
       <fileMode>0755</fileMode>
       <excludes>
         <exclude>bin/neo4j</exclude>
+        <exclude>bin/neo4j-support-upload</exclude>
         <exclude>**/*.bat</exclude>
         <exclude>**/neo4j-backup*</exclude>
         <exclude>**/neo4j-coord*</exclude>
+        <exclude>**/*arbiter*</exclude>
       </excludes>
       <filtered>true</filtered>
     </fileSet>
@@ -111,24 +113,22 @@
       <fileMode>0755</fileMode>
       <unpack>false</unpack>
       <useProjectArtifact>false</useProjectArtifact>
+      <useStrictFiltering>true</useStrictFiltering>
       <includes>
         <include>org.neo4j:*</include>
         <include>org.apache.geronimo.specs:geronimo-jta_1.1_spec</include>
         <include>org.apache.servicemix.bundles:org.apache.servicemix.bundles.jline</include>
-        <include>org.apache.servicemix.bundles:org.apache.servicemix.bundles.lucene</include>
         <include>org.apache.lucene:lucene-core</include>
         <include>org.scala-lang:scala-library</include>
+        <include>org.parboiled:*</include>
         <include>com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru</include>
+        <include>net.sf.opencsv:opencsv</include>
       </includes>
       <excludes>
         <exclude>*:javadoc:*</exclude>
-        <exclude>*:manpages:*</exclude>
-        <exclude>*:docs:*</exclude>
         <exclude>*:pom:*</exclude>
-        <exclude>org.neo4j:neo4j:jar</exclude>
         <exclude>org.neo4j:neo4j-community:jar</exclude>
         <exclude>org.neo4j:neo4j-advanced:jar</exclude>
-        <exclude>org.neo4j.app:windows-service-wrapper:*</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>
@@ -137,19 +137,15 @@
       <fileMode>0755</fileMode>
       <unpack>false</unpack>
       <useProjectArtifact>false</useProjectArtifact>
+      <useStrictFiltering>true</useStrictFiltering>
       <excludes>
-        <exclude>*:site:*</exclude>
-        <exclude>*:docs:*</exclude>
         <exclude>org.neo4j:*</exclude>
-        <exclude>org.neo4j.examples:*</exclude>
         <exclude>org.neo4j.doc:*</exclude>
         <exclude>org.apache.geronimo.specs:geronimo-jta_1.1_spec</exclude>
         <exclude>org.apache.servicemix.bundles:org.apache.servicemix.bundles.jline</exclude>
-        <exclude>org.apache.servicemix.bundles:org.apache.servicemix.bundles.netty</exclude>
         <exclude>org.apache.lucene:lucene-core</exclude>
-        <exclude>org.apache.zookeeper:zookeeper</exclude>
-        <exclude>log4j:log4j</exclude>
         <exclude>org.scala-lang:scala-library</exclude>
+        <exclude>org.parboiled:*</exclude>
         <exclude>org.neo4j.app:windows-service-wrapper:*</exclude>
         <exclude>com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru</exclude>
       </excludes>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,19 +25,15 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.LoggerContext;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.neo4j.cluster.BindingListener;
-import org.neo4j.cluster.ClusterSettings;
-import org.neo4j.cluster.MultiPaxosServerFactory;
-import org.neo4j.cluster.NetworkedServerFactory;
-import org.neo4j.cluster.ProtocolServer;
+import org.neo4j.cluster.*;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcast;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastMap;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
 import org.neo4j.cluster.protocol.cluster.Cluster;
 import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
@@ -54,9 +50,13 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.logging.LogbackService;
 import org.neo4j.test.TargetDirectory;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+
 /**
  * TODO
  */
+@Ignore
 public class MultiPaxosNetworkTest
 {
     @Test
@@ -81,12 +81,12 @@ public class MultiPaxosNetworkTest
 
         NetworkedServerFactory serverFactory = new NetworkedServerFactory( life,
                 new MultiPaxosServerFactory(
-                        new ClusterConfiguration( "default",
+                        new ClusterConfiguration( "default", logging.getMessagesLog( ClusterConfiguration.class ),
                                 "cluster://localhost:5001",
                                 "cluster://localhost:5002",
                                 "cluster://localhost:5003" ),
                         logging ),
-                timeoutStrategy, logging );
+                timeoutStrategy, logging, new ObjectStreamFactory(), new ObjectStreamFactory() );
 
         ServerIdElectionCredentialsProvider serverIdElectionCredentialsProvider = new
                 ServerIdElectionCredentialsProvider();
@@ -124,7 +124,7 @@ public class MultiPaxosNetworkTest
             @Override
             public void listeningAt( URI me )
             {
-                server2.newClient( Cluster.class ).join( "default", server1.getServerId() );
+                server2.newClient( Cluster.class ).join( "default", me );
             }
         } );
 
@@ -133,7 +133,7 @@ public class MultiPaxosNetworkTest
             @Override
             public void listeningAt( URI me )
             {
-                server3.newClient( Cluster.class ).join( "default", server1.getServerId() );
+                server3.newClient( Cluster.class ).join( "default", me );
             }
         } );
 
@@ -163,9 +163,9 @@ public class MultiPaxosNetworkTest
             }
 
             @Override
-            public void joinedCluster( URI member )
+            public void joinedCluster( InstanceId instanceId, URI member )
             {
-                logger.info( "1 sees join by " + member );
+                logger.info( "1 sees join by " + instanceId + " at URI " + member );
             }
         } );
 
@@ -178,9 +178,9 @@ public class MultiPaxosNetworkTest
             }
 
             @Override
-            public void joinedCluster( URI member )
+            public void joinedCluster( InstanceId instanceId, URI member )
             {
-                logger.info( "2 sees join by " + member );
+                logger.info( "2 sees join by " + instanceId + " at URI " + member );
             }
         } );
 
@@ -193,9 +193,9 @@ public class MultiPaxosNetworkTest
             }
 
             @Override
-            public void joinedCluster( URI member )
+            public void joinedCluster( org.neo4j.cluster.InstanceId instanceId, URI member )
             {
-                logger.info( "3 sees join by " + member );
+                logger.info( "3 sees join by " + instanceId + " at URI " + member );
             }
         } );
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,34 +22,66 @@ package org.neo4j.kernel.impl.event;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 
+import static org.neo4j.helpers.collection.IteratorUtil.count;
+
 public class VerifyingTransactionEventHandler implements
         TransactionEventHandler<Object>
 {
     private final ExpectedTransactionData expectedData;
     private boolean hasBeenCalled;
+    private Throwable failure;
 
     public VerifyingTransactionEventHandler( ExpectedTransactionData expectedData )
     {
         this.expectedData = expectedData;
     }
     
+    @Override
     public void afterCommit( TransactionData data, Object state )
     {
+        verify( data );
     }
 
+    @Override
     public void afterRollback( TransactionData data, Object state )
     {
     }
 
+    @Override
     public Object beforeCommit( TransactionData data ) throws Exception
     {
-        this.expectedData.compareTo( data );
-        this.hasBeenCalled = true;
-        return null;
+        return verify( data );
     }
     
+    private Object verify( TransactionData data )
+    {
+        // TODO Hmm, makes me think... should we really call transaction event handlers
+        // for these relationship type / property index transactions?
+        if ( count( data.createdNodes() ) == 0 )
+        {
+            return null;
+        }
+        
+        try
+        {
+            this.expectedData.compareTo( data );
+            this.hasBeenCalled = true;
+            return null;
+        }
+        catch ( Exception e )
+        {
+            failure = e;
+            throw e;
+        }
+    }
+
     boolean hasBeenCalled()
     {
         return this.hasBeenCalled;
+    }
+    
+    Throwable failure()
+    {
+        return this.failure;
     }
 }

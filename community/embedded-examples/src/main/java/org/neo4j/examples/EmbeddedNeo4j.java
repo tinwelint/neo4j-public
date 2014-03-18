@@ -21,6 +21,7 @@ package org.neo4j.examples;
 
 import java.io.File;
 import java.io.IOException;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -33,7 +34,9 @@ import org.neo4j.kernel.impl.util.FileUtils;
 public class EmbeddedNeo4j
 {
     private static final String DB_PATH = "target/neo4j-hello-db";
-    String greeting;
+
+    public String greeting;
+
     // START SNIPPET: vars
     GraphDatabaseService graphDb;
     Node firstNode;
@@ -65,10 +68,9 @@ public class EmbeddedNeo4j
         // END SNIPPET: startDb
 
         // START SNIPPET: transaction
-        Transaction tx = graphDb.beginTx();
-        try
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            // Updating operations go here
+            // Database operations go here
             // END SNIPPET: transaction
             // START SNIPPET: addData
             firstNode = graphDb.createNode();
@@ -93,10 +95,6 @@ public class EmbeddedNeo4j
             // START SNIPPET: transaction
             tx.success();
         }
-        finally
-        {
-            tx.finish();
-        }
         // END SNIPPET: transaction
     }
 
@@ -114,8 +112,7 @@ public class EmbeddedNeo4j
 
     void removeData()
     {
-        Transaction tx = graphDb.beginTx();
-        try
+        try ( Transaction tx = graphDb.beginTx() )
         {
             // START SNIPPET: removingData
             // let's remove the data
@@ -125,10 +122,6 @@ public class EmbeddedNeo4j
             // END SNIPPET: removingData
 
             tx.success();
-        }
-        finally
-        {
-            tx.finish();
         }
     }
 
@@ -146,7 +139,7 @@ public class EmbeddedNeo4j
     {
         // Registers a shutdown hook for the Neo4j instance so that it
         // shuts down nicely when the VM exits (even if you "Ctrl-C" the
-        // running example before it's completed)
+        // running application).
         Runtime.getRuntime().addShutdownHook( new Thread()
         {
             @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -139,6 +139,7 @@ public class TestBufferedFileChannel
     private File createBigTempFile( int mb ) throws IOException
     {
         File file = File.createTempFile( "neo4j", "temp" );
+        file.deleteOnExit();
         FileChannel channel = new RandomAccessFile( file, "rw" ).getChannel();
         byte[] bytes = newStripedBytes( 1000 );
         ByteBuffer buffer = ByteBuffer.wrap( bytes );

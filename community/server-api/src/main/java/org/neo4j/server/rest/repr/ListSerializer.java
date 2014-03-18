@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -46,11 +46,6 @@ public class ListSerializer extends Serializer
         writer.writeString( value );
     }
 
-    public void addBoolean( boolean value )
-    {
-        writer.writeBoolean( value );
-    }
-
     public void addMapping( MappingRepresentation value )
     {
         serialize( writer.newMapping( value.type ), value );
@@ -73,5 +68,4 @@ public class ListSerializer extends Serializer
             writer.writeInteger( RepresentationType.valueOf( value.getClass() ), value.longValue() );
         }
     }
-
 }

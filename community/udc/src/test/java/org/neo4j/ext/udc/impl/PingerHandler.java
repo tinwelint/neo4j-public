@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,44 +30,35 @@ import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
-/**
- *
- */
-public class PingerHandler implements HttpRequestHandler {
+public class PingerHandler implements HttpRequestHandler
+{
+    private final Map<String, String> queryMap = new HashMap<String, String>();
 
-    Map<String, String> queryMap = new HashMap<String, String>();
-
-    public void handle(HttpRequest httpRequest, HttpResponse httpResponse, HttpContext httpContext) throws HttpException, IOException {
-        System.out.println("got the ping, as: " + httpRequest.getRequestLine().getUri());
-
+    @Override
+    public void handle( HttpRequest httpRequest, HttpResponse httpResponse, HttpContext httpContext )
+            throws HttpException, IOException
+    {
         final String requestUri = httpRequest.getRequestLine().getUri();
-        final int offset = requestUri.indexOf("?");
-        if (offset > -1) {
-            String query = requestUri.substring(offset+1);
-            String[] params = query.split("\\+");
-            if (params.length > 0) {
-                for (String param : params) {
-                    String[] pair = param.split("=");
-                    String key = URLDecoder.decode(pair[0], "UTF-8");
-                    String value = URLDecoder.decode(pair[1], "UTF-8");
-                    System.out.println("\t:" + key + " = " + value);
-                    queryMap.put(key, value);
+        final int offset = requestUri.indexOf( "?" );
+        if ( offset > -1 )
+        {
+            String query = requestUri.substring( offset + 1 );
+            String[] params = query.split( "\\+" );
+            if ( params.length > 0 )
+            {
+                for ( String param : params )
+                {
+                    String[] pair = param.split( "=" );
+                    String key = URLDecoder.decode( pair[0], "UTF-8" );
+                    String value = URLDecoder.decode( pair[1], "UTF-8" );
+                    queryMap.put( key, value );
                 }
             }
-            else
-            {
-                System.out.println("no params found in query");
-            }
-        }
-        else
-        {
-            System.out.println("no query string found");
         }
     }
 
     public Map<String, String> getQueryMap()
     {
-            return queryMap;
+        return queryMap;
     }
-
 }

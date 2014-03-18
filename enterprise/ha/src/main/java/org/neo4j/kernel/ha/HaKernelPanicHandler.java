@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,19 +23,32 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.graphdb.event.ErrorState;
 import org.neo4j.graphdb.event.KernelEventHandler;
+import org.neo4j.kernel.AvailabilityGuard;
+import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.impl.transaction.TxManager;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
+import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.logging.Logging;
 
-public class HaKernelPanicHandler implements KernelEventHandler
+public class HaKernelPanicHandler implements KernelEventHandler, AvailabilityGuard.AvailabilityRequirement
 {
     private final XaDataSourceManager dataSourceManager;
     private final TxManager txManager;
     private final AtomicInteger epoch = new AtomicInteger();
+    private final AvailabilityGuard availabilityGuard;
+    private final DelegateInvocationHandler<Master> masterDelegateInvocationHandler;
+    private final StringLogger logger;
 
-    public HaKernelPanicHandler( XaDataSourceManager dataSourceManager, TxManager txManager )
+    public HaKernelPanicHandler( XaDataSourceManager dataSourceManager, TxManager txManager,
+                                 AvailabilityGuard availabilityGuard, Logging logging,
+                                 DelegateInvocationHandler<Master> masterDelegateInvocationHandler )
     {
         this.dataSourceManager = dataSourceManager;
         this.txManager = txManager;
+        this.availabilityGuard = availabilityGuard;
+        this.logger = logging.getMessagesLog( getClass() );
+        this.masterDelegateInvocationHandler = masterDelegateInvocationHandler;
+        availabilityGuard.grant(this);
     }
 
     @Override
@@ -54,20 +67,40 @@ public class HaKernelPanicHandler implements KernelEventHandler
                 synchronized ( dataSourceManager )
                 {
                     if ( myEpoch != epoch.get() )
+                    {
                         return;
-                    
-                    txManager.stop();
-                    dataSourceManager.stop();
-                    dataSourceManager.start();
-                    txManager.start();
-                    txManager.doRecovery();
+                    }
+
+                    logger.info( "Recovering from HA kernel panic" );
                     epoch.incrementAndGet();
+                    availabilityGuard.deny(this);
+                    try
+                    {
+                        txManager.stop();
+                        dataSourceManager.stop();
+                        dataSourceManager.start();
+                        txManager.start();
+                        txManager.doRecovery();
+                        masterDelegateInvocationHandler.harden();
+                    }
+                    finally
+                    {
+                        availabilityGuard.grant(this);
+                        logger.info( "Done recovering from HA kernel panic" );
+                    }
                 }
             }
-            catch (Throwable t)
+            catch ( Throwable t )
             {
-                throw new RuntimeException( "error while handling kernel panic for TX_MANAGER_NOT_OK", t );
+                String msg = "Error while handling HA kernel panic";
+                logger.warn( msg, t );
+                throw new RuntimeException( msg, t );
             }
+        }
+        else if ( error == ErrorState.STORAGE_MEDIA_FULL )
+        {
+            // Fatal error - Permanently unavailable
+            availabilityGuard.shutdown();
         }
     }
 
@@ -81,5 +114,11 @@ public class HaKernelPanicHandler implements KernelEventHandler
     public ExecutionOrder orderComparedTo( KernelEventHandler other )
     {
         return ExecutionOrder.DOESNT_MATTER;
+    }
+
+    @Override
+    public String description()
+    {
+        return getClass().getSimpleName();
     }
 }

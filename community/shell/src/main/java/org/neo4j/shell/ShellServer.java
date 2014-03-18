@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -39,9 +39,8 @@ public interface ShellServer extends Remote
 	/**
 	 * Receives a command line (probably from a {@link ShellClient}) and reacts
 	 * to it. Output is written to the {@link Output} object.
-     * @param the ID identifying the client.
+     * @param clientID identifying the client.
 	 * @param line the command line to react to.
-	 * @param session the client session (environment).
 	 * @param out where output should go (like System.out).
 	 * @return some result from the execution, it's up to the client to
 	 * interpret the result, if any. F.ex. "e" could mean that the client
@@ -56,9 +55,8 @@ public interface ShellServer extends Remote
 	/**
 	 * Interprets a variable from a client session and returns the
 	 * interpreted result.
-	 * @param the ID identifying the client.
+	 * @param clientID identifying the client.
 	 * @param key the variable key.
-	 * @param session the client session to get necessary values from to
 	 * help the interpretation.
 	 * @return the interpreted value.
 	 * @throws ShellException if some error should occur.
@@ -73,7 +71,7 @@ public interface ShellServer extends Remote
 	 * asks for a greeting message to display to the user.
 	 * @throws RemoteException RMI error.
 	 */
-	Welcome welcome( Map<String, Serializable> initialSession ) throws RemoteException;
+	Welcome welcome( Map<String, Serializable> initialSession ) throws RemoteException, ShellException;
 
 	/**
 	 * Notifies this server that the client identified by {@code clientID} is about to
@@ -91,12 +89,21 @@ public interface ShellServer extends Remote
 	void shutdown() throws RemoteException;
 	
 	/**
-	 * Makes this server available for clients to connect to via RMI.
+	 * Makes this server available at {@code localhost} for clients to connect to via RMI.
 	 * @param port the RMI port.
 	 * @param name the RMI name.
 	 * @throws RemoteException RMI error.
 	 */
 	void makeRemotelyAvailable( int port, String name ) throws RemoteException;
+	
+	/**
+	 * Makes this server available at the specific {@code host} for clients to connect to via RMI.
+	 * @param host the host to make this server available at.
+	 * @param port the RMI port.
+	 * @param name the RMI name.
+	 * @throws RemoteException RMI error.
+	 */
+	void makeRemotelyAvailable( String host, int port, String name ) throws RemoteException;
 	
 	/**
 	 * @return all the available commands one can issue to this server.
@@ -107,9 +114,8 @@ public interface ShellServer extends Remote
 	/**
 	 * Tries to complete a half-entered line and returns possible candidates,
 	 * in the form of a {@link TabCompletion}.
-     * @param the ID identifying the client.
+     * @param clientID identifying the client.
 	 * @param partOfLine the half-entered line to try to complete.
-	 * @param session the client {@link Session}.
 	 * @return a {@link TabCompletion} containing the possible candidates for completion.
      * @throws ShellException if some error should occur.
      * @throws RemoteException RMI error.
@@ -123,6 +129,7 @@ public interface ShellServer extends Remote
 	 * @param key the property key.
 	 * @param value the property value.
      * @throws RemoteException RMI error.
+     * @throws ShellException if an error occurs during initialization.
 	 */
-	void setSessionVariable( Serializable clientID, String key, Object value ) throws RemoteException;
+	void setSessionVariable( Serializable clientID, String key, Object value ) throws RemoteException, ShellException;
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,6 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.helpers.collection.IteratorUtil.lastOrNull;
-import static org.neo4j.kernel.impl.util.FileUtils.deleteRecursively;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -47,15 +41,28 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
+import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.impl.EphemeralFileSystemAbstraction;
 import org.neo4j.tooling.GlobalGraphOperations;
 
+import static org.junit.Assert.*;
+import static org.neo4j.graphdb.DynamicRelationshipType.withName;
+import static org.neo4j.helpers.collection.IteratorUtil.lastOrNull;
+import static org.neo4j.kernel.impl.util.FileUtils.deleteRecursively;
+
 public class TestIdGenerator
 {
-    private final FileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
+    @Rule public EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
+    private EphemeralFileSystemAbstraction fs;
+    
+    @Before
+    public void doBefore()
+    {
+        fs = fsRule.get();
+    }
 
-//    @Before
     private void deleteIdGeneratorFile()
     {
         fs.deleteFile( idGeneratorFile() );
@@ -65,7 +72,7 @@ public class TestIdGenerator
     {
         String path = AbstractNeo4jTestCase.getStorePath( "xatest" );
         File file = new File( path );
-        file.mkdirs();
+        fs.mkdirs( file );
         return file;
     }
 
@@ -487,10 +494,10 @@ public class TestIdGenerator
         {
             IdGeneratorImpl.createGenerator( fs, idGeneratorFile() );
             IdGenerator idGenerator = new IdGeneratorImpl( fs, idGeneratorFile(), 1,
-                    IdType.PROPERTY_INDEX.getMaxValue(), false, 0 );
-            idGenerator.setHighId( IdType.PROPERTY_INDEX.getMaxValue() - 1 );
+                    IdType.PROPERTY_KEY_TOKEN.getMaxValue(), false, 0 );
+            idGenerator.setHighId( IdType.PROPERTY_KEY_TOKEN.getMaxValue() - 1 );
             long id = idGenerator.nextId();
-            assertEquals( IdType.PROPERTY_INDEX.getMaxValue() - 1, id );
+            assertEquals( IdType.PROPERTY_KEY_TOKEN.getMaxValue() - 1, id );
             idGenerator.freeId( id );
             try
             {
@@ -501,10 +508,10 @@ public class TestIdGenerator
             { // good, capacity exceeded
             }
             closeIdGenerator( idGenerator );
-            idGenerator = new IdGeneratorImpl( fs, idGeneratorFile(), 1, IdType.PROPERTY_INDEX.getMaxValue(), false, 0 );
-            assertEquals( IdType.PROPERTY_INDEX.getMaxValue() + 1, idGenerator.getHighId() );
+            idGenerator = new IdGeneratorImpl( fs, idGeneratorFile(), 1, IdType.PROPERTY_KEY_TOKEN.getMaxValue(), false, 0 );
+            assertEquals( IdType.PROPERTY_KEY_TOKEN.getMaxValue() + 1, idGenerator.getHighId() );
             id = idGenerator.nextId();
-            assertEquals( IdType.PROPERTY_INDEX.getMaxValue() - 1, id );
+            assertEquals( IdType.PROPERTY_KEY_TOKEN.getMaxValue() - 1, id );
             try
             {
                 idGenerator.nextId();
@@ -608,7 +615,6 @@ public class TestIdGenerator
         deleteRecursively( new File( storeDir ) );
         GraphDatabaseService db = new TestGraphDatabaseFactory().setFileSystem( fs ).newImpermanentDatabase( storeDir );
         RelationshipType type = withName( "SOME_TYPE" );
-        Node rootNode = db.getReferenceNode();
 
         // This transaction will, if some commands may be executed more than
         // once,
@@ -618,10 +624,11 @@ public class TestIdGenerator
         Set<Long> createdNodeIds = new HashSet<Long>();
         Set<Long> createdRelationshipIds = new HashSet<Long>();
         Transaction tx = db.beginTx();
+        Node commonNode = db.createNode();
         for ( int i = 0; i < 20; i++ )
         {
             Node otherNode = db.createNode();
-            Relationship relationship = rootNode.createRelationshipTo( otherNode, type );
+            Relationship relationship = commonNode.createRelationshipTo( otherNode, type );
             if ( i % 5 == 0 )
             {
                 otherNode.delete();
@@ -641,8 +648,8 @@ public class TestIdGenerator
         // that
         // all ids are unique.
         db = new TestGraphDatabaseFactory().setFileSystem( fs ).newImpermanentDatabase( storeDir );
-        rootNode = db.getReferenceNode();
         tx = db.beginTx();
+        commonNode = db.getNodeById( commonNode.getId() );
         for ( int i = 0; i < 100; i++ )
         {
             Node otherNode = db.createNode();
@@ -650,7 +657,7 @@ public class TestIdGenerator
             {
                 fail( "Managed to create a node with an id that was already in use" );
             }
-            Relationship relationship = rootNode.createRelationshipTo( otherNode, type );
+            Relationship relationship = commonNode.createRelationshipTo( otherNode, type );
             if ( !createdRelationshipIds.add( relationship.getId() ) )
             {
                 fail( "Managed to create a relationship with an id that was already in use" );
@@ -660,12 +667,13 @@ public class TestIdGenerator
         tx.finish();
 
         // Verify by loading everything from scratch
-        ((GraphDatabaseAPI) db).getNodeManager().clearCache();
+        ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( NodeManager.class ).clearCache();
+        tx = db.beginTx();
         for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
         {
             lastOrNull( node.getRelationships() );
         }
-
+        tx.finish();
         db.shutdown();
     }
 

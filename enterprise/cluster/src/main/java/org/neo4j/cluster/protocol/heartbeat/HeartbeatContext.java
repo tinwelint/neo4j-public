@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,202 +19,50 @@
  */
 package org.neo4j.cluster.protocol.heartbeat;
 
-import static org.neo4j.cluster.com.message.Message.timeout;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
 
-import org.neo4j.cluster.com.message.Message;
-import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.LearnerContext;
-import org.neo4j.cluster.protocol.cluster.ClusterContext;
-import org.neo4j.helpers.Listeners;
-import org.neo4j.helpers.Predicate;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.cluster.InstanceId;
+import org.neo4j.cluster.protocol.ConfigurationContext;
+import org.neo4j.cluster.protocol.LoggingContext;
+import org.neo4j.cluster.protocol.TimeoutsContext;
 
 /**
  * Context used by the {@link HeartbeatState} state machine.
  */
-public class HeartbeatContext
+public interface HeartbeatContext
+    extends TimeoutsContext, ConfigurationContext, LoggingContext
 {
-    private ClusterContext clusterContext;
-    private LearnerContext learnerContext;
-    private Executor executor;
-    List<URI> failed = new ArrayList<URI>();
+    void started();
 
-    Map<URI, Set<URI>> nodeSuspicions = new HashMap<URI, Set<URI>>();
+    /**
+     * @return True iff the node was suspected
+     */
+    boolean alive( final InstanceId node );
 
-    Iterable<HeartbeatListener> listeners = Listeners.newListeners();
+    void suspect( final InstanceId node );
 
-    public HeartbeatContext( ClusterContext clusterContext, LearnerContext learnerContext, Executor executor )
-    {
-        this.clusterContext = clusterContext;
-        this.learnerContext = learnerContext;
-        this.executor = executor;
-    }
+    void suspicions( InstanceId from, Set<InstanceId> suspicions );
 
-    public void started()
-    {
-        failed.clear();
-    }
+    Set<InstanceId> getFailed();
 
-    public boolean alive( final URI node )
-    {
-        Set<URI> serverSuspicions = getSuspicionsFor( clusterContext.getMe() );
-        boolean suspected = serverSuspicions.remove( node );
+    Iterable<InstanceId> getAlive();
 
-        if ( !isFailed( node ) && failed.remove( node ) )
-        {
-            Listeners.notifyListeners( listeners, new Listeners.Notification<HeartbeatListener>()
-            {
-                @Override
-                public void notify( HeartbeatListener listener )
-                {
-                    listener.alive( node );
-                }
-            } );
-        }
+    void addHeartbeatListener( HeartbeatListener listener );
 
-        return suspected;
-    }
+    void removeHeartbeatListener( HeartbeatListener listener );
 
-    public void suspect( final URI node )
-    {
-        Set<URI> serverSuspicions = getSuspicionsFor( clusterContext.getMe() );
-        serverSuspicions.add( node );
+    void serverLeftCluster( InstanceId node );
 
-        if ( isFailed( node ) && !failed.contains( node ) )
-        {
-            failed.add( node );
-            Listeners.notifyListeners( listeners, executor, new Listeners.Notification<HeartbeatListener>()
-            {
-                @Override
-                public void notify( HeartbeatListener listener )
-                {
-                    listener.failed( node );
-                }
-            } );
-        }
-    }
+    boolean isFailed( InstanceId node );
 
-    public void suspicions( URI from, Set<URI> suspicions )
-    {
-        Set<URI> serverSuspicions = getSuspicionsFor( from );
-        serverSuspicions.clear();
-        serverSuspicions.addAll( suspicions );
+    List<InstanceId> getSuspicionsOf( InstanceId server );
 
-        for ( final URI node : suspicions )
-        {
-            if ( isFailed( node ) && !failed.contains( node ) )
-            {
-                failed.add( node );
-                Listeners.notifyListeners( listeners, executor, new Listeners.Notification<HeartbeatListener>()
-                {
-                    @Override
-                    public void notify( HeartbeatListener listener )
-                    {
-                        listener.failed( node );
-                    }
-                } );
-            }
-        }
-    }
+    Set<InstanceId> getSuspicionsFor( InstanceId uri );
 
-    public List<URI> getFailed()
-    {
-        return failed;
-    }
+    Iterable<InstanceId> getOtherInstances();
 
-    public Iterable<URI> getAlive()
-    {
-        return Iterables.filter( new Predicate<URI>()
-        {
-            @Override
-            public boolean accept( URI item )
-            {
-                return !isFailed( item );
-            }
-        }, clusterContext.getConfiguration().getMembers() );
-    }
+    long getLastKnownLearnedInstanceInCluster();
 
-    public ClusterContext getClusterContext()
-    {
-        return clusterContext;
-    }
-
-    public LearnerContext getLearnerContext()
-    {
-        return learnerContext;
-    }
-
-    public void addHeartbeatListener( HeartbeatListener listener )
-    {
-        listeners = Listeners.addListener( listener, listeners );
-    }
-
-    public void removeHeartbeatListener( HeartbeatListener listener )
-    {
-        listeners = Listeners.removeListener( listener, listeners );
-    }
-
-    public void startHeartbeatTimers( Message<?> message )
-    {
-        // Start timers for sending and receiving heartbeats
-        for ( URI server : clusterContext.getConfiguration().getMembers() )
-        {
-            if ( !clusterContext.isMe( server ) )
-            {
-                clusterContext.timeouts.setTimeout( HeartbeatMessage.i_am_alive + "-" + server,
-                        timeout( HeartbeatMessage.timed_out, message, server ) );
-                clusterContext.timeouts.setTimeout( HeartbeatMessage.sendHeartbeat + "-" + server,
-                        timeout( HeartbeatMessage.sendHeartbeat, message, server ) );
-            }
-        }
-    }
-
-    public void serverLeftCluster( URI node )
-    {
-        failed.remove( node );
-        for ( Set<URI> uris : nodeSuspicions.values() )
-        {
-            uris.remove( node );
-        }
-    }
-
-    public boolean isFailed( URI node )
-    {
-        List<URI> suspicions = getSuspicionsOf( node );
-
-        return suspicions.size() > (clusterContext.getConfiguration().getMembers().size() - failed.size()) / 2;
-    }
-
-    public List<URI> getSuspicionsOf( URI uri )
-    {
-        List<URI> suspicions = new ArrayList<URI>();
-        for ( Map.Entry<URI, Set<URI>> uriSetEntry : nodeSuspicions.entrySet() )
-        {
-            if ( uriSetEntry.getValue().contains( uri ) )
-            {
-                suspicions.add( uriSetEntry.getKey() );
-            }
-        }
-
-        return suspicions;
-    }
-
-    public Set<URI> getSuspicionsFor( URI uri )
-    {
-        Set<URI> serverSuspicions = nodeSuspicions.get( uri );
-        if ( serverSuspicions == null )
-        {
-            serverSuspicions = new HashSet<URI>();
-            nodeSuspicions.put( uri, serverSuspicions );
-        }
-        return serverSuspicions;
-    }
+    long getLastLearnedInstanceId();
 }

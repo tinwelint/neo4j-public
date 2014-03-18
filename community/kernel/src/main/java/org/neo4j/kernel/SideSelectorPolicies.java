@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,32 +23,45 @@ import org.neo4j.graphdb.traversal.BranchSelector;
 import org.neo4j.graphdb.traversal.SideSelector;
 import org.neo4j.graphdb.traversal.SideSelectorPolicy;
 
+/**
+ * @deprecated See {@link org.neo4j.graphdb.traversal.SideSelectorPolicies}
+ */
 public enum SideSelectorPolicies implements SideSelectorPolicy
 {
+    /**
+     * @deprecated See {@link org.neo4j.graphdb.traversal.SideSelectorPolicies}
+     */
     LEVEL
     {
         @Override
         public SideSelector create( BranchSelector start, BranchSelector end, int maxDepth )
         {
-            return new LevelSelectorOrderer( start, end, false, maxDepth );
+            return org.neo4j.graphdb.traversal.SideSelectorPolicies.LEVEL.create( start, end, maxDepth );
         }
     },
-    
+
+    /**
+     * @deprecated See {@link org.neo4j.graphdb.traversal.SideSelectorPolicies}
+     */
     LEVEL_STOP_DESCENT_ON_RESULT
     {
         @Override
         public SideSelector create( BranchSelector start, BranchSelector end, int maxDepth )
         {
-            return new LevelSelectorOrderer( start, end, true, maxDepth );
+            return org.neo4j.graphdb.traversal.SideSelectorPolicies.LEVEL_STOP_DESCENT_ON_RESULT
+                    .create( start, end, maxDepth );
         }
     },
-    
+
+    /**
+     * @deprecated See {@link org.neo4j.graphdb.traversal.SideSelectorPolicies}
+     */
     ALTERNATING
     {
         @Override
         public SideSelector create( BranchSelector start, BranchSelector end, int maxDepth )
         {
-            return new AlternatingSelectorOrderer( start, end );
+            return org.neo4j.graphdb.traversal.SideSelectorPolicies.ALTERNATING.create( start, end, maxDepth );
         }
     };
 }

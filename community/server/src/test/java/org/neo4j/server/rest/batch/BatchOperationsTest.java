@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,8 @@
  */
 package org.neo4j.server.rest.batch;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +30,8 @@ import javax.servlet.ServletException;
 import org.junit.Test;
 import org.neo4j.server.rest.web.InternalJettyServletRequest;
 import org.neo4j.server.rest.web.InternalJettyServletResponse;
+
+import static org.junit.Assert.*;
 
 public class BatchOperationsTest {
 
@@ -48,5 +49,25 @@ public class BatchOperationsTest {
         assertEquals("foo bar", ops.replaceLocationPlaceholders("foo {100}", map));
         assertEquals("bar foo bar", ops.replaceLocationPlaceholders("{100} foo {100}", map));
         assertEquals("bar bar foo bar bar", ops.replaceLocationPlaceholders("bar {100} foo {100} bar", map));
+    }
+
+    @Test
+    public void testSchemeInInternalJettyServletRequestForHttp() throws UnsupportedEncodingException
+    {
+        // when
+        InternalJettyServletRequest req = new InternalJettyServletRequest( "POST", "http://localhost:7473/db/data/node", "{'name':'node1'}", new InternalJettyServletResponse() );
+
+        // then
+        assertEquals("http",req.getScheme());
+    }
+
+    @Test
+    public void testSchemeInInternalJettyServletRequestForHttps() throws UnsupportedEncodingException
+    {
+        // when
+        InternalJettyServletRequest req = new InternalJettyServletRequest( "POST", "https://localhost:7473/db/data/node", "{'name':'node1'}", new InternalJettyServletResponse() );
+
+        // then
+        assertEquals("https",req.getScheme());
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -85,6 +85,22 @@ public interface TransactionData
      * @return all properties that have been removed from nodes.
      */
     Iterable<PropertyEntry<Node>> removedNodeProperties();
+
+    /**
+     * Get all new labels that have been assigned during the transaction. This
+     * will return one entry for each label added to each node. All labels assigned
+     * to nodes that were created in the transaction will also be included.
+     *
+     * @return all labels assigned on nodes.
+     */
+    Iterable<LabelEntry> assignedLabels();
+
+    /**
+     * Get all labels that have been removed from nodes during the transaction.
+     *
+     * @return all labels removed from nodes.
+     */
+    Iterable<LabelEntry> removedLabels();
 
     /**
      * Get the relationships that were created during the transaction.

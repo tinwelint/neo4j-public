@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageHolder;
@@ -32,12 +33,12 @@ import org.neo4j.cluster.statemachine.State;
  * State machine for Paxos Proposer
  */
 public enum ProposerState
-        implements State<MultiPaxosContext, ProposerMessage>
+        implements State<ProposerContext, ProposerMessage>
 {
     start
             {
                 @Override
-                public ProposerState handle( MultiPaxosContext context,
+                public ProposerState handle( ProposerContext context,
                                              Message<ProposerMessage> message,
                                              MessageHolder outgoing
                 )
@@ -58,7 +59,7 @@ public enum ProposerState
     proposer
             {
                 @Override
-                public ProposerState handle( MultiPaxosContext context,
+                public ProposerState handle( ProposerContext context,
                                              Message<ProposerMessage> message,
                                              MessageHolder outgoing
                 )
@@ -68,27 +69,7 @@ public enum ProposerState
                     {
                         case propose:
                         {
-                            Object payload = message.getPayload();
-
-                            if ( payload instanceof ClusterMessage.ConfigurationChangeState )
-                            {
-                                ClusterMessage.ConfigurationChangeState state = message.getPayload();
-                                List<URI> acceptors = context.getAcceptors();
-
-                                // Never include node that is leaving
-                                if ( state.getLeave() != null )
-                                {
-                                    acceptors = new ArrayList<URI>( acceptors );
-                                    acceptors.remove( state.getLeave() );
-                                }
-
-                                propose( context, message, outgoing, payload, acceptors );
-                            }
-                            else
-                            {
-                                propose( context, message, outgoing, payload, context.getAcceptors() );
-                            }
-
+                            propose( context, message, outgoing, determineAcceptorSet( message, context ) );
                             break;
                         }
 
@@ -96,8 +77,12 @@ public enum ProposerState
                         {
                             // Denial of prepare
                             ProposerMessage.RejectPrepare rejectPropose = message.getPayload();
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
+                            context.getLogger( ProposerState.class ).debug( "Propose for instance " + instance
+                                    + " rejected from " + message.getHeader( Message.FROM ) + " with ballot "
+                                    + rejectPropose.getBallot() );
+
                             if ( instance.isState( PaxosInstance.State.p1_pending ) )
                             {
                                 long ballot = instance.ballot;
@@ -106,57 +91,73 @@ public enum ProposerState
                                     ballot += 1000; // Make sure we win next time
                                 }
 
-                                instance.phase1Timeout( ballot, context.getAcceptors() );
+                                instance.phase1Timeout( ballot );
+                                context.getLogger( ProposerState.class ).debug(
+                                        "Reproposing instance " + instance + " at ballot " + instance.ballot
+                                                + " after rejectPrepare" );
                                 for ( URI acceptor : instance.getAcceptors() )
                                 {
-                                    if ( acceptor.equals( context.clusterContext.getMe() ) )
-                                    {
-
-                                    }
-                                    else
-                                    {
-                                        outgoing.offer( message.copyHeadersTo( Message.to( AcceptorMessage.prepare,
-                                                acceptor, new AcceptorMessage.PrepareState( ballot ) ),
-                                                InstanceId.INSTANCE ) );
-                                    }
+                                    outgoing.offer( message.copyHeadersTo( Message.to( AcceptorMessage.prepare,
+                                            acceptor, new AcceptorMessage.PrepareState( ballot ) ),
+                                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                 }
-                                context.timeouts.setTimeout( instanceId, message.copyHeadersTo( Message.timeout(
-                                        ProposerMessage
-                                                .phase1Timeout, message ), InstanceId.INSTANCE ) );
+                                
+                                assert instance.value_1 == null : "value_1 should have been null at this point";
+                                Object payload = context.getBookedInstance( instanceId ).getPayload();
+                                assert payload != null : "Should have a booked instance payload for " + instanceId;
+                                // This will reset the phase1Timeout if existing
+                                context.setTimeout( instanceId, message.copyHeadersTo( Message.timeout(
+                                        ProposerMessage.phase1Timeout, message, payload ), org.neo4j.cluster.protocol
+                                  .atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                             }
                             break;
                         }
 
                         case phase1Timeout:
                         {
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
                             if ( instance.isState( PaxosInstance.State.p1_pending ) )
                             {
                                 if ( instance.ballot > 10000 )
                                 {
-                                    context.clusterContext.getLogger( ProposerState.class ).warn( "Propose failed due to phase 1 timeout" );
+                                    context.getLogger( ProposerState.class ).warn( "Propose failed due to phase 1 " +
+                                            "timeout" );
 
                                     // Fail this propose
-                                    outgoing.offer( Message.internal( AtomicBroadcastMessage.failed,
-                                            context.proposerContext.bookedInstances.get( instance.id ) ) );
+                                    Message originalMessage = context.getBookedInstance( instance.id );
+                                    // Also make sure that all headers are copied over
+                                    outgoing.offer( originalMessage.copyHeadersTo(
+                                            Message.internal( AtomicBroadcastMessage.failed,
+                                                    originalMessage.getPayload() ) ) );
+                                    context.cancelTimeout( instanceId );
                                 }
                                 else
                                 {
                                     long ballot = instance.ballot + 1000;
 
-                                    instance.phase1Timeout( ballot, context.getAcceptors() );
+                                    instance.phase1Timeout( ballot );
 
                                     for ( URI acceptor : instance.getAcceptors() )
                                     {
                                         outgoing.offer( message.copyHeadersTo( Message.to( AcceptorMessage.prepare,
                                                 acceptor, new AcceptorMessage.PrepareState( ballot ) ),
-                                                InstanceId.INSTANCE ) );
+                                                org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                     }
-                                    context.timeouts.setTimeout( instanceId, message.copyHeadersTo( Message.timeout(
-                                            ProposerMessage
-                                                    .phase1Timeout, message ), InstanceId.INSTANCE ) );
+                                    context.setTimeout( instanceId, message.copyHeadersTo( Message.timeout(
+                                            ProposerMessage.phase1Timeout, message, message.getPayload() ),
+                                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                 }
+                            }
+                            else if ( instance.isState( PaxosInstance.State.closed ) || instance.isState(
+                                    PaxosInstance.State.delivered ) )
+                            {
+                                // Retry
+                                Message oldMessage = context.unbookInstance( instance.id );
+                                context.getLogger( getClass() ).debug( "Retrying instance " + instance.id +
+                                        " with message " + message.getPayload() +
+                                        ". Previous instance was " + oldMessage );
+                                outgoing.offer( Message.internal( ProposerMessage.propose, message.getPayload() ) );
                             }
                             break;
                         }
@@ -165,8 +166,7 @@ public enum ProposerState
                         {
                             // P
                             ProposerMessage.PromiseState promiseState = message.getPayload();
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( new InstanceId(
-                                    message ) );
+                            PaxosInstance instance = context.getPaxosInstance( new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message ) );
 
                             if ( instance.isState( PaxosInstance.State.p1_pending ) && instance.ballot ==
                                     promiseState.getBallot() )
@@ -175,14 +175,16 @@ public enum ProposerState
 
                                 if ( instance.isPromised( context.getMinimumQuorumSize( instance.getAcceptors() ) ) )
                                 {
-                                    context.timeouts.cancelTimeout( instance.id );
+                                    context.cancelTimeout( instance.id );
 
                                     // No promises contained a value
+                                    Object readyValue = instance.value_2 == null ?
+                                            context.getBookedInstance( instance.id ).getPayload() : instance
+                                            .value_2;
                                     if ( instance.value_1 == null )
                                     {
                                         // R0
-                                        instance.ready( instance.value_2 == null ? context.proposerContext
-                                                .bookedInstances.get( instance.id ) : instance.value_2, true );
+                                        instance.ready( readyValue, true );
                                     }
                                     else
                                     {
@@ -191,14 +193,11 @@ public enum ProposerState
                                         {
                                             // Another value was already associated with this instance. Push value
                                             // back onto pending list
-                                            context.proposerContext.pendingValues.offerFirst( context.proposerContext
-                                                    .bookedInstances.remove( instance.id ) );
+                                            context.pendingValue( context.unbookInstance( instance.id ) );
 
                                             instance.ready( instance.value_1, false );
                                         }
-                                        else if ( instance.value_1.equals( instance.value_2 == null ? context
-                                                .proposerContext.bookedInstances.get( instance.id ) : instance
-                                                .value_2 ) )
+                                        else if ( instance.value_1.equals( readyValue ) )
                                         {
                                             instance.ready( instance.value_2, instance.clientValue );
                                         }
@@ -206,8 +205,7 @@ public enum ProposerState
                                         {
                                             // Another value was already associated with this instance. Push value
                                             // back onto pending list
-                                            context.proposerContext.pendingValues.offerFirst( context.proposerContext
-                                                    .bookedInstances.remove( instance.id ) );
+                                            context.pendingValue( context.unbookInstance( instance.id ) );
 
                                             instance.ready( instance.value_1, false );
                                         }
@@ -215,8 +213,7 @@ public enum ProposerState
                                         {
                                             // Another value was already associated with this instance. Push value
                                             // back onto pending list
-                                            context.proposerContext.pendingValues.offerFirst( context.proposerContext
-                                                    .bookedInstances.remove( instance.id ) );
+                                            context.pendingValue( context.unbookInstance( instance.id ) );
                                             instance.ready( instance.value_1, false );
                                         }
                                     }
@@ -228,12 +225,12 @@ public enum ProposerState
                                         outgoing.offer( message.copyHeadersTo( Message.to( AcceptorMessage.accept,
                                                 acceptor,
                                                 new AcceptorMessage.AcceptState( instance.ballot,
-                                                        instance.value_2 ) ), InstanceId.INSTANCE ) );
+                                                        instance.value_2 ) ), org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                     }
 
-                                    context.timeouts.setTimeout( instance.id,
+                                    context.setTimeout( instance.id,
                                             message.copyHeadersTo( Message.timeout( ProposerMessage.phase2Timeout,
-                                                    message ), InstanceId.INSTANCE ) );
+                                                    message, readyValue ), org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                 }
                                 else
                                 {
@@ -247,8 +244,8 @@ public enum ProposerState
 
                         case rejectAccept:
                         {
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
 
                             if ( instance.isState( PaxosInstance.State.p2_pending ) )
                             {
@@ -257,15 +254,17 @@ public enum ProposerState
 
                                 if ( !instance.isAccepted( context.getMinimumQuorumSize( instance.getAcceptors() ) ) )
                                 {
-                                    context.timeouts.cancelTimeout( instanceId );
+                                    context.cancelTimeout( instanceId );
 
-                                    context.clusterContext.getLogger( ProposerState.class ).warn( "Accept rejected:" +
+                                    context.getLogger( ProposerState.class ).warn( "Accept rejected:" +
                                             instance.state );
 
                                     if ( instance.clientValue )
                                     {
-                                        propose( context, message, outgoing, instance.value_2,
-                                                instance.getAcceptors() );
+                                        Message copyWithValue = Message.internal( ProposerMessage.propose,
+                                                instance.value_2 );
+                                        message.copyHeadersTo( copyWithValue );
+                                        propose( context, copyWithValue, outgoing, instance.getAcceptors() );
                                     }
                                 }
                             }
@@ -274,8 +273,8 @@ public enum ProposerState
 
                         case phase2Timeout:
                         {
-                            InstanceId instanceId = new InstanceId( message );
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+                            PaxosInstance instance = context.getPaxosInstance( instanceId );
 
                             if ( instance.isState( PaxosInstance.State.p2_pending ) )
                             {
@@ -286,18 +285,25 @@ public enum ProposerState
                                 {
                                     outgoing.offer( message.copyHeadersTo( Message.to( AcceptorMessage.prepare,
                                             acceptor, new AcceptorMessage.PrepareState( ballot ) ),
-                                            InstanceId.INSTANCE ) );
+                                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                 }
 
-                                context.timeouts.setTimeout( instanceId, message.copyHeadersTo( Message.timeout(
-                                        ProposerMessage.phase1Timeout, message ), InstanceId.INSTANCE ) );
+                                context.setTimeout( instanceId, message.copyHeadersTo( Message.timeout(
+                                        ProposerMessage.phase1Timeout, message, message.getPayload() ),
+                                        org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
+                            }
+                            else if ( instance.isState( PaxosInstance.State.closed )
+                                    || instance.isState( PaxosInstance.State.delivered ) )
+                            {
+                                outgoing.offer( message.copyHeadersTo( Message.internal( ProposerMessage.propose,
+                                        message.getPayload() ) ) );
                             }
                             break;
                         }
 
                         case accepted:
                         {
-                            PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( new InstanceId(
+                            PaxosInstance instance = context.getPaxosInstance( new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId(
                                     message ) );
 
                             if ( instance.isState( PaxosInstance.State.p2_pending ) )
@@ -306,34 +312,38 @@ public enum ProposerState
                                 instance.accepted( acceptedState );
 
                                 // Value has been accepted! Now distribute to all learners
-                                if ( instance.accepts.size() == context.getMinimumQuorumSize( instance.getAcceptors()
+                                if ( instance.accepts.size() >= context.getMinimumQuorumSize( instance.getAcceptors()
                                 ) )
                                 {
-                                    context.timeouts.cancelTimeout( instance.id );
+                                    context.cancelTimeout( instance.id );
 
                                     // Might have to extra-tell myself if not yet officially part of cluster
                                     if ( instance.value_2 instanceof ClusterMessage.ConfigurationChangeState )
                                     {
+                                        context.patchBookedInstances( (ClusterMessage.ConfigurationChangeState) instance.value_2);
+
                                         ClusterMessage.ConfigurationChangeState state = (ClusterMessage
                                                 .ConfigurationChangeState) instance.value_2;
                                         // TODO getLearners might return wrong list if another join happens at the
                                         // same time
                                         // Proper fix is to wait with this learn until we have learned all previous
                                         // configuration changes
-                                        for ( URI learner : context.getLearners() )
+
+                                        // TODO Fix this to use InstanceId instead of URI
+                                        for ( URI learner : context.getMemberURIs() )
                                         {
-                                            if ( learner.equals( context.clusterContext.getMe() ))
+                                            if ( learner.equals( context.boundAt() ) )
                                             {
                                                 outgoing.offer( message.copyHeadersTo( Message.internal( LearnerMessage
                                                         .learn, new LearnerMessage.LearnState( instance.value_2 ) ),
-                                                        InstanceId.INSTANCE ) );
+                                                        org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                             }
                                             else
                                             {
                                                 outgoing.offer( message.copyHeadersTo( Message.to( LearnerMessage
                                                         .learn, learner,
                                                         new LearnerMessage.LearnState( instance.value_2 ) ),
-                                                        InstanceId.INSTANCE ) );
+                                                        org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                             }
                                         }
 
@@ -341,69 +351,81 @@ public enum ProposerState
                                         if ( state.getJoin() != null )
                                         {
                                             outgoing.offer( message.copyHeadersTo( Message.to( LearnerMessage
-                                                    .learn, state.getJoin(),
+                                                    .learn, state.getJoinUri(),
                                                     new LearnerMessage.LearnState( instance.value_2 ) ),
-                                                    InstanceId.INSTANCE ) );
+                                                    org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                         }
                                     }
                                     else
                                     {
                                         // Tell learners
-                                        for ( URI learner : context.getLearners() )
+                                        for ( URI learner : context.getMemberURIs() )
                                         {
                                             outgoing.offer( message.copyHeadersTo( Message.to( LearnerMessage
                                                     .learn, learner,
                                                     new LearnerMessage.LearnState( instance.value_2 ) ),
-                                                    InstanceId.INSTANCE ) );
+                                                    org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                         }
                                     }
 
-                                    context.proposerContext.bookedInstances.remove( instance.id );
+                                    context.unbookInstance( instance.id );
 
                                     // Check if we have anything pending - try to start process for it
-                                    if ( !context.proposerContext.pendingValues.isEmpty() && context.proposerContext
-                                            .bookedInstances.size() < MAX_CONCURRENT_INSTANCES )
+                                    if ( context.hasPendingValues() && context.canBookInstance() )
                                     {
-                                        Object value = context.proposerContext.pendingValues.remove();
-                                        context.clusterContext.getLogger( ProposerState.class ).debug( "Restarting "
-                                                + value + " booked:"
-                                                + context.proposerContext.bookedInstances.size() );
-                                        outgoing.offer( Message.internal( ProposerMessage.propose, value ) );
+                                        Message proposeMessage = context.popPendingValue();
+                                        context.getLogger( ProposerState.class ).debug( "Restarting "
+                                                + proposeMessage + " booked:"
+                                                + context.nrOfBookedInstances() );
+                                        outgoing.offer( proposeMessage );
                                     }
                                 }
-                                else
-                                {
-                                }
+                            } else
+                            {
+                                context.getLogger( ProposerState.class ).debug( "Instance receiving an accepted is in the wrong state:"+instance );
                             }
                             break;
                         }
 
                         case leave:
                         {
-                            context.proposerContext.leave();
-                            context.getPaxosInstances().leave();
+                            context.leave();
                             return start;
                         }
                     }
 
                     return this;
                 }
+    };
 
-            };
-
-    public final int MAX_CONCURRENT_INSTANCES = 10;
-
-    private static void propose( MultiPaxosContext context, Message message, MessageHolder outgoing,
-                                 Object payload, List<URI> acceptors )
+    private static void propose( ProposerContext context, Message message, MessageHolder outgoing,
+                                 List<URI> acceptors )
     {
-        InstanceId instanceId = context.proposerContext.newInstanceId( context.learnerContext
-                .getLastKnownLearnedInstanceInCluster() );
+        org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId;
+        if ( message.hasHeader( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) )
+        {
+            instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
+        }
+        else
+        {
+            instanceId = context.newInstanceId();
 
-        context.proposerContext.bookedInstances.put( instanceId, payload );
+            message.setHeader( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE, instanceId.toString() );
+            context.bookInstance( instanceId, message );
+        }
 
-        long ballot = 1000 + context.getServerId(); // First server will have first ballot id be 1001
+        long ballot = 1000 + context.getMyId().toIntegerIndex(); // First server will have first ballot id be 1001
 
-        PaxosInstance instance = context.getPaxosInstances().getPaxosInstance( instanceId );
+        PaxosInstance instance = context.getPaxosInstance( instanceId );
+
+        /*
+         * If the instance already has an acceptor set, use that. This ensures that patched acceptor sets, for example,
+         * are respected.
+         */
+        if ( instance.getAcceptors() != null )
+        {
+            acceptors = instance.getAcceptors();
+        }
 
         if ( !(instance.isState( PaxosInstance.State.closed ) || instance.isState( PaxosInstance.State.delivered )) )
         {
@@ -412,16 +434,50 @@ public enum ProposerState
             for ( URI acceptor : acceptors )
             {
                 outgoing.offer( Message.to( AcceptorMessage.prepare, acceptor, new AcceptorMessage.PrepareState(
-                        ballot ) ).setHeader( InstanceId.INSTANCE, instanceId.toString() ) );
+                        ballot ) ).setHeader( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE, instanceId.toString() ) );
             }
 
-            context.timeouts.setTimeout( instanceId, Message.timeout( ProposerMessage.phase1Timeout, message,
-                    instanceId ).setHeader( InstanceId.INSTANCE, instanceId.toString() ) );
+            context.setTimeout( instanceId, Message.timeout( ProposerMessage.phase1Timeout, message,
+                    message.getPayload() ).setHeader( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE, instanceId.toString() ) );
         }
         else
         {
             // Wait with this value - we have our hands full right now
-            context.proposerContext.pendingValues.offerFirst( payload );
+            context.pendingValue( message );
+        }
+    }
+
+    private static List<URI> determineAcceptorSet( Message<ProposerMessage> message, ProposerContext context )
+    {
+        Object payload = message.getPayload();
+
+        if ( payload instanceof ClusterMessage.ConfigurationChangeState )
+        {
+            ClusterMessage.ConfigurationChangeState state = message.getPayload();
+            List<URI> acceptors = context.getAcceptors();
+
+            Map<org.neo4j.cluster.InstanceId, URI> currentMembers = context.getMembers();
+
+            // Never include node that is leaving
+            if ( state.getLeave() != null )
+            {
+                acceptors = new ArrayList<URI>( acceptors );
+                acceptors.remove( currentMembers.get(state.getLeave()) );
+            }
+
+            if ( state.getJoin() != null && currentMembers.containsKey( state.getJoin() ) )
+            {
+                acceptors.remove( currentMembers.get( state.getJoin() ) );
+                if ( !acceptors.contains( state.getJoinUri() ) )
+                {
+                    acceptors.add( state.getJoinUri() );
+                }
+            }
+            return acceptors;
+        }
+        else
+        {
+            return context.getAcceptors();
         }
     }
 }

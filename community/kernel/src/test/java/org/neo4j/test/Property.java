@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -44,6 +44,16 @@ public final class Property
     {
         this.key = key;
         this.value = value;
+    }
+
+    public String key()
+    {
+        return key;
+    }
+
+    public Object value()
+    {
+        return value;
     }
 
     @Override

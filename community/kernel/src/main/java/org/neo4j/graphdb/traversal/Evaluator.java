@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -54,7 +54,7 @@ public interface Evaluator
      * Exposes an {@link Evaluator} as a {@link PathEvaluator}.
      * @param <STATE> the type of state passed into the evaluator.
      */
-    public static class AsPathEvaluator<STATE> implements PathEvaluator<STATE>
+    class AsPathEvaluator<STATE> implements PathEvaluator<STATE>
     {
         private final Evaluator evaluator;
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,7 +34,7 @@ import org.neo4j.shell.ShellException;
  * could also (regarding POSIX) move nodes, but it doesn't).
  */
 @Service.Implementation( App.class )
-public class Mv extends GraphDatabaseApp
+public class Mv extends TransactionProvidingApp
 {
     /**
      * Constructs a new "mv" application.

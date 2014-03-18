@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,6 @@
  */
 package org.neo4j.backup;
 
-import static org.neo4j.helpers.ProgressIndicator.SimpleProgress.textual;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource.LOGICAL_LOG_DEFAULT_NAME;
 import static org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog.getHighestHistoryLogVersion;
@@ -30,6 +29,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.util.List;
 import java.util.Map;
 
 import javax.transaction.xa.Xid;
@@ -39,23 +39,27 @@ import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.FullCheck;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Args;
-import org.neo4j.helpers.ProgressIndicator;
+import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.InternalAbstractGraphDatabase;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.api.direct.DirectStoreAccess;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConfigParam;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.StoreAccess;
 import org.neo4j.kernel.impl.nioneo.xa.Command;
+import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.InMemoryLogBuffer;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry;
 import org.neo4j.kernel.impl.transaction.xaframework.LogExtractor;
 import org.neo4j.kernel.impl.transaction.xaframework.LogIoUtils;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommand;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommandFactory;
-import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.kernel.monitoring.Monitors;
 
 class RebuildFromLogs
 {
@@ -64,22 +68,21 @@ class RebuildFromLogs
     /*
      * TODO: This process can be sped up if the target db doesn't have to write tx logs.
      */
-    private final XaDataSource nioneo;
+    private final NeoStoreXaDataSource nioneo;
     private final StoreAccess stores;
 
-    RebuildFromLogs( InternalAbstractGraphDatabase graphdb )
+    RebuildFromLogs( GraphDatabaseAPI graphdb )
     {
-        this.nioneo = getDataSource( graphdb, Config.DEFAULT_DATA_SOURCE_NAME );
+        this.nioneo = getDataSource( graphdb, NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME );
         this.stores = new StoreAccess( graphdb );
     }
 
-    // TODO: rewrite to use the new progress indication API
-    RebuildFromLogs applyTransactionsFrom( ProgressIndicator progress, File sourceDir ) throws IOException
+    RebuildFromLogs applyTransactionsFrom( ProgressListener progress, File sourceDir ) throws IOException
     {
         LogExtractor extractor = null;
         try
         {
-            extractor = LogExtractor.from( FS, sourceDir );
+            extractor = LogExtractor.from( FS, sourceDir, new Monitors().newMonitor( ByteCounterMonitor.class ) );
             for ( InMemoryLogBuffer buffer = new InMemoryLogBuffer(); ; buffer.reset() )
             {
                 long txId = extractor.extractNext( buffer );
@@ -88,10 +91,7 @@ class RebuildFromLogs
                     break;
                 }
                 applyTransaction( txId, buffer );
-                if ( progress != null )
-                {
-                    progress.update( false, txId );
-                }
+                progress.set( txId );
             }
         }
         finally
@@ -100,6 +100,7 @@ class RebuildFromLogs
             {
                 extractor.close();
             }
+            progress.done();
         }
         return this;
     }
@@ -109,9 +110,10 @@ class RebuildFromLogs
         nioneo.applyCommittedTransaction( txId, txData );
     }
 
-    private static XaDataSource getDataSource( InternalAbstractGraphDatabase graphdb, String name )
+    private static NeoStoreXaDataSource getDataSource( GraphDatabaseAPI graphdb, String name )
     {
-        XaDataSource datasource = graphdb.getXaDataSourceManager().getXaDataSource( name );
+        NeoStoreXaDataSource datasource = graphdb.getDependencyResolver().resolveDependency( XaDataSourceManager.class )
+                .getNeoStoreDataSource();
         if ( datasource == null )
         {
             throw new NullPointerException( "Could not access " + name );
@@ -129,7 +131,8 @@ class RebuildFromLogs
         Args params = new Args( args );
         @SuppressWarnings("boxing")
         boolean full = params.getBoolean( "full", false, true );
-        args = params.orphans().toArray( new String[0] );
+        List<String> orphans = params.orphans();
+        args = orphans.toArray( new String[orphans.size()] );
         if ( args.length != 2 )
         {
             printUsage( "Exactly two positional arguments expected: "
@@ -148,7 +151,7 @@ class RebuildFromLogs
         {
             if ( target.isDirectory() )
             {
-                if ( BackupService.directoryContainsDb( target.getAbsolutePath() ) )
+                if ( new BackupService().directoryContainsDb( target.getAbsolutePath() ) )
                 {
                     printUsage( "target graph database already exists" );
                     System.exit( -1 );
@@ -175,31 +178,28 @@ class RebuildFromLogs
         }
         long txCount = findLastTransactionId( source, LOGICAL_LOG_DEFAULT_NAME + ".v" + maxFileId );
         String txdifflog = params.get( "txdifflog", null, new File( target, "txdiff.log" ).getAbsolutePath() );
-        InternalAbstractGraphDatabase graphdb = BackupService.startTemporaryDb( target.getAbsolutePath(),
+        GraphDatabaseAPI graphdb = BackupService.startTemporaryDb( target.getAbsolutePath(),
                 new TxDiffLogConfig( full
                         ? VerificationLevel.FULL_WITH_LOGGING
                         : VerificationLevel.LOGGING, txdifflog ) );
 
-        ProgressIndicator progress;
+        ProgressMonitorFactory progress;
         if ( txCount < 0 )
         {
-            progress = null;
+            progress = ProgressMonitorFactory.NONE;
             System.err.println( "Unable to report progress, cannot find highest txId, attempting rebuild anyhow." );
         }
         else
         {
-            progress = textual( System.err, txCount );
-            System.err.printf( "Rebuilding store from %s transactions %n", txCount );
+            progress = ProgressMonitorFactory.textual( System.err );
         }
         try
         {
             try
             {
-                RebuildFromLogs rebuilder = new RebuildFromLogs( graphdb ).applyTransactionsFrom( progress, source );
-                if ( progress != null )
-                {
-                    progress.done( txCount );
-                }
+                ProgressListener listener = progress
+                        .singlePart( String.format( "Rebuilding store from %s transactions ", txCount ), txCount );
+                RebuildFromLogs rebuilder = new RebuildFromLogs( graphdb ).applyTransactionsFrom( listener, source );
                 // if we didn't run the full checker for each transaction, run it afterwards
                 if ( !full )
                 {
@@ -216,7 +216,6 @@ class RebuildFromLogs
             System.err.println();
             e.printStackTrace( System.err );
             System.exit( -1 );
-            return;
         }
     }
 
@@ -259,7 +258,7 @@ class RebuildFromLogs
         Config tuningConfiguration = new Config( stringMap(),
                 GraphDatabaseSettings.class, ConsistencyCheckSettings.class );
         new FullCheck( tuningConfiguration, ProgressMonitorFactory.textual( System.err ) )
-                .execute( stores, StringLogger.SYSTEM );
+                .execute( new DirectStoreAccess( stores, nioneo.getLabelScanStore(), nioneo.getIndexProvider() ), StringLogger.SYSTEM );
     }
 
     private static void printUsage( String... msgLines )
@@ -310,7 +309,7 @@ class RebuildFromLogs
         @Override
         public XaCommand readCommand( ReadableByteChannel byteChannel, ByteBuffer buffer ) throws IOException
         {
-            return Command.readCommand( null, byteChannel, buffer );
+            return Command.readCommand( null, null, byteChannel, buffer );
         }
     }
 }

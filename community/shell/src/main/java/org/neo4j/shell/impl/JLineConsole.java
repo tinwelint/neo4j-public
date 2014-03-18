@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,7 @@
 package org.neo4j.shell.impl;
 
 import java.io.File;
+import java.nio.file.Paths;
 
 import org.neo4j.shell.Console;
 import org.neo4j.shell.ShellClient;
@@ -30,7 +31,7 @@ import org.neo4j.shell.ShellClient;
  */
 public class JLineConsole implements Console
 {
-	private Object consoleReader;
+	private final Object consoleReader;
 	
 	static JLineConsole newConsoleOrNullIfNotFound( ShellClient client )
 	{
@@ -54,9 +55,8 @@ public class JLineConsole implements Console
             Class<?> historyClass = Class.forName( "jline.History" );
             Object history = historyClass.newInstance();
             history.getClass().getMethod( "setHistoryFile", File.class ).invoke( history,
-                    new File( ".shell_history" ) );
-            consoleReader.getClass().getMethod( "setHistory", historyClass ).invoke(
-                    consoleReader, history );
+                    Paths.get( System.getProperty( "user.home" ), ".neo4j_shell_history" ).toFile() );
+            consoleReader.getClass().getMethod( "setHistory", historyClass ).invoke( consoleReader, history );
 
 			return new JLineConsole( consoleReader, client );
 		}
@@ -78,12 +78,14 @@ public class JLineConsole implements Console
 		this.consoleReader = consoleReader;
 	}
 	
-	public void format( String format, Object... args )
+	@Override
+    public void format( String format, Object... args )
 	{
 		System.out.print( format );
 	}
 	
-	public String readLine( String prompt )
+	@Override
+    public String readLine( String prompt )
 	{
 		try
 		{

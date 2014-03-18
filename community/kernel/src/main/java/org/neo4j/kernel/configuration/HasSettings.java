@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,5 +28,5 @@ public interface HasSettings
      *
      * @return a class or null if no settings are needed
      */
-    public Class getSettingsClass();
+    Class getSettingsClass();
 }

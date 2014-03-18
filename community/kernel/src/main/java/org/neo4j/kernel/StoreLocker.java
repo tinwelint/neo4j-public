@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,34 +19,30 @@
  */
 package org.neo4j.kernel;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.read_only;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
 
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.nioneo.store.FileLock;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
-import org.neo4j.kernel.impl.util.StringLogger;
 
+/**
+ * @deprecated This will be moved to internal packages in the next major release.
+ */
+@Deprecated
 public class StoreLocker
 {
     public static final String STORE_LOCK_FILENAME = "store_lock";
 
-    private final Config configuration;
-    private final StringLogger logger;
     private final FileSystemAbstraction fileSystemAbstraction;
 
     private FileLock storeLockFileLock;
     private FileChannel storeLockFileChannel;
 
-    public StoreLocker( Config configuration, FileSystemAbstraction fileSystemAbstraction, StringLogger logger )
+    public StoreLocker( FileSystemAbstraction fileSystemAbstraction )
     {
-        this.configuration = configuration;
         this.fileSystemAbstraction = fileSystemAbstraction;
-        this.logger = logger;
     }
 
     /**
@@ -54,9 +50,9 @@ public class StoreLocker
      * <p/>
      * Creates store dir if necessary, creates store lock file if necessary
      *
-     * @return true if lock was successfully obtained, false otherwise
+     * @throws StoreLockException if lock could not be acquired
      */
-    public boolean lock( File storeDir )
+    public void checkLock( File storeDir ) throws StoreLockException
     {
         File storeLockFile = new File( storeDir, STORE_LOCK_FILENAME );
 
@@ -64,47 +60,37 @@ public class StoreLocker
         {
             if ( !fileSystemAbstraction.fileExists( storeLockFile ) )
             {
-                if ( configuration.get( read_only ) )
-                {
-                    logger.warn( "Unable to lock store as store dir does not exist and instance is in read-only mode" );
-                    return false;
-                }
-
-                fileSystemAbstraction.autoCreatePath( storeLockFile.getParentFile() );
+                fileSystemAbstraction.mkdirs( storeLockFile.getParentFile() );
             }
         }
         catch ( IOException e )
         {
-            logger.warn( "Unable to create path for store dir: " + storeDir, e );
-            return false;
+            throw new StoreLockException( "Unable to create path for store dir: " + storeDir+". Please ensure no other process is using this database, and that the directory is writable (required even for read-only access)", e );
         }
 
         try
         {
             storeLockFileChannel = fileSystemAbstraction.open( storeLockFile, "rw" );
             storeLockFileLock = fileSystemAbstraction.tryLock( storeLockFile, storeLockFileChannel );
-            return storeLockFileLock != null;
         }
         catch ( OverlappingFileLockException e )
         {
-            logger.warn( "Unable to obtain lock on store lock file: " + storeLockFile, e );
-            return false;
+            throw new StoreLockException( "Unable to obtain lock on store lock file: " + storeLockFile+". Please ensure no other process is using this database, and that the directory is writable (required even for read-only access)", e );
         }
         catch ( IOException e )
         {
-            logger.warn( "Unable to obtain lock on store lock file: " + storeLockFile, e );
-            return false;
+            throw new StoreLockException( "Unable to obtain lock on store lock file: " + storeLockFile+". Please ensure no other process is using this database, and that the directory is writable (required even for read-only access)", e );
         }
     }
 
     public void release() throws IOException
     {
-        if (storeLockFileLock != null)
+        if ( storeLockFileLock != null )
         {
             storeLockFileLock.release();
             storeLockFileLock = null;
         }
-        if (storeLockFileChannel != null)
+        if ( storeLockFileChannel != null )
         {
             storeLockFileChannel.close();
             storeLockFileChannel = null;

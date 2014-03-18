@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,38 +19,27 @@
  */
 package org.neo4j.server;
 
-import org.neo4j.kernel.AbstractGraphDatabase;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.ServerConfigurator;
-import org.neo4j.server.database.Database;
-import org.neo4j.server.database.WrappedDatabase;
 import org.neo4j.server.preflight.PreFlightTasks;
+
+import static org.neo4j.server.database.WrappedDatabase.wrappedDatabase;
 
 public class WrappingNeoServer extends CommunityNeoServer {
 
-	private final GraphDatabaseAPI db;
-
-	public WrappingNeoServer(GraphDatabaseAPI db) 
+    public WrappingNeoServer(GraphDatabaseAPI db)
 	{
 		this(db, new ServerConfigurator(db));
 	}
 	
-	public WrappingNeoServer(GraphDatabaseAPI db, Configurator configurator) 
+	public WrappingNeoServer(final GraphDatabaseAPI db, Configurator configurator)
 	{
-		this.configurator = configurator;
-		this.db = db;
-		
-		init();
+		super( configurator, wrappedDatabase( db ));
 	}
 
 	@Override
 	protected PreFlightTasks createPreflightTasks() {
 		return new PreFlightTasks();
-	}
-
-	@Override
-	protected Database createDatabase() {
-		return new WrappedDatabase( (AbstractGraphDatabase) db );
 	}
 }

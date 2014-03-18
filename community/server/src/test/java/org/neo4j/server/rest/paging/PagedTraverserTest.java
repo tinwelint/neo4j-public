@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,54 +19,46 @@
  */
 package org.neo4j.server.rest.paging;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import java.util.List;
 
-import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.DynamicRelationshipType;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.Traversal;
 import org.neo4j.kernel.Uniqueness;
-import org.neo4j.server.database.Database;
-import org.neo4j.server.database.EphemeralDatabase;
+import org.neo4j.test.ImpermanentDatabaseRule;
+
+import static org.junit.Assert.*;
 
 public class PagedTraverserTest
 {
+    @Rule
+    public ImpermanentDatabaseRule dbRule = new ImpermanentDatabaseRule( );
+
     private static final int LIST_LENGTH = 100;
-    private Database database;
     private Node startNode;
 
     @Before
     public void clearDb() throws Throwable
     {
-        database = new EphemeralDatabase();
-        database.start();
-        createLinkedList( LIST_LENGTH, database );
+        createLinkedList( LIST_LENGTH, dbRule.getGraphDatabaseService() );
     }
 
-    @After
-    public void shutdownDatabase() throws Throwable
+    private void createLinkedList( int listLength, GraphDatabaseService db )
     {
-        database.getGraph().shutdown();
-    }
-
-    private void createLinkedList( int listLength, Database db )
-    {
-        Transaction tx = db.getGraph().beginTx();
-        try
+        try ( Transaction tx = db.beginTx() )
         {
             Node previous = null;
             for ( int i = 0; i < listLength; i++ )
             {
-                Node current = db.getGraph().createNode();
+                Node current = db.createNode();
 
                 if ( previous != null )
                 {
@@ -80,10 +72,6 @@ public class PagedTraverserTest
                 previous = current;
             }
             tx.success();
-        }
-        finally
-        {
-            tx.finish();
         }
     }
 
@@ -103,12 +91,16 @@ public class PagedTraverserTest
     @SuppressWarnings( "unused" )
     private int iterateThroughPagedTraverser( PagedTraverser traversalPager )
     {
-        int count = 0;
-        for ( List<Path> paths : traversalPager )
+        try ( Transaction transaction = dbRule.getGraphDatabaseService().beginTx() )
         {
-            count++;
+            int count = 0;
+            for ( List<Path> paths : traversalPager )
+            {
+                count++;
+            }
+            transaction.success();
+            return count;
         }
-        return count;
     }
 
     @Test

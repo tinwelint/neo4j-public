@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -95,5 +95,7 @@ public interface App
 	 * as well as possible completions. Returns an empty list if no completions found
 	 * or if the implementing class chooses not to implement it properly.
 	 */
-	List<String> completionCandidates( String partOfLine, Session session );
+	List<String> completionCandidates( String partOfLine, Session session ) throws ShellException;
+
+    boolean takesOptions();
 }

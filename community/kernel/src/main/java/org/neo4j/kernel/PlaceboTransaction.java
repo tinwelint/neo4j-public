@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,13 @@ package org.neo4j.kernel;
 
 import org.neo4j.graphdb.Lock;
 import org.neo4j.kernel.impl.core.TransactionState;
+import org.neo4j.kernel.impl.persistence.PersistenceManager;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
-import org.neo4j.kernel.impl.transaction.LockManager;
 
+/**
+ * @deprecated This will be moved to internal packages in the next major release.
+ */
+@Deprecated
 public class PlaceboTransaction extends TopLevelTransaction
 {
     public final static Lock NO_LOCK = new Lock()
@@ -34,14 +38,13 @@ public class PlaceboTransaction extends TopLevelTransaction
         }
     };
     
-    public PlaceboTransaction( AbstractTransactionManager transactionManager, LockManager lockManager,
-            TransactionState state )
+    public PlaceboTransaction( PersistenceManager pm, AbstractTransactionManager transactionManager, TransactionState state )
     {
-        super( transactionManager, lockManager, state );
+        super( pm, transactionManager, state );
     }
 
     @Override
-    public void finish()
+    public void close()
     {
         if ( !transactionOutcome.successCalled() && !transactionOutcome.failureCalled() )
         {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -90,7 +90,7 @@ class MappedPersistenceWindow extends LockableWindow
     @Override
     public void force()
     {
-        ((java.nio.MappedByteBuffer) buffer.getBuffer()).force();
+        ((MappedByteBuffer) buffer.getBuffer()).force();
     }
 
     @Override
@@ -134,7 +134,14 @@ class MappedPersistenceWindow extends LockableWindow
     public Buffer getOffsettedBuffer( long id )
     {
         int offset = (int) (id - buffer.position()) * recordSize;
-        buffer.setOffset( offset );
-        return buffer;
+        try
+        {
+            buffer.setOffset( offset );
+            return buffer;
+        } catch(IllegalArgumentException e)
+        {
+            throw new IllegalArgumentException( "Unable to set offset. id:" + id + ", position:" + buffer.position()
+                    + ", recordSize:" + recordSize, e );
+        }
     }
 }

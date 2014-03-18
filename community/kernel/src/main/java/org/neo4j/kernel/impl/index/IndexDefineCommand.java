@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -202,7 +202,19 @@ public class IndexDefineCommand extends XaCommand
             buffer.put( entry.getValue() );
         }
     }
-    
+
+    @Override
+    public int hashCode()
+    {
+        int result = nextIndexNameId != null ? nextIndexNameId.hashCode() : 0;
+        result = 31 * result + (nextKeyId != null ? nextKeyId.hashCode() : 0);
+        result = 31 * result + (indexNameIdRange != null ? indexNameIdRange.hashCode() : 0);
+        result = 31 * result + (keyIdRange != null ? keyIdRange.hashCode() : 0);
+        result = 31 * result + (idToIndexName != null ? idToIndexName.hashCode() : 0);
+        result = 31 * result + (idToKey != null ? idToKey.hashCode() : 0);
+        return result;
+    }
+
     @Override
     public boolean equals( Object obj )
     {

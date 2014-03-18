@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,9 +22,11 @@ package org.neo4j.server.rest.paging;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.helpers.Clock;
+
 public class LeaseManager
 {
-    private Clock clock;
+    private final Clock clock;
     private Map<String, Lease> leases = new ConcurrentHashMap<String, Lease>();
 
     public LeaseManager( Clock clock )
@@ -65,7 +67,7 @@ public class LeaseManager
             try
             {
                 Lease lease = leases.get( key );
-                if ( lease.getStartTime() + lease.getPeriod() < clock.currentTimeInMilliseconds() )
+                if ( lease.getStartTime() + lease.getPeriod() < clock.currentTimeMillis() )
                 {
                     remove( key );
                 }
@@ -81,11 +83,6 @@ public class LeaseManager
     public Clock getClock()
     {
         return clock;
-    }
-
-    public void setClock( Clock clock )
-    {
-        this.clock = clock;
     }
 
     public void remove( String key )

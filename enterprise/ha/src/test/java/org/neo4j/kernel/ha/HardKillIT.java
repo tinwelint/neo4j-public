@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,6 +37,7 @@ import org.neo4j.cluster.client.ClusterClient;
 import org.neo4j.cluster.member.paxos.MemberIsAvailable;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastListener;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastSerializer;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -77,7 +78,7 @@ public class HardKillIT
                 {
                     try
                     {
-                        Object event = new AtomicBroadcastSerializer().receive( value );
+                        Object event = new AtomicBroadcastSerializer(new ObjectStreamFactory(), new ObjectStreamFactory()).receive( value );
                         if ( event instanceof MemberIsAvailable )
                         {
                             if ( HighAvailabilityModeSwitcher.MASTER.equals( ((MemberIsAvailable) event).getRole() ) )
@@ -100,6 +101,9 @@ public class HardKillIT
             assertTrue( dbWithId2.isMaster() );
             assertTrue( !dbWithId3.isMaster() );
 
+            // Ensure that everyone has marked the killed instance as failed, otherwise it cannot rejoin
+            Thread.sleep(15000);
+
             oldMaster = startDb( 1 );
             long oldMasterNode = createNamedNode( oldMaster, "Old master" );
             assertEquals( oldMasterNode, getNamedNode( dbWithId2, "Old master" ) );
@@ -121,16 +125,24 @@ public class HardKillIT
 
     private long getNamedNode( HighlyAvailableGraphDatabase db, String name )
     {
-        for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
+        Transaction transaction = db.beginTx();
+        try
         {
-            if ( name.equals( node.getProperty( "name", null ) ) )
+            for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
             {
-                return node.getId();
+                if ( name.equals( node.getProperty( "name", null ) ) )
+                {
+                    return node.getId();
+                }
             }
+            fail( "Couldn't find named node '" + name + "' at " + db );
+            // The lone above will prevent this return from happening
+            return -1;
         }
-        fail( "Couldn't find named node '" + name + "' at " + db );
-        // The lone above will prevent this return from happening
-        return -1;
+        finally
+        {
+            transaction.finish();
+        }
     }
 
     private long createNamedNode( HighlyAvailableGraphDatabase db, String name )
@@ -175,9 +187,9 @@ public class HardKillIT
     {
         GraphDatabaseBuilder builder = new HighlyAvailableGraphDatabaseFactory()
                 .newHighlyAvailableDatabaseBuilder( path( serverId ) )
-                .setConfig( ClusterSettings.initial_hosts, "127.0.0.1:5002,127.0.0.1:5003,127.0.0.1:5004" )
+                .setConfig( ClusterSettings.initial_hosts, "127.0.0.1:5002,127.0.0.1:5003" )
                 .setConfig( ClusterSettings.cluster_server, "127.0.0.1:" + (5001 + serverId) )
-                .setConfig( HaSettings.server_id, "" + serverId )
+                .setConfig( ClusterSettings.server_id, "" + serverId )
                 .setConfig( HaSettings.ha_server, ":" + (8001 + serverId) )
                 .setConfig( HaSettings.tx_push_factor, "0" );
         HighlyAvailableGraphDatabase db = (HighlyAvailableGraphDatabase) builder.newGraphDatabase();

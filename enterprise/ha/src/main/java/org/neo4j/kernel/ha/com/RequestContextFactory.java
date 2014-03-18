@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import java.util.Collection;
 import org.neo4j.com.RequestContext;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
@@ -33,17 +33,24 @@ import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog;
 
 public class RequestContextFactory
 {
-    private final long startupTime;
+    private long epoch;
     private final int serverId;
     private final XaDataSourceManager xaDsm;
     private final DependencyResolver resolver;
+    private AbstractTransactionManager txManager;
 
     public RequestContextFactory( int serverId, XaDataSourceManager xaDsm, DependencyResolver resolver )
     {
         this.resolver = resolver;
-        this.startupTime = System.currentTimeMillis();
+        this.epoch = -1;
         this.serverId = serverId;
         this.xaDsm = xaDsm;
+    }
+    
+    public void setEpoch( long epoch )
+    {
+        this.epoch = epoch;
+        this.txManager = resolver.resolveDependency( AbstractTransactionManager.class );
     }
 
     public RequestContext newRequestContext( int eventIdentifier )
@@ -58,13 +65,14 @@ public class RequestContextFactory
             for ( XaDataSource dataSource : dataSources )
             {
                 long txId = dataSource.getLastCommittedTxId();
-                if( dataSource.getName().equals( Config.DEFAULT_DATA_SOURCE_NAME ) )
+                if( dataSource.getName().equals( NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME ) )
                 {
                     master = dataSource.getMasterForCommittedTx( txId );
                 }
                 txs[i++] = RequestContext.lastAppliedTx( dataSource.getName(), txId );
             }
-            return new RequestContext( startupTime, serverId, eventIdentifier, txs, master.first(), master.other() );
+            assert master != null : "master should not be null, since we should have found " + NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME;
+            return new RequestContext( epoch, serverId, eventIdentifier, txs, master.first(), master.other() );
         }
         catch ( IOException e )
         {
@@ -83,12 +91,13 @@ public class RequestContextFactory
             for ( XaDataSource dataSource : dataSources )
             {
                 long txId = dataSource.getLastCommittedTxId();
-                if( dataSource.getName().equals( Config.DEFAULT_DATA_SOURCE_NAME ) )
+                if( dataSource.getName().equals( NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME ) )
                 {
                     master = dataSource.getMasterForCommittedTx( txId );
                 }
                 txs[i++] = RequestContext.lastAppliedTx( dataSource.getName(), txId );
             }
+            assert master != null : "master should not be null, since we should have found " + NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME;
             return new RequestContext( sessionId, machineId, eventIdentifier, txs, master.first(), master.other() );
         }
         catch ( IOException e )
@@ -103,7 +112,7 @@ public class RequestContextFactory
         {
             long txId = dataSource.getLastCommittedTxId();
             RequestContext.Tx[] txs = new RequestContext.Tx[] { RequestContext.lastAppliedTx( dataSource.getName(), txId ) };
-            Pair<Integer,Long> master = dataSource.getName().equals( Config.DEFAULT_DATA_SOURCE_NAME ) ?
+            Pair<Integer,Long> master = dataSource.getName().equals( NeoStoreXaDataSource.DEFAULT_DATA_SOURCE_NAME ) ?
                     dataSource.getMasterForCommittedTx( txId ) : Pair.of( XaLogicalLog.MASTER_ID_REPRESENTING_NO_MASTER, 0L );
             return new RequestContext( sessionId, machineId, eventIdentifier, txs, master.first(), master.other() );
         }
@@ -115,13 +124,11 @@ public class RequestContextFactory
 
     public RequestContext newRequestContext( XaDataSource dataSource )
     {
-        return newRequestContext( dataSource, startupTime, serverId,
-                resolver.resolveDependency( AbstractTransactionManager.class ).getEventIdentifier() );
+        return newRequestContext( dataSource, epoch, serverId, txManager.getEventIdentifier() );
     }
 
     public RequestContext newRequestContext()
     {
-        return newRequestContext( startupTime, serverId,
-                resolver.resolveDependency( AbstractTransactionManager.class ).getEventIdentifier() );
+        return newRequestContext( epoch, serverId, txManager.getEventIdentifier() );
     }
 }

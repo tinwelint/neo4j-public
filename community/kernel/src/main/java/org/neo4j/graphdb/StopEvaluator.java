@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -71,7 +71,7 @@ public interface StopEvaluator
      * Traverse until the end of the graph. This evaluator returns
      * <code>false</code> all the time.
      */
-    public static final StopEvaluator END_OF_GRAPH = new StopEvaluator()
+    StopEvaluator END_OF_GRAPH = new StopEvaluator()
     {
         public boolean isStopNode( final TraversalPosition currentPosition )
         {
@@ -82,7 +82,7 @@ public interface StopEvaluator
     /**
      * Traverses to depth 1.
      */
-    public static final StopEvaluator DEPTH_ONE = new StopEvaluator()
+    StopEvaluator DEPTH_ONE = new StopEvaluator()
     {
         public boolean isStopNode( final TraversalPosition currentPosition )
         {
@@ -96,5 +96,5 @@ public interface StopEvaluator
      * @param currentPos the traversal position
      * @return True if current position is a stop node
      */
-    public boolean isStopNode( TraversalPosition currentPos );
+    boolean isStopNode( TraversalPosition currentPos );
 }

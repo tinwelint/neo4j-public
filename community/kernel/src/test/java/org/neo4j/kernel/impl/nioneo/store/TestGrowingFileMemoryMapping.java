@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -55,7 +55,7 @@ public class TestGrowingFileMemoryMapping
                 NodeStore.Configuration.store_dir.name(), storeDir.getPath() ), NodeStore.Configuration.class );
         DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory();
         StoreFactory storeFactory = new StoreFactory( config, idGeneratorFactory,
-                new DefaultWindowPoolFactory(), new DefaultFileSystemAbstraction(), StringLogger.SYSTEM,
+                new DefaultWindowPoolFactory(), new DefaultFileSystemAbstraction(), StringLogger.DEV_NULL,
                 new DefaultTxHook() );
 
         File fileName = new File( storeDir, NeoStore.DEFAULT_NAME + ".nodestore.db" );
@@ -63,12 +63,12 @@ public class TestGrowingFileMemoryMapping
                 NodeStore.TYPE_DESCRIPTOR ) );
 
         NodeStore nodeStore = new NodeStore( fileName, config, idGeneratorFactory, new DefaultWindowPoolFactory(),
-                new DefaultFileSystemAbstraction(), StringLogger.SYSTEM );
+                new DefaultFileSystemAbstraction(), StringLogger.DEV_NULL, null );
 
         // when
         for ( int i = 0; i < 2 * NUMBER_OF_RECORDS; i++ )
         {
-            NodeRecord record = new NodeRecord( nodeStore.nextId(), 0, 0 );
+            NodeRecord record = new NodeRecord( nodeStore.nextId(), false, 0, 0 );
             record.setInUse( true );
             nodeStore.updateRecord( record );
         }

@@ -1,0 +1,18 @@
+[[query-delete]]
+Delete
+======
+
+Deleting graph elements -- nodes and relationships, is done with +DELETE+.
+
+For removing properties and labels, see <<query-remove>>.
+
+The examples start out with the following database:
+
+include::includes/cypher-delete-graph.asciidoc[]
+
+include::delete-single-node.asciidoc[]
+
+include::delete-a-node-and-connected-relationships.asciidoc[]
+
+include::delete-all-nodes-and-relationships.asciidoc[]
+

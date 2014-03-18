@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,12 +51,9 @@ public class BufferedFileChannel extends FileChannel
         while ( read < dst.limit() )
         {
             read += readAsMuchAsPossibleFromIntermediaryBuffer( dst );
-            if ( read < dst.limit() )
+            if ( read < dst.limit() && fillUpIntermediaryBuffer() == -1 )
             {
-                if ( fillUpIntermediaryBuffer() == -1 )
-                {
-                    break;
-                }
+                break;
             }
         }
         return read == 0 && dst.limit() > 0 ? -1 : read;

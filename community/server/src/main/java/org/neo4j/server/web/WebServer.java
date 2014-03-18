@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,16 +23,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-
 import javax.servlet.Filter;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.neo4j.kernel.guard.Guard;
 import org.neo4j.server.database.InjectableProvider;
 import org.neo4j.server.plugins.Injectable;
-import org.neo4j.server.rest.security.SecurityRule;
 import org.neo4j.server.security.KeyStoreInformation;
 
 public interface WebServer
@@ -60,31 +57,17 @@ public interface WebServer
     void addJAXRSPackages( List<String> packageNames, String serverMountPoint, Collection<Injectable<?>> injectables );
     void removeJAXRSPackages( List<String> packageNames, String serverMountPoint );
 
+    void addJAXRSClasses( List<String> classNames, String serverMountPoint, Collection<Injectable<?>> injectables );
+    void removeJAXRSClasses( List<String> classNames, String serverMountPoint );
+
     void addFilter(Filter filter, String pathSpec);
     void removeFilter(Filter filter, String pathSpec);
-    
+
     void addStaticContent( String contentLocation, String serverMountPoint );
     void removeStaticContent( String contentLocation, String serverMountPoint );
 
     void invokeDirectly( String targetUri, HttpServletRequest request, HttpServletResponse response )
         throws IOException, ServletException;
-
-    /**
-     * Please use {@link #addFilter instead}, this will be removed
-     * in version 1.10
-     * @param rules
-     */
-    @Deprecated
-    void addSecurityRules( SecurityRule... rules );
-
-    /**
-     * Please use {@link #addFilter instead}, this will be removed
-     * in version 1.10
-     * @param timeout
-     * @param guard
-     */
-    @Deprecated
-    void addExecutionLimitFilter( int timeout, Guard guard );
 
     void setWadlEnabled( boolean wadlEnabled );
 

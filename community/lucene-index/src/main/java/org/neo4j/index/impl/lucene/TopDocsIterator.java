@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -50,15 +50,14 @@ class TopDocsIterator extends AbstractIndexHits<Document>
     private TopDocs toTopDocs( Query query, QueryContext context, IndexSearcher searcher ) throws IOException
     {
         Sort sorting = context != null ? context.getSorting() : null;
-        TopDocs topDocs = null;
-        if ( sorting == null )
+        TopDocs topDocs;
+        if ( sorting == null && context != null )
         {
             topDocs = searcher.search( query, context.getTop() );
         }
         else
         {
-            boolean forceScore = context == null || !context.getTradeCorrectnessForSpeed();
-            if ( forceScore )
+            if ( context == null || !context.getTradeCorrectnessForSpeed() )
             {
                 TopFieldCollector collector = LuceneDataSource.scoringCollector( sorting, context.getTop() );
                 searcher.search( query, collector );

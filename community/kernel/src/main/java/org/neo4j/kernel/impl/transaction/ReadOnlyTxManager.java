@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.kernel.impl.core.ReadOnlyDbException;
+import org.neo4j.helpers.Factory;
 import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.transaction.xaframework.XaResource;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -46,9 +46,13 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
     private XaDataSourceManager xaDsManager = null;
     private final StringLogger logger;
 
-    public ReadOnlyTxManager( XaDataSourceManager xaDsManagerToUse, StringLogger logger )
+    private final Factory<byte[]> xidGlobalIdFactory;
+
+    public ReadOnlyTxManager( XaDataSourceManager xaDsManagerToUse, Factory<byte[]> xidGlobalIdFactory,
+            StringLogger logger )
     {
         xaDsManager = xaDsManagerToUse;
+        this.xidGlobalIdFactory = xidGlobalIdFactory;
         this.logger = logger;
     }
 
@@ -64,9 +68,8 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
 
     @Override
     public void start()
-            throws Throwable
     {
-        txThreadMap = new ThreadLocalWithSize<ReadOnlyTransactionImpl>();
+        txThreadMap = new ThreadLocalWithSize<>();
     }
 
     @Override
@@ -76,10 +79,8 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
 
     @Override
     public void shutdown()
-            throws Throwable
     {
     }
-
 
     @Override
     public void begin() throws NotSupportedException
@@ -89,7 +90,7 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
             throw new NotSupportedException(
                     "Nested transactions not supported" );
         }
-        txThreadMap.set( new ReadOnlyTransactionImpl( this, logger ) );
+        txThreadMap.set( new ReadOnlyTransactionImpl( xidGlobalIdFactory.newInstance(), this, logger ) );
     }
 
     @Override
@@ -129,10 +130,6 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
         {
             tx.setStatus( Status.STATUS_COMMITTED );
         }
-        else
-        {
-            throw new ReadOnlyDbException();
-        }
         tx.doAfterCompletion();
         txThreadMap.remove();
         tx.setStatus( Status.STATUS_NO_TRANSACTION );
@@ -160,7 +157,7 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
         txThreadMap.remove();
         tx.setStatus( Status.STATUS_NO_TRANSACTION );
         throw new RollbackException(
-                "Failed to commit, transaction rolledback" );
+                "Failed to commit, transaction rolled back" );
     }
 
     @Override
@@ -305,10 +302,6 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
         }
     }
 
-    public synchronized void dumpTransactions()
-    {
-    }
-
     @Override
     public int getEventIdentifier()
     {
@@ -319,7 +312,7 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
         }
         return -1;
     }
-    
+
     @Override
     public void doRecovery() throws Throwable
     {

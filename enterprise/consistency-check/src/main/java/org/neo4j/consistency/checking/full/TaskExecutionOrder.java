@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,11 +31,11 @@ public enum TaskExecutionOrder
     MULTI_THREADED
     {
         @Override
-        void execute( List<StoreProcessorTask> tasks, Completion completion )
+        void execute( List<StoppableRunnable> tasks, Completion completion )
                 throws ConsistencyCheckIncompleteException
         {
             ExecutorService executor = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors() );
-            for ( StoreProcessorTask task : tasks )
+            for ( StoppableRunnable task : tasks )
             {
                 executor.submit( task );
             }
@@ -66,15 +66,16 @@ public enum TaskExecutionOrder
     SINGLE_THREADED
     {
         @Override
-        void execute( List<StoreProcessorTask> tasks, Completion completion )
+        void execute( List<StoppableRunnable> tasks, Completion completion )
                 throws ConsistencyCheckIncompleteException
         {
             try
             {
-                for ( StoreProcessorTask task : tasks )
+                for ( StoppableRunnable task : tasks )
                 {
                     task.run();
                 }
+                completion.await( 0, TimeUnit.SECONDS );
             }
             catch ( Exception e )
             {
@@ -85,15 +86,16 @@ public enum TaskExecutionOrder
     MULTI_PASS
     {
         @Override
-        void execute( List<StoreProcessorTask> tasks, Completion completion )
+        void execute( List<StoppableRunnable> tasks, Completion completion )
                 throws ConsistencyCheckIncompleteException
         {
             try
             {
-                for ( StoreProcessorTask task : tasks )
+                for ( StoppableRunnable task : tasks )
                 {
                     task.run();
                 }
+                completion.await( 0, TimeUnit.SECONDS );
             }
             catch ( Exception e )
             {
@@ -102,6 +104,6 @@ public enum TaskExecutionOrder
         }
     };
 
-    abstract void execute( List<StoreProcessorTask> tasks, Completion completion )
+    abstract void execute( List<StoppableRunnable> tasks, Completion completion )
             throws ConsistencyCheckIncompleteException;
 }

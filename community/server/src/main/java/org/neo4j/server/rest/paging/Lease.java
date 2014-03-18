@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,8 @@ package org.neo4j.server.rest.paging;
 
 import java.util.UUID;
 
+import org.neo4j.helpers.Clock;
+
 public class Lease
 {
     private long startTime;
@@ -39,7 +41,7 @@ public class Lease
 
         this.clock = clock;
         this.leasedTraverser = leasedTraverser;
-        this.startTime = clock.currentTimeInMilliseconds();
+        this.startTime = clock.currentTimeMillis();
         this.leasePeriod = leasePeriodInSeconds * 1000;
         this.id = toHexOnly( UUID.randomUUID() );
     }
@@ -65,13 +67,13 @@ public class Lease
     {
         if ( !expired() )
         {
-            startTime = clock.currentTimeInMilliseconds();
+            startTime = clock.currentTimeMillis();
         }
     }
 
     public boolean expired()
     {
-        return startTime + leasePeriod < clock.currentTimeInMilliseconds();
+        return startTime + leasePeriod < clock.currentTimeMillis();
     }
 
     public long getStartTime()

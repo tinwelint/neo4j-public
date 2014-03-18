@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,8 +38,7 @@ public class LoggerRule
     protected void before()
             throws Throwable
     {
-        logger = LoggerFactory.getLogger( "test" );
-        logger.debug( "Begin test:" + testName );
+        logger.info( "Begin test:" + testName );
         super.before();
     }
 
@@ -47,13 +46,14 @@ public class LoggerRule
     protected void after()
     {
         super.after();
-        logger.debug( "Finished test:" + testName );
+        logger.info( "Finished test:" + testName );
     }
 
     @Override
     public Statement apply( Statement base, Description description )
     {
         testName = description.getDisplayName();
+        logger = LoggerFactory.getLogger( description.getTestClass() );
         return super.apply( base, description );
     }
 

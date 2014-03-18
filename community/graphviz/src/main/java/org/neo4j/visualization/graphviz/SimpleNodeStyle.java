@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,10 +20,15 @@
 package org.neo4j.visualization.graphviz;
 
 import java.io.IOException;
+import java.util.Iterator;
+
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 
 public class SimpleNodeStyle extends DefaultNodeStyle
 {
+    boolean hasLabels = false;
+
     SimpleNodeStyle( DefaultStyleConfiguration configuration )
     {
         super( configuration );
@@ -36,11 +41,38 @@ public class SimpleNodeStyle extends DefaultNodeStyle
         stream.append( "  N" + node.getId() + " [\n" );
         config.emit( node, stream );
         stream.append( "    label = \"" );
+        Iterator<Label> labels = node.getLabels().iterator();
+        hasLabels = labels.hasNext();
+        if ( hasLabels )
+        {
+            hasLabels = labels.hasNext();
+            if ( hasLabels )
+            {
+                stream.append( "{" );
+                while ( labels.hasNext() )
+                {
+                    stream.append( labels.next()
+                            .name() );
+                    if ( labels.hasNext() )
+                    {
+                        stream.append( ", " );
+                    }
+                }
+                stream.append( "|" );
+            }
+        }
     }
 
     @Override
     public void emitEnd( Appendable stream ) throws IOException
     {
-        stream.append( "\"\n  ]\n" );
+        if ( hasLabels )
+        {
+            stream.append( "}\"\n  ]\n" );
+        }
+        else
+        {
+            stream.append( "\"\n  ]\n" );
+        }
     }
 }

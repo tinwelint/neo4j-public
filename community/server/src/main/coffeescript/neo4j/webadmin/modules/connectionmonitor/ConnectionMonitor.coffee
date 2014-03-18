@@ -1,5 +1,5 @@
 ###
-Copyright (c) 2002-2013 "Neo Technology,"
+Copyright (c) 2002-2014 "Neo Technology,"
 Network Engine for Objects in Lund AB [http://neotechnology.com]
 
 This file is part of Neo4j.
@@ -27,7 +27,8 @@ define(
 
     class ConnectionMonitor
 
-      visible : false
+      visible : =>
+        @connectionLostSplash.is(":visible")
 
       init : (appState) ->
         @db = appState.getServer()
@@ -42,19 +43,22 @@ define(
         # lost splash have been pre-loaded, so we
         # have them in case the server dies.
         splash = $(template())
+        @connectionLostSplash = splash
         $("body").append(splash)
         setTimeout((-> splash.hide()),0)
 
       connectionLost : =>
 
-        if not @visible
-          @visible = true
-          connectionLostSplash = $(template())
-          $("body").append(connectionLostSplash)
+        if not @visible()
+          # @visible = true
+          # connectionLostSplash = $(template())
+          # $("body").append(connectionLostSplash)
+          @connectionLostSplash.fadeIn(200)
           
           hideSplash = =>
-            @visible = false
-            connectionLostSplash.fadeOut 200, -> connectionLostSplash.remove()
+            # @visible = false
+            # connectionLostSplash.fadeOut 200, -> connectionLostSplash.remove()
+            @connectionLostSplash.fadeOut 200
 
           @db.heartbeat.waitForPulse hideSplash
 )

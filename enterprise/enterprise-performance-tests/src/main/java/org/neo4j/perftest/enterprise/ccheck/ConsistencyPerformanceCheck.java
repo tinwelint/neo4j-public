@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,34 @@
  */
 package org.neo4j.perftest.enterprise.ccheck;
 
+import java.io.File;
+import java.util.Map;
+
+import org.neo4j.consistency.ConsistencyCheckSettings;
+import org.neo4j.consistency.checking.full.TaskExecutionOrder;
+import org.neo4j.consistency.store.windowpool.WindowPoolImplementation;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.index.lucene.LuceneLabelScanStoreBuilder;
+import org.neo4j.kernel.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.DefaultTxHook;
+import org.neo4j.kernel.api.direct.DirectStoreAccess;
+import org.neo4j.kernel.api.impl.index.DirectoryFactory;
+import org.neo4j.kernel.api.impl.index.LuceneSchemaIndexProvider;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
+import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.impl.nioneo.store.StoreAccess;
+import org.neo4j.kernel.impl.nioneo.store.StoreFactory;
+import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.perftest.enterprise.generator.DataGenerator;
+import org.neo4j.perftest.enterprise.util.Configuration;
+import org.neo4j.perftest.enterprise.util.Parameters;
+import org.neo4j.perftest.enterprise.util.Setting;
+
 import static org.neo4j.perftest.enterprise.util.Configuration.SYSTEM_PROPERTIES;
 import static org.neo4j.perftest.enterprise.util.Configuration.settingsOf;
 import static org.neo4j.perftest.enterprise.util.DirectlyCorrelatedParameter.param;
@@ -28,28 +56,6 @@ import static org.neo4j.perftest.enterprise.util.Setting.enumSetting;
 import static org.neo4j.perftest.enterprise.util.Setting.integerSetting;
 import static org.neo4j.perftest.enterprise.util.Setting.stringSetting;
 import static org.neo4j.perftest.enterprise.windowpool.MemoryMappingConfiguration.addLegacyMemoryMappingConfiguration;
-
-import java.io.File;
-import java.util.Map;
-
-import org.neo4j.consistency.ConsistencyCheckSettings;
-import org.neo4j.consistency.checking.full.TaskExecutionOrder;
-import org.neo4j.consistency.store.windowpool.WindowPoolImplementation;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.kernel.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
-import org.neo4j.kernel.DefaultTxHook;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.nioneo.store.NeoStore;
-import org.neo4j.kernel.impl.nioneo.store.StoreAccess;
-import org.neo4j.kernel.impl.nioneo.store.StoreFactory;
-import org.neo4j.kernel.impl.util.StringLogger;
-import org.neo4j.perftest.enterprise.generator.DataGenerator;
-import org.neo4j.perftest.enterprise.util.Configuration;
-import org.neo4j.perftest.enterprise.util.Parameters;
-import org.neo4j.perftest.enterprise.util.Setting;
 
 public class ConsistencyPerformanceCheck
 {
@@ -96,7 +102,7 @@ public class ConsistencyPerformanceCheck
             DataGenerator.run( configuration );
         }
         // ensure that the store is recovered
-        new EmbeddedGraphDatabase( configuration.get( DataGenerator.store_dir ) ).shutdown();
+        new GraphDatabaseFactory().newEmbeddedDatabase( configuration.get( DataGenerator.store_dir ) ).shutdown();
 
         // run the consistency check
         ProgressMonitorFactory progress;
@@ -115,28 +121,31 @@ public class ConsistencyPerformanceCheck
         }
 
         Config tuningConfiguration = buildTuningConfiguration( configuration );
-        StoreAccess storeAccess = createStoreAccess( configuration.get( DataGenerator.store_dir ),
+        DirectStoreAccess directStoreAccess = createScannableStores( configuration.get( DataGenerator.store_dir ),
                 tuningConfiguration );
 
         JsonReportWriter reportWriter = new JsonReportWriter( configuration, tuningConfiguration );
         TimingProgress progressMonitor = new TimingProgress( new TimeLogger( reportWriter ), progress );
 
-        configuration.get( checker_version ).run( progressMonitor, storeAccess, tuningConfiguration );
+        configuration.get( checker_version ).run( progressMonitor, directStoreAccess, tuningConfiguration );
     }
 
-    private static StoreAccess createStoreAccess( String storeDir, Config tuningConfiguration )
+    private static DirectStoreAccess createScannableStores( String storeDir, Config tuningConfiguration )
     {
         StringLogger logger = StringLogger.DEV_NULL;
+        FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
         StoreFactory factory = new StoreFactory(
                 tuningConfiguration,
                 new DefaultIdGeneratorFactory(),
                 tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_window_pool_implementation )
                         .windowPoolFactory( tuningConfiguration, logger ),
-                new DefaultFileSystemAbstraction(), logger, new DefaultTxHook() );
+                fileSystem, logger, new DefaultTxHook() );
 
         NeoStore neoStore = factory.newNeoStore( new File( storeDir, NeoStore.DEFAULT_NAME ) );
 
-        return new StoreAccess( neoStore );
+        SchemaIndexProvider indexes = new LuceneSchemaIndexProvider( DirectoryFactory.PERSISTENT, tuningConfiguration );
+        return new DirectStoreAccess( new StoreAccess( neoStore ),
+                new LuceneLabelScanStoreBuilder( storeDir, neoStore, fileSystem, logger ).build(), indexes );
     }
 
     private static Config buildTuningConfiguration( Configuration configuration )

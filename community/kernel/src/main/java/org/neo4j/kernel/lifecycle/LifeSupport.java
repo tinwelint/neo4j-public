@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,9 +38,20 @@ import org.neo4j.kernel.impl.util.StringLogger;
 public class LifeSupport
         implements Lifecycle
 {
-    List<LifecycleInstance> instances = new ArrayList<LifecycleInstance>();
-    LifecycleStatus status = LifecycleStatus.NONE;
-    List<LifecycleListener> listeners = new ArrayList<LifecycleListener>();
+    private volatile List<LifecycleInstance> instances = new ArrayList<LifecycleInstance>();
+    private volatile LifecycleStatus status = LifecycleStatus.NONE;
+    private final List<LifecycleListener> listeners = new ArrayList<LifecycleListener>();
+    private final StringLogger log;
+    
+    public LifeSupport()
+    {
+        this( StringLogger.SYSTEM_ERR );
+    }
+    
+    public LifeSupport( StringLogger log )
+    {
+        this.log = log;
+    }
 
     /**
      * Initialize all registered instances, transitioning from status NONE to STOPPED.
@@ -105,7 +116,6 @@ public class LifeSupport
                 }
                 catch ( LifecycleException e )
                 {
-                    e.printStackTrace();
                     // TODO perhaps reconsider chaining of exceptions coming from LifeSupports?
                     status = changedStatus( this, status, LifecycleStatus.STARTED );
                     try
@@ -128,8 +138,6 @@ public class LifeSupport
      * <p/>
      * If any instance fails to stop, the rest of the instances will still be stopped,
      * so that the overall status is STOPPED.
-     *
-     * @throws Exception
      */
     @Override
     public synchronized void stop()
@@ -166,8 +174,6 @@ public class LifeSupport
      * <p/>
      * If any instance fails to shutdown, the rest of the instances will still be shut down,
      * so that the overall status is SHUTDOWN.
-     *
-     * @throws Exception
      */
     @Override
     public synchronized void shutdown()
@@ -213,8 +219,7 @@ public class LifeSupport
      * so that they don't try to use it during the restart. A restart is effectively a stop followed
      * by a start.
      *
-     * @param instance
-     * @throws Throwable                if any start or stop fails
+     * @throws LifecycleException       if any start or stop fails
      * @throws IllegalArgumentException if instance is not registered
      */
     public synchronized void restart( Lifecycle instance )
@@ -315,7 +320,9 @@ public class LifeSupport
         if ( instance instanceof Lifecycle )
         {
             LifecycleInstance newInstance = new LifecycleInstance( (Lifecycle) instance );
-            instances.add( newInstance );
+            List<LifecycleInstance> tmp = new ArrayList<>( instances );
+            tmp.add(newInstance);
+            instances = tmp;
             bringToState( newInstance );
         }
         return instance;
@@ -327,8 +334,10 @@ public class LifeSupport
         {
             if ( instances.get( i ).isInstance( instance ) )
             {
-                LifecycleInstance lifecycleInstance = instances.remove( i );
+                List<LifecycleInstance> tmp = new ArrayList<>( instances );
+                LifecycleInstance lifecycleInstance = tmp.remove( i );
                 lifecycleInstance.shutdown();
+                instances = tmp;
                 return true;
             }
         }
@@ -336,7 +345,7 @@ public class LifeSupport
     }
 
 
-    public synchronized Iterable<Lifecycle> getLifecycleInstances()
+    public Iterable<Lifecycle> getLifecycleInstances()
     {
         return Iterables.map( new Function<LifecycleInstance, Lifecycle>()
         {
@@ -345,7 +354,7 @@ public class LifeSupport
             {
                 return lifecycleInstance.instance;
             }
-        }, instances );
+        }, new ArrayList<>(instances) );
     }
 
     /**
@@ -359,10 +368,10 @@ public class LifeSupport
         {
             instance.shutdown();
         }
-        instances.clear();
+        instances = new ArrayList<>( );
     }
 
-    public synchronized LifecycleStatus getStatus()
+    public LifecycleStatus getStatus()
     {
         return status;
     }
@@ -380,7 +389,8 @@ public class LifeSupport
 
     public synchronized void dump( StringLogger logger )
     {
-        logger.logLongMessage( "Lifecycle status:" + status.name(), new Visitor<StringLogger.LineLogger>()
+        logger.logLongMessage( "Lifecycle status:" + status.name(), new Visitor<StringLogger.LineLogger,
+                RuntimeException>()
         {
             @Override
             public boolean visit( StringLogger.LineLogger element )
@@ -419,8 +429,8 @@ public class LifeSupport
             return exception;
         }
 
-        exception.printStackTrace();
-        chainedLifecycleException.printStackTrace();
+        log.error( "Lifecycle exception", exception );
+        log.error( "Chained lifecycle exception", chainedLifecycleException );
         
         Throwable current = exception;
         while ( current.getCause() != null )
@@ -443,6 +453,11 @@ public class LifeSupport
         }
 
         return newStatus;
+    }
+
+    public boolean isRunning()
+    {
+        return status == LifecycleStatus.STARTED;
     }
 
     private class LifecycleInstance
@@ -513,6 +528,7 @@ public class LifeSupport
                 }
                 catch ( Throwable e )
                 {
+                    log.error( "Exception when stopping " + instance, e );
                     throw new LifecycleException( instance, LifecycleStatus.STARTED, LifecycleStatus.STOPPED, e );
                 }
                 finally

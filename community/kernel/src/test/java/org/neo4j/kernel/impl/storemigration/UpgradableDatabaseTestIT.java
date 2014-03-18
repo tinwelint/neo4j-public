@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,37 @@
  */
 package org.neo4j.kernel.impl.storemigration;
 
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.changeVersionNumber;
 import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.truncateFile;
 import static org.neo4j.kernel.impl.storemigration.MigrationTestUtils.truncateToFixedLength;
+import static org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore.LEGACY_VERSION;
 import static org.neo4j.kernel.impl.util.FileUtils.copyRecursively;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.helpers.UTF8;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
+import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
 import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.Unzip;
 
 public class UpgradableDatabaseTestIT
 {
+    @Rule
+    public final TargetDirectory.TestDirectory directory = TargetDirectory.cleanTestDirForTest( getClass() );
+
     @Before
     public void checkOperatingSystem() {
         assumeTrue( !System.getProperty( "os.name" ).startsWith( "Windows" ) );
@@ -48,24 +58,22 @@ public class UpgradableDatabaseTestIT
     @Test
     public void shouldAcceptTheStoresInTheSampleDatabaseAsBeingEligibleForUpgrade() throws IOException
     {
-        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
-        File resourceDirectory = new File( legacyStoreResource.getFile() ).getParentFile();
-        File workingDirectory = new File( "target/" + UpgradableDatabaseTestIT.class.getSimpleName() );
+        File resourceDirectory = Unzip.unzip( LegacyStore.class, "exampledb.zip" );
+        File workingDirectory = directory.directory();
 
         FileUtils.deleteRecursively( workingDirectory );
         assertTrue( workingDirectory.mkdirs() );
 
         copyRecursively( resourceDirectory, workingDirectory );
 
-        assertTrue( new UpgradableDatabase().storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
+        assertTrue( new UpgradableDatabase( new StoreVersionCheck( fileSystem ) ).storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
     }
 
     @Test
     public void shouldRejectStoresIfOneFileHasIncorrectVersion() throws IOException
     {
-        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
-        File resourceDirectory = new File( legacyStoreResource.getFile() ).getParentFile();
-        File workingDirectory = new File( "target/" + UpgradableDatabaseTestIT.class.getSimpleName() );
+        File resourceDirectory = Unzip.unzip( LegacyStore.class, "exampledb.zip" );
+        File workingDirectory = directory.directory();
 
         FileUtils.deleteRecursively( workingDirectory );
         assertTrue( workingDirectory.mkdirs() );
@@ -74,32 +82,30 @@ public class UpgradableDatabaseTestIT
 
         changeVersionNumber( fileSystem, new File( workingDirectory, "neostore.nodestore.db" ), "v0.9.5" );
 
-        assertFalse( new UpgradableDatabase().storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
+        assertFalse( new UpgradableDatabase( new StoreVersionCheck( fileSystem ) ).storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
     }
 
     @Test
     public void shouldRejectStoresIfOneFileHasNoVersionAsIfNotShutDownCleanly() throws IOException
     {
-        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
-        File resourceDirectory = new File( legacyStoreResource.getFile() ).getParentFile();
-        File workingDirectory = new File( "target/" + UpgradableDatabaseTestIT.class.getSimpleName() );
+        File resourceDirectory = Unzip.unzip( LegacyStore.class, "exampledb.zip" );
+        File workingDirectory = directory.directory();
 
         FileUtils.deleteRecursively( workingDirectory );
         assertTrue( workingDirectory.mkdirs() );
 
         copyRecursively( resourceDirectory, workingDirectory );
 
-        truncateFile( fileSystem, new File( workingDirectory, "neostore.nodestore.db" ), "StringPropertyStore v0.9.9" );
+        truncateFile( fileSystem, new File( workingDirectory, "neostore.nodestore.db" ), "StringPropertyStore " + LEGACY_VERSION );
 
-        assertFalse( new UpgradableDatabase().storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
+        assertFalse( new UpgradableDatabase( new StoreVersionCheck( fileSystem ) ).storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
     }
 
     @Test
     public void shouldRejectStoresIfOneFileShorterThanExpectedVersionString() throws IOException
     {
-        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
-        File resourceDirectory = new File( legacyStoreResource.getFile() ).getParentFile();
-        File workingDirectory = new File( "target/" + UpgradableDatabaseTestIT.class.getSimpleName() );
+        File resourceDirectory = Unzip.unzip( LegacyStore.class, "exampledb.zip" );
+        File workingDirectory = directory.directory();
 
         FileUtils.deleteRecursively( workingDirectory );
         assertTrue( workingDirectory.mkdirs() );
@@ -107,11 +113,37 @@ public class UpgradableDatabaseTestIT
         copyRecursively( resourceDirectory, workingDirectory );
 
         int shortFileLength = 5 /* (RelationshipTypeStore.RECORD_SIZE) */ * 3;
-        assertTrue( shortFileLength < UTF8.encode( "StringPropertyStore v0.9.9" ).length );
+        assertTrue( shortFileLength < UTF8.encode( "StringPropertyStore " + LEGACY_VERSION ).length );
         truncateToFixedLength( fileSystem, new File( workingDirectory, "neostore.relationshiptypestore.db" ), shortFileLength );
 
-        assertFalse( new UpgradableDatabase().storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
+        assertFalse( new UpgradableDatabase( new StoreVersionCheck( fileSystem ) ).storeFilesUpgradeable( new File( workingDirectory, "neostore" ) ) );
     }
 
     private final FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
+
+    @Test
+    public void shouldCommunicateWhatCausesInabilityToUpgrade() throws IOException
+    {
+        File resourceDirectory = Unzip.unzip( LegacyStore.class, "exampledb.zip" );
+        File workingDirectory = directory.directory();
+
+        FileUtils.deleteRecursively( workingDirectory );
+        assertTrue( workingDirectory.mkdirs() );
+
+        copyRecursively( resourceDirectory, workingDirectory );
+
+        changeVersionNumber( fileSystem, new File( workingDirectory, "neostore.nodestore.db" ), "v0.9.5" );
+
+        try
+        {
+            new UpgradableDatabase( new StoreVersionCheck( fileSystem ) ).checkUpgradeable(
+                    new File( workingDirectory, "neostore" ) );
+            fail( "should not have been able to upgrade" );
+        }
+        catch (StoreUpgrader.UnexpectedUpgradingStoreVersionException e)
+        {
+            assertThat( e.getMessage(), is("'neostore.nodestore.db' has a store version number that we cannot upgrade " +
+                    "from. Expected 'NodeStore " + LEGACY_VERSION + "' but file is version 'NodeStore v0.9.5'.") );
+        }
+    }
 }

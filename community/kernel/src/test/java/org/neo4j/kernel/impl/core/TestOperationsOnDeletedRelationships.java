@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,77 +19,66 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.core.IsNot.not;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import org.junit.Test;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.util.RelIdArray;
+import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
+
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 public class TestOperationsOnDeletedRelationships
 {
-
     // Should it really do this? Wouldn't it be better if we could recover from a a relationship suddenly
     // missing in the chain? Perhaps that is really hard to do though.
     @Test
     public void shouldThrowNotFoundOnGetAllRelationshipsWhenRelationshipConcurrentlyDeleted() throws Exception
     {
         // Given
-        NodeImpl nodeImpl = new NodeImpl( 1337l, 0l, 0l, false );
-        NodeManager nodeManager = mock(NodeManager.class);
-        Throwable exceptionCaught = null;
+        NodeImpl nodeImpl = new NodeImpl( 1337l, false );
+        NodeManager nodeManager = mock( NodeManager.class );
 
         // Given something tries to load relationships, throw InvalidRecordException
-        when( nodeManager.getMoreRelationships( any( NodeImpl.class ) ) ).thenThrow( new InvalidRecordException( "LURING!" ) );
+        when( nodeManager.getRelationshipChainPosition( any( NodeImpl.class ) ) ).thenReturn(
+                new SingleChainPosition( 1 ) );
+        when( nodeManager.getMoreRelationships( any( NodeImpl.class ), any( DirectionWrapper.class ),
+                any( int[].class ) ) ).thenThrow( new InvalidRecordException( "LURING!" ) );
 
         // When
-        try {
-            nodeImpl.getAllRelationships( nodeManager, RelIdArray.DirectionWrapper.BOTH );
-        } catch(Throwable e)
+        try
         {
-            exceptionCaught = e;
+            nodeImpl.getAllRelationships( nodeManager, RelIdArray.DirectionWrapper.BOTH );
+            fail( "Should throw exception" );
         }
-
-        // Then
-        assertThat(exceptionCaught, not(nullValue()));
-        assertThat( exceptionCaught, is( instanceOf( NotFoundException.class ) ) );
+        catch ( NotFoundException e )
+        {
+            // Then
+        }
     }
 
     @Test
     public void shouldThrowNotFoundWhenIteratingOverDeletedRelationship() throws Exception
     {
         // Given
-        NodeImpl fromNode = new NodeImpl( 1337l, 0l, 0l, false );
-        NodeManager nodeManager = mock(NodeManager.class);
-        Throwable exceptionCaught = null;
-
-        // This makes fromNode think there are more relationships to be loaded
-        fromNode.setRelChainPosition( 1337l );
+        NodeImpl fromNode = new NodeImpl( 1337l, false );
+        NodeManager nodeManager = mock( NodeManager.class );
 
         // This makes nodeManager pretend that relationships have been deleted
-        when( nodeManager.getMoreRelationships( any( NodeImpl.class ) ) ).thenThrow( new InvalidRecordException(
-                "LURING!" ) );
-
+        when( nodeManager.getMoreRelationships( any( NodeImpl.class ), any( DirectionWrapper.class ),
+                any( int[].class ) ) ).thenThrow( new InvalidRecordException( "LURING!" ) );
+        fromNode.setRelChainPosition( new SingleChainPosition( 1 ) );
 
         // When
         try
         {
-           fromNode.getMoreRelationships( nodeManager );
-        } catch(Throwable e)
-        {
-            exceptionCaught = e;
+            fromNode.getMoreRelationships( nodeManager, DirectionWrapper.BOTH, new int[0] );
+            fail( "Should throw exception" );
         }
-
-        // Then
-        assertThat( exceptionCaught, not( nullValue() ) );
-        assertThat( exceptionCaught, is( instanceOf( NotFoundException.class ) ) );
+        catch ( NotFoundException e )
+        {
+            // Then
+        }
     }
-
 }

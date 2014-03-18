@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,17 @@ package org.neo4j.backup;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
+import org.neo4j.helpers.Settings;
 
 public class EmbeddedServer implements ServerInterface
 {
     private GraphDatabaseService db;
 
-    public EmbeddedServer( String storeDir )
+    public EmbeddedServer( String storeDir, String serverAddress )
     {
         GraphDatabaseBuilder graphDatabaseBuilder = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
-        graphDatabaseBuilder.setConfig( OnlineBackupSettings.online_backup_enabled, GraphDatabaseSetting.TRUE );
+        graphDatabaseBuilder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE );
+        graphDatabaseBuilder.setConfig( OnlineBackupSettings.online_backup_server, serverAddress );
         this.db = graphDatabaseBuilder.newGraphDatabase();
     }
     

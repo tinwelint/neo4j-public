@@ -1,6 +1,501 @@
 For Release Notes, see http://neo4j.org/release-notes#neo4j-${project.version}
 
-1.9.M05 (2013-02-12)
+2.1.0-M01
+---------
+Cypher:
+o Add LOAD CSV
+o Add USING PERIODIC COMMIT
+
+Kernel:
+o Introduces utility methods for printing paths into a new class, org.neo4j.graphdb.traveral.Paths
+o Deprecates several methods in the old traversal framework (org.neo4j.kernel.Traversal) that have been replaced by
+  new utilities in the org.neo4j.graphdb.traversal library. No breaking changes made, but this flags for these features
+  being removed in the next major version, 3.0.
+o Relationship chains are now split by type and direction. Disk storage format changes, requires an upgrade.
+o Fixes an issue with tx log reading in damaged log files
+o Adds support for labels in transaction event handlers
+
+Cluster:
+o Solves issue with join denied when restarting a failed instance before it times out on the master.
+o Instances will now not form clusters on startup unless they managed to contact
+  every other instance in initial_hosts setting.
+
+
+2.0.2 (Unreleased)
+------------------
+Cypher:
+o Fixes #1897 - goes into never ending loop for some aggregate queries
+o Add the functions toInt(...) and toFloat(...)
+o Renames the Cypher type Double to Float
+o Add the function split(...)
+o Reading a non-existent property from a map returns null rather than failing
+o MERGE will choose a direction when it has to create a relationship if you use an undirected relationship pattern
+
+Kernel:
+o Fixes an issue with tx log reading in severely damaged log files.
+o Fixes a JVM deadlock issue between committing and a reading thread
+o Can now handle more gracefully a larger set of failed index states
+
+Server:
+o Fixes github issues #1872, #961 that deal with Content-Encoding headers
+
+HA:
+o Fixes potential deadlock when concurrently shutting down the database and role switching
+
+Cluster:
+o Fixes issue where failed instances would not be able to rejoin the cluster after restart
+o Throttles output of learn failure messages that could create big messages.log files
+
+2.0.1 (2014-01-04)
+------------------
+HA:
+o Index delete now propagates properly across all cluster nodes
+o Slaves now retry switching, making possible overcoming temporary failures
+o Remote transaction initialization is now explicitly marked and tracked, solving
+  transaction leakage and reuse problems
+o HA instances no longer require a snapshot on cluster join
+o HA instances now properly switch to PENDING state when losing quorum
+o Fixes slave deadlock problem
+o Transactions now happen in the context of a master epoch, to solve issues
+  with transactions wrongly propagating between masters
+o Introduces monitoring for remote calls between cluster instances
+
+Kernel:
+o Improve speed of verifying unique constraints on constraint creation.
+o Improve speed of creating label scan store in BatchInserter.
+o Fixes issue with batch inserter which could lead to record not in use exception
+  when adding properties
+o Introduces monitoring for reads/writes to the logical log
+
+Server:
+o Fixes issue with transactions leaking when there is an exception while rendering the response
+
+Cypher:
+o Fixes bug around MERGE inside a FOREACH inside a FOREACH
+o Makes it possible to write MERGE queries with no already known parts
+o Fixes problem with compiling queries with NOT expressions in them
+o Fixes #1735 - Indexes and AND predicates produce wrong results
+o Fixes #1876 - Null nodes and properties should be ignored when SETting properties
+o Fixes problem with parser not being thread safe. State is bad, m'kay?
+o Add support for double literals in exponent form
+o Use internal heirarchy for types. Previously dependeded on Scala type hierarchy
+o Fixes MERGE without any identifier previously known
+o Corrects numerous inconsistencies when performing static type inference during compilation.
+
+Backup:
+o HA backup instances now are logged as backup instead of "-1"
+
+Cluster:
+o Fixes message reordering issue
+o Fixes a Paxos instance reuse issue
+o Cluster join denial now includes cluster configuration
+o Fixes issues with proper Payload values passed around
+
+2.0.0 (2013-12-11)
+------------------
+Cypher:
+o Fix for problem with index lookups against properties
+o Fix: MERGE should work when finding multiple elements
+o Fix: Should support updates for merging
+o Fix issue when mixing Cypher queries of different versions
+o Fix problems with CREATE for relationships without declared nodes
+o Allow MERGE to run inside FOREACH
+o Prevent the use of parameter maps in MATCH and MERGE
+
+2.0.0-RC1 (2013-11-21)
+----------------------
+Kernel:
+  o BREAKING CHANGE: Reference node has been removed.
+  o BREAKING CHANGE: All classes under the org.neo4j.kernel package space, except
+    those related to the traversal frameworks, are now deprecated and due to be moved
+    into internal packages. This includes well-known classes such as EmbeddedGraphDatabase
+    and HighlyAvailableGraphDatabase, both of which are replaced by GraphDatabaseFactory
+    and HighlyAvailableGraphDatabaseFactory, respectively.
+  o BREAKING CHANGE: Removed deprecated settings from org.neo4j.graphdb.factory.GraphDatabaseSettings. These settings are
+    no longer effective and can be removed without any effect.
+  o BREAKING CHANGE: Removed deprecated org.neo4j.graphdb.index.IndexProvider (and associated
+    org.neo4j.graphdb.index.IndexIterable and org.neo4j.graphdb.index.IndexProviderKernelExtensionFactory). This has been
+    replaced by the kernel extension mechanism.
+  o BREAKING CHANGE: Removed deprecated org.neo4j.graphdb.PropertyContainer#getPropertyValues(). Instead use
+    org.neo4j.graphdb.PropertyContainer#getPropertyKeys() and org.neo4j.graphdb.PropertyContainer#getProperty(String).
+  o BREAKING CHANGE: Removed deprecated methods from org.neo4j.kernel.GraphDatabaseAPI: #getDiagnosticsManager(),
+    #getMessageLog(), #getIdGeneratorFactory(), #getKernelData() and #getPersistenceSource(). These are internal
+    components which Kernel clients should not need to access. The entire org.neo4j.kernel.GraphDatabaseAPI interface is
+    deprecated and will be removed in future.
+  o BREAKING CHANGE: Deprecated constructors of EmbeddedReadOnlyDatabase and EmbeddedGraphDatabase have been removed,
+    in favor of the long-advertised alternative GraphDatabaseFactory.
+  o BREAKING CHANGE: All deprecated methods in GraphDatabaseAPI have been removed in favor of getDependencyResolver().
+  o The GCResistantCache is now called the HighPerformanceCache. The configuration for enabling it has changed from
+    'gcr' to 'hpc', although the old setting will remaing functional until the next major release.
+
+Cypher:
+  o Add OPTIONAL MATCH to Cypher
+  o Remove question mark symbol from patterns in Cypher
+  o Fixes 1313
+  o Fixes problem with collection index types
+  o Changes behaviour of LAST/HEAD/TAIL and collection slice -
+    they now all return null for ranges outside a collection
+  o Fixed #1471 - SETting a relationship to a map value fails
+
+Shell:
+  o Add '-' as filename for piping stdin directly into the shell, behaves as a file import.
+
+Server:
+  o BREAKING CHANGE: Removed deprecated method org.neo4j.server.AbstractNeoServer#stopServerOnly(). To stop the server use
+    org.neo4j.server.AbstractNeoServer#stop(). If you would like to disconnect the database life cycle from server control
+    use org.neo4j.server.WrappingNeoServer.
+  o BREAKING CHANGE: org.neo4j.server.database.Database is now an interface. Direct uses of the class can be replaced by
+    one of its implementations.
+  o Transactional endpoint status codes are now textual rather than numeric. Since the transactional endpoint was introduced
+    in the 2.0.0 series, it is not considered a breaking change. It will, however, require modifying client code that depends
+    on the numeric status codes.
+
+Backup:
+  o BREAKING CHANGE: Removed deprecated org.neo4j.backup.check.ConsistencyCheck main class. This is replaced by
+    org.neo4j.consistency.ConsistencyCheckTool.
+
+2.0.0-M06 (2013-10-15)
+----------------------
+o Windows desktop GUI added
+
+HA:
+  o Constraints can now be created in a running HA cluster
+
+Cypher:
+  o Parenthesis around nodes are now mandatory if a label is used on the node
+
+2.0.0-M05 (2013-09-10)
+----------------------
+Kernel:
+  o BREAKING CHANGE: GraphDatabaseSettings now only exposes Setting, deprecated settings classes have been removed.
+  o Fixed problems with array properties being updated multiple times in a single transaction
+  o Adds label store as an index
+  o Transaction now implements AutoClosable
+  o Distinguish between data and schema transactions
+  o Unique constraint validation for new data
+
+Cypher:
+  o Promote the experimental parser to the default
+  o Added literal maps
+  o Makes RETURN only queries valid
+  o Labels on optional nodes no longer stop the whole MATCH
+    clause from returning results.
+  o Updated NOT precedence
+  o Added collection slice and collection index
+  o Added list comprehension documentation
+
+ Shell:
+  o Adds support for RETURN only Cypher queries
+
+2.0.0-M04 (2013-08-08)
+----------------------
+Kernel:
+  o BREAKING CHANGE: Require Java 7
+  o BREAKING CHANGE: Transactions are now required for all operations throughout Java Core API,
+    read operations as well as write operations
+  o Define proper equality for indexing of array properties
+  o BREAKING CHANGE: Equality for indexing of number properties compares numbers independent of underlying primitive Java type
+
+Cypher:
+  o Fixes #844 - Label predicate do not work on optional nodes that are null
+  o Fixes #897 - Cypher start doesnt allow combining multiple starting points with start node sets
+  o BREAKING CHANGE: Removes "?", "!" syntax for accessing properties. Missing properties are now treated as null
+  o Introduced a new experimental and fast PEG parser
+  o BREAKING CHANGE: Escaped identifiers in the RETURN clause are kept as the user entered them
+  o BREAKING CHANGE: No longer possible to use expressions and params to identify nodes in patterns
+  o BREAKING CHANGE: Use "|" in favor of ":" in FOREACH, EXTRACT and REDUCE to avoid disambiguity with label syntax
+
+Server:
+  o Added support for extracting and returning the graph structure from the result of a Cypher query executed via the transactional endpoint
+
+2.0.0-M03 (2013-05-29)
+----------------------
+Kernel:
+  o Read-only index results are closed properly
+
+Cypher:
+  o Make Cypher execution results closable
+  o Adds Cypher label scan hint
+  o Removes alternative WITH syntax in Cypher
+  o Fixes bug with UNION text output
+  o Added startNode()/endNode()
+  o Fixes #780 - Queries with literal collections fail against schema indexes
+
+Server:
+  o Added support for transaction keep-alive
+
+2.0.0-M02 (2013-04-28)
+----------------------
+o In server, added REST transaction support
+o In cypher, added MERGE clause
+o In cypher, MATCH now supports single-node patterns
+o In shell, support for listing indexes and their state
+o Support for labels in the org.neo4j.unsafe.batchinsert APIs.
+o BREAKING CHANGE: Replaced protected fields from org.neo4j.graphdb.factory.GraphDatabaseFactory with a single
+  org.neo4j.graphdb.factory.GraphDatabaseFactoryState instance to avoid race conditions when creating multiple,
+  lazily instantiated builders
+o BREAKING CHANGE: org.neo4j.graphdb.index.BatchInserterIndex and org.neo4j.graphdb.index.BatchInserterIndexProvider
+  has been removed in favor of the same interfaces available in org.neo4j.unsafe.batchinsert
+o BREAKING CHANGE: The BatchInserter and the BatchGraphDatabase are not binary compatible with 1.9 due to some methods
+  now taking a varargs array of labels as last argument.  Please recompile any code that depends on the BatchInserter.
+
+2.0.0-M01 (2013-04-08)
+----------------------
+o Added support for labels across all APIs: Cypher, Core Java and REST
+o Added support for the new label-based indexes across all APIs: Cypher, Core Java and REST
+o Improvements to shell, including import/export of small graphs via cypher statements
+
+1.9.6 (2014-01-31)
+------------------
+HA:
+o Index delete now propagates properly across all cluster nodes
+o Slaves now retry switching, making possible overcoming temporary failures
+o Remote transaction initialization is now explicitly marked and tracked, solving
+  transaction leakage and reuse problems
+o HA instances no longer require a snapshot on cluster join
+o HA instances now properly switch to PENDING state when losing quorum
+o Fixes save deadlock problem
+o Transactions now happen in the context of a master epoch, to solve issues
+  with transactions wrongly propagating between masters
+o Introduces monitoring for remote calls between cluster instances
+
+Kernel:
+o Fixes issue with batch inserter which could lead to record not in use exception
+  when adding properties
+o Introduces monitoring for reads/writes to the logical log
+
+Server:
+o Fixes issue with transacions leaking when there is an exception while rendering the response
+
+Backup:
+o HA backup instances now are logged as backup instead of "-1"
+
+Cluster:
+o Fixes message reordering issue
+o Fixes a Paxos instance reuse issue
+o Cluster join denial now includes cluster configuration
+o Fixes issues with proper Payload values passed around
+
+1.9.5 (2013-11-11)
+------------------
+HA:
+o Removed all usage of getHostName() that might lead to problems on instances with improperly
+  configured DNS
+o The master instance will now always send out masterIsAvailable messages in response to
+  masterIsElected, ensuring that instances in PENDING state will transition eventually to
+  SLAVE
+o Master instance now properly blocks transactions from starting after shutdown has started and
+  waits on a timeout for running transactions to finish and be pushed to slaves before stopping
+  completely
+
+Kernel:
+o Fixed NPE in PersistenceWindowPool when concurrently loading non-mapped windows
+o Fixed potential deadlock in PersistenceWindowPool cause by negative mark count
+o Performance optimizations for best-first selector
+o Database now waits on a timeout for transactions to finish before actually shutting
+  down, while preventing new transactions from starting up
+
+Server:
+o Shutdown hook is now properly removed on normal shutdown, removing potential thread
+  leak which might prevent orderly exit of the VM process
+
+Graph Algorithms:
+o Fixed potential suboptimal path finding in A* executions for particular graph topologies. Also
+  improved performance and memory consumption of A*
+
+Cluster:
+o Fixed a bug around channel handling which might lead to messages being delayed and leading
+  to false heartbeat failures
+o It is now possible to specify 0.0.0.0 for ha.cluster_server and properly wait for messages
+  on all interfaces
+o Removed all usage of getHostName() that might lead to problems on instances with improperly
+  configured DNS
+o Fixed election bug which might lead to infinite wait on elections
+o Fixed election bug which might lead to votes being discarded and result in the wrong master
+  being elected
+o Instances no longer expect heartbeats from themselves so they can't timeout on their own
+o Instances will now ignore suspicions from ex cluster members
+o Instances will now ignore suspicions for themselves
+
+1.9.4 (2013-09-19)
+------------------
+Backup:
+o Backup tool and command line utility now exit with status 1 in case the
+  target store has mismatching store ID with the source.
+
+Enterprise Server:
+o Properly return UNKNOWN from the HA REST API when the instance is neither
+  master or slave.
+
+Cluster:
+o Suspicions on failed instances are now printed only once, no longer
+  spamming messages.log.
+o Fixed issue where a failing cluster instance might delay messages between
+  the rest of the instances.
+
+Lucene index:
+o Fixed issue where querying an index for "*:*" while having removed entities
+  from it in the same transaction might result in exceptions.
+
+1.9.3 (2013-08-30)
+------------------
+Logging in console is now consistent across modules and more informative
+
+HA:
+o Fix for wrong snapshot processing on cluster join, leading to failure to switch to Slave
+o Fix in SlaveIdGenerator which could lead to records being marked as not in use
+o Important cluster events are now properly included in the console
+
+Kernel:
+o Remove hard dependency on Logback
+o Introduction of logical_log_rotation_threshold to control log rotation.
+o Autoconfigurator can handle cases where physical memory is less than the configured JVM heap
+o Fixes index out of bounds errors when iterating over relationships
+o Fixes race in persistent window pool which might lead to inconsistent data
+
+Cypher:
+o Fixes problems with extra columns showing up in some conditions
+
+Server:
+o Reintroduces, deprecated, the Configurator.getThirdpartyJaxRsClasses. Fixes, among other things, the authentication-extension
+o Server now properly returns the version when asked through REST
+
+Index:
+o Stop keeping norms in Lucene indexes, saving space and memory
+
+Com:
+o Fix for a race between Slave shutting down a channel and Master reaping it, which led to exceptions on the Master side
+
+Cluster:
+o Fixes issue which might lead to eternal elections
+o UUID for Available messages is now ignored, allowing for upgrades from 1.9.2
+
+1.9.2 (2013-07-16)
+------------------
+Cluster:
+o Fixes bug where a single instance cluster will perpetually try to perform elections
+
+Kernel:
+o When flushing persistent windows, do so only if dirty. This is a performance improvement
+  for certain scenarios.
+o Fixes bug where loading relationship chains with high ids would cause them to be
+  ignored when iterating over them.
+
+Cypher:
+o Fixes problem where Cypher would see changes while the query was running
+
+Server:
+o The Content-Type is now correctly used to set the text encoding, not Content-Encoding
+o Fixes concurrency issue with generation of JSON responses
+o HTTPS scheme is now properly propagated on batch requests
+
+1.9.1 (2013-06-24)
+------------------
+HA:
+o Access guard is now raised during recovery
+o Properly throttle push notifications from the master, preventing an exhaustion of resources
+  and accompanying failures to pull from slaves
+o Slaves will now not participate in elections if not eligible (e.g. when copying the store)
+
+Kernel:
+o Fixes bug where creating an Index with an invalid configuration would not properly clean up
+  the configuration for it.
+o Fixes race condition that occasionally would make Node.getSingleRelationship() mistakenly fail.
+o Fixes compliance for non-logback logging implementations
+o Cleanup of transactions that fail commit happens under the same lock as the commit
+
+Cypher:
+o Cypher execution results are now closeable
+o Allow | to be used as a separator in foreach and extract+reduce
+
+Server:
+o Fixes bug where the last security rule would be the only one respected, if multiple would
+  be present
+o Support for chained certificates
+o Enabled streaming support for paged traversals
+
+Com:
+o Client now uses heap buffers, reduces GC requirements and out of memory errors
+o Master will now not timeout long running write operations, like store copying
+o Redesigned ResourcePool, now it properly pools and reuses resources, should be more
+  easy going on the garbage collector
+
+Packaging:
+o Improved handling of JAVA_HOME on OSX
+
+1.9 (2013-05-13)
+----------------
+Cluster:
+o Coordinator doesn't ask itself for snapshots, solving a bug where starting an arbiter first would make the
+  cluster unresponsive.
+
+Enterprise server:
+o Arbiter instances now log into data/log/arbiter/messages.log
+
+Kernel:
+o Performance improvement on initial loading of relationship types during startup
+
+1.9.RC2 (2013-04-30)
+--------------------
+Backup:
+o Reverts default backup port to 6362
+
+Cluster:
+o Upgrades to Netty 3.6.3
+o Elections don't start when a quorum is not available, fixing a certain class of race conditions when quorum is lost
+o The joining of an instance is now interpreted as a heartbeat, fixing a class of race conditions when an instance joins
+  and immediately dies
+
+Com:
+o Upgrades to Netty 3.6.3
+
+Kernel:
+o Fixes race conditions on usage of persistence windows' byte buffers that occasionally led to buffer over/underflows.
+
+Server:
+o Create unique node with properties that have collection values properly casts them to arrays
+o Data visualization editor now navigates back to the data browser on save and cancel
+
+Cypher:
+o Fixes problem when sending down custom queries to index providers
+
+1.9.RC1 (2013-04-15)
+--------------------
+HA:
+o Introduction of pseudo quorum writes. If half or more of the instances are unreachable, the instance will stop
+  accepting write requests and all transactions will timeout.
+
+Backup:
+o -full and -incremental backup flags are deprecated, type of backup is
+  automatically determined by the contents of the target directory
+
+Cluster:
+o Removes URL discovery mechanism for clustering
+o Moves from URI as an instance id to integers - they must be specified manually. The new setting is
+  ClusterSettings.server_id
+o Instances can now be replaced if they have marked as fail if a new instance with the same id joins the cluster
+o For a cluster to be formed now a majority of instances as configured in initial_hosts must be available
+o Fixes around cluster formation from instances concurrently starting up
+o Explicit join denial is now possible if an instance tries to join using a server_id already in use
+
+Lucene Index:
+o Lucene upgraded to 3.6.2
+
+Server:
+o Introduces new splash screen containing a guide to Neo4j. Several small aesthetic improvements
+
+Cypher:
+o Fixed #578 - problem with profiling queries that use LIMIT
+o Fixes #550 - problem when using START after WITH
+o Allows single node patterns in MATCH
+o Fixes problem for some patterns and all-nodes start points
+o Fixes #650 - issue when doing multiple aggregation expressions on the same identifier
+o Added timestamp function
+
+Packaging:
+o plugins/ subdirectory is searched recursively for server plugins
+
+1.9.M05 (2013-03-05)
 --------------------
 
 Now compiles and runs under JDK 7
@@ -25,25 +520,37 @@ o Cluster server will now by default bind to all interfaces (0.0.0.0)
 Com:
 o Shutting down Server now takes proper care of executors and works with multiple versions of netty
 
+Enterprise Server:
+o HA info REST endpoints now are called /db/manage/server/ha/{ismaster,isslave}, with getMaster no longer existing.
+
 Kernel:
-o Concurrent modifications to relationship chains now do now lead to RecordNotInUse exceptions or
+o Concurrent modifications to relationship chains now do not lead to RecordNotInUse exceptions or
   cache poisoning
 o Proper tx management will now make negative transaction counts impossible
 o IndexProvider is now deprecated, replaced by KernelExtensionFactory
+o Store locks are respected from read only instances too
+o grab_file_lock configuration setting is now deprecated
 
 Lucene Index:
 o LuceneIndexProvider is now replaced by LuceneKernelExtension
+
+Server:
+o Added support for X-Forwarded-Host and X-Forwarded-Proto headers to allow parameterising of
+  links in data for hosting behind proxy servers.
 
 JMX:
 o JMX will now provide info on all configuration values, including the defaults not explicitly set
 
 Cypher:
-o The parser now runs concurrently
+o Fixes #450 - Predicates in WHERE are not evaluated correctly for certain patterns
+o Fixes problem with null comparisons and optional relationships
+o Made it possible to run the parser concurrently
 o DISTINCT is now lazy, and keeps the incoming ordering
 o Added execution plan descriptions to execution results
 o Fixes #464 - getDeletedRelationships does not work for javacompat.ExecutionResult
-o Fixes #535 - "INTERNAL_SORT" columns show when doing RETURN * ORDER BY
-
+o Fixes #535 - 'INTERNAL_SORT' columns show when doing RETURN * ORDER BY
+o Added experimental profiled query support
+o Fixes #489 - CREATE UNIQUE does not work as expected inside FOREACH
 
 1.9.M04 (2013-01-17)
 --------------------
@@ -92,7 +599,7 @@ o Fixes #369 - The substring-function sometimes fails when no length is specifie
 HA:
 o Lifecycle improvements, with proper removal of listeners on shutdown
 o Cluster snapshot synchronization used for HA cluster membership
-o Implements JMX changes  
+o Implements JMX changes
 o IdGenerators instantiated properly in ModeSwitcher
 o ZooKeeper compatibility layer introduced, allows for rolling upgrades from 1.8
 o Ability to join a cluster even if there's an existing and empty database with a mismatching store ID.
@@ -131,8 +638,8 @@ o Optimizations for read performance
     transaction instead
 
 Server:
-o Server now allows - under some specific circumstances - setting empty arrays as properties. 
-  Specifically, it is allowed if there is a pre-existing array property on the entity from 
+o Server now allows - under some specific circumstances - setting empty arrays as properties.
+  Specifically, it is allowed if there is a pre-existing array property on the entity from
   which the server can infer the type of array to store.
 o Traversal Javascript is now security sandboxed. It is possible to turn the sandbox off for
   the next two releases, for backwards compatibility.
@@ -218,7 +725,7 @@ Kernel:
  o Fix for Node/Relationship#getPropertyValues() sometimes returning null values from the iterator.
 
 Server:
- o Upgraded Jackson JAXRS to version 1.9.7 
+ o Upgraded Jackson JAXRS to version 1.9.7
  o Keeping the Cypher execution engine between calls makes it possible to re-use execution plans
  o added User-Agent header tracking to udc to determine rest-driver usage
 
@@ -236,7 +743,7 @@ Cypher:
  o Fixed #818: Problem where properties could only have scalar values (they can be arrays as well)
  o Fixed #834: Gives relevant syntax exception when properties are entered in MATCH
 
- 1.8.M07 (2012-08-08)
+1.8.M07 (2012-08-08)
 --------------------
 HA:
  o Fixed bug where transactions committed through slaves in a mixed version cluster would fail
@@ -367,7 +874,6 @@ High Availability:
  o Fixed possible but benign NPE when pulling updates
  o Really old instances when attempting to join but the tx is not in the master's log will now copy the store
 
- 
 1.8.M02 (2012-05-11)
 --------------------
 Kernel:
@@ -521,7 +1027,7 @@ o [server] DEPRECATION: Cypher execution is now part of the core REST API, the c
 o [com] Now closes connections if either side dies during streaming
 o [ha] Added entry about HAProxy in manual.
 o [ha] Fixed an issue where pulling updates would fail if no master had been elected. Now it tries to find a new master instead.
-o [ha] Exposes information about branched (and stashed) stores through JMX. 
+o [ha] Exposes information about branched (and stashed) stores through JMX.
 o [server] Webadmin data browser now supports cypher queries
 o [server] Updated to gremlin 1.4
 o [server] Fixed bug in how auto indexes are represented
@@ -571,7 +1077,7 @@ o First iteration of the Cypher Query Language included,
   with a section in the manual.
 o Experimental support for batch operations in REST
 o The Neo4j Manual now includes some examples, and the
-  section on REST has been extended.   
+  section on REST has been extended.
 
 1.4.M01 (2011-04-28)
 --------------------
@@ -602,7 +1108,6 @@ o All manpages are included in the manual.
 o Some fixes to be more Windows friendly.
 o Added Dijkstra to the list of graph algorithms to be used when finding paths.
 o Support for advanced index queries through REST.
-
 
 1.3.M03 (2011-02-24)
 --------------------
@@ -693,7 +1198,7 @@ o Shuts down databases after verifying them.
 - Server
 o Bridge OSGi LogService to server Logger. Bundle log messages and stdout pipe through correctly.
 o Refactoring of functional tests to remove static dependencies. Introduced a server builder to deal with it instead.
-o Can now add performance-tweaking properties to the database hosted by the server. It uses the same neo4j.properties file as the embedded version, but you need to add a property: 
+o Can now add performance-tweaking properties to the database hosted by the server. It uses the same neo4j.properties file as the embedded version, but you need to add a property:
   org.neo4j.server.db.tuning.properties into the neo4j-server.properties file.
 o Webadmin: Removed component titles, added save button to data browser, minor change to data browser layout.
 o Webadmin: Minor UI updates, added error message that shows up when server connection is lost.
@@ -732,7 +1237,6 @@ o integrated index is now supported by the shell
 o new Evaluator interface improves the traversal API
 o support for index hit scores in neo4j-lucene-index
 o index caching support added to BatchInserter
-
 
 1.2.M04 (2010-11-18)
 --------------------

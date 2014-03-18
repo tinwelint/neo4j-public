@@ -1,6 +1,335 @@
 For Release Notes, see http://neo4j.org/release-notes#neo4j-${project.version}
 
-1.9.M05 (2013-02-12)
+2.1.0-M01
+---------
+Cypher:
+o Add LOAD CSV
+o Add USING PERIODIC COMMIT
+
+Kernel:
+o Introduces utility methods for printing paths into a new class, org.neo4j.graphdb.traveral.Paths
+o Deprecates several methods in the old traversal framework (org.neo4j.kernel.Traversal) that have been replaced by
+  new utilities in the org.neo4j.graphdb.traversal library. No breaking changes made, but this flags for these features
+  being removed in the next major version, 3.0.
+o Relationship chains are now split by type and direction. Disk storage format changes, requires an upgrade.
+o Fixes an issue with tx log reading in damaged log files
+o Adds support for labels in transaction event handlers
+
+2.0.2 (Unreleased)
+---------------------------
+Cypher:
+o Fixes #1897 - goes into never ending loop for some aggregate queries
+o Add the functions toInt(...) and toFloat(...)
+o Renames the Cypher type Double to Float
+o Add the function split(...)
+o Reading a non-existent property from a map returns null rather than failing
+o MERGE will choose a direction when it has to create a relationship if you use an undirected relationship pattern
+
+Kernel:
+o Fixes an issue with tx log reading in severely damaged log files.
+o Fixes a JVM deadlock issue between committing and a reading thread
+o Can now handle more gracefully a larger set of failed index states
+
+Server:
+o Fixes github issues #1872, #961 that deal with Content-Encoding headers
+
+2.0.1 (2014-01-04)
+------------------
+Kernel:
+o Improve speed of verifying unique constraints on constraint creation.
+o Improve speed of creating label scan store in BatchInserter.
+o Fixes issue with batch inserter which could lead to record not in use exception
+  when adding properties
+o Introduces monitoring for reads/writes to the logical log
+Server:
+o Fixes issue with transactions leaking when there is an exception while rendering the response
+
+Cypher:
+o Fixes bug around MERGE inside a FOREACH inside a FOREACH
+o Makes it possible to write MERGE queries with no already known parts
+o Fixes problem with compiling queries with NOT expressions in them
+o Fixes #1735 - Indexes and AND predicates produce wrong results
+o Fixes #1876 - Null nodes and properties should be ignored when SETting properties
+o Fixes problem with parser not being thread safe. State is bad, m'kay?
+o Add support for double literals in exponent form
+o Use internal heirarchy for types. Previously dependeded on Scala type hierarchy
+o Fixes MERGE without any identifier previously known
+o Corrects numerous inconsistencies when performing static type inference during compilation.
+
+2.0.0 (2013-12-11)
+------------------
+Cypher:
+o Fix for problem with index lookups against properties
+o Fix: MERGE should work when finding multiple elements
+o Fix: Should support updates for merging
+o Fix issue when mixing Cypher queries of different versions
+o Fix problems with CREATE for relationships without declared nodes
+o Allow MERGE to run inside FOREACH
+o Prevent the use of parameter maps in MATCH and MERGE
+
+2.0.0-RC1 (2013-11-21)
+----------------------
+Kernel:
+o BREAKING CHANGE: Reference node has been removed.
+o BREAKING CHANGE: All classes under the org.neo4j.kernel package space, except
+  those related to the traversal frameworks, are now deprecated and due to be moved
+  into internal packages. This includes well-known classes such as EmbeddedGraphDatabase
+  and HighlyAvailableGraphDatabase, both of which are replaced by GraphDatabaseFactory
+  and HighlyAvailableGraphDatabaseFactory, respectively.
+o BREAKING CHANGE: Removed deprecated settings from org.neo4j.graphdb.factory.GraphDatabaseSettings. These settings are
+  no longer effective and can be removed without any effect.
+o BREAKING CHANGE: Removed deprecated org.neo4j.graphdb.index.IndexProvider (and associated
+  org.neo4j.graphdb.index.IndexIterable and org.neo4j.graphdb.index.IndexProviderKernelExtensionFactory). This has been
+  replaced by the kernel extension mechanism.
+o BREAKING CHANGE: Removed deprecated org.neo4j.graphdb.PropertyContainer#getPropertyValues(). Instead use
+  org.neo4j.graphdb.PropertyContainer#getPropertyKeys() and org.neo4j.graphdb.PropertyContainer#getProperty(String).
+o BREAKING CHANGE: Removed deprecated methods from org.neo4j.kernel.GraphDatabaseAPI: #getDiagnosticsManager(),
+  #getMessageLog(), #getIdGeneratorFactory(), #getKernelData() and #getPersistenceSource(). These are internal
+  components which Kernel clients should not need to access. The entire org.neo4j.kernel.GraphDatabaseAPI interface is
+  deprecated and will be removed in future.
+o BREAKING CHANGE: Deprecated constructors of EmbeddedReadOnlyDatabase and EmbeddedGraphDatabase have been removed,
+  in favor of the long-advertised alternative GraphDatabaseFactory.
+o BREAKING CHANGE: All deprecated methods in GraphDatabaseAPI have been removed in favor of getDependencyResolver().
+
+Cypher:
+o Add OPTIONAL MATCH to Cypher
+o Remove question mark symbol from patterns in Cypher
+o Fixes 1313
+o Fixes problem with collection index types
+o Changes behaviour of LAST/HEAD/TAIL and collection slice -
+  they now all return null for ranges outside a collection
+o Fixed #1471 - SETting a relationship to a map value fails
+
+Shell:
+o Add '-' as filename for piping stdin directly into the shell, behaves as a file import.
+
+Server:
+o BREAKING CHANGE: Removed deprecated method org.neo4j.server.AbstractNeoServer#stopServerOnly(). To stop the server use
+  org.neo4j.server.AbstractNeoServer#stop(). If you would like to disconnect the database life cycle from server control
+  use org.neo4j.server.WrappingNeoServer.
+o BREAKING CHANGE: org.neo4j.server.database.Database is now an interface. Direct uses of the class can be replaced by
+  one of its implementations.
+o Transactional endpoint status codes are now textual rather than numeric. Since the transactional endpoint was introduced
+  in the 2.0.0 series, it is not considered a breaking change. It will, however, require modifying client code that depends
+  on the numeric status codes.
+
+2.0.0-M06 (2013-10-15)
+----------------------
+o Windows desktop GUI added
+
+Cypher:
+o Parenthesis around nodes are now mandatory if a label is used on the node
+
+2.0.0-M05 (2013-09-10)
+----------------------
+Kernel:
+o BREAKING CHANGE: GraphDatabaseSettings now only exposes Setting, deprecated settings classes have been removed.
+o Fixed problems with array properties being updated multiple times in a single transaction
+o Adds label store as an index
+o Transaction now implements AutoClosable
+o Distinguish between data and schema transactions
+o Unique constraint validation for new data
+
+Cypher:
+o Promote the experimental parser to the default
+o Added literal maps
+o Makes RETURN only queries valid
+o Labels on optional nodes no longer stop the whole MATCH
+  clause from returning results.
+o Updated NOT precedence
+o Added collection slice and collection index
+o Added list comprehension documentation
+
+Shell:
+o Adds support for RETURN only Cypher queries
+
+2.0.0-M04 (2013-08-08)
+----------------------
+Kernel:
+o BREAKING CHANGE: Require Java 7
+o BREAKING CHANGE: Transactions are now required for all operations throughout Java Core API,
+  read operations as well as write operations
+o Define proper equality for indexing of array properties
+o BREAKING CHANGE: Equality for indexing of number properties compares numbers independent of underlying primitive Java type
+
+Cypher:
+o Fixes #844 - Label predicate do not work on optional nodes that are null
+o Fixes #897 - Cypher start doesnt allow combining multiple starting points with start node sets
+o BREAKING CHANGE: Removes "?", "!" syntax for accessing properties. Missing properties are now treated as null
+o Introduced a new experimental and fast PEG parser
+o BREAKING CHANGE: Escaped identifiers in the RETURN clause are kept as the user entered them
+o BREAKING CHANGE: No longer possible to use expressions and params to identify nodes in patterns
+o BREAKING CHANGE: Use "|" in favor of ":" in FOREACH, EXTRACT and REDUCE to avoid disambiguity with label syntax
+
+Server:
+o Added support for extracting and returning the graph structure from the result of a Cypher query executed via the transactional endpoint
+
+2.0.0-M03 (2013-05-29)
+----------------------
+Kernel:
+o Read-only index results are closed properly
+
+Cypher:
+o Make Cypher execution results closable
+o Adds Cypher label scan hint
+o Removes alternative WITH syntax in Cypher
+o Fixes bug with UNION text output
+o Added startNode()/endNode()
+o Fixes #780 - Queries with literal collections fail against schema indexes
+
+Server:
+o Added support for transaction keep-alive
+
+2.0.0-M02 (2013-04-28)
+----------------------
+o In server, added REST transaction support
+o In cypher, added MERGE clause
+o In cypher, MATCH now supports single-node patterns
+o In shell, support for listing indexes and their state
+o Support for labels in the org.neo4j.unsafe.batchinsert APIs.
+o BREAKING CHANGE: Replaced protected fields from org.neo4j.graphdb.factory.GraphDatabaseFactory with a single
+  org.neo4j.graphdb.factory.GraphDatabaseFactoryState instance to avoid race conditions when creating multiple,
+  lazily instantiated builders
+o BREAKING CHANGE: org.neo4j.graphdb.index.BatchInserterIndex and org.neo4j.graphdb.index.BatchInserterIndexProvider
+  has been removed in favor of the same interfaces available in org.neo4j.unsafe.batchinsert
+o BREAKING CHANGE: The BatchInserter and the BatchGraphDatabase are not binary compatible with 1.9 due to some methods
+  now taking a varargs array of labels as last argument.  Please recompile any code that depends on the BatchInserter.
+
+2.0.0-M01 (2013-04-08)
+----------------------
+o Added support for labels across all APIs: Cypher, Core Java and REST
+o Added support for the new label-based indexes across all APIs: Cypher, Core Java and REST
+o Improvements to shell, including import/export of small graphs via cypher statements
+
+1.9.6 (2014-01-31)
+------------------
+Kernel:
+o Fixes issue with batch inserter which could lead to record not in use exception
+  when adding properties
+o Introduces monitoring for reads/writes to the logical log
+
+Server:
+o Fixes issue with transacions leaking when there is an exception while rendering the response
+
+1.9.5 (2013-11-11)
+------------------
+Kernel:
+o Fixed NPE in PersistenceWindowPool when concurrently loading non-mapped windows
+o Fixed potential deadlock in PersistenceWindowPool cause by negative mark count
+o Performance optimizations for best-first selector
+o Database now waits on a timeout for transactions to finish before actually shutting
+  down, while preventing new transactions from starting up
+
+Server:
+o Shutdown hook is now properly removed on normal shutdown, removing potential thread
+  leak which might prevent orderly exit of the VM process
+
+Graph Algorithms:
+o Fixed potential suboptimal path finding in A* executions for particular graph topologies. Also
+  improved performance and memory consumption of A*
+
+1.9.4 (2013-09-19)
+------------------
+Lucene index:
+o Fixed issue where querying an index for "*:*" while having removed entities
+  from it in the same transaction might result in exceptions.
+
+1.9.3 (2013-08-30)
+------------------
+Logging in console is now consistent across modules and more informative
+
+Kernel:
+o Remove hard dependency on Logback
+o Introduction of logical_log_rotation_threshold to control log rotation.
+o Autoconfigurator can handle cases where physical memory is less than the configured JVM heap
+o Fixes index out of bounds errors when iterating over relationships
+o Fixes race in persistent window pool which might lead to inconsistent data
+
+Cypher:
+o Fixes problems with extra columns showing up in some conditions
+
+Server:
+o Reintroduces, deprecated, the Configurator.getThirdpartyJaxRsClasses. Fixes, among other things, the authentication-extension
+o Server now properly returns the version when asked through REST
+
+Index:
+o Stop keeping norms in Lucene indexes, saving space and memory
+
+1.9.2 (2013-07-16)
+------------------
+Kernel:
+o When flushing persistent windows, do so only if dirty. This is a performance improvement
+  for certain scenarios.
+o Fixes bug where loading relationship chains with high ids would cause them to be
+  ignored when iterating over them.
+
+Cypher:
+o Fixes problem where Cypher would see changes while the query was running
+
+Server:
+o The Content-Type is now correctly used to set the text encoding, not Content-Encoding
+o Fixes concurrency issue with generation of JSON responses
+o HTTPS scheme is now properly propagated on batch requests
+
+1.9.1 (2013-06-24)
+------------------
+Kernel:
+o Fixes bug where creating an Index with an invalid configuration would not properly clean up
+  the configuration for it.
+o Fixes race condition that occasionally would make Node.getSingleRelationship() mistakenly fail.
+o Fixes compliance for non-logback logging implementations
+o Cleanup of transactions that fail commit happens under the same lock as the commit
+
+Cypher:
+o Cypher execution results are now closeable
+o Allow | to be used as a separator in foreach and extract+reduce
+
+Server:
+o Fixes bug where the last security rule would be the only one respected, if multiple would
+  be present
+o Support for chained certificates
+o Enabled streaming support for paged traversals
+
+Packaging:
+o Improved handling of JAVA_HOME on OSX
+
+1.9 (2013-05-13)
+----------------
+Kernel:
+o Performance improvement on initial loading of relationship types during startup
+
+1.9.RC2 (2013-04-30)
+--------------------
+Kernel:
+o Fixes race conditions on usage of persistence windows' byte buffers that occasionally led to buffer over/underflows.
+
+Server:
+o Create unique node with properties that have collection values properly casts them to arrays
+o Data visualization editor now navigates back to the data browser on save and cancel
+
+Cypher:
+o Fixes problem when sending down custom queries to index providers
+
+1.9.RC1 (2013-04-15)
+--------------------
+Lucene Index:
+o Lucene upgraded to 3.6.2
+
+Server:
+o Introduces new splash screen containing a guide to Neo4j. Several small aesthetic improvements
+
+Cypher:
+o Fixed #578 - problem with profiling queries that use LIMIT
+o Fixes #550 - problem when using START after WITH
+o Allows single node patterns in MATCH
+o Fixes problem for some patterns and all-nodes start points
+o Fixes #650 - issue when doing multiple aggregation expressions on the same identifier
+o Added timestamp function
+
+Packaging:
+o plugins/ subdirectory is searched recursively for server plugins
+
+1.9.M05 (2013-03-05)
 --------------------
 
 Now compiles and runs under JDK 7
@@ -10,20 +339,29 @@ o Concurrent modifications to relationship chains now do now lead to RecordNotIn
   cache poisoning
 o Proper tx management will now make negative transaction counts impossible
 o IndexProvider is now deprecated, replaced by KernelExtensionFactory
+o Store locks are respected from read only instances too
+o grab_file_lock configuration setting is now deprecated
 
 Lucene Index:
 o LuceneIndexProvider is now replaced by LuceneKernelExtension
+
+Server:
+o Added support for X-Forwarded-Host and X-Forwarded-Proto headers to allow parameterising of
+  links in data for hosting behind proxy servers.
 
 JMX:
 o JMX will now provide info on all configuration values, including the defaults not explicitly set
 
 Cypher:
-o The parser now runs concurrently
+o Fixes #450 - Predicates in WHERE are not evaluated correctly for certain patterns
+o Fixes problem with null comparisons and optional relationships
+o Made it possible to run the parser concurrently
 o DISTINCT is now lazy, and keeps the incoming ordering
 o Added execution plan descriptions to execution results
 o Fixes #464 - getDeletedRelationships does not work for javacompat.ExecutionResult
-o Fixes #535 - "INTERNAL_SORT" columns show when doing RETURN * ORDER BY
-
+o Fixes #535 - 'INTERNAL_SORT' columns show when doing RETURN * ORDER BY
+o Added experimental profiled query support
+o Fixes #489 - CREATE UNIQUE does not work as expected inside FOREACH
 
 1.9.M04 (2013-01-17)
 --------------------
@@ -71,8 +409,8 @@ o Optimizations for read performance
     transaction instead
 
 Server:
-o Server now allows - under some specific circumstances - setting empty arrays as properties. 
-  Specifically, it is allowed if there is a pre-existing array property on the entity from 
+o Server now allows - under some specific circumstances - setting empty arrays as properties.
+  Specifically, it is allowed if there is a pre-existing array property on the entity from
   which the server can infer the type of array to store.
 o Traversal Javascript is now security sandboxed. It is possible to turn the sandbox off for
   the next two releases, for backwards compatibility.
@@ -122,7 +460,7 @@ Kernel:
  o Fix for Node/Relationship#getPropertyValues() sometimes returning null values from the iterator.
 
 Server:
- o Upgraded Jackson JAXRS to version 1.9.7 
+ o Upgraded Jackson JAXRS to version 1.9.7
  o Keeping the Cypher execution engine between calls makes it possible to re-use execution plans
  o added User-Agent header tracking to udc to determine rest-driver usage
 
@@ -253,7 +591,7 @@ Cypher:
  o Fixes #526: cypher filter in return clause
  o Fixes #536: SQRT only returns an integer
  o Fixes #543: Appending elements to collections
- 
+
 1.8.M02 (2012-05-11)
 --------------------
 Kernel:
@@ -354,7 +692,6 @@ Shell:
 UDC:
   o Added MAC address to pings.
 
-
 1.6 (2012-01-19)
 ----------------
 o Fixed a ConcurrentModificationException problem in lucene index when rotating logs and listing store files.
@@ -410,9 +747,8 @@ o [cypher] Added COALESCE
 o [cypher] Added column aliasing with AS
 o [cypher] Variable length relationships can now introduce a rel-iterable
 o [cypher] BREAKING CHANGE: Changed the syntax for iterable predicated ALL/NONE/ANY/SINGLE to use WHERE instead of a colon
-o [cypher] BREAKING CHANGE: ExecutionResult is now a read-once, forward only iterator. 
+o [cypher] BREAKING CHANGE: ExecutionResult is now a read-once, forward only iterator.
 o [cypher] Fixed problems with optional graph elements
-
 
 1.6.M01 (2011-11-24)
 --------------------
@@ -474,7 +810,7 @@ o First iteration of the Cypher Query Language included,
   with a section in the manual.
 o Experimental support for batch operations in REST
 o The Neo4j Manual now includes some examples, and the
-  section on REST has been extended.   
+  section on REST has been extended.
 
 1.4.M01 (2011-04-28)
 --------------------
@@ -595,7 +931,7 @@ o Shuts down databases after verifying them.
 - Server
 o Bridge OSGi LogService to server Logger. Bundle log messages and stdout pipe through correctly.
 o Refactoring of functional tests to remove static dependencies. Introduced a server builder to deal with it instead.
-o Can now add performance-tweaking properties to the database hosted by the server. It uses the same neo4j.properties file as the embedded version, but you need to add a property: 
+o Can now add performance-tweaking properties to the database hosted by the server. It uses the same neo4j.properties file as the embedded version, but you need to add a property:
   org.neo4j.server.db.tuning.properties into the neo4j-server.properties file.
 o Webadmin: Removed component titles, added save button to data browser, minor change to data browser layout.
 o Webadmin: Minor UI updates, added error message that shows up when server connection is lost.
@@ -634,7 +970,6 @@ o integrated index is now supported by the shell
 o new Evaluator interface improves the traversal API
 o support for index hit scores in neo4j-lucene-index
 o index caching support added to BatchInserter
-
 
 1.2.M04 (2010-11-18)
 --------------------

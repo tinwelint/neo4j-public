@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-class DirectLogBuffer implements LogBuffer
+public class DirectLogBuffer implements LogBuffer
 {
     private final FileChannel fileChannel;
     private final ByteBuffer buffer;
 
-    DirectLogBuffer( FileChannel fileChannel, ByteBuffer buffer )
+    public DirectLogBuffer( FileChannel fileChannel, ByteBuffer buffer )
     {
         if ( fileChannel == null || buffer == null )
         {

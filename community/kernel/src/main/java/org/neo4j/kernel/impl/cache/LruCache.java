@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -127,7 +127,7 @@ public class LruCache<K,E>
         return cache.values();
     }
 
-    public synchronized Set<java.util.Map.Entry<K,E>> entrySet()
+    public synchronized Set<Map.Entry<K,E>> entrySet()
     {
         return cache.entrySet();
     }

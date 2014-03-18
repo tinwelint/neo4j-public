@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -55,9 +55,10 @@ public interface PathEvaluator<STATE> extends Evaluator
      * Adapter for {@link PathEvaluator}.
      * @param <STATE>
      */
-    public static abstract class Adapter<STATE> implements PathEvaluator<STATE>
+    abstract class Adapter<STATE> implements PathEvaluator<STATE>
     {
         @Override
+        @SuppressWarnings("unchecked")
         public Evaluation evaluate( Path path )
         {
             return evaluate( path, BranchState.NO_STATE );

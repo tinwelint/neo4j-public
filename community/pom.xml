@@ -3,14 +3,15 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>1.9-SNAPSHOT</version>
+    <version>2.1-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.neo4j.build</groupId>
   <artifactId>community-build</artifactId>
-  <version>1.9-SNAPSHOT</version>
+  <version>2.1-SNAPSHOT</version>
+
   <name>Neo4j Community Build</name>
   <packaging>pom</packaging>
   <description>Project that builds the Neo4j Community distribution.</description>
@@ -20,12 +21,14 @@
     <short-name>community-build</short-name>
     <license-text.header>GPL-3-header.txt</license-text.header>
     <docs-plugin.skip>true</docs-plugin.skip>
+    <maven.site.skip>true</maven.site.skip>
+    <maven.site.deploy.skip>true</maven.site.deploy.skip>
   </properties>
 
   <scm>
-    <connection>scm:git:git://github.com/neo4j/community.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/community.git</developerConnection>
-    <url>https://github.com/neo4j/community</url>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+	<url>https://github.com/neo4j/neo4j/tree/master/community</url>
   </scm>
 
   <modules>
@@ -44,6 +47,7 @@
     <module>graphviz</module>
     <module>server</module>
     <module>server-examples</module>
+    <module>server-plugin-test</module>
     <module>licensecheck-config</module>
   </modules>
 
@@ -70,11 +74,22 @@ the relevant Commercial Agreement.
   <distributionManagement>
     <site>
       <id>neo4j-site</id>
-      <url>scpexe://static.neo4j.org/var/www/components.neo4j.org/${project.artifactId}/${project.version}</url>
+      <url>scpexe://docs.neo4j.org/data/www/doc/components.neo4j.org/${project.artifactId}/${project.version}</url>
     </site>
   </distributionManagement>
 
   <profiles>
+    <profile>
+      <id>include-browser</id>
+      <activation>
+        <property>
+          <name>!skipBrowser</name>
+        </property>
+      </activation>
+      <modules>
+        <module>browser</module>
+      </modules>
+    </profile>
     <profile>
       <id>freeze</id>
       <activation>
@@ -99,7 +114,12 @@ the relevant Commercial Agreement.
                     <include>org.neo4j:*</include>
                     <include>org.neo4j.app:*</include>
                     <include>org.neo4j.examples:*</include>
+                    <include>org.neo4j.build:licensecheck-config:*</include>
                   </includes>
+                  <excludes>
+                    <exclude>org.neo4j:neo4j-cypher-compiler-1.9</exclude>
+                    <exclude>org.neo4j:neo4j-cypher-compiler-2.0</exclude>
+                  </excludes>
                 </configuration>
               </execution>
               <execution>
@@ -149,6 +169,17 @@ the relevant Commercial Agreement.
         <dependency>
           <groupId>org.neo4j.build</groupId>
           <artifactId>licensecheck-config</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.neo4j</groupId>
+          <artifactId>cypher-parent</artifactId>
+          <version>${project.version}</version>
+          <type>pom</type>
+        </dependency>
+        <dependency>
+          <groupId>org.neo4j</groupId>
+          <artifactId>neo4j-cypher-docs</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>

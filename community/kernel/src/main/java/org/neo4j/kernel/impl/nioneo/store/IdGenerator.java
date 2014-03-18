@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,10 @@ public interface IdGenerator
 {
     long nextId();
     IdRange nextIdBatch( int size );
+    
+    /**
+     * @param id the highest in use + 1
+     */
     void setHighId( long id );
     long getHighId();
     void freeId( long id );

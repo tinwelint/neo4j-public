@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,28 @@
  */
 package org.neo4j.graphalgo.path;
 
-import static org.neo4j.graphalgo.GraphAlgoFactory.allPaths;
-import static org.neo4j.kernel.Traversal.expanderForAllTypes;
-
 import org.junit.Test;
+
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.Path;
 
 import common.Neo4jAlgoTestCase;
+import org.neo4j.graphdb.PathExpanders;
+
+import static org.neo4j.graphalgo.GraphAlgoFactory.allPaths;
 
 public class TestAllPaths extends Neo4jAlgoTestCase
 {
     protected PathFinder<Path> instantiatePathFinder( int maxDepth )
     {
-        return allPaths( expanderForAllTypes(), maxDepth );
+        return allPaths( PathExpanders.allTypesAndDirections(), maxDepth );
     }
 
     @Test
     public void testCircularGraph()
     {
         /* Layout
-         * 
+         *
          * (a)---(b)===(c)---(e)
          *         \   /
          *          (d)
@@ -69,7 +70,7 @@ public class TestAllPaths extends Neo4jAlgoTestCase
         graph.makeEdge( "b", "c" );
         graph.makeEdge( "b", "c" );
         graph.makeEdge( "c", "d" );
-        
+
         PathFinder<Path> finder = instantiatePathFinder( 10 );
         Iterable<Path> paths = finder.findAllPaths( graph.getNode( "a" ), graph.getNode( "d" ) );
         assertPaths( paths, "a,b,c,d", "a,b,c,d", "a,b,c,d",

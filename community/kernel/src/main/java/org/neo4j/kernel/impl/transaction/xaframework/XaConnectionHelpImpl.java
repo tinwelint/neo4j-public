@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -95,8 +95,10 @@ public abstract class XaConnectionHelpImpl implements XaConnection
      * 
      * @return The XAResource for this connection
      */
+    @Override
     public abstract XAResource getXaResource();
 
+    @Override
     public boolean enlistResource( Transaction javaxTx )
         throws SystemException, RollbackException
     {
@@ -104,12 +106,12 @@ public abstract class XaConnectionHelpImpl implements XaConnection
     }
 
     @Override
-    public boolean delistResource( Transaction tx, int tmsuccess )
-        throws java.lang.IllegalStateException, javax.transaction.SystemException
+    public boolean delistResource( Transaction tx, int tmsuccess ) throws IllegalStateException, SystemException
     {
         return tx.delistResource( getXaResource(), tmsuccess );
     }
 
+    @Override
     public void destroy()
     {
         // kill xaResource
@@ -127,6 +129,16 @@ public abstract class XaConnectionHelpImpl implements XaConnection
         xaRm.validate( getXaResource() );
     }
 
+    /**
+     * Creates a {@link XaTransaction} for the managed {@link XAResource}.
+     * @return the created transaction.
+     * @throws XAException if there were already an associated transaction for this resource and xid.
+     */
+    protected XaTransaction createTransaction() throws XAException
+    {
+        return xaRm.createTransaction( getXaResource() );
+    }
+    
     /**
      * Returns the {@link XaTransaction} associated with this connection. If
      * transaction is already completed it will still be returned.

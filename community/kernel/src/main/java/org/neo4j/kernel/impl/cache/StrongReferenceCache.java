@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,29 +23,30 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class StrongReferenceCache<E extends EntityWithSize> implements Cache<E>
+public class StrongReferenceCache<E extends EntityWithSizeObject> implements Cache<E>
 {
+    private final ConcurrentHashMap<Long,E> cache = new ConcurrentHashMap<>();
     private final String name;
-    private final ConcurrentHashMap<Long,E> cache = new ConcurrentHashMap<Long,E>();
-
     private final HitCounter counter = new HitCounter();
-
 
     public StrongReferenceCache( String name )
     {
         this.name = name;
     }
 
+    @Override
     public void clear()
     {
         cache.clear();
     }
 
+    @Override
     public E get( long key )
     {
         return counter.count( cache.get( key ) );
     }
 
+    @Override
     public String getName()
     {
         return name;
@@ -56,9 +57,11 @@ public class StrongReferenceCache<E extends EntityWithSize> implements Cache<E>
         return Integer.MAX_VALUE;
     }
 
-    public void put( E value )
+    @Override
+    public E put( E value )
     {
-        cache.put( value.getId(), value );
+        E previous = cache.putIfAbsent( value.getId(), value );
+        return previous != null ? previous : value;
     }
 
     public void putAll( List<E> list )
@@ -69,6 +72,7 @@ public class StrongReferenceCache<E extends EntityWithSize> implements Cache<E>
         }
     }
 
+    @Override
     public E remove( long key )
     {
         return cache.remove( key );
@@ -86,6 +90,7 @@ public class StrongReferenceCache<E extends EntityWithSize> implements Cache<E>
         return counter.getMissCount();
     }
 
+    @Override
     public long size()
     {
         return cache.size();
@@ -105,7 +110,7 @@ public class StrongReferenceCache<E extends EntityWithSize> implements Cache<E>
     {
         // do nothing
     }
-    
+
     @Override
     public void printStatistics()
     {

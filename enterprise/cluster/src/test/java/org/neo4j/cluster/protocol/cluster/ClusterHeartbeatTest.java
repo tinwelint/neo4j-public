@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,6 @@
  */
 package org.neo4j.cluster.protocol.cluster;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,9 +27,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
 
-/**
- * TODO
- */
+import org.neo4j.cluster.InstanceId;
+
 public class ClusterHeartbeatTest
         extends ClusterMockTest
 {
@@ -43,7 +41,7 @@ public class ClusterHeartbeatTest
                 join( 100, 1 ).
                 join( 100, 2 ).
                 join( 100, 3 ).
-                verifyConfigurations( 1000 ).
+                verifyConfigurations( "after setup", 3000 ).
                 leave( 0, 1 ).
                 leave( 200, 2 ).
                 leave( 200, 3 ) );
@@ -54,16 +52,17 @@ public class ClusterHeartbeatTest
             throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
     {
         testCluster( 3, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
-                rounds( 250 ).
+                rounds( 1000 ).
                 join( 100, 1 ).
                 join( 100, 2 ).
                 join( 100, 3 ).
+                verifyConfigurations( "after setup", 3000 ).
                 message( 100, "*** All nodes up and ok" ).
-                down( 500, 3 ).
+                down( 100, 3 ).
                 message( 1000, "*** Should have seen failure by now" ).
                 up( 0, 3 ).
                 message( 200, "*** Should have recovered by now" ).
-                verifyConfigurations( 0 ).
+                verifyConfigurations( "after recovery", 0 ).
                 leave( 200, 1 ).
                 leave( 200, 2 ).
                 leave( 200, 3 ) );
@@ -75,40 +74,40 @@ public class ClusterHeartbeatTest
     {
         testCluster( 3, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
                 rounds( 1000 ).
-                join( 100, 1 ).
-                join( 100, 2 ).
-                join( 100, 3 ).
-                message( 100, "*** All nodes up and ok" ).
+                join( 100, 1, 1 ).
+                join( 100, 2, 1 ).
+                join( 100, 3, 1 ).
+                message( 3000, "*** All nodes up and ok" ).
                 down( 500, 1 ).
                 message( 1000, "*** Should have seen failure by now" ).
                 up( 0, 1 ).
                 message( 2000, "*** Should have recovered by now" ).
-                verifyConfigurations( 0 ).
+                verifyConfigurations( "after recovery", 0 ).
                 down( 0, 2 ).
                 message( 1400, "*** Should have seen failure by now" ).
                 up( 0, 2 ).
                 message( 800, "*** All nodes leave" ).
-                verifyConfigurations( 0 ).
+                verifyConfigurations( "before leave", 0 ).
                 leave( 0, 1 ).
                 leave( 300, 2 ).
                 leave( 300, 3 ) );
     }
-    
+
     @Test
     public void threeNodesJoinAndThenCoordinatorDiesForReal()
             throws URISyntaxException, ExecutionException, TimeoutException, InterruptedException
     {
-        final Map<String, URI> roles = new HashMap<String, URI>();
-        
+        final Map<String, InstanceId> roles = new HashMap<String, InstanceId>();
+
         testCluster( 3, DEFAULT_NETWORK(), new ClusterTestScriptDSL().
                 rounds( 1000 ).
-                join( 100, 1 ).
-                join( 100, 2 ).
-                join( 100, 3 ).
-                message( 100, "*** All nodes up and ok" ).
-                getRoles( 0, roles ).
-                down( 500, 1 ).
-                message( 1000, "*** Should have seen failure by now" ).
+                join( 100, 1, 1 ).
+                join( 100, 2, 1 ).
+                join( 100, 3, 1 ).
+                message( 3000, "*** All nodes up and ok" ).
+                getRoles( roles ).
+                down( 800, 1 ).
+                message( 2000, "*** Should have seen failure by now" ).
                 verifyCoordinatorRoleSwitched( roles ).
                 leave( 0, 1 ).
                 leave( 300, 2 ).

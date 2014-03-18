@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,10 +24,8 @@ package org.neo4j.helpers;
  * <p/>
  * This can be used with the Iterables methods to transform lists of objects.
  *
- * @param <T>
- * @param <R>
  */
-public interface Function<T, R>
+public interface Function<FROM, TO>
 {
     /**
      * Apply a value to this function
@@ -35,5 +33,5 @@ public interface Function<T, R>
      * @param from the input item
      * @return the mapped item
      */
-    R apply( T from );
+    TO apply( FROM from );
 }

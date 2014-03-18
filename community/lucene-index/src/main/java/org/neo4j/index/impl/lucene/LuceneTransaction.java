@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,6 +31,7 @@ import java.util.Map;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -54,10 +55,10 @@ class LuceneTransaction extends XaTransaction
     private final Map<IndexIdentifier,CommandList> commandMap =
             new HashMap<IndexIdentifier,CommandList>();
 
-    LuceneTransaction( int identifier, XaLogicalLog xaLog, TransactionState state,
+    LuceneTransaction( XaLogicalLog xaLog, TransactionState state,
         LuceneDataSource luceneDs )
     {
-        super( identifier, xaLog, state );
+        super( xaLog, state );
         this.dataSource = luceneDs;
     }
 
@@ -66,7 +67,7 @@ class LuceneTransaction extends XaTransaction
     {
         value = value instanceof ValueContext ? ((ValueContext) value).getCorrectValue() : value.toString();
         TxDataBoth data = getTxData( index, true );
-        insert( index, entity, key, value, data.added( true ), data.removed( false ) );
+        insert( entity, key, value, data.added( true ), data.removed( false ) );
         queueCommand( index.newAddCommand( entity, key, value ) );
     }
 
@@ -94,21 +95,21 @@ class LuceneTransaction extends XaTransaction
     {
         value = value instanceof ValueContext ? ((ValueContext) value).getCorrectValue() : value.toString();
         TxDataBoth data = getTxData( index, true );
-        insert( index, entity, key, value, data.removed( true ), data.added( false ) );
+        insert( entity, key, value, data.removed( true ), data.added( false ) );
         queueCommand( index.newRemoveCommand( entity, key, value ) );
     }
 
     <T extends PropertyContainer> void remove( LuceneIndex<T> index, T entity, String key )
     {
         TxDataBoth data = getTxData( index, true );
-        insert( index, entity, key, null, data.removed( true ), data.added( false ) );
+        insert( entity, key, null, data.removed( true ), data.added( false ) );
         queueCommand( index.newRemoveCommand( entity, key, null ) );
     }
 
     <T extends PropertyContainer> void remove( LuceneIndex<T> index, T entity )
     {
         TxDataBoth data = getTxData( index, true );
-        insert( index, entity, null, null, data.removed( true ), data.added( false ) );
+        insert( entity, null, null, data.removed( true ), data.added( false ) );
         queueCommand( index.newRemoveCommand( entity, null, null ) );
     }
 
@@ -136,8 +137,8 @@ class LuceneTransaction extends XaTransaction
         return commands;
     }
 
-    private <T extends PropertyContainer> void insert( LuceneIndex<T> index,
-            T entity, String key, Object value, TxDataHolder insertInto, TxDataHolder removeFrom )
+    private <T extends PropertyContainer> void insert( T entity, String key, Object value, TxDataHolder insertInto,
+                                                       TxDataHolder removeFrom )
     {
         Object id = getEntityId( entity );
         if ( removeFrom != null )
@@ -179,8 +180,14 @@ class LuceneTransaction extends XaTransaction
         }
         else if ( c1 != null && c2 != null )
         {
-            if (c1.isEmpty()) return c2;
-            if (c2.isEmpty()) return c1;
+            if (c1.isEmpty())
+            {
+                return c2;
+            }
+            if (c2.isEmpty())
+            {
+                return c1;
+            }
             Collection<Long> result = new HashSet<Long>( c1.size()+c2.size(), 1 );
             result.addAll( c1 );
             result.addAll( c2 );
@@ -268,7 +275,6 @@ class LuceneTransaction extends XaTransaction
                     if ( commandList.isDeletion() )
                     {
                         dataSource.removeExpectedFutureDeletion( identifier );
-                        continue;
                     }
                     else if ( commandList.containsWrites() )
                     {
@@ -295,7 +301,9 @@ class LuceneTransaction extends XaTransaction
                 finally
                 {
                     if ( context != null )
+                    {
                         context.close();
+                    }
                 }
             }
 

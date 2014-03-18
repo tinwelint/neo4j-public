@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,11 +22,10 @@ package org.neo4j.kernel.impl.cache;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class NoCache<E extends EntityWithSize> implements Cache<E>
+public class NoCache<E extends EntityWithSizeObject> implements Cache<E>
 {
     private final String name;
-    private volatile long misses;
-    
+
     private static final AtomicLong MISSES = new AtomicLong( 0 );
 
     public NoCache( String name )
@@ -34,20 +33,25 @@ public class NoCache<E extends EntityWithSize> implements Cache<E>
         this.name = name;
     }
 
-    public void put( E value )
+    @Override
+    public E put( E value )
     {
+        return value;
     }
 
+    @Override
     public void putAll( Collection<E> values )
     {
     }
 
+    @Override
     public E get( long key )
     {
         MISSES.incrementAndGet();
         return null;
     }
 
+    @Override
     public E remove( long key )
     {
         return null;
@@ -62,18 +66,21 @@ public class NoCache<E extends EntityWithSize> implements Cache<E>
     @Override
     public long missCount()
     {
-        return misses;
+        return 0;
     }
 
+    @Override
     public long size()
     {
         return 0;
     }
 
+    @Override
     public void clear()
     {
     }
 
+    @Override
     public String getName()
     {
         return name;
@@ -84,7 +91,7 @@ public class NoCache<E extends EntityWithSize> implements Cache<E>
     {
         // do nothing
     }
-    
+
     @Override
     public void printStatistics()
     {

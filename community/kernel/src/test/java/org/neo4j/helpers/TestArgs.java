@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -52,6 +52,16 @@ public class TestArgs
         assertEquals( 2, args.orphans().size() );
         assertEquals( "param1", args.orphans().get( 0 ) );
         assertEquals( "param2", args.orphans().get( 1 ) );
+    }
+    
+    @Test
+    public void testParameterWithDashValue()
+    {
+        String [] line = { "-file", "-" };
+        Args args = new Args ( line );
+        assertEquals( 1, args.asMap().size() );
+        assertEquals( "-", args.get ( "file", null ) );
+        assertTrue( args.orphans().isEmpty() );
     }
     
     @Test

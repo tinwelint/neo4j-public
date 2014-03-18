@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestArrayMap
@@ -182,7 +183,8 @@ public class TestArrayMap
         map.remove( "key4" );
         assertNull( "removed element still found", map.get( "key1" ) );
     }
-    
+
+    @Ignore("Takes 30mins to run on Windows. Ignoring")
     @Test
     public void testThreadSafeSize() throws InterruptedException
     {

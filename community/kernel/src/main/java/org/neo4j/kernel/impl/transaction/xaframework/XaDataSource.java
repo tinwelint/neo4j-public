@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Pair;
-import org.neo4j.helpers.collection.ClosableIterable;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
@@ -209,7 +210,9 @@ public abstract class XaDataSource implements Lifecycle
      * Turns off/on auto rotate of logical logs. Default is <CODE>true</CODE>.
      *
      * @param rotate <CODE>true</CODE> to turn on
+     * @deprecated in favor of {@link GraphDatabaseSettings#logical_log_rotation_threshold}
      */
+    @Deprecated
     public void setAutoRotate( boolean rotate )
     {
         throw new UnsupportedOperationException( getClass().getName() );
@@ -220,7 +223,9 @@ public abstract class XaDataSource implements Lifecycle
      * the log if {@link #setAutoRotate(boolean)} is set to <CODE>true</CODE>.
      *
      * @param size target size in bytes
+     * @deprecated in favor of setting {@link GraphDatabaseSettings#logical_log_rotation_threshold} to {@code 0}.
      */
+    @Deprecated
     public void setLogicalLogTargetSize( long size )
     {
         throw new UnsupportedOperationException( getClass().getName() );
@@ -250,7 +255,7 @@ public abstract class XaDataSource implements Lifecycle
     {
         throw new UnsupportedOperationException( getClass().getName() );
     }
-    
+
     public void setLastCommittedTxId( long txId )
     {
         throw new UnsupportedOperationException( getClass().getName() );
@@ -266,9 +271,49 @@ public abstract class XaDataSource implements Lifecycle
         throw new UnsupportedOperationException( getClass().getName() );
     }
 
-    public ClosableIterable<File> listStoreFiles( boolean includeLogicalLogs ) throws IOException
+    public ResourceIterator<File> listStoreFiles( boolean includeLogicalLogs ) throws IOException
     {
         throw new UnsupportedOperationException( getClass().getName() );
+    }
+
+    public ResourceIterator<File> listStoreFiles() throws IOException
+    {
+        throw new UnsupportedOperationException( getClass().getName() );
+    }
+
+    public ResourceIterator<File> listLogicalLogs(  ) throws IOException
+    {
+        throw new UnsupportedOperationException( getClass().getName() );
+    }
+
+    /**
+     * Should return a log writer that remains usable after this {@link XaDataSource} has been shut down.
+     * This log writer is guaranteed to not be used against any existing store locations while this data source
+     * is running.
+     */
+    public LogBufferFactory createLogBufferFactory()
+    {
+        throw new UnsupportedOperationException( getClass().getName() );
+    }
+
+    @Override
+    public void init() throws Throwable
+    {
+    }
+
+    @Override
+    public void start() throws Throwable
+    {
+    }
+
+    @Override
+    public void stop() throws Throwable
+    {
+    }
+
+    @Override
+    public void shutdown() throws Throwable
+    {
     }
 
     /**
@@ -282,5 +327,9 @@ public abstract class XaDataSource implements Lifecycle
     public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
     {
         throw new UnsupportedOperationException( getClass().getName() );
+    }
+
+    public void recoveryCompleted() throws IOException
+    {
     }
 }

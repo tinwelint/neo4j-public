@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,18 @@
  */
 package recovery;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.System.exit;
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.test.LogTestUtils.EVERYTHING_BUT_DONE_RECORDS;
-import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
-import static org.neo4j.test.LogTestUtils.filterTxLog;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Ignore;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry.TwoPhaseCommit;
@@ -44,14 +38,23 @@ import org.neo4j.test.LogTestUtils;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.TargetDirectory;
 
-@Ignore( "Used from another test case and isn't a test case in itself" )
+import static java.lang.Integer.parseInt;
+import static java.lang.System.exit;
+
+import static org.junit.Assert.assertEquals;
+
+import static org.neo4j.test.LogTestUtils.EVERYTHING_BUT_DONE_RECORDS;
+import static org.neo4j.test.LogTestUtils.filterNeostoreLogicalLog;
+import static org.neo4j.test.LogTestUtils.filterTxLog;
+
+@Ignore( "Used from another test case and is not a test case in itself" )
 public class CreateTransactionsAndDie
 {
     public static void main( String[] args )
     {
         String storeDir = args[0];
         int count = parseInt( args[1] );
-        GraphDatabaseService db = new EmbeddedGraphDatabase( storeDir );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         for ( int i = 0; i < 2; i++ ) create1pcTx( db );
         for ( int i = 0; i < count; i++ ) create2pcTx( db );
         
@@ -61,34 +64,25 @@ public class CreateTransactionsAndDie
 
     private static void create1pcTx( GraphDatabaseService db )
     {
-        Transaction tx = db.beginTx();
-        try
+        try(Transaction tx = db.beginTx())
         {
             db.createNode();
             tx.success();
-        }
-        finally
-        {
-            tx.finish();
         }
     }
 
     private static void create2pcTx( GraphDatabaseService db )
     {
-        Transaction tx = db.beginTx();
-        try
+        try(Transaction tx = db.beginTx())
         {
             Node node = db.createNode();
             db.index().forNodes( "index" ).add( node, "key", "value" );
             tx.success();
         }
-        finally
-        {
-            tx.finish();
-        }
     }
     
-    public static String produceNonCleanDbWhichWillRecover2PCsOnStartup( String name, int nrOf2PcTransactionsToRecover ) throws Exception, IOException
+    public static String produceNonCleanDbWhichWillRecover2PCsOnStartup( String name, int nrOf2PcTransactionsToRecover )
+            throws Exception
     {
         FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
         String dir = TargetDirectory.forTest( CreateTransactionsAndDie.class ).directory( name, true ).getAbsolutePath();

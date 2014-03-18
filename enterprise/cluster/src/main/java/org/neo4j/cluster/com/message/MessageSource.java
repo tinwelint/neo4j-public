@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.cluster.com.message;
 
 /**
- * This represents a source of messages, such as {@link org.neo4j.cluster.com.NetworkInstance}.
+ * This represents a source of messages, such as {@link org.neo4j.cluster.com.NetworkReceiver}.
  * Attach message processors to be notified when a message arrives.
  */
 public interface MessageSource

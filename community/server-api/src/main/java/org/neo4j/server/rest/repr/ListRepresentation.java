@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -55,9 +55,21 @@ public class ListRepresentation extends Representation
 
     void serialize( ListSerializer serializer )
     {
-        for ( Representation repr : content )
+        Iterator<? extends Representation> contentIterator = content.iterator();
+
+        try
         {
-            repr.addTo( serializer );
+            while ( contentIterator.hasNext() )
+            {
+                Representation repr = contentIterator.next();
+                repr.addTo( serializer );
+            }
+        }
+        finally
+        {
+            // Make sure we exhaust this iterator in case it has an internal close mechanism
+            while (contentIterator.hasNext())
+                contentIterator.next();
         }
     }
 

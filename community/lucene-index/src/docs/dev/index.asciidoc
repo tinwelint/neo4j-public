@@ -1,19 +1,18 @@
 [[indexing]]
-Indexing
-========
+Legacy Indexing
+===============
 
-Indexing in Neo4j can be done in two different ways:
+NOTE: This is not the same as <<graphdb-neo4j-schema, indexes defined in the schema>>, the documentation below is for the legacy indexing in Neo4j.
 
-. The database itself is a _natural index_ consisting of its relationships of different types between nodes.
-  For example a tree structure can be layered on top of the data and used for index lookups performed by a traverser.
-. Separate index engines can be used, with http://lucene.apache.org/java/{lucene-version}/index.html[Apache Lucene] being the default backend included with Neo4j.
+This chapter focuses on how to use the Manual Indexes and Autoindexes.
+As of Neo4j 2.0, this is not  the favored method of indexing data in Neo4j, instead we recommend defining indexes in the database schema.
 
-This chapter demonstrate how to use the second type of indexing, focusing on Lucene.
+However, support for legacy indexes remains, because certain features, such as uniqueness constraints, are not yet handled by the new indexes.
 
 [[indexing-introduction]]
 == Introduction ==
 
-Indexing operations are part of the http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/index/package-summary.html[Neo4j index API].
+Legacy Indexing operations are part of the http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/index/package-summary.html[Neo4j index API].
 
 Each index is tied to a unique, user-specified name (for example "first_name" or "books") and can index either http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/Node.html[nodes] or http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/Relationship.html[relationships].
 
@@ -40,7 +39,7 @@ To set the stage for our examples, let's create some indexes to begin with:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=createIndexes
 ----
 
@@ -54,7 +53,7 @@ You can also check if an index exists like this:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=checkIfExists
 ----
 
@@ -64,12 +63,12 @@ tag=checkIfExists
 
 Indexes can be deleted.
 When deleting, the entire contents of the index will be removed as well as its associated configuration.
-A new index can be created with the same name at a later point in time.
+An index can be created with the same name at a later point in time.
 
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=delete
 ----
 
@@ -86,7 +85,7 @@ To begin with, let's add a few nodes to the indexes:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=createNodes
 ----
 
@@ -97,7 +96,7 @@ Next up, we'll create relationships and index them as well:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=createRelationships
 ----
 
@@ -117,7 +116,7 @@ http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/inde
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=removeNodeFromIndex
 ----
 
@@ -138,7 +137,7 @@ Here's a code example that demonstrates how it's done:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=update
 ----
 
@@ -148,7 +147,7 @@ tag=update
 
 An index can be searched in two ways, http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/index/Index.html#get%28java.lang.String,%20java.lang.Object%29[get] and http://components.neo4j.org/neo4j/{neo4j-version}/apidocs/org/neo4j/graphdb/index/Index.html#query%28java.lang.String,%20java.lang.Object%29[query].
 The +get+ method will return exact matches to the given key-value pair, whereas +query+ exposes querying capabilities directly from the backend used by the index.
-For example the http://lucene.apache.org/java/{lucene-version}/queryparsersyntax.html[Lucene query syntax] can be used directly with the default indexing backend.
+For example the {lucene-base-uri}/queryparsersyntax.html[Lucene query syntax] can be used directly with the default indexing backend.
 
 [[indexing-search-get]]
 === Get ===
@@ -158,7 +157,7 @@ This is how to search for a single exact match:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=getSingleNode
 ----
 
@@ -169,7 +168,7 @@ Here's how to get a single relationship by exact matching and retrieve its start
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=getSingleRelationship
 ----
 
@@ -178,7 +177,7 @@ Finally, we can iterate over all exact matches from a relationship index:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=getRelationships
 ----
 
@@ -195,7 +194,7 @@ Here's an example using the key-query option:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=actorsQuery
 ----
 
@@ -204,7 +203,7 @@ In the following example the query uses multiple keys:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=matrixQuery
 ----
 
@@ -225,7 +224,7 @@ Example of querying a relationship index:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=queryForRelationships
 ----
 
@@ -234,7 +233,7 @@ And here's an example for the special case of searching for a specific relations
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=queryForRelationshipType
 ----
 
@@ -252,7 +251,7 @@ See <<indexing-lucene-sort>> for how to sort by score.
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=queryWithScore
 ----
 
@@ -266,7 +265,7 @@ For example to create a Lucene fulltext index:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=fulltext
 ----
 
@@ -290,10 +289,10 @@ The +provider+ configuration key is interpreted by Neo4j, but any other configur
 |========================================================
 | Parameter                 | Possible values   | Effect
 | type | +exact+, +fulltext+ |
-  +exact+ is the default and uses a Lucene http://lucene.apache.org/core/old_versioned_docs/versions/{lucene-version}/api/core/org/apache/lucene/analysis/KeywordAnalyzer.html[keyword analyzer].
+  +exact+ is the default and uses a Lucene {lucene-api-base-uri}/org/apache/lucene/analysis/KeywordAnalyzer.html[keyword analyzer].
   +fulltext+ uses a white-space tokenizer in its analyzer.
 | to_lower_case | `true`, `false` | This parameter goes together with +type+: +fulltext+ and converts values to lower case during both additions and querying, making the index case insensitive. Defaults to `true`.
-| analyzer | the full class name of an http://lucene.apache.org/core/old_versioned_docs/versions/{lucene-version}/api/core/org/apache/lucene/analysis/Analyzer.html[Analyzer] | Overrides the +type+ so that a custom analyzer can be used.
+| analyzer | the full class name of an {lucene-api-base-uri}/org/apache/lucene/analysis/Analyzer.html[Analyzer] | Overrides the +type+ so that a custom analyzer can be used.
   Note: +to_lower_case+ still affects lowercasing of string queries. 
   If the custom analyzer uppercases the indexed tokens, string queries will not match as expected. 
 |========================================================
@@ -311,7 +310,7 @@ To mark a value so that it is indexed as a numeric value, we can make use of the
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=numericRange
 ----
 
@@ -325,7 +324,7 @@ In the following example we are doing that, and have added sorting to the query 
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=sortedNumericRange
 ----
 
@@ -334,7 +333,7 @@ From/to in the ranges defaults to be _inclusive_, but you can change this behavi
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=exclusiveRange
 ----
 
@@ -348,7 +347,7 @@ Lucene performs sorting very well, and that is also exposed in the index backend
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=sortedResult
 ----
 
@@ -357,7 +356,7 @@ We sort the results by relevance (score) like this:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=queryWithRelevance
 ----
 
@@ -369,18 +368,18 @@ Instead of passing in Lucene query syntax queries, you can instantiate such quer
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=termQuery
 ----
 
-Note that the http://lucene.apache.org/core/old_versioned_docs/versions/{lucene-version}/api/core/org/apache/lucene/search/TermQuery.html[TermQuery] is basically the same thing as using the +get+ method on the index.
+Note that the {lucene-api-base-uri}/org/apache/lucene/search/TermQuery.html[TermQuery] is basically the same thing as using the +get+ method on the index.
 
 This is how to perform _wildcard_ searches using Lucene Query Objects:
 
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=wildcardTermQuery
 ----
 
@@ -394,7 +393,7 @@ Lucene supports querying for multiple terms in the same query, like so:
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=compoundQueries
 ----
 
@@ -408,7 +407,7 @@ The default operator (that is whether +AND+ or +OR+ is used in between different
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=defaultOperator
 ----
 
@@ -422,7 +421,7 @@ You can control the size of the cache (the maximum number of results) per index 
 [snippet,java]
 ----
 component=neo4j-lucene-index
-source=examples/ImdbExampleTest.java
+source=examples/ImdbDocTest.java
 tag=cache
 ----
 

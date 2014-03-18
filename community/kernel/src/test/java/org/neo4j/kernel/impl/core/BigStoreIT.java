@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,41 +19,52 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import static java.lang.Math.pow;
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
-import static org.neo4j.helpers.collection.MapUtil.map;
-import static org.neo4j.kernel.impl.AbstractNeo4jTestCase.deleteFileOrDirectory;
-
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TestName;
+
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.DynamicRelationshipType;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSetting;
-import org.neo4j.kernel.InternalAbstractGraphDatabase;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.helpers.Settings;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
+
+import static java.lang.Math.pow;
+import static java.util.Arrays.asList;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
+import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
+import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.kernel.impl.AbstractNeo4jTestCase.deleteFileOrDirectory;
 
 public class BigStoreIT implements RelationshipType
 {
     private static final RelationshipType OTHER_TYPE = DynamicRelationshipType.withName( "OTHER" );
     
     private static final String PATH = "target/var/big";
-    private InternalAbstractGraphDatabase db;
+    private GraphDatabaseService db;
     public @Rule
     TestName testName = new TestName()
     {
@@ -69,7 +80,7 @@ public class BigStoreIT implements RelationshipType
     {
         // Delete before just to be sure
         deleteFileOrDirectory( new File( PATH ) );
-        db = new EmbeddedGraphDatabase( PATH );
+        db = new GraphDatabaseFactory().newEmbeddedDatabase( PATH );
     }
     
     @After
@@ -130,6 +141,7 @@ public class BigStoreIT implements RelationshipType
          *           
          * Each node/relationship will have a bunch of different properties on them.
          */
+        Node refNode = createReferenceNode( db );
         setHighIds( startId-1000 );
         
         byte[] bytes = new byte[45];
@@ -143,10 +155,11 @@ public class BigStoreIT implements RelationshipType
         {
             Node node = db.createNode();
             setProperties( node, properties );
-            Relationship rel = db.getReferenceNode().createRelationshipTo( node, this );
-            setProperties( rel, properties );
+            Relationship rel1 = refNode.createRelationshipTo( node, this );
+            setProperties( rel1, properties );
             Node highNode = db.createNode();
-            node.createRelationshipTo( highNode, OTHER_TYPE );
+            Relationship rel2 = node.createRelationshipTo( highNode, OTHER_TYPE );
+            setProperties( rel2, properties );
             setProperties( highNode, properties );
             if ( i % 100 == 0 && i > 0 )
             {
@@ -159,30 +172,48 @@ public class BigStoreIT implements RelationshipType
         tx.finish();
         
         db.shutdown();
-        db = new EmbeddedGraphDatabase( PATH );
+        db = new GraphDatabaseFactory().newEmbeddedDatabase( PATH );
         
         // Verify the data
         int verified = 0;
-        for ( Relationship rel : db.getReferenceNode().getRelationships( Direction.OUTGOING ) )
+        
+        try ( Transaction transaction = db.beginTx() )
         {
-            Node node = rel.getEndNode();
-            assertProperties( properties, node );
-            assertProperties( properties, rel );
-            Node highNode = node.getSingleRelationship( OTHER_TYPE, Direction.OUTGOING ).getEndNode();
-            assertProperties( properties, highNode );
-            verified++;
+            refNode = db.getNodeById( refNode.getId() );
+	        for ( Relationship rel : refNode.getRelationships( Direction.OUTGOING ) )
+	        {
+	            Node node = rel.getEndNode();
+	            assertProperties( properties, node );
+	            assertProperties( properties, rel );
+	            Node highNode = node.getSingleRelationship( OTHER_TYPE, Direction.OUTGOING ).getEndNode();
+	            assertProperties( properties, highNode );
+	            verified++;
+	        }
+	        transaction.success();
         }
         assertEquals( count, verified );
     }
     
+    private static final Label REFERENCE = DynamicLabel.label( "Reference" );
+    
+    private Node createReferenceNode( GraphDatabaseService db )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( REFERENCE );
+            tx.success();
+            return node;
+        }
+    }
+
     public static boolean machineIsOkToRunThisTest( String testName, int requiredHeapMb )
     {
-        if ( GraphDatabaseSetting.osIsWindows() )
+        if ( Settings.osIsWindows() )
         {
             System.out.println( testName + ": This test cannot be run on Windows because it can't handle files of this size in a timely manner" );
             return false;
         }
-        if ( GraphDatabaseSetting.osIsMacOS() )
+        if ( Settings.osIsMacOS() )
         {
             System.out.println( testName + ": This test cannot be run on Mac OS X because Mac OS X doesn't support sparse files" );
             return false;
@@ -259,22 +290,27 @@ public class BigStoreIT implements RelationshipType
 
         for ( int i = 0; i < 2; i++ )
         {
-            assertEquals( nodeAboveTheLine, db.getNodeById( highMark ) );
-            assertEquals( idBelow, nodeBelowTheLine.getId() );
-            assertEquals( highMark, nodeAboveTheLine.getId() );
-            assertEquals( idBelow, relBelowTheLine.getId() );
-            assertEquals( highMark, relAboveTheLine.getId() );
-            assertEquals( relBelowTheLine, db.getNodeById( idBelow ).getSingleRelationship( this, Direction.OUTGOING ) );
-            assertEquals( relAboveTheLine, db.getNodeById( idBelow ).getSingleRelationship( this, Direction.INCOMING ) );
-            assertEquals( idBelow, relBelowTheLine.getId() );
-            assertEquals( highMark, relAboveTheLine.getId() );
-            assertEquals(   asSet( asList( relBelowTheLine, relAboveTheLine ) ),
-                            asSet( asCollection( db.getNodeById( idBelow ).getRelationships() ) ) );
-            
+            try ( Transaction transaction = db.beginTx() )
+            {
+                assertEquals( nodeAboveTheLine, db.getNodeById( highMark ) );
+                assertEquals( idBelow, nodeBelowTheLine.getId() );
+                assertEquals( highMark, nodeAboveTheLine.getId() );
+                assertEquals( idBelow, relBelowTheLine.getId() );
+                assertEquals( highMark, relAboveTheLine.getId() );
+                assertEquals( relBelowTheLine,
+                        db.getNodeById( idBelow ).getSingleRelationship( this, Direction.OUTGOING ) );
+                assertEquals( relAboveTheLine,
+                        db.getNodeById( idBelow ).getSingleRelationship( this, Direction.INCOMING ) );
+                assertEquals( idBelow, relBelowTheLine.getId() );
+                assertEquals( highMark, relAboveTheLine.getId() );
+                assertEquals( asSet( asList( relBelowTheLine, relAboveTheLine ) ),
+                        asSet( asCollection( db.getNodeById( idBelow ).getRelationships() ) ) );
+                transaction.success();
+            }
             if ( i == 0 )
             {
                 db.shutdown();
-                db = new EmbeddedGraphDatabase( PATH );
+                db = new GraphDatabaseFactory().newEmbeddedDatabase( PATH );
             }
         }
     }
@@ -295,6 +331,6 @@ public class BigStoreIT implements RelationshipType
 
     private void setHighId( IdType type, long highId )
     {
-        db.getIdGeneratorFactory().get( type ).setHighId( highId );
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency( IdGeneratorFactory.class ).get( type ).setHighId( highId );
     }
 }

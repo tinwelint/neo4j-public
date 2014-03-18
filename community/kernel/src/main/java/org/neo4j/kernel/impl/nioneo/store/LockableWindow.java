@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.kernel.impl.transaction.LockException;
  * thread during a operation making sure no other thread use the same window
  * concurrently.
  */
-abstract class LockableWindow implements PersistenceWindow
+public abstract class LockableWindow implements PersistenceWindow
 {
     private final FileChannel fileChannel;
 
@@ -39,6 +39,8 @@ abstract class LockableWindow implements PersistenceWindow
     private boolean locked;
     private int marked = 0;
     protected boolean closed;
+
+    private boolean isDirty = false;
 
     LockableWindow( FileChannel fileChannel )
     {
@@ -108,6 +110,20 @@ abstract class LockableWindow implements PersistenceWindow
         lockingThread = currentThread;
         le.movedOn = true;
         marked--;
+        if ( operationType == OperationType.WRITE )
+        {
+            isDirty = true;
+        }
+    }
+    
+    synchronized boolean isDirty()
+    {
+        return isDirty;
+    }
+
+    synchronized void setClean()
+    {
+        isDirty = false;
     }
 
     synchronized void unLock()
@@ -115,8 +131,8 @@ abstract class LockableWindow implements PersistenceWindow
         Thread currentThread = Thread.currentThread();
         if ( !locked )
         {
-            throw new LockException( "" + currentThread
-                + " don't have window lock on " + this );
+            throw new LockException( currentThread
+                + " doesn't have window lock on " + this );
         }
         locked = false;
         lockingThread = null;

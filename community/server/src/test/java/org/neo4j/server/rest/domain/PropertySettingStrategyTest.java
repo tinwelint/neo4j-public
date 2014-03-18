@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,6 @@
  */
 package org.neo4j.server.rest.domain;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
-import static org.neo4j.helpers.collection.MapUtil.map;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,22 +29,27 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.server.rest.web.PropertyValueException;
-import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static org.neo4j.helpers.collection.MapUtil.map;
 
 public class PropertySettingStrategyTest
 {
-
-    private static ImpermanentGraphDatabase db;
+    private static GraphDatabaseAPI db;
     private Transaction tx;
     private static PropertySettingStrategy propSetter;
 
     @BeforeClass
     public static void createDb()
     {
-        db = new ImpermanentGraphDatabase(  );
+        db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
         propSetter = new PropertySettingStrategy( db );
     }
 

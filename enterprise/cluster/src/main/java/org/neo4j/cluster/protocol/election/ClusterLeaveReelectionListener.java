@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,50 +19,30 @@
  */
 package org.neo4j.cluster.protocol.election;
 
-import java.net.URI;
-
-import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
+import org.neo4j.kernel.impl.util.StringLogger;
 
 /**
  * When an instance leaves a cluster, demote it from all its current roles.
  */
 public class ClusterLeaveReelectionListener
-        implements ClusterListener
+        extends ClusterListener.Adapter
 {
     private final Election election;
-    private ClusterConfiguration clusterConfiguration;
+    private final StringLogger logger;
 
-    public ClusterLeaveReelectionListener( Election election )
+    public ClusterLeaveReelectionListener( Election election, StringLogger logger )
     {
         this.election = election;
+        this.logger = logger;
     }
 
     @Override
-    public void enteredCluster( ClusterConfiguration clusterConfiguration )
+    public void leftCluster( InstanceId member )
     {
-        this.clusterConfiguration = clusterConfiguration;
-    }
-
-    @Override
-    public void joinedCluster( URI member )
-    {
-    }
-
-    @Override
-    public void leftCluster( URI member )
-    {
+        logger.warn( "Demoting member " + member + " because it left the cluster" );
         // Suggest reelection for all roles of this node
         election.demote( member );
-    }
-
-    @Override
-    public void leftCluster()
-    {
-    }
-
-    @Override
-    public void elected( String role, URI electedMember )
-    {
     }
 }

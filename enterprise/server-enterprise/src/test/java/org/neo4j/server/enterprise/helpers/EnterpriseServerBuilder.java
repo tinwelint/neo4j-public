@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,26 @@
  */
 package org.neo4j.server.enterprise.helpers;
 
-import static org.neo4j.server.ServerTestUtils.createTempDir;
-
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.helpers.Clock;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.configuration.validation.DatabaseLocationMustBeSpecifiedRule;
 import org.neo4j.server.configuration.validation.Validator;
-import org.neo4j.server.database.Database;
-import org.neo4j.server.database.EphemeralDatabase;
 import org.neo4j.server.enterprise.EnterpriseNeoServer;
-import org.neo4j.server.helpers.ServerBuilder;
+import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.preflight.PreFlightTasks;
-import org.neo4j.server.rest.paging.Clock;
 import org.neo4j.server.rest.paging.LeaseManager;
-import org.neo4j.server.rest.paging.RealClock;
 import org.neo4j.server.rest.web.DatabaseActions;
 
-public class EnterpriseServerBuilder extends ServerBuilder
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
+import static org.neo4j.server.ServerTestUtils.createTempDir;
+import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManagingDatabase;
+
+public class EnterpriseServerBuilder extends CommunityServerBuilder
 {
     public static EnterpriseServerBuilder server()
     {
@@ -53,7 +52,7 @@ public class EnterpriseServerBuilder extends ServerBuilder
         {
             this.dbDir = createTempDir().getAbsolutePath();
         }
-        File configFile = createPropertiesFiles();
+        final File configFile = createPropertiesFiles();
 
         if ( preflightTasks == null )
         {
@@ -67,35 +66,46 @@ public class EnterpriseServerBuilder extends ServerBuilder
             };
         }
 
-        return new EnterpriseNeoServer( new PropertyFileConfigurator( new Validator(
-                new DatabaseLocationMustBeSpecifiedRule() ), configFile ) )
+        return new TestEnterpriseNeoServer( new PropertyFileConfigurator( new Validator(
+                new DatabaseLocationMustBeSpecifiedRule() ), configFile ), configFile );
+
+    }
+
+    private class TestEnterpriseNeoServer extends EnterpriseNeoServer
+    {
+        private final File configFile;
+
+        public TestEnterpriseNeoServer( PropertyFileConfigurator propertyFileConfigurator, File configFile )
         {
-            @Override
-            protected PreFlightTasks createPreflightTasks()
-            {
-                return preflightTasks;
-            }
+            super( propertyFileConfigurator, persistent ? createDbFactory( propertyFileConfigurator.configuration() )
+                                                        : lifecycleManagingDatabase( IN_MEMORY_DB )  );
+            this.configFile = configFile;
+        }
 
-            @Override
-            protected Database createDatabase()
-            {
-                return persistent ?
-                        super.createDatabase() :
-                        new EphemeralDatabase( configurator.configuration() );
-            }
+        @Override
+        protected PreFlightTasks createPreflightTasks()
+        {
+            return preflightTasks;
+        }
 
-            @Override
-            protected DatabaseActions createDatabaseActions()
-            {
-                Clock clockToUse = (clock != null) ? clock : new RealClock();
+        @Override
+        protected DatabaseActions createDatabaseActions()
+        {
+            Clock clockToUse = (clock != null) ? clock : SYSTEM_CLOCK;
 
-                return new DatabaseActions( database,
-                        new LeaseManager( clockToUse ),
-                        ForceMode.forced,
-                        configurator.configuration().getBoolean(
-                                Configurator.SCRIPT_SANDBOXING_ENABLED_KEY,
-                                Configurator.DEFAULT_SCRIPT_SANDBOXING_ENABLED ) );
-            }
-        };
+            return new DatabaseActions(
+                    new LeaseManager( clockToUse ),
+                    ForceMode.forced,
+                    configurator.configuration().getBoolean(
+                            Configurator.SCRIPT_SANDBOXING_ENABLED_KEY,
+                            Configurator.DEFAULT_SCRIPT_SANDBOXING_ENABLED ), database.getGraph() );
+        }
+
+        @Override
+        public void stop()
+        {
+            super.stop();
+            configFile.delete();
+        }
     }
 }

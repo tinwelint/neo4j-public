@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,30 +20,79 @@
 package org.neo4j.backup;
 
 import java.net.URI;
-
+import org.neo4j.cluster.BindingListener;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.client.ClusterClient;
+import org.neo4j.cluster.com.BindingNotifier;
 import org.neo4j.cluster.member.ClusterMemberAvailability;
 import org.neo4j.cluster.member.ClusterMemberEvents;
 import org.neo4j.cluster.member.ClusterMemberListener;
+import org.neo4j.com.ServerUtil;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
+import org.neo4j.kernel.impl.nioneo.store.StoreId;
+import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
+
+import static org.neo4j.backup.OnlineBackupSettings.online_backup_server;
 
 public class OnlineBackupKernelExtension implements Lifecycle
 {
+    public interface BackupProvider
+    {
+        TheBackupInterface newBackup();
+    }
+
     // This is the role used to announce that a cluster member can handle backups
     public static final String BACKUP = "backup";
+    // In this context, the IPv4 zero-address is understood as "any address on this host."
+    public static final String INADDR_ANY = "0.0.0.0";
 
     private Config config;
     private GraphDatabaseAPI graphDatabaseAPI;
+    private Logging logging;
+    private final Monitors monitors;
     private BackupServer server;
-    private URI backupUri;
+    private final BackupProvider backupProvider;
+    private volatile URI me;
 
-    public OnlineBackupKernelExtension( Config config, GraphDatabaseAPI graphDatabaseAPI )
+    public OnlineBackupKernelExtension( Config config, final GraphDatabaseAPI graphDatabaseAPI, final XaDataSourceManager
+            xaDataSourceManager, final KernelPanicEventGenerator kpeg, final Logging logging, final Monitors monitors )
+    {
+        this(config, graphDatabaseAPI, new BackupProvider()
+        {
+            @Override
+            public TheBackupInterface newBackup()
+            {
+                return new BackupImpl( logging.getMessagesLog( BackupImpl.class ), new BackupImpl.SPI()
+                {
+                    @Override
+                    public String getStoreDir()
+                    {
+                        return graphDatabaseAPI.getStoreDir();
+                    }
+
+                    @Override
+                    public StoreId getStoreId()
+                    {
+                        return graphDatabaseAPI.storeId();
+                    }
+                }, xaDataSourceManager, kpeg, monitors );
+            }
+        }, monitors, logging);
+    }
+
+    public OnlineBackupKernelExtension( Config config, GraphDatabaseAPI graphDatabaseAPI, BackupProvider provider,
+                                        Monitors monitors, Logging logging )
     {
         this.config = config;
         this.graphDatabaseAPI = graphDatabaseAPI;
+        this.backupProvider = provider;
+        this.monitors = monitors;
+        this.logging = logging;
     }
 
     @Override
@@ -56,12 +105,9 @@ public class OnlineBackupKernelExtension implements Lifecycle
     {
         if ( config.<Boolean>get( OnlineBackupSettings.online_backup_enabled ) )
         {
-            TheBackupInterface backup = new BackupImpl( graphDatabaseAPI );
             try
             {
-                server = new BackupServer( backup,
-                        config.get( OnlineBackupSettings.online_backup_server ),
-                        graphDatabaseAPI.getDependencyResolver().resolveDependency( Logging.class ) );
+                server = new BackupServer( backupProvider.newBackup(), config.get( online_backup_server ), logging, monitors );
                 server.init();
                 server.start();
 
@@ -69,12 +115,21 @@ public class OnlineBackupKernelExtension implements Lifecycle
                 {
                     graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberEvents.class).addClusterMemberListener(
                             new StartBindingListener() );
+
+                    graphDatabaseAPI.getDependencyResolver().resolveDependency( BindingNotifier.class ).addBindingListener( new BindingListener()
+                            {
+                                @Override
+                                public void listeningAt( URI myUri )
+                                {
+                                    me = myUri;
+                                }
+                            } );
                 }
                 catch ( NoClassDefFoundError e )
                 {
                     // Not running HA
                 }
-                catch ( IllegalArgumentException e )
+                catch ( IllegalArgumentException e ) // NOPMD
                 {
                     // HA available, but not used
                 }
@@ -97,14 +152,14 @@ public class OnlineBackupKernelExtension implements Lifecycle
 
             try
             {
-                ClusterMemberAvailability client = graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberAvailability.class );
+                ClusterMemberAvailability client = getClusterMemberAvailability();
                 client.memberIsUnavailable( BACKUP );
             }
             catch ( NoClassDefFoundError e )
             {
                 // Not running HA
             }
-            catch ( IllegalArgumentException e )
+            catch ( IllegalArgumentException e ) // NOPMD
             {
                 // HA available, but not used
             }
@@ -116,27 +171,21 @@ public class OnlineBackupKernelExtension implements Lifecycle
     {
     }
 
-    private class StartBindingListener implements ClusterMemberListener
+    private class StartBindingListener extends ClusterMemberListener.Adapter
     {
 
-
         @Override
-        public void masterIsElected( URI masterUri )
-        {
-        }
-
-        @Override
-        public void memberIsAvailable( String role, URI instanceClusterUri, URI roleUri )
+        public void memberIsAvailable( String role, InstanceId available, URI availableAtUri )
         {
             if ( graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterClient.class ).
-                    getServerUri().equals( instanceClusterUri ) && "master".equals( role ) )
+                    getServerId().equals( available ) && "master".equals( role ) )
             {
                 // It was me and i am master - yey!
                 {
                     try
                     {
-                        ClusterMemberAvailability ha = graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberAvailability.class );
-                        backupUri = URI.create( "backup://" + server.getSocketAddress().getHostName() + ":" + server.getSocketAddress().getPort() );
+                        URI backupUri = createBackupURI();
+                        ClusterMemberAvailability ha = getClusterMemberAvailability();
                         ha.memberIsAvailable( BACKUP, backupUri );
                     }
                     catch ( Throwable t )
@@ -148,17 +197,16 @@ public class OnlineBackupKernelExtension implements Lifecycle
         }
 
         @Override
-        public void memberIsUnavailable( String role, URI instanceClusterUri )
+        public void memberIsUnavailable( String role, InstanceId unavailableId )
         {
             if ( graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterClient.class ).
-                    getServerUri().equals( instanceClusterUri ) && "master".equals( role ) )
+                    getServerId().equals( unavailableId ) && "master".equals( role ) )
             {
                 // It was me and i am master - yey!
                 {
                     try
                     {
-                        ClusterMemberAvailability ha = graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberAvailability.class );
-                        backupUri = URI.create( "backup://" + server.getSocketAddress().getHostName() + ":" + server.getSocketAddress().getPort() );
+                        ClusterMemberAvailability ha = getClusterMemberAvailability();
                         ha.memberIsUnavailable( BACKUP );
                     }
                     catch ( Throwable t )
@@ -168,5 +216,16 @@ public class OnlineBackupKernelExtension implements Lifecycle
                 }
             }
         }
+    }
+
+    private ClusterMemberAvailability getClusterMemberAvailability() {
+        return graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberAvailability.class );
+    }
+
+    private URI createBackupURI() {
+        String hostString = ServerUtil.getHostString( server.getSocketAddress() );
+        String host = hostString.contains( INADDR_ANY ) ? me.getHost() : hostString;
+        int port = server.getSocketAddress().getPort();
+        return URI.create("backup://" + host + ":" + port);
     }
 }

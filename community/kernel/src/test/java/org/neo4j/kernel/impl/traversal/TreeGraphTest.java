@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,6 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.Traversal.postorderBreadthFirst;
-import static org.neo4j.kernel.Traversal.postorderDepthFirst;
-import static org.neo4j.kernel.Traversal.traversal;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,9 +30,16 @@ import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.Traverser;
 
-public class TreeGraphTest extends AbstractTestBase
+import static java.util.Arrays.asList;
+import static org.junit.Assert.*;
+import static org.neo4j.graphdb.traversal.BranchOrderingPolicies.POSTORDER_BREADTH_FIRST;
+import static org.neo4j.graphdb.traversal.BranchOrderingPolicies.POSTORDER_DEPTH_FIRST;
+import static org.neo4j.kernel.Traversal.traversal;
+
+public class TreeGraphTest extends TraversalTestBase
 {
     /*
      *                     (1)
@@ -63,44 +62,68 @@ public class TreeGraphTest extends AbstractTestBase
     @Test
     public void nodesIteratorReturnAllNodes() throws Exception
     {
-        Traverser traverser = traversal().traverse( node( "1" ) );
-        int count = 0;
-        for ( Node node : traverser.nodes() )
+        Transaction transaction = beginTx();
+        try
         {
-            assertNotNull( "returned nodes should not be null. node #"
-                           + count, node );
-            count++;
+            Traverser traverser = traversal().traverse( node( "1" ) );
+            int count = 0;
+            for ( Node node : traverser.nodes() )
+            {
+                assertNotNull( "returned nodes should not be null. node #"
+                               + count, node );
+                count++;
+            }
+            assertEquals( 13, count );
         }
-        assertEquals( 13, count );
+        finally
+        {
+            transaction.finish();
+        }
     }
 
     @Test
     public void relationshipsIteratorReturnAllNodes() throws Exception
     {
-        Traverser traverser = traversal().traverse( node( "1" ) );
-        int count = 0;
-        for ( Relationship relationship : traverser.relationships() )
+        Transaction transaction = beginTx();
+        try
         {
-            assertNotNull(
-                    "returned relationships should not be. relationship #"
-                            + count, relationship );
-            count++;
+            Traverser traverser = traversal().traverse( node( "1" ) );
+            int count = 0;
+            for ( Relationship relationship : traverser.relationships() )
+            {
+                assertNotNull(
+                        "returned relationships should not be. relationship #"
+                                + count, relationship );
+                count++;
+            }
+            assertEquals( 12, count );
         }
-        assertEquals( 12, count );
+        finally
+        {
+            transaction.finish();
+        }
     }
 
     @Test
     public void pathsIteratorReturnAllNodes() throws Exception
     {
-        Traverser traverser = traversal().traverse( node( "1" ) );
-        int count = 0;
-        for ( Path path : traverser )
+        Transaction transaction = beginTx();
+        try
         {
-            assertNotNull( "returned paths should not be null. path #"
-                           + count, path );
-            count++;
+            Traverser traverser = traversal().traverse( node( "1" ) );
+            int count = 0;
+            for ( Path path : traverser )
+            {
+                assertNotNull( "returned paths should not be null. path #"
+                               + count, path );
+                count++;
+            }
+            assertEquals( 13, count );
         }
-        assertEquals( 13, count );
+        finally
+        {
+            transaction.finish();
+        }
     }
 
     @Test
@@ -112,33 +135,54 @@ public class TreeGraphTest extends AbstractTestBase
                 "9", "A", "B", "C", "D" ) ) );
         levels.push( new HashSet<String>( asList( "2", "3", "4" ) ) );
         levels.push( new HashSet<String>( asList( "1" ) ) );
-        assertLevels( traverser, levels );
+
+        Transaction tx = beginTx();
+        try
+        {
+            assertLevels( traverser, levels );
+            tx.success();
+        }
+        finally
+        {
+            tx.finish();
+        }
     }
 
     @Test
     public void testDepthFirstTraversalReturnsNodesOnCorrectDepths()
             throws Exception
     {
-        Traverser traverser = traversal().depthFirst().traverse( node( "1" ) );
-        int i = 0;
-        for ( Path pos : traverser )
+        Transaction transaction = beginTx();
+        try
         {
-            assertEquals( expectedDepth( i++ ), pos.length() );
+            Traverser traverser = traversal().depthFirst().traverse( node( "1" ) );
+            int i = 0;
+            for ( Path pos : traverser )
+            {
+                assertEquals( expectedDepth( i++ ), pos.length() );
+            }
+            assertEquals( 13, i );
         }
-        assertEquals( 13, i );
+        finally
+        {
+            transaction.finish();
+        }
     }
 
     @Test
     public void testPostorderDepthFirstReturnsDeeperNodesFirst()
     {
-        Traverser traverser = traversal().order( postorderDepthFirst() ).traverse( node( "1" ) );
+        Traverser traverser = traversal().order( POSTORDER_DEPTH_FIRST ).traverse( node( "1" ) );
         int i = 0;
         List<String> encounteredNodes = new ArrayList<String>();
+        Transaction tx = beginTx();
         for ( Path pos : traverser )
         {
             encounteredNodes.add( (String) pos.endNode().getProperty( "name" ) );
             assertEquals( expectedDepth( ( 12 - i++ ) ), pos.length() );
         }
+        tx.success();
+        tx.finish();
         assertEquals( 13, i );
 
         assertTrue( encounteredNodes.indexOf( "5" ) < encounteredNodes.indexOf( "2" ) );
@@ -158,13 +202,22 @@ public class TreeGraphTest extends AbstractTestBase
     @Test
     public void testPostorderBreadthFirstReturnsDeeperNodesFirst()
     {
-        Traverser traverser = traversal().order( postorderBreadthFirst() ).traverse( node( "1" ) );
-        Stack<Set<String>> levels = new Stack<Set<String>>();
-        levels.push( new HashSet<String>( asList( "1" ) ) );
-        levels.push( new HashSet<String>( asList( "2", "3", "4" ) ) );
-        levels.push( new HashSet<String>( asList( "5", "6", "7", "8",
+        Traverser traverser = traversal().order( POSTORDER_BREADTH_FIRST ).traverse( node( "1" ) );
+        Stack<Set<String>> levels = new Stack<>();
+        levels.push( new HashSet<>( asList( "1" ) ) );
+        levels.push( new HashSet<>( asList( "2", "3", "4" ) ) );
+        levels.push( new HashSet<>( asList( "5", "6", "7", "8",
                 "9", "A", "B", "C", "D" ) ) );
-        assertLevels( traverser, levels );
+        Transaction tx = beginTx();
+        try
+        {
+            assertLevels( traverser, levels );
+            tx.success();
+        }
+        finally
+        {
+            tx.finish();
+        }
     }
 
     private int expectedDepth( int i )

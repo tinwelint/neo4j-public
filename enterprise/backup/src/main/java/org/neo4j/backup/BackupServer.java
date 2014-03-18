@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.backup;
 
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
+
 import java.io.IOException;
 
 import org.jboss.netty.channel.Channel;
@@ -31,15 +33,17 @@ import org.neo4j.com.Server;
 import org.neo4j.com.TxChecksumVerifier;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.logging.Logging;
+import org.neo4j.kernel.monitoring.Monitors;
 
 class BackupServer extends Server<TheBackupInterface, Object>
 {
     static final byte PROTOCOL_VERSION = 1;
     private final BackupRequestType[] contexts = BackupRequestType.values();
-    static int DEFAULT_PORT = DEFAULT_BACKUP_PORT;
+    static int DEFAULT_PORT = 6362;
     static final int FRAME_LENGTH = Protocol.MEGA * 4;
 
-    public BackupServer( TheBackupInterface requestTarget, final HostnamePort server , Logging logging ) throws IOException
+    public BackupServer( TheBackupInterface requestTarget, final HostnamePort server,
+                         Logging logging, Monitors monitors ) throws IOException
     {
         super( requestTarget, new Configuration()
         {
@@ -67,7 +71,7 @@ class BackupServer extends Server<TheBackupInterface, Object>
                 return server;
             }
         }, logging, FRAME_LENGTH, PROTOCOL_VERSION,
-                TxChecksumVerifier.ALWAYS_MATCH );
+                TxChecksumVerifier.ALWAYS_MATCH, SYSTEM_CLOCK, monitors );
     }
 
     @Override

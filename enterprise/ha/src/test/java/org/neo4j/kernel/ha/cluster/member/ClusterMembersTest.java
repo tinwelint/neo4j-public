@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,8 @@ package org.neo4j.kernel.ha.cluster.member;
 
 import static java.net.URI.create;
 import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -34,8 +36,7 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.neo4j.cluster.BindingListener;
-import org.neo4j.cluster.com.BindingNotifier;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.member.ClusterMemberEvents;
 import org.neo4j.cluster.member.ClusterMemberListener;
 import org.neo4j.cluster.protocol.cluster.Cluster;
@@ -43,30 +44,32 @@ import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
 import org.neo4j.cluster.protocol.heartbeat.Heartbeat;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatListener;
+import org.neo4j.kernel.impl.util.StringLogger;
 
 public class ClusterMembersTest
 {
+    private static InstanceId clusterId1 = new InstanceId( 1 );
+    private static InstanceId clusterId2 = new InstanceId( 2 );
+    private static InstanceId clusterId3 = new InstanceId( 3 );
     private static URI clusterUri1 = create( "cluster://server1" );
     private static URI clusterUri2 = create( "cluster://server2" );
     private static URI clusterUri3 = create( "cluster://server3" );
-    private static URI haUri1 = create( "ha://server1?serverId=1" );
-    private static URI haUri2 = create( "ha://server2?serverId=2" );
-    private static URI haUri3 = create( "ha://server3?serverId=3" );
+    private static URI haUri1 = create( "ha://server1?serverId="+clusterId1.toIntegerIndex() );
+    private static URI haUri2 = create( "ha://server2?serverId="+clusterId2.toIntegerIndex() );
+    private static URI haUri3 = create( "ha://server3?serverId="+clusterId3.toIntegerIndex() );
 
     @Test
     public void shouldRegisterItselfOnListeners() throws Exception
     {
         // given
         Cluster cluster = mock( Cluster.class );
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
         // when
-        new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         // then
-        verify( binding ).addBindingListener( Mockito.<BindingListener>any() );
         verify( cluster ).addClusterListener( Mockito.<ClusterListener>any() );
         verify( heartbeat ).addHeartbeatListener( Mockito.<HeartbeatListener>any() );
         verify( clusterMemberEvents ).addClusterMemberListener( Mockito.<ClusterMemberListener>any() );
@@ -77,11 +80,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock( Cluster.class );
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         // when
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
@@ -90,9 +92,9 @@ public class ClusterMembersTest
 
         // then
         assertThat( members.getMembers(), CoreMatchers.<ClusterMember>hasItems(
-                sameMemberAs( new ClusterMember( clusterUri1 ) ),
-                sameMemberAs( new ClusterMember( clusterUri2 ) ),
-                sameMemberAs( new ClusterMember( clusterUri3 ) ) ));
+                sameMemberAs( new ClusterMember( clusterId1 ) ),
+                sameMemberAs( new ClusterMember( clusterId2 ) ),
+                sameMemberAs( new ClusterMember( clusterId3 ) ) ));
     }
 
     @Test
@@ -100,11 +102,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock( Cluster.class );
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -112,13 +113,36 @@ public class ClusterMembersTest
         listener.getValue().enteredCluster( clusterConfiguration( clusterUri1, clusterUri2 ) );
 
         // when
-        listener.getValue().joinedCluster( clusterUri3 );
+        listener.getValue().joinedCluster( clusterId3, clusterUri3 );
 
         // then
         assertThat( members.getMembers(), CoreMatchers.<ClusterMember>hasItems(
-                sameMemberAs( new ClusterMember( clusterUri1 ) ),
-                sameMemberAs( new ClusterMember( clusterUri2 ) ),
-                sameMemberAs( new ClusterMember( clusterUri3 ) ) ));
+                sameMemberAs( new ClusterMember( clusterId1 ) ),
+                sameMemberAs( new ClusterMember( clusterId2 ) ),
+                sameMemberAs( new ClusterMember( clusterId3 ) ) ) );
+    }
+
+    @Test
+    public void iCanGetToMyself() throws Exception
+    {
+        // given
+        Cluster cluster = mock( Cluster.class );
+        Heartbeat heartbeat = mock( Heartbeat.class );
+        ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
+
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, clusterId1 );
+
+        // when
+
+        ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
+        verify( cluster ).addClusterListener( listener.capture() );
+
+        listener.getValue().enteredCluster( clusterConfiguration( clusterUri1, clusterUri2 ) );
+
+        ClusterMember me = members.getSelf();
+        assertNotNull( me );
+        assertEquals( 1, me.getInstanceId() );
+        assertEquals( clusterId1, me.getMemberId() );
     }
 
     @Test
@@ -126,11 +150,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock( Cluster.class );
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -138,13 +161,13 @@ public class ClusterMembersTest
         listener.getValue().enteredCluster( clusterConfiguration( clusterUri1, clusterUri2, clusterUri3 ) );
 
         // when
-        listener.getValue().leftCluster( clusterUri3 );
+        listener.getValue().leftCluster( clusterId3 );
 
         // then
         assertThat(
                 members.getMembers(),
                 CoreMatchers.not( CoreMatchers.<ClusterMember>hasItems(
-                sameMemberAs( new ClusterMember( clusterUri3 ) ) ) ));
+                sameMemberAs( new ClusterMember( clusterId3 ) ) ) ));
     }
     
     @Test
@@ -152,11 +175,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock(Cluster.class);
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -166,13 +188,13 @@ public class ClusterMembersTest
         verify( clusterMemberEvents ).addClusterMemberListener( clusterMemberListener.capture() );
 
         // when
-        clusterMemberListener.getValue().memberIsAvailable( MASTER, clusterUri1, haUri1 );
+        clusterMemberListener.getValue().memberIsAvailable( MASTER, clusterId1, haUri1 );
 
         // then
         assertThat(
                 members.getMembers(),
-                CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember(
-                        clusterUri1 ).availableAs( MASTER, haUri1 ) ) ) );
+                CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember( clusterId1 ).availableAs(
+                        MASTER, haUri1 ) ) ) );
     }
 
     @Test
@@ -180,11 +202,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock(Cluster.class);
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -194,13 +215,13 @@ public class ClusterMembersTest
         verify( clusterMemberEvents ).addClusterMemberListener( clusterMemberListener.capture() );
 
         // when
-        clusterMemberListener.getValue().memberIsAvailable( SLAVE, clusterUri1, haUri1 );
+        clusterMemberListener.getValue().memberIsAvailable( SLAVE, clusterId1, haUri1 );
 
         // then
         assertThat(
                 members.getMembers(),
                 CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember(
-                        clusterUri1 ).availableAs( SLAVE, haUri1 ) ) ) );
+                        clusterId1 ).availableAs( SLAVE, haUri1 ) ) ) );
     }
     
     @Test
@@ -208,11 +229,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock(Cluster.class);
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -220,16 +240,15 @@ public class ClusterMembersTest
 
         ArgumentCaptor<ClusterMemberListener> clusterMemberListener = ArgumentCaptor.forClass( ClusterMemberListener.class );
         verify( clusterMemberEvents ).addClusterMemberListener( clusterMemberListener.capture() );
-        clusterMemberListener.getValue().memberIsAvailable( SLAVE, clusterUri1, haUri1 );
+        clusterMemberListener.getValue().memberIsAvailable( SLAVE, clusterId1, haUri1 );
 
         // when
-        clusterMemberListener.getValue().masterIsElected( clusterUri2 );
+        clusterMemberListener.getValue().coordinatorIsElected( clusterId2 );
 
         // then
         assertThat(
                 members.getMembers(),
-                CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember(
-                        clusterUri1 ) ) ) );
+                CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember( clusterId1 ) ) ) );
     }
     
     @Test
@@ -237,11 +256,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock(Cluster.class);
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -251,13 +269,13 @@ public class ClusterMembersTest
         verify( heartbeat ).addHeartbeatListener( heartBeatListener.capture() );
 
         // when
-        heartBeatListener.getValue().failed( clusterUri1);
+        heartBeatListener.getValue().failed( clusterId1);
 
         // then
         assertThat(
                 members.getMembers(),
                 CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember(
-                        clusterUri1 ).failed() ) ) );
+                        clusterId1 ).failed() ) ) );
     }
     
     @Test
@@ -265,11 +283,10 @@ public class ClusterMembersTest
     {
         // given
         Cluster cluster = mock(Cluster.class);
-        BindingNotifier binding = mock( BindingNotifier.class );
         Heartbeat heartbeat = mock( Heartbeat.class );
         ClusterMemberEvents clusterMemberEvents = mock(ClusterMemberEvents.class);
 
-        ClusterMembers members = new ClusterMembers( cluster, binding, heartbeat, clusterMemberEvents );
+        ClusterMembers members = new ClusterMembers( cluster, heartbeat, clusterMemberEvents, null );
 
         ArgumentCaptor<ClusterListener> listener = ArgumentCaptor.forClass( ClusterListener.class );
         verify( cluster ).addClusterListener( listener.capture() );
@@ -279,18 +296,24 @@ public class ClusterMembersTest
         verify( heartbeat ).addHeartbeatListener( heartBeatListener.capture() );
 
         // when
-        heartBeatListener.getValue().failed( clusterUri1);
-        heartBeatListener.getValue().alive( clusterUri1);
+        heartBeatListener.getValue().failed( clusterId1 );
+        heartBeatListener.getValue().alive( clusterId1 );
 
         // then
         assertThat(
                 members.getMembers(),
-                CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember(
-                        clusterUri1 ) ) ) );
+                CoreMatchers.<ClusterMember>hasItem( sameMemberAs( new ClusterMember( clusterId1 ) ) ) );
     }
 
     private ClusterConfiguration clusterConfiguration( URI... uris )
     {
-        return new ClusterConfiguration( "neo4j.ha", asList( uris ) );
+        ClusterConfiguration toReturn = new ClusterConfiguration( "neo4j.ha", StringLogger.SYSTEM, asList( uris ) );
+        toReturn.joined( clusterId1, clusterUri1 );
+        toReturn.joined( clusterId2, clusterUri2 );
+        if ( uris.length == 3 )
+        {
+            toReturn.joined( clusterId3, clusterUri3 );
+        }
+        return toReturn;
     }
 }

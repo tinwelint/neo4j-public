@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,20 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.graphdb.Direction.OUTGOING;
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.kernel.Traversal.expanderForTypes;
-import static org.neo4j.kernel.Traversal.traversal;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.PathExpanders;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 
-public class TestMultiRelTypesAndDirections extends AbstractTestBase
+import static org.junit.Assert.*;
+import static org.neo4j.graphdb.Direction.OUTGOING;
+import static org.neo4j.graphdb.DynamicRelationshipType.withName;
+import static org.neo4j.kernel.Traversal.traversal;
+
+public class TestMultiRelTypesAndDirections extends TraversalTestBase
 {
     private static final RelationshipType ONE = withName( "ONE" );
 
@@ -55,11 +56,19 @@ public class TestMultiRelTypesAndDirections extends AbstractTestBase
 
     private void testCIsReturnedOnDepthTwo( TraversalDescription description )
     {
-        description = description.expand( expanderForTypes( ONE, OUTGOING ) );
-        int i = 0;
-        for ( Path position : description.traverse( node( "A" ) ) )
+        Transaction transaction = beginTx();
+        try
         {
-            assertEquals( i++, position.length() );
+            description = description.expand( PathExpanders.forTypeAndDirection( ONE, OUTGOING ) );
+            int i = 0;
+            for ( Path position : description.traverse( node( "A" ) ) )
+            {
+                assertEquals( i++, position.length() );
+            }
+        }
+        finally
+        {
+            transaction.finish();
         }
     }
 }

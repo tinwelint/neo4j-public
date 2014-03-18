@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.graphalgo.centrality;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,8 +42,8 @@ public abstract class EigenvectorCentralityTest extends Neo4jAlgoTestCase
         EigenvectorCentralityPower eigenvectorCentralityPower, String nodeId,
         Double value )
     {
-        assertTrue( eigenvectorCentralityPower.getCentrality(
-            graph.getNode( nodeId ) ).equals( value ) );
+        assertEquals( value,
+                      eigenvectorCentralityPower.getCentrality( graph.getNode( nodeId ) ) );
     }
 
     /**
@@ -61,8 +61,7 @@ public abstract class EigenvectorCentralityTest extends Neo4jAlgoTestCase
     {
         Double centrality = eigenvectorCentrality.getCentrality( graph
             .getNode( nodeId ) );
-        assertTrue( centrality < value * (1 + precision)
-            && centrality > value * (1 - precision) );
+        assertEquals( value, centrality, precision );
     }
 
     public abstract EigenvectorCentrality getEigenvectorCentrality(

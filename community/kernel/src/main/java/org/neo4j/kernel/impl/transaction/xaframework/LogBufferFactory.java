@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,9 +20,22 @@
 package org.neo4j.kernel.impl.transaction.xaframework;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 
+import org.neo4j.kernel.configuration.Config;
+
+/**
+ * Instances of this interface are responsible for creating active log files with any necessary headers.
+ */
 public interface LogBufferFactory
 {
-    LogBuffer create( FileChannel fileChannel ) throws IOException;
+    /**
+     * Create a new active log file (a file that will be picked up and used for recovery), and return
+     * a log buffer that allows writing to the file. The resulting file should contain any necessary
+     * headers and so on, and allow directly appending new transactions.
+     *
+     * @throws IllegalStateException if an active file already exists at the specified location
+     * @return LogBuffer that wraps the log file. Caller MUST call LogBuffer.getFileChannel.close() when done.
+     */
+    LogBuffer createActiveLogFile( Config config, long prevCommittedId ) throws IllegalStateException, IOException;
+
 }

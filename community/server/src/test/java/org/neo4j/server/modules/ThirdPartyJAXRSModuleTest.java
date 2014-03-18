@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,10 +27,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
+
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.configuration.Configurator;
@@ -49,13 +50,13 @@ public class ThirdPartyJAXRSModuleTest
         CommunityNeoServer neoServer = mock( CommunityNeoServer.class );
         when( neoServer.baseUri() ).thenReturn( new URI( "http://localhost:7575" ) );
         when( neoServer.getWebServer() ).thenReturn( webServer );
-        when( neoServer.getDatabase() ).thenReturn( new Database(  ) );
+        when( neoServer.getDatabase() ).thenReturn( mock(Database.class));
 
         Configurator configurator = mock( PropertyFileConfigurator.class );
-        HashSet<ThirdPartyJaxRsPackage> jaxRsPackages = new HashSet<ThirdPartyJaxRsPackage>();
+        List<ThirdPartyJaxRsPackage> jaxRsPackages = new ArrayList<ThirdPartyJaxRsPackage>();
         String path = "/third/party/package";
         jaxRsPackages.add( new ThirdPartyJaxRsPackage( "org.example.neo4j", path ) );
-        when( configurator.getThirdpartyJaxRsClasses() ).thenReturn( jaxRsPackages );
+        when( configurator.getThirdpartyJaxRsPackages() ).thenReturn( jaxRsPackages );
 
         when( neoServer.getConfigurator() ).thenReturn( configurator );
 

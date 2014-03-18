@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel;
 
-import static java.lang.String.format;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,17 +26,27 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.channels.FileChannel;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.impl.nioneo.store.FileLock;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.util.FileUtils;
 
+import static java.lang.String.format;
+
 /**
  * Default file system abstraction that creates files using the underlying file system.
+ *
+ * @deprecated This will be moved to internal packages in the next major release.
  */
+@Deprecated
 public class DefaultFileSystemAbstraction
         implements FileSystemAbstraction
 {
@@ -68,6 +76,12 @@ public class DefaultFileSystemAbstraction
     {
         return new InputStreamReader( new FileInputStream( fileName ), encoding );
     }
+    
+    @Override
+    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    {
+        return new OutputStreamWriter( new FileOutputStream( fileName, append ), encoding );
+    }
 
     @Override
     public FileLock tryLock( File fileName, FileChannel channel ) throws IOException
@@ -88,9 +102,15 @@ public class DefaultFileSystemAbstraction
     }
     
     @Override
-    public boolean mkdirs( File fileName )
+    public void mkdirs( File path ) throws IOException
     {
-        return fileName.mkdirs();
+        if (path.exists()) return;
+
+        boolean directoriesWereCreated = path.mkdirs();
+
+        if (directoriesWereCreated) return;
+
+        throw new IOException( format( UNABLE_TO_CREATE_DIRECTORY_FORMAT, path ) );
     }
 
     @Override
@@ -124,18 +144,6 @@ public class DefaultFileSystemAbstraction
     }
 
     @Override
-    public void autoCreatePath( File path ) throws IOException
-    {
-        if (path.exists()) return;
-
-        boolean directoriesWereCreated = path.mkdirs();
-
-        if (directoriesWereCreated) return;
-
-        throw new IOException( format( UNABLE_TO_CREATE_DIRECTORY_FORMAT, path ) );
-    }
-
-    @Override
     public File[] listFiles( File directory )
     {
         return directory.listFiles();
@@ -145,5 +153,38 @@ public class DefaultFileSystemAbstraction
     public boolean isDirectory( File file )
     {
         return file.isDirectory();
+    }
+    
+    @Override
+    public void moveToDirectory( File file, File toDirectory ) throws IOException
+    {
+        FileUtils.moveFileToDirectory( file, toDirectory );
+    }
+    
+    @Override
+    public void copyFile( File from, File to ) throws IOException
+    {
+        FileUtils.copyFile( from, to );
+    }
+    
+    @Override
+    public void copyRecursively( File fromDirectory, File toDirectory ) throws IOException
+    {
+        FileUtils.copyRecursively( fromDirectory, toDirectory );
+    }
+
+    private final Map<Class<? extends ThirdPartyFileSystem>, ThirdPartyFileSystem> thirdPartyFileSystems =
+            new HashMap<Class<? extends ThirdPartyFileSystem>, ThirdPartyFileSystem>();
+
+    @Override
+    public synchronized <K extends ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem(
+            Class<K> clazz, Function<Class<K>, K> creator )
+    {
+        ThirdPartyFileSystem fileSystem = thirdPartyFileSystems.get( clazz );
+        if (fileSystem == null)
+        {
+            thirdPartyFileSystems.put( clazz, fileSystem = creator.apply( clazz ) );
+        }
+        return clazz.cast( fileSystem );
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,27 +24,34 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.backup.BackupExtensionService;
 import org.neo4j.backup.OnlineBackupKernelExtension;
 import org.neo4j.backup.OnlineBackupSettings;
+import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.client.ClusterClient;
 import org.neo4j.cluster.member.ClusterMemberEvents;
 import org.neo4j.cluster.member.ClusterMemberListener;
 import org.neo4j.cluster.member.paxos.PaxosClusterMemberEvents;
+import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
 import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
+import org.neo4j.cluster.protocol.cluster.ClusterEntryDeniedException;
 import org.neo4j.cluster.protocol.cluster.ClusterListener;
 import org.neo4j.cluster.protocol.election.NotElectableElectionCredentialsProvider;
 import org.neo4j.helpers.Args;
+import org.neo4j.helpers.Exceptions;
+import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.Predicates;
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.ha.HaSettings;
+import org.neo4j.kernel.ha.cluster.HANewSnapshotFunction;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.kernel.logging.SystemOutLogging;
 
@@ -60,8 +67,8 @@ public final class HaBackupProvider extends BackupExtensionService
     public URI resolve( URI address, Args args, Logging logging )
     {
         String master = null;
-        StringLogger logger = logging.getLogger( HaBackupProvider.class );
-        logger.debug( "Asking cluster member at '" + address
+        StringLogger logger = logging.getMessagesLog( HaBackupProvider.class );
+        logger.debug( "Asking cluster member(s) at '" + address
                 + "' for master" );
 
         String clusterName = args.get( ClusterSettings.cluster_name.name(), null );
@@ -88,17 +95,21 @@ public final class HaBackupProvider extends BackupExtensionService
     {
         LifeSupport life = new LifeSupport();
         Map<String, String> params = new HashMap<String, String>();
-        params.put( HaSettings.server_id.name(), "-1" );
+        params.put( ClusterSettings.server_id.name(), "-1" );
         params.put( ClusterSettings.cluster_name.name(), clusterName );
         params.put( ClusterSettings.initial_hosts.name(), from );
-        params.put( ClusterSettings.cluster_discovery_enabled.name(), "false" );
+        params.put( ClusterSettings.instance_name.name(), "Backup");
+        params.put(ClusterClient.clusterJoinTimeout.name(), "20s");
         final Config config = new Config( params,
                 ClusterSettings.class, OnlineBackupSettings.class );
 
+        ObjectStreamFactory objectStreamFactory = new ObjectStreamFactory();
         final ClusterClient clusterClient = life.add( new ClusterClient( ClusterClient.adapt( config ), logging,
-                new NotElectableElectionCredentialsProvider() ) );
+                new NotElectableElectionCredentialsProvider(), objectStreamFactory, objectStreamFactory ) );
         ClusterMemberEvents events = life.add( new PaxosClusterMemberEvents( clusterClient, clusterClient,
-                clusterClient, new SystemOutLogging(), Predicates.<PaxosClusterMemberEvents.ClusterMembersSnapshot>TRUE() ) );
+                clusterClient, clusterClient, new SystemOutLogging(),
+                Predicates.<PaxosClusterMemberEvents.ClusterMembersSnapshot>TRUE(), new HANewSnapshotFunction(),
+                objectStreamFactory, objectStreamFactory ) );
 
         // Refresh the snapshot once we join
         clusterClient.addClusterListener( new ClusterListener.Adapter()
@@ -106,7 +117,7 @@ public final class HaBackupProvider extends BackupExtensionService
             @Override
             public void enteredCluster( ClusterConfiguration clusterConfiguration )
             {
-                clusterClient.refreshSnapshot();
+                clusterClient.performRoleElections();
                 clusterClient.removeClusterListener( this );
             }
         });
@@ -114,11 +125,11 @@ public final class HaBackupProvider extends BackupExtensionService
         final AtomicReference<URI> backupUri = new AtomicReference<URI>(  );
         events.addClusterMemberListener( new ClusterMemberListener.Adapter()
         {
-            Map<URI, URI> backupUris = new HashMap<URI, URI>();
-            URI master = null;
+            Map<InstanceId, URI> backupUris = new HashMap<InstanceId, URI>();
+            InstanceId master = null;
 
             @Override
-            public void memberIsAvailable( String role, URI clusterUri, URI roleUri )
+            public void memberIsAvailable( String role, InstanceId clusterUri, URI roleUri )
             {
                 if ( OnlineBackupKernelExtension.BACKUP.equals( role ) )
                 {
@@ -136,13 +147,25 @@ public final class HaBackupProvider extends BackupExtensionService
                 }
             }
 
+            /**
+             * Called when new master has been elected. The new master may not be available a.t.m.
+             * A call to {@link #memberIsAvailable} will confirm that the master given in
+             * the most recent {@link #coordinatorIsElected(org.neo4j.cluster.InstanceId)} call is up and running as
+             * master.
+             *
+             * @param coordinatorId the connection information to the master.
+             */
+            @Override
+            public void coordinatorIsElected( InstanceId coordinatorId )
+            {
+            }
         } );
-
-        life.start();
 
         try
         {
-            if ( !infoReceivedLatch.tryAcquire( 10, TimeUnit.SECONDS ) )
+            life.start();
+
+            if ( !infoReceivedLatch.tryAcquire( 20, TimeUnit.SECONDS ) )
             {
                 throw new RuntimeException( "Could not find backup server in cluster " + clusterName + " at " + from + ", " +
                         "operation timed out" );
@@ -151,6 +174,34 @@ public final class HaBackupProvider extends BackupExtensionService
         catch ( InterruptedException e )
         {
             throw new RuntimeException( e );
+        }
+        catch ( LifecycleException e )
+        {
+            Throwable ex = Exceptions.peel( e, Exceptions.exceptionsOfType( LifecycleException.class ) );
+
+            if (ex != null && ex instanceof ClusterEntryDeniedException)
+            {
+                // Someone else is doing a backup
+                throw new RuntimeException( "Another backup client is currently performing backup; concurrent backups are not allowed" );
+            }
+
+            ex = Exceptions.peel( e, Exceptions.exceptionsOfType( TimeoutException.class ) );
+            if ( ex != null )
+            {
+                throw new RuntimeException( "Could not find backup server in cluster " + clusterName + " at " + from + ", " +
+                        "operation timed out" );
+            }
+            else
+            {
+                throw new RuntimeException(Exceptions.peel(e, new Predicate<Throwable>()
+                {
+                    @Override
+                    public boolean accept( Throwable item )
+                    {
+                        return !(item instanceof LifecycleException);
+                    }
+                }));
+            }
         }
         finally
         {

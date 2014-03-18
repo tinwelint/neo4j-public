@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -278,7 +278,15 @@ public abstract class IndexCommand extends XaCommand
             putIntOrLong( buffer, startNode );
             putIntOrLong( buffer, endNode );
         }
-        
+
+        @Override
+        public int hashCode()
+        {
+            int result = (int) (startNode ^ (startNode >>> 32));
+            result = 31 * result + (int) (endNode ^ (endNode >>> 32));
+            return result;
+        }
+
         @Override
         public boolean equals( Object obj )
         {
@@ -351,7 +359,13 @@ public abstract class IndexCommand extends XaCommand
         {
             return false;
         }
-        
+
+        @Override
+        public int hashCode()
+        {
+            return config != null ? config.hashCode() : 0;
+        }
+
         @Override
         public boolean equals( Object obj )
         {

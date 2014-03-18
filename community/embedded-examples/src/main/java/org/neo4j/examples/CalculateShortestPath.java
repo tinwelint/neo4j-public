@@ -19,6 +19,7 @@
 package org.neo4j.examples;
 
 import java.io.File;
+
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.Direction;
@@ -26,11 +27,12 @@ import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.PathExpanders;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
-import org.neo4j.kernel.Traversal;
+import org.neo4j.graphdb.traversal.Paths;
 
 public class CalculateShortestPath
 {
@@ -47,8 +49,7 @@ public class CalculateShortestPath
         graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
         indexService = graphDb.index().forNodes( "nodes" );
         registerShutdownHook();
-        Transaction tx = graphDb.beginTx();
-        try
+        try ( Transaction tx = graphDb.beginTx() )
         {
             /*
              *  (Neo) --> (Trinity)
@@ -65,20 +66,16 @@ public class CalculateShortestPath
             createChain( "Morpheus", "Agent Smith" );
             tx.success();
         }
-        finally
-        {
-            tx.finish();
-        }
 
         // So let's find the shortest path between Neo and Agent Smith
         Node neo = getOrCreateNode( "Neo" );
         Node agentSmith = getOrCreateNode( "Agent Smith" );
         // START SNIPPET: shortestPathUsage
         PathFinder<Path> finder = GraphAlgoFactory.shortestPath(
-                Traversal.expanderForTypes( KNOWS, Direction.BOTH ), 4 );
+                PathExpanders.forTypeAndDirection( KNOWS, Direction.BOTH ), 4 );
         Path foundPath = finder.findSinglePath( neo, agentSmith );
         System.out.println( "Path from Neo to Agent Smith: "
-                            + Traversal.simplePathToString( foundPath, NAME_KEY ) );
+                            + Paths.simplePathToString( foundPath, NAME_KEY ) );
         // END SNIPPET: shortestPathUsage
 
         System.out.println( "Shutting down database ..." );

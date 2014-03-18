@@ -1,9 +1,134 @@
-1.9.M05 (2013-02-12)]
+2.1.0-M01
+------------
+o Introduces utility methods for printing paths into a new class, org.neo4j.graphdb.traveral.Paths
+o Deprecates several methods in the old traversal framework (org.neo4j.kernel.Traversal) that have been replaced by
+  new utilities in the org.neo4j.graphdb.traversal library. No breaking changes made, but this flags for these features
+  being removed in the next major version, 3.0.
+o Relationship chains are now split by type and direction. Disk storage format changes, requires an upgrade.
+o Fixes an issue with tx log reading in damaged log files
+o Adds support for labels in transaction event handlers
+
+2.0.2
+-----
+o Fixes an issue with tx log reading in severely damaged log files.
+o Fixes a JVM deadlock issue between committing and a reading thread
+o Can now handle more gracefully a larger set of failed index states
+
+2.0.1
+-----
+o Improve speed of verifying unique constraints on constraint creation.
+o Improve speed of creating label scan store in BatchInserter.
+o Fixes issue with batch inserter which could lead to record not in use exception
+  when adding properties
+o Introduces monitoring for reads/writes to the logical log
+
+2.0.0-RC1
+---------
+o BREAKING CHANGE: Reference node has been removed.
+o BREAKING CHANGE: All classes under the org.neo4j.kernel package space, except
+  those related to the traversal frameworks, are now deprecated and due to be moved
+  into internal packages. This includes well-known classes such as EmbeddedGraphDatabase
+  and HighlyAvailableGraphDatabase, both of which are replaced by GraphDatabaseFactory
+  and HighlyAvailableGraphDatabaseFactory, respectively.
+o BREAKING CHANGE: Removed deprecated settings from org.neo4j.graphdb.factory.GraphDatabaseSettings. These settings are
+  no longer effective and can be removed without any effect.
+o BREAKING CHANGE: Removed deprecated org.neo4j.graphdb.index.IndexProvider (and associated
+  org.neo4j.graphdb.index.IndexIterable and org.neo4j.graphdb.index.IndexProviderKernelExtensionFactory). This has been
+  replaced by the kernel extension mechanism.
+o BREAKING CHANGE: Removed deprecated org.neo4j.graphdb.PropertyContainer#getPropertyValues(). Instead use
+  org.neo4j.graphdb.PropertyContainer#getPropertyKeys() and org.neo4j.graphdb.PropertyContainer#getProperty(String).
+o BREAKING CHANGE: Removed deprecated methods from org.neo4j.kernel.GraphDatabaseAPI: #getDiagnosticsManager(),
+  #getMessageLog(), #getIdGeneratorFactory(), #getKernelData() and #getPersistenceSource(). These are internal
+  components which Kernel clients should not need to access. The entire org.neo4j.kernel.GraphDatabaseAPI interface is
+  deprecated and will be removed in future.
+o BREAKING CHANGE: Deprecated constructors of EmbeddedReadOnlyDatabase and EmbeddedGraphDatabase have been removed,
+  in favor of the long-advertised alternative GraphDatabaseFactory.
+o BREAKING CHANGE: All deprecated methods in GraphDatabaseAPI have been removed in favor of getDependencyResolver().
+
+2.0.0-M05
+---------
+o BREAKING CHANGE: GraphDatabaseSettings now only exposes Setting, deprecated settings classes have been removed.
+o Fixed problems with array properties being updated multiple times in a single transaction
+o Adds label store as an index
+o Transaction now implements AutoClosable
+o Distinguish between data and schema transactions
+o Unique constraint validation for new data
+
+2.0.0-M04
+---------
+o BREAKING CHANGE: Requires useage of Java 7
+o BREAKING CHANGE: Transactions are now required for all operations throughout Java Core API,
+  read operations as well as write operations.
+o Defines proper equality for indexing of array properties.
+o BREAKING CHANGE: Equality for indexing of number properties compares numbers independent of underlying primitive Java type.
+
+2.0.0-M03
+---------
+o Read-only index results are closed properly
+
+2.0.0-M02
+---------
+o Support for labels in the org.neo4j.unsafe.batchinsert APIs.
+o BREAKING CHANGE: Replaced protected fields from org.neo4j.graphdb.factory.GraphDatabaseFactory with a single
+  org.neo4j.graphdb.factory.GraphDatabaseFactoryState instance to avoid race conditions when creating multiple,
+  lazily instantiated builders
+o BREAKING CHANGE: org.neo4j.graphdb.index.BatchInserterIndex and org.neo4j.graphdb.index.BatchInserterIndexProvider
+  has been removed in favor of the same interfaces available in org.neo4j.unsafe.batchinsert
+o BREAKING CHANGE: The BatchInserter and the BatchGraphDatabase are not binary compatible with 1.9 due to some methods
+  now taking a varargs array of labels as last argument.  Please recompile any code that depends on the BatchInserter.
+
+2.0.0-M01
+---------
+o Adds support for adding, listing, removing, and testing of labels
+o Adds support for creating, querying, and dropping label-based indexes
+
+1.9.5 (2013-11-11)
+------------------
+o Fixed NPE in PersistenceWindowPool when concurrently loading non-mapped windows
+o Fixed potential deadlock in PersistenceWindowPool cause by negative mark count
+o Performance optimizations for best-first selector
+o Database now waits on a timeout for transactions to finish before actually shutting
+  down, while preventing new transactions from starting up
+
+1.9.3 (2013-08-30)
+------------------
+o Remove hard dependency on Logback
+o Introduction of logical_log_rotation_threshold to control log rotation.
+o Autoconfigurator can handle cases where physical memory is less than the configured JVM heap
+o Fixes index out of bounds errors when iterating over relationships
+o Fixes race in persistent window pool which might lead to inconsistent data
+
+1.9.2 (2013-07-16)
+------------------
+o When flushing persistent windows, do so only if dirty. This is a performance improvement
+  for certain scenarios.
+o Fixes bug where loading relationship chains with high ids would cause them to be
+  ignored when iterating over them.
+
+1.9.1 (2013-06-24)
+------------------
+o Fixes bug where creating an Index with an invalid configuration would not properly clean up
+  the configuration for it.
+o Fixes race condition that occasionally would make Node.getSingleRelationship() mistakenly fail.
+o Fixes compliance for non-logback logging implementations
+o Cleanup of transactions that fail commit happens under the same lock as the commit
+
+1.9 (2013-05-13)
+----------------
+o Performance improvement on initial loading of relationship types during startup
+
+1.9.RC2 (2013-04-30)
+--------------------
+o Fixes race conditions on usage of persistence windows' byte buffers that occasionally led to buffer over/underflows.
+
+1.9.M05 (2013-03-05)
 --------------------
 o Concurrent modifications to relationship chains now do now lead to RecordNotInUse exceptions or
   cache poisoning
 o Proper tx management will now make negative transaction counts impossible
 o IndexProvider is now deprecated, replaced by KernelExtensionFactory
+o Store locks are respected from read only instances too
+o grab_file_lock configuration setting is now deprecated
 
 1.9.M04 (2013-01-17)
 --------------------

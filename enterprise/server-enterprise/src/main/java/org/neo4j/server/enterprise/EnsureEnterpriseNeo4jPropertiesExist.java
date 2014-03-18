@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 "Neo Technology,"
+ * Copyright (c) 2002-2014 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,14 +26,13 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import org.apache.commons.configuration.Configuration;
-import org.neo4j.kernel.ha.HaSettings;
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.preflight.EnsureNeo4jPropertiesExist;
 
 public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesExist
 {
     public static final String CONFIG_KEY_OLD_SERVER_ID = "ha.machine_id";
-    public static final String CONFIG_KEY_OLD_COORDINATORS = "ha.zoo_keeper_servers";
 
     public EnsureEnterpriseNeo4jPropertiesExist( Configuration config )
     {
@@ -47,13 +46,13 @@ public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesE
     protected boolean validateProperties( Properties configProperties )
     {
         String dbMode = configProperties.getProperty( Configurator.DB_MODE_KEY,
-                EnterpriseDatabase.DatabaseMode.SINGLE.name() );
+                EnterpriseNeoServer.SINGLE );
         dbMode = dbMode.toUpperCase();
-        if ( dbMode.equals( EnterpriseDatabase.DatabaseMode.SINGLE.name() ) )
+        if ( dbMode.equals( EnterpriseNeoServer.SINGLE ) )
         {
             return true;
         }
-        if ( !dbMode.equals( EnterpriseDatabase.DatabaseMode.HA.name() ) )
+        if ( !dbMode.equals( EnterpriseNeoServer.HA ) )
         {
             failureMessage = String.format( "Illegal value for %s \"%s\" in %s", Configurator.DB_MODE_KEY, dbMode,
                     Configurator.NEO_SERVER_CONFIG_FILE_KEY );
@@ -99,7 +98,7 @@ public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesE
                 String machineId = null;
                 try
                 {
-                    machineId = getSinglePropertyFromCandidates( dbTuning, HaSettings.server_id.name(),
+                    machineId = getSinglePropertyFromCandidates( dbTuning, ClusterSettings.server_id.name(),
                             CONFIG_KEY_OLD_SERVER_ID, "<not set>" );
                     if ( Integer.parseInt( machineId ) < 0 )
                     {
@@ -109,7 +108,7 @@ public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesE
                 catch ( NumberFormatException e )
                 {
                     failureMessage = String.format( "%s in %s needs to be a non-negative integer, not %s",
-                            HaSettings.server_id.name(), dbTuningFilename, machineId );
+                            ClusterSettings.server_id.name(), dbTuningFilename, machineId );
                     return false;
                 }
                 catch ( IllegalArgumentException e )
