@@ -78,7 +78,7 @@ public class InterruptSignalHandler implements SignalHandler, CtrlCHandler
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( e );
+            e.printStackTrace();
         }
     }
 }

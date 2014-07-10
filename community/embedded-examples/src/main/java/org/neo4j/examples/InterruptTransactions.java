@@ -31,16 +31,16 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.kernel.TransactionTerminatedException;
 
-public class TerminateTransactions
+public class InterruptTransactions
 {
-    private static final String DB_PATH = "target/neo4j-terminate-tx-db";
+    private static final String DB_PATH = "target/neo4j-interrupt-tx-db";
 
     public static void main(String[] args) throws IOException
     {
 
-        System.out.println( new TerminateTransactions().run() );
+        System.out.println( new InterruptTransactions().run() );
     }
 
     public String run() throws IOException
@@ -61,8 +61,7 @@ public class TerminateTransactions
             Node rootNode = graphDb.createNode();
             nodes.add( rootNode );
 
-            Terminator terminator = new Terminator(tx);
-            terminator.terminateAfter( 1000 );
+            interruptAfter( tx, 1000 );
 
             for (; true; depth++) {
                 int nodesToExpand = nodes.size();
@@ -80,7 +79,7 @@ public class TerminateTransactions
                 }
             }
         }
-        catch ( TransactionTerminatedException ignored )
+        catch (TransactionTerminatedException e)
         {
             return String.format( "Created tree up to depth %s in 1 sec", depth );
         }
@@ -93,43 +92,32 @@ public class TerminateTransactions
         }
     }
 
-    public class Terminator
+    // START SNIPPET: interruptAfter
+    private void interruptAfter(final Transaction tx, final long millis)
     {
-        private final Transaction tx;
-
-        Terminator( Transaction tx ) {
-            this.tx = tx;
-        }
-
-        public void terminateAfter( final long millis )
+        Executors.newSingleThreadExecutor().submit( new Runnable()
         {
-            Executors.newSingleThreadExecutor().submit( new Runnable()
+            @Override
+            public void run()
             {
-                @Override
-                public void run()
+                long startTime = System.currentTimeMillis();
+                do
                 {
-                    long startTime = System.currentTimeMillis();
-                    do
+                    try
                     {
-                        try
-                        {
-                            Thread.sleep( millis );
-                        }
-                        catch ( InterruptedException ignored )
-                        {
-                            // terminated while sleeping
-                        }
+                        Thread.sleep( millis );
                     }
-                    while ( (System.currentTimeMillis() - startTime) < millis );
-
-                    // START SNIPPET: terminateTx
-                    // terminate transaction
-                    tx.terminate();
-                    // END SNIPPET: terminateTx
+                    catch ( InterruptedException ignored )
+                    {
+                        // interrupted while sleeping
+                    }
                 }
-            } );
-        }
+                while ( (System.currentTimeMillis() - startTime) < millis );
+
+                // interrupt transaction
+                tx.terminate();
+            }
+        } );
     }
-
-
+    // END SNIPPET: interruptAfter
 }

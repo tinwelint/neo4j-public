@@ -33,9 +33,9 @@ public class MandatoryTransactionsForIndexManagerFacadeTests extends AbstractMan
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnIndexManagerFacade() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnIndexManagerFacade() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_INDEX_MANAGER_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_INDEX_MANAGER_FACADE_METHODS );
     }
 
     @Override

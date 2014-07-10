@@ -33,9 +33,9 @@ public class MandatoryTransactionsForGraphDatabaseServiceTests extends
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnGraphDatabaseService() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnGraphDatabaseService() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_NON_TRANSACTIONAL_GRAPH_DATABASE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_NON_TRANSACTIONAL_GRAPH_DATABASE_METHODS );
     }
 
     @Override

@@ -20,13 +20,12 @@ package org.neo4j.examples;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertFalse;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import org.neo4j.test.JavaDocsGenerator;
 import org.neo4j.visualization.asciidoc.AsciidocHelper;
-
-import static org.junit.Assert.assertFalse;
 
 public class EmbeddedNeo4jDocTest
 {

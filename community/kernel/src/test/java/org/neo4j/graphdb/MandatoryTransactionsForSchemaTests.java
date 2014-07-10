@@ -34,9 +34,9 @@ public class MandatoryTransactionsForSchemaTests extends AbstractMandatoryTransa
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnSchema() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnSchema() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_SCHEMA_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_SCHEMA_FACADE_METHODS );
     }
 
     @Override

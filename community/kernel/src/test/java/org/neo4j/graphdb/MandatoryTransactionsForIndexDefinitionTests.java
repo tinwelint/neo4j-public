@@ -35,9 +35,9 @@ public class MandatoryTransactionsForIndexDefinitionTests
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnIndexDefinitions() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnIndexDefinitions() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_INDEX_DEFINITION_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_INDEX_DEFINITION_FACADE_METHODS );
     }
 
     @Override

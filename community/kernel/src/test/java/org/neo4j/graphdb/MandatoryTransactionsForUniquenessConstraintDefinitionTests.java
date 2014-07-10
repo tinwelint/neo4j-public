@@ -34,9 +34,9 @@ public class MandatoryTransactionsForUniquenessConstraintDefinitionTests
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnUniquenessConstraintDefinitions() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnUniquenessConstraintDefinitions() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_CONSTRAINT_DEFINITION_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_CONSTRAINT_DEFINITION_FACADE_METHODS );
     }
 
 

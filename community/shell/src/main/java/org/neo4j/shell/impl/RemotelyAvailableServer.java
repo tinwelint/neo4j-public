@@ -68,7 +68,7 @@ class RemotelyAvailableServer extends UnicastRemoteObject implements ShellServer
     }
 
     @Override
-    public void terminate( Serializable clientID ) throws RemoteException
+    public void terminate( Serializable clientID ) throws ShellException, RemoteException
     {
         actual.terminate( clientID );
     }

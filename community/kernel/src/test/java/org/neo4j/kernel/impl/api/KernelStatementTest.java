@@ -21,15 +21,13 @@ package org.neo4j.kernel.impl.api;
 
 import org.junit.Test;
 
-import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.kernel.TransactionTerminatedException;
 import org.neo4j.kernel.api.labelscan.LabelScanReader;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 public class KernelStatementTest
 {
@@ -65,8 +63,8 @@ public class KernelStatementTest
         verifyNoMoreInteractions( scanReader );
     }
 
-    @Test(expected = TransactionTerminatedException.class)
-    public void shouldThrowTerminateExceptionWhenTransactionTerminated() throws Exception
+    @Test
+    public void shouldThrowInterruptExceptionWhenTransactionInterrupted() throws Exception
     {
         KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
         when( transaction.shouldBeTerminated() ).thenReturn( true );
@@ -76,6 +74,11 @@ public class KernelStatementTest
                 mock( LabelScanStore.class ), null, null, null, null, null
         );
 
-        statement.readOperations().nodeExists( 0 );
+        try {
+            statement.readOperations().nodeExists( 0 );
+            fail("Did not throw a TransactionInterruptException");
+        } catch (TransactionTerminatedException ignored) {
+            // ignore
+        }
     }
 }

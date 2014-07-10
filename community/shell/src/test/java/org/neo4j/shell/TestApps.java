@@ -988,7 +988,7 @@ public class TestApps extends AbstractShellTest
     }
 
     @Test
-    public void canTerminateAnActiveCommand() throws Exception
+    public void canInterruptAnActiveCommand() throws Exception
     {
         final ShellServer server = this.shellServer;
         final Serializable clientId = this.shellClient.getId();
@@ -1009,6 +1009,6 @@ public class TestApps extends AbstractShellTest
         });
         thread.start();
 
-        executeCommandExpectingException("CYPHER 2.1 FOREACH(i IN range(0, 10000) | CREATE ());", "has been terminated" );
+        executeCommandExpectingException("CYPHER 2.1 FOREACH(i IN range(0, 10000) | CREATE ());", "has been interrupted" );
     }
 }

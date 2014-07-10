@@ -35,9 +35,9 @@ public class MandatoryTransactionsForGlobalGraphOperations
     }
 
     @Test
-    public void shouldTerminateWhenCallingGlobalGraphOperations() throws Exception
+    public void shouldInterruptWhenCallingGlobalGraphOperations() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_GLOBAL_GRAPH_OPERATIONS_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_GLOBAL_GRAPH_OPERATIONS_FACADE_METHODS );
     }
 
     @Override

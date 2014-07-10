@@ -27,6 +27,7 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.neo4j.kernel.TransactionTerminatedException;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.junit.Assert.fail;
@@ -96,7 +97,7 @@ public class GraphDatabaseServiceTest
     }
 
     @Test
-    public void terminateTransactionThrowsExceptionOnNextOperation() throws Exception
+    public void interruptTransactionThrowsExceptionOnNextOperation() throws Exception
     {
         // Given
         final GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
@@ -107,7 +108,7 @@ public class GraphDatabaseServiceTest
             try
             {
                 db.createNode();
-                fail( "Failed to throw TransactionTerminateException" );
+                fail( "Failed to throw TransactionInterruptException" );
             }
             catch ( TransactionTerminatedException ignored )
             {
@@ -116,7 +117,7 @@ public class GraphDatabaseServiceTest
     }
 
     @Test
-    public void terminateNestedTransactionThrowsExceptionOnNextOperation() throws Exception
+    public void interruptNestedTransactionThrowsExceptionOnNextOperation() throws Exception
     {
         // Given
         final GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
@@ -130,7 +131,7 @@ public class GraphDatabaseServiceTest
             try
             {
                 db.createNode();
-                fail( "Failed to throw TransactionTerminateException" );
+                fail( "Failed to throw TransactionInterruptException" );
             }
             catch ( TransactionTerminatedException ignored )
             {
@@ -139,7 +140,7 @@ public class GraphDatabaseServiceTest
     }
 
     @Test
-    public void terminateNestedTransactionThrowsExceptionOnNextNestedOperation() throws Exception
+    public void interruptNestedTransactionThrowsExceptionOnNextNestedOperation() throws Exception
     {
         // Given
         final GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
@@ -152,7 +153,7 @@ public class GraphDatabaseServiceTest
                 try
                 {
                     db.createNode();
-                    fail( "Failed to throw TransactionTerminateException" );
+                    fail( "Failed to throw TransactionInterruptException" );
                 }
                 catch ( TransactionTerminatedException ignored )
                 {

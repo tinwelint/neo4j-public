@@ -65,11 +65,9 @@ public interface ShellServer extends Remote
 	Serializable interpretVariable( Serializable clientID, String key ) throws ShellException, RemoteException;
 
     /**
-     * Marks the client's active transaction as terminated.
-     * @param clientID identifying the client.
-     * @throws RemoteException RMI error.
+     *
      */
-    public void terminate( Serializable clientID ) throws RemoteException;
+    public void terminate( Serializable clientID ) throws ShellException, RemoteException;
 
 	/**
 	 * @param initialSession the initial session variables that the client would

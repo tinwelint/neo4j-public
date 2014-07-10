@@ -32,9 +32,9 @@ public class MandatoryTransactionsForNodeTests extends AbstractMandatoryTransact
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnNode() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnNode() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_NODE_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_NODE_FACADE_METHODS );
     }
 
     @Override

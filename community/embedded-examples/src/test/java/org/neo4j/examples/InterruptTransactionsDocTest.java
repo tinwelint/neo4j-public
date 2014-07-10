@@ -27,21 +27,21 @@ import org.neo4j.test.JavaDocsGenerator;
 
 import static org.neo4j.visualization.asciidoc.AsciidocHelper.createOutputSnippet;
 
-public class TerminateTransactionsDocTest
+public class InterruptTransactionsDocTest
 {
-    private static TerminateTransactions terminateTransactions;
-    private static JavaDocsGenerator gen = new JavaDocsGenerator( "terminate-tx-java", "dev" );
+    private static InterruptTransactions interruptTransactions;
+    private static JavaDocsGenerator gen = new JavaDocsGenerator( "interrupt-tx-java", "dev" );
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        terminateTransactions = new TerminateTransactions();
+        interruptTransactions = new InterruptTransactions();
     }
 
     @Test
     public void test() throws IOException
     {
-        String result = terminateTransactions.run();
+        String result = interruptTransactions.run();
         gen.saveToFile( "result", createOutputSnippet( result ) );
     }
 }

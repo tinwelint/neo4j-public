@@ -36,9 +36,9 @@ public class MandatoryTransactionsForConstraintDefinitionTests
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnIndexDefinitions() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnIndexDefinitions() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_CONSTRAINT_DEFINITION_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_CONSTRAINT_DEFINITION_FACADE_METHODS );
     }
 
     @Override

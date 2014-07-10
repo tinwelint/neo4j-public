@@ -33,6 +33,7 @@ import org.neo4j.kernel.impl.transaction.xaframework.TransactionMonitor;
 import org.neo4j.test.DoubleLatch;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -109,7 +110,7 @@ public class KernelTransactionImplementationTest
     }
 
     @Test
-    public void shouldRollbackOnClosingTerminatedTransaction() throws Exception
+    public void shouldRollbackOnClosingInterruptedTransaction() throws Exception
     {
         // GIVEN
         boolean exceptionReceived = false;
@@ -130,11 +131,12 @@ public class KernelTransactionImplementationTest
 
         // THEN
         verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 
     @Test
-    public void shouldRollbackOnClosingSuccessfulButTerminatedTransaction() throws Exception
+    public void shouldRollbackOnClosingSuccessfulButInterruptedTransaction() throws Exception
     {
         try ( KernelTransaction transaction = newTransaction() )
         {
@@ -145,11 +147,12 @@ public class KernelTransactionImplementationTest
 
         // THEN
         verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 
     @Test
-    public void shouldRollbackOnClosingTerminatedButSuccessfulTransaction() throws Exception
+    public void shouldRollbackOnClosingInterruptedButSuccessfulTransaction() throws Exception
     {
         // GIVEN
         boolean exceptionReceived = false;
@@ -169,6 +172,7 @@ public class KernelTransactionImplementationTest
         // THEN
         assertTrue( exceptionReceived );
         verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 
@@ -185,11 +189,12 @@ public class KernelTransactionImplementationTest
 
         // THEN
         verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 
     @Test
-    public void shouldIgnoreTerminateAfterCommit() throws Exception
+    public void shouldIgnoreInterruptAfterCommit() throws Exception
     {
         KernelTransaction transaction = newTransaction();
         transaction.success();
@@ -198,11 +203,12 @@ public class KernelTransactionImplementationTest
 
         // THEN
         verify( transactionMonitor, times( 1 ) ).transactionFinished( true );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 
     @Test
-    public void shouldIgnoreTerminateAfterRollback() throws Exception
+    public void shouldIgnoreInterruptAfterRollback() throws Exception
     {
         KernelTransaction transaction = newTransaction();
         transaction.close();
@@ -210,11 +216,42 @@ public class KernelTransactionImplementationTest
 
         // THEN
         verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 
     @Test
-    public void shouldAllowTerminateingFromADifferentThread() throws Exception
+    public void shouldThrowOnInterruptInCommit() throws Exception
+    {
+        KernelTransaction transaction = newTransaction();
+        transaction.success();
+        transaction.markForTermination();
+        try
+        {
+            transaction.close();
+            fail("Expected TransactionFailureException to be thrown");
+        }
+        catch (TransactionFailureException ignored)
+        {
+            // yay
+        }
+    }
+
+    @Test
+    public void shouldIgnoreInterruptDuringRollback() throws Exception
+    {
+        KernelTransaction transaction = newTransaction();
+        transaction.markForTermination();
+        transaction.close();
+
+        // THEN
+        verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
+        verifyNoMoreInteractions( transactionMonitor );
+    }
+
+    @Test
+    public void shouldAllowInterruptingFromADifferentThread() throws Exception
     {
         // GIVEN
         final DoubleLatch latch = new DoubleLatch( 1 );
@@ -247,6 +284,7 @@ public class KernelTransactionImplementationTest
         // THEN
         assertTrue( exceptionReceived );
         verify( transactionMonitor, times( 1 ) ).transactionFinished( false );
+        verify( transactionMonitor, times( 1 ) ).transactionTerminated();
         verifyNoMoreInteractions( transactionMonitor );
     }
 

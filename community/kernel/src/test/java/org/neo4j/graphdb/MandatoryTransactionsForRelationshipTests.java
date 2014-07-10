@@ -33,9 +33,9 @@ public class MandatoryTransactionsForRelationshipTests extends AbstractMandatory
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsOnRelationshipFacade() throws Exception
+    public void shouldInterruptWhenCallingMethodsOnRelationshipFacade() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_RELATIONSHIP_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_RELATIONSHIP_FACADE_METHODS );
     }
 
     @Override

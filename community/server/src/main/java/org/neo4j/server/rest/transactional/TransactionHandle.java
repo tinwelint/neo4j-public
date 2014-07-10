@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.cypher.CypherException;
 import org.neo4j.cypher.InvalidSemanticsException;
@@ -54,7 +55,7 @@ import org.neo4j.server.rest.web.TransactionUriScheme;
  * All of the public methods on this class are "single-shot"; once you have called one method, the handle returns itself
  * to the registry. If you want to use it again, you'll need to acquire it back from the registry to ensure exclusive use.
  */
-public class TransactionHandle
+public class TransactionHandle implements TransactionTerminationHandle
 {
     private final TransitionalPeriodTransactionMessContainer txManagerFacade;
     private final ServerExecutionEngine engine;
@@ -63,6 +64,7 @@ public class TransactionHandle
     private final StringLogger log;
     private final long id;
     private TransitionalTxManagementKernelTransaction context;
+    private AtomicBoolean terminated;
 
     public TransactionHandle( TransitionalPeriodTransactionMessContainer txManagerFacade, ServerExecutionEngine engine,
                               TransactionRegistry registry, TransactionUriScheme uriScheme, StringLogger log )
@@ -72,7 +74,8 @@ public class TransactionHandle
         this.registry = registry;
         this.uriScheme = uriScheme;
         this.log = log;
-        this.id = registry.begin();
+        this.id = registry.begin( this );
+        this.terminated = new AtomicBoolean( false );
     }
 
     public URI uri()
@@ -98,6 +101,18 @@ public class TransactionHandle
             output.errors( errors );
             output.finish();
         }
+    }
+
+    @Override
+    public boolean terminate()
+    {
+        if ( !terminated.compareAndSet( false, true ) ) {
+            return false;
+        }
+        if ( context != null ) {
+            context.interrupt();
+        }
+        return true;
     }
 
     public void commit( StatementDeserializer statements, ExecutionResultSerializer output, boolean pristine )

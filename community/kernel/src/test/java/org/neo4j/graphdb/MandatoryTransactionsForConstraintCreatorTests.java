@@ -35,9 +35,9 @@ public class MandatoryTransactionsForConstraintCreatorTests
     }
 
     @Test
-    public void shouldTerminateWhenCallingMethodsConstraintCreators() throws Exception
+    public void shouldInterruptWhenCallingMethodsConstraintCreators() throws Exception
     {
-        assertFacadeMethodsThrowAfterTerminate( ALL_CONSTRAINT_CREATOR_FACADE_METHODS );
+        assertFacadeMethodsThrowAfterInterrupt( ALL_CONSTRAINT_CREATOR_FACADE_METHODS );
     }
 
     @Override

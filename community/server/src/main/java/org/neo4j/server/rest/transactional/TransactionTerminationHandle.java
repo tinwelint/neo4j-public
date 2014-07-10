@@ -17,16 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.graphdb;
+package org.neo4j.server.rest.transactional;
 
-/**
- * Signals that the transaction within which the failed operations ran
- * has been terminated with {@link Transaction#terminate()}.
- */
-public class TransactionTerminatedException extends TransactionFailureException
+public interface TransactionTerminationHandle
 {
-    public TransactionTerminatedException()
-    {
-        super( "The transaction has been terminated." );
-    }
+    boolean terminate();
 }

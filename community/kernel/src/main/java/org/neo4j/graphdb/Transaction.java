@@ -99,7 +99,7 @@ public interface Transaction extends AutoCloseable
      * if {@link #success()} is invoked afterwards -- the transaction will still be rolled back.
      *
      * Additionally, terminating a transaction causes all subsequent operations carried out within that
-     * transaction to throw a {@link TransactionTerminatedException} in the owning thread.
+     * transaction to throw a {@link org.neo4j.kernel.TransactionTerminatedException} in the owning thread.
      *
      * Note that, unlike the other transaction operations, this method can be called from threads other than
      * the owning thread of the transaction. When this method is called from a different thread,

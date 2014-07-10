@@ -68,7 +68,7 @@ public abstract class AbstractClient implements ShellClient
         this.initialSession = initialSession;
     }
 
-    private Runnable getTerminateAction()
+    private Runnable getInterruptAction()
     {
         return new Runnable()
         {
@@ -90,7 +90,7 @@ public abstract class AbstractClient implements ShellClient
     public void grabPrompt()
     {
         init();
-        Runnable ctrlcAction = getTerminateAction();
+        Runnable ctrlcAction = getInterruptAction();
         while ( !end )
         {
             String command = readLine( getPrompt() );

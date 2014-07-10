@@ -20,7 +20,7 @@
 package org.neo4j.kernel.impl.api;
 
 import org.neo4j.graphdb.NotInTransactionException;
-import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.kernel.TransactionTerminatedException;
 import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
