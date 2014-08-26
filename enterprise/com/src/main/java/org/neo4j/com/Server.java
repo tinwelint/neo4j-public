@@ -19,10 +19,6 @@
  */
 package org.neo4j.com;
 
-import static org.neo4j.com.DechunkingChannelBuffer.assertSameProtocolVersion;
-import static org.neo4j.com.Protocol.addLengthFieldPipes;
-import static org.neo4j.com.Protocol.assertChunkSizeIsWithinFrameSize;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -54,6 +50,7 @@ import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+
 import org.neo4j.com.monitor.RequestMonitor;
 import org.neo4j.helpers.Clock;
 import org.neo4j.helpers.Exceptions;
@@ -72,6 +69,11 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.tooling.LockTracker;
+
+import static org.neo4j.com.DechunkingChannelBuffer.assertSameProtocolVersion;
+import static org.neo4j.com.Protocol.addLengthFieldPipes;
+import static org.neo4j.com.Protocol.assertChunkSizeIsWithinFrameSize;
 
 /**
  * Receives requests from {@link Client clients}. Delegates actual work to an instance
@@ -481,9 +483,10 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
             {
                 // This is the first chunk in a multi-chunk request
                 RequestType<T> type = getRequestContext( buffer.readByte() );
+                int requestId = buffer.readInt();
                 RequestContext context = readContext( buffer );
                 ChannelBuffer targetBuffer = mapSlave( channel, context );
-                partialRequest = new PartialRequest( type, context, targetBuffer );
+                partialRequest = new PartialRequest( type, context, targetBuffer, requestId );
                 partialRequests.put( channel, partialRequest );
             }
             partialRequest.add( buffer );
@@ -496,10 +499,12 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
             ChannelBuffer targetBuffer;
             ChannelBuffer bufferToReadFrom;
             ChannelBuffer bufferToWriteTo;
+            int requestId;
             if ( partialRequest == null )
             {
                 // This is the one and single chunk in the request
                 type = getRequestContext( buffer.readByte() );
+                requestId = buffer.readInt();
                 context = readContext( buffer );
                 targetBuffer = mapSlave( channel, context );
                 bufferToReadFrom = buffer;
@@ -509,6 +514,7 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
             {
                 // This is the last chunk in a multi-chunk request
                 type = partialRequest.type;
+                requestId = partialRequest.requestId;
                 context = partialRequest.context;
                 targetBuffer = partialRequest.buffer;
                 partialRequest.add( buffer );
@@ -520,7 +526,7 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
             final ChunkingChannelBuffer chunkingBuffer = new ChunkingChannelBuffer( bufferToWriteTo, channel, chunkSize,
                     getInternalProtocolVersion(), applicationProtocolVersion );
             submitSilent( targetCallExecutor, targetCaller( type, channel, context, chunkingBuffer,
-                    bufferToReadFrom ) );
+                    bufferToReadFrom, requestId ) );
         }
     }
 
@@ -548,7 +554,8 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
     }
 
     protected Runnable targetCaller( final RequestType<T> type, final Channel channel, final RequestContext context,
-                                     final ChunkingChannelBuffer targetBuffer, final ChannelBuffer bufferToReadFrom )
+                                     final ChunkingChannelBuffer targetBuffer, final ChannelBuffer bufferToReadFrom,
+                                     final int requestId )
     {
         return new Runnable()
         {
@@ -566,9 +573,11 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
                 try
                 {
                     unmapSlave( channel );
+                    LockTracker.INSTANCE.mapWorker( requestId );
                     response = type.getTargetCaller().call( requestTarget, context, bufferToReadFrom, targetBuffer );
                     type.getObjectSerializer().write( response.response(), targetBuffer );
                     writeStoreId( response.getStoreId(), targetBuffer );
+                    targetBuffer.writeInt( requestId );
                     writeTransactionStreams( response, targetBuffer, byteCounterMonitor );
                     targetBuffer.done();
                     responseWritten( type, channel, context );
@@ -731,12 +740,14 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
         final RequestContext context;
         final ChannelBuffer buffer;
         final RequestType<T> type;
+        final int requestId;
 
-        public PartialRequest( RequestType<T> type, RequestContext context, ChannelBuffer buffer )
+        public PartialRequest( RequestType<T> type, RequestContext context, ChannelBuffer buffer, int requestId )
         {
             this.type = type;
             this.context = context;
             this.buffer = buffer;
+            this.requestId = requestId;
         }
 
         public void add( ChannelBuffer buffer )

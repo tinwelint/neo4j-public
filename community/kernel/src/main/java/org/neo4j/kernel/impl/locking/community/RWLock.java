@@ -28,10 +28,13 @@ import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.impl.transaction.LockType;
 import org.neo4j.kernel.impl.util.ArrayMap;
 import org.neo4j.kernel.impl.util.StringLogger.LineLogger;
+import org.neo4j.tooling.LockTracker;
 
+import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
+import static org.neo4j.helpers.Format.time;
 import static org.neo4j.kernel.impl.transaction.LockType.READ;
 import static org.neo4j.kernel.impl.transaction.LockType.WRITE;
 
@@ -65,6 +68,7 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
 {
     private final Object resource; // the resource this RWLock locks
     private final LinkedList<WaitElement> waitingThreadList = new LinkedList<>();
+    private final LinkedList<WaitElement> waitedThreadList = new LinkedList<>();
     private final ArrayMap<Object,TxLockElement> txLockElementMap = new ArrayMap<>( (byte)5, false, true );
     private final RagManager ragManager;
 
@@ -107,12 +111,29 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
         private final LockType lockType;
         private final Thread waitingThread;
         private final long since = System.currentTimeMillis();
+        private final long created = currentTimeMillis();
+        private long interrupted;
 
         WaitElement( TxLockElement element, LockType lockType, Thread thread )
         {
             this.element = element;
             this.lockType = lockType;
             this.waitingThread = thread;
+        }
+        
+        public void interrupt( RWLock lock )
+        {
+            interrupted = currentTimeMillis();
+            waitingThread.interrupt();
+            LockTracker.INSTANCE.notifiedWaitingThread( waitingThread, lock.resource, lockType );
+        }
+        
+        @Override
+        public String toString()
+        {
+            return "[" + waitingThread + "("
+                    + element.readCount + "r," + element.writeCount + "w),"
+                    + lockType + (interrupted != 0 ? ", NOTIFIED " + time( interrupted ) : ", UNNOTIFIED " + time( created )) + "]";
         }
     }
 
@@ -253,7 +274,7 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
                     waitingThreadList.removeLast();
                     if ( !we.element.movedOn )
                     {
-                        we.waitingThread.interrupt();
+                        we.interrupt( this );
                     }
                 }
                 else
@@ -269,9 +290,10 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
                         {
                             // found a write lock with all read locks
                             listItr.remove();
+                            waitedThreadList.add( we );
                             if ( !we.element.movedOn )
                             {
-                                we.waitingThread.interrupt();
+                                we.interrupt( this );
                                 // ----
                                 break;
                             }
@@ -280,9 +302,10 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
                         {
                             // found a read lock, let it do the job...
                             listItr.remove();
+                            waitedThreadList.add( we );
                             if ( !we.element.movedOn )
                             {
-                                we.waitingThread.interrupt();
+                                we.interrupt( this );
                             }
                         }
                     }
@@ -296,9 +319,10 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
                 if ( totalWriteCount == 0 )
                 {
                     waitingThreadList.removeLast();
+                    waitedThreadList.add( we );
                     if ( !we.element.movedOn )
                     {
-                        we.waitingThread.interrupt();
+                        we.interrupt( this );
                     }
                 }
             }
@@ -433,9 +457,10 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
             do
             {
                 WaitElement we = waitingThreadList.removeLast();
+                waitedThreadList.add( we );
                 if ( !we.element.movedOn )
                 {
-                    we.waitingThread.interrupt();
+                    we.interrupt( this );
                     if ( we.lockType == LockType.WRITE )
                     {
                         break;
@@ -472,9 +497,23 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
         while ( wElements.hasNext() )
         {
             WaitElement we = wElements.next();
-            logger.logLine( "[" + we.waitingThread + "("
-                + we.element.readCount + "r," + we.element.writeCount + "w),"
-                + we.lockType + "]" );
+            logger.logLine( we.toString() );
+            if ( wElements.hasNext() )
+            {
+                logger.logLine( "," );
+            }
+            else
+            {
+                logger.logLine( "" );
+            }
+        }
+        
+        logger.logLine( "Waited list:" );
+        wElements = waitingThreadList.iterator();
+        while ( wElements.hasNext() )
+        {
+            WaitElement we = wElements.next();
+            logger.logLine( we.toString() );
             if ( wElements.hasNext() )
             {
                 logger.logLine( "," );
@@ -506,13 +545,15 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
         while ( wElements.hasNext() )
         {
             WaitElement we = wElements.next();
-            sb.append( "[" + we.waitingThread + "("
-                    + we.element.readCount + "r," + we.element.writeCount + "w),"
-                    + we.lockType + "]\n" );
-            if ( wElements.hasNext() )
-            {
-                sb.append( "," );
-            }
+            sb.append( we + "\n" );
+        }
+
+        sb.append( "Waited list:\n" );
+        wElements = waitedThreadList.iterator();
+        while ( wElements.hasNext() )
+        {
+            WaitElement we = wElements.next();
+            sb.append( we + "\n" );
         }
 
         sb.append( "Locking transactions:\n" );
@@ -528,7 +569,7 @@ class RWLock implements Visitor<LineLogger, RuntimeException>
 
     public synchronized long maxWaitTime()
     {
-        long max = 0l;
+        long max = System.currentTimeMillis();
         for ( WaitElement thread : waitingThreadList )
         {
             if ( thread.since < max )

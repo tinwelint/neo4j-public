@@ -47,6 +47,7 @@ import org.neo4j.kernel.impl.transaction.xaframework.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.xaframework.log.entry.LogEntryWriterv1;
 import org.neo4j.kernel.impl.transaction.xaframework.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.util.Cursors;
+import org.neo4j.tooling.LockTracker;
 
 /**
  * Contains the logic for serializing requests and deserializing responses. Still missing the inverse, serializing
@@ -61,7 +62,7 @@ public class Protocol
     private final int chunkSize;
     private final byte applicationProtocolVersion;
     private final byte internalProtocolVersion;
-
+    
     public Protocol( int chunkSize, byte applicationProtocolVersion, byte internalProtocolVersion )
     {
         this.chunkSize = chunkSize;
@@ -76,6 +77,9 @@ public class Protocol
         ChunkingChannelBuffer chunkingBuffer = new ChunkingChannelBuffer( buffer,
                 channel, chunkSize, internalProtocolVersion, applicationProtocolVersion );
         chunkingBuffer.writeByte( type.id() );
+        
+        buffer.writeInt( LockTracker.INSTANCE.trackClient() );
+        
         writeContext( ctx, chunkingBuffer );
         payload.write( chunkingBuffer );
         chunkingBuffer.done();
@@ -90,6 +94,7 @@ public class Protocol
 
         PAYLOAD response = payloadDeserializer.read( dechunkingBuffer, input );
         StoreId storeId = readStoreId( dechunkingBuffer, input );
+        LockTracker.INSTANCE.untrackClient( dechunkingBuffer.readInt() );
         TransactionStream transactions = new TransactionStream()
         {
             @Override

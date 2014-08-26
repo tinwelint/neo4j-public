@@ -21,6 +21,7 @@ package org.neo4j.kernel.ha.lock;
 
 import java.net.URI;
 
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.com.storecopy.TransactionCommittingResponseUnpacker;
 import org.neo4j.helpers.Factory;
 import org.neo4j.kernel.AvailabilityGuard;
@@ -32,6 +33,7 @@ import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberStateMachine;
 import org.neo4j.kernel.ha.com.RequestContextFactory;
 import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.tooling.LockTracker;
 
 public class LockManagerModeSwitcher extends AbstractModeSwitcher<Locks>
 {
@@ -59,7 +61,8 @@ public class LockManagerModeSwitcher extends AbstractModeSwitcher<Locks>
     @Override
     protected Locks getMasterImpl()
     {
-        return locksFactory.newInstance();
+        Locks locks = locksFactory.newInstance();
+        return LockTracker.INSTANCE.spyOnLockManager( locks, config.get( ClusterSettings.server_id ).toIntegerIndex() );
     }
 
     @Override
