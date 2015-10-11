@@ -144,6 +144,15 @@ public interface Log
     void error( String format, Object... arguments );
 
     /**
+     * Returns a {@link Logger} for the specified {@link Level}, like {@link #debugLogger()} for {@link Level#DEBUG},
+     * a.s.o.
+     *
+     * @param level {@link Level} of logging to get a {@link Logger} for.
+     * @return a {@link Logger} for specified {@code level}.
+     */
+    Logger logger( Level level );
+
+    /**
      * Used to temporarily log several messages in bulk. The implementation may choose to
      * disable flushing, and may also block other operations until the bulk update is completed.
      *

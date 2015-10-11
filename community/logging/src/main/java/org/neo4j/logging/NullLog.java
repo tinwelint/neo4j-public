@@ -131,6 +131,12 @@ public final class NullLog implements Log
     }
 
     @Override
+    public Logger logger( Level level )
+    {
+        return NullLogger.getInstance();
+    }
+
+    @Override
     public void bulk( Consumer<Log> consumer )
     {
         consumer.accept( this );

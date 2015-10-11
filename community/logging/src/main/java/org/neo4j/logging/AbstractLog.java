@@ -99,4 +99,17 @@ public abstract class AbstractLog implements Log
     {
         errorLogger().log( format, arguments );
     }
+
+    @Override
+    public Logger logger( Level level )
+    {
+        switch ( level )
+        {
+        case DEBUG: return debugLogger();
+        case INFO: return infoLogger();
+        case WARN: return warnLogger();
+        case ERROR: return errorLogger();
+        default: throw new IllegalArgumentException( "Unknown log level " + level );
+        }
+    }
 }
