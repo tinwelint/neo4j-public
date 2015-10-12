@@ -42,7 +42,7 @@ public class LifeSupport
     private volatile List<LifecycleInstance> instances = new ArrayList<>();
     private volatile LifecycleStatus status = LifecycleStatus.NONE;
     private final List<LifecycleListener> listeners = new ArrayList<>();
-    
+
     public LifeSupport()
     {
     }
@@ -307,6 +307,8 @@ public class LifeSupport
     {
         if ( instance instanceof Lifecycle )
         {
+            assert notAlreadyAdded( (Lifecycle) instance );
+
             LifecycleInstance newInstance = new LifecycleInstance( (Lifecycle) instance );
             List<LifecycleInstance> tmp = new ArrayList<>( instances );
             tmp.add(newInstance);
@@ -314,6 +316,18 @@ public class LifeSupport
             bringToState( newInstance );
         }
         return instance;
+    }
+
+    private boolean notAlreadyAdded( Lifecycle instance )
+    {
+        for ( LifecycleInstance candidate : instances )
+        {
+            if ( candidate.instance == instance )
+            {
+                throw new IllegalStateException( instance + " already added", candidate.addedWhere );
+            }
+        }
+        return true;
     }
 
     public synchronized boolean remove( Object instance )
@@ -463,10 +477,18 @@ public class LifeSupport
     {
         Lifecycle instance;
         LifecycleStatus currentStatus = LifecycleStatus.NONE;
+        Exception addedWhere;
 
         private LifecycleInstance( Lifecycle instance )
         {
             this.instance = instance;
+            assert trackInstantiationStackTrace();
+        }
+
+        private boolean trackInstantiationStackTrace()
+        {
+            addedWhere = new Exception();
+            return true;
         }
 
         @Override

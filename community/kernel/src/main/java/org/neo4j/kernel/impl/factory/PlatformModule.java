@@ -259,7 +259,7 @@ public class PlatformModule
         {
             throw new RuntimeException( ex );
         }
-        return life.add( logService );
+        return logService;
     }
 
     protected Neo4jJobScheduler createJobScheduler()
