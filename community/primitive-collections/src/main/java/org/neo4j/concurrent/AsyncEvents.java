@@ -24,6 +24,8 @@ import java.util.concurrent.locks.LockSupport;
 
 import org.neo4j.function.Consumer;
 
+import static java.lang.Thread.currentThread;
+
 /**
  * {@code AsyncEvents} is a mechanism for queueing up events to be processed asynchronously in a background thread.
  *
@@ -41,36 +43,34 @@ import org.neo4j.function.Consumer;
  *
  * @param <T> The type of events the {@code AsyncEvents} will process.
  */
-public class AsyncEvents<T extends AsyncEvent> implements AsyncEventSender<T>, Runnable
+public abstract class AsyncEvents<T extends AsyncEvent> implements AsyncEventSender<T>, Runnable
 {
-    // TODO use VarHandles in Java 9
-    private static AtomicReferenceFieldUpdater<AsyncEvents,AsyncEvent> updater =
-            AtomicReferenceFieldUpdater.newUpdater( AsyncEvents.class, AsyncEvent.class, "stack" );
-    private static final AsyncEvent endSentinel = new Sentinel();
-    private static final AsyncEvent shutdownSentinel = new Sentinel();
-
-    private final Consumer<T> eventConsumer;
-
-    @SuppressWarnings( {"unused", "FieldCanBeLocal"} )
-    private volatile AsyncEvent stack; // Accessed via AtomicReferenceFieldUpdater
-    private volatile Thread runner;
-    private volatile boolean shutdown;
-
     /**
      * Construct a new {@code AsyncEvents} instance, that will use the given consumer to process the events.
      *
      * @param eventConsumer The {@link Consumer} used for processing the events that are sent in.
      */
-    public AsyncEvents( Consumer<T> eventConsumer )
+    public static <T extends AsyncEvent> AsyncEvents<T> newAsyncEvents( Consumer<T> eventConsumer )
+    {
+        return new PostPadding<>( eventConsumer );
+    }
+
+    private static final AsyncEvent endSentinel = new Sentinel();
+    private static final AsyncEvent shutdownSentinel = new Sentinel();
+
+    private final Consumer<T> eventConsumer;
+    private volatile Thread runner;
+    private volatile boolean shutdown;
+
+    private AsyncEvents( Consumer<T> eventConsumer )
     {
         this.eventConsumer = eventConsumer;
-        stack = endSentinel;
     }
 
     @Override
     public void send( T event )
     {
-        AsyncEvent prev = updater.getAndSet( this, event );
+        AsyncEvent prev = getAndSet( event );
         assert prev != null;
         event.next = prev;
         if ( prev == endSentinel )
@@ -79,32 +79,30 @@ public class AsyncEvents<T extends AsyncEvent> implements AsyncEventSender<T>, R
         }
         else if ( prev == shutdownSentinel )
         {
-            AsyncEvent events = updater.getAndSet( this, shutdownSentinel );
-            process( events );
+            swapAndProcess( shutdownSentinel, eventConsumer );
         }
     }
+
+    abstract AsyncEvent getAndSet( T event );
 
     @Override
     public void run()
     {
         assert runner == null : "A thread is already running " + runner;
-        runner = Thread.currentThread();
+        runner = currentThread();
 
         try
         {
             do
             {
-                AsyncEvent events = updater.getAndSet( this, endSentinel );
-                process( events );
-                if ( stack == endSentinel && !shutdown )
+                if ( swapAndProcess( endSentinel, eventConsumer ) && !shutdown )
                 {
                     LockSupport.park( this );
                 }
             }
             while ( !shutdown );
 
-            AsyncEvent events = updater.getAndSet( this, shutdownSentinel );
-            process( events );
+            swapAndProcess( shutdownSentinel, eventConsumer );
         }
         finally
         {
@@ -112,39 +110,14 @@ public class AsyncEvents<T extends AsyncEvent> implements AsyncEventSender<T>, R
         }
     }
 
-    private void process( AsyncEvent events )
-    {
-        events = reverseAndStripEndMark( events );
-
-        while ( events != null )
-        {
-            @SuppressWarnings( "unchecked" )
-            T event = (T) events;
-            eventConsumer.accept( event );
-            events = events.next;
-        }
-
-        endSentinel.next = null;
-        shutdownSentinel.next = null;
-    }
-
-    private AsyncEvent reverseAndStripEndMark( AsyncEvent events )
-    {
-        AsyncEvent result = null;
-        while ( events != endSentinel && events != shutdownSentinel )
-        {
-            AsyncEvent tmp;
-            do
-            {
-                tmp = events.next;
-            }
-            while ( tmp == null );
-            events.next = result;
-            result = events;
-            events = tmp;
-        }
-        return result;
-    }
+    /**
+     * Sets the top event of the stack to the sentinel value, then processes the events in the stack.
+     *
+     * @param sentinel the sentinel to use as a marker in the stack.
+     * @param eventConsumer the consumer that should consume the events.
+     * @return {@code true} if the stack still holds the sentinel value after processing completes.
+     */
+    abstract boolean swapAndProcess( AsyncEvent sentinel, Consumer<T> eventConsumer );
 
     /**
      * Initiate the shut down process of this {@code AsyncEvents} instance.
@@ -171,5 +144,85 @@ public class AsyncEvents<T extends AsyncEvent> implements AsyncEventSender<T>, R
         {
             next = this;
         }
+    }
+
+    private static abstract class PrePadding<T extends AsyncEvent> extends AsyncEvents<T>
+    {
+        public long b0, b1, b2, b3, b4, b5, b6, b8;
+
+        private PrePadding( Consumer<T> eventConsumer )
+        {
+            super( eventConsumer );
+        }
+    }
+
+    private static abstract class HotPart<T extends AsyncEvent> extends PrePadding<T>
+    {
+        // TODO use VarHandles in Java 9
+        private static final AtomicReferenceFieldUpdater<HotPart,AsyncEvent> STACK =
+                AtomicReferenceFieldUpdater.newUpdater( HotPart.class, AsyncEvent.class, "stack" );
+        @SuppressWarnings( {"unused", "FieldCanBeLocal"} )
+        private volatile AsyncEvent stack; // Accessed via AtomicReferenceFieldUpdater
+
+        private HotPart( Consumer<T> eventConsumer )
+        {
+            super( eventConsumer );
+            stack = endSentinel;
+        }
+
+        @Override
+        AsyncEvent getAndSet( T event )
+        {
+            return STACK.getAndSet( this, event );
+        }
+
+        @Override
+        boolean swapAndProcess( AsyncEvent sentinel, Consumer<T> eventConsumer )
+        {
+                AsyncEvent events = STACK.getAndSet( this, sentinel );
+                process( events, eventConsumer );
+                return stack == sentinel;
+        }
+
+        private void process( AsyncEvent events, Consumer<T> eventConsumer )
+        {
+            events = reverseAndStripEndMark( events );
+
+            while ( events != null )
+            {
+                @SuppressWarnings( "unchecked" )
+                T event = (T) events;
+                eventConsumer.accept( event );
+                events = events.next;
+            }
+        }
+    }
+
+    private static class PostPadding<T extends AsyncEvent> extends HotPart<T>
+    {
+        public long a0, a1, a2, a3, a4, a5, a6, a8;
+
+        private PostPadding( Consumer<T> eventConsumer )
+        {
+            super( eventConsumer );
+        }
+    }
+
+    static AsyncEvent reverseAndStripEndMark( AsyncEvent events )
+    {
+        AsyncEvent result = null;
+        while ( events != endSentinel && events != shutdownSentinel )
+        {
+            AsyncEvent tmp;
+            do
+            {
+                tmp = events.next;
+            }
+            while ( tmp == null );
+            events.next = result;
+            result = events;
+            events = tmp;
+        }
+        return result;
     }
 }

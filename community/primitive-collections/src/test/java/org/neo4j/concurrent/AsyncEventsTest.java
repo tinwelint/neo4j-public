@@ -19,10 +19,6 @@
  */
 package org.neo4j.concurrent;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -30,11 +26,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import org.neo4j.function.Consumer;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.concurrent.AsyncEvents.newAsyncEvents;
 
 public class AsyncEventsTest
 {
@@ -79,7 +80,7 @@ public class AsyncEventsTest
     {
         EventConsumer consumer = new EventConsumer();
 
-        AsyncEvents<Event> asyncEvents = new AsyncEvents<>( consumer );
+        AsyncEvents<Event> asyncEvents = newAsyncEvents( consumer );
         executor.submit( asyncEvents );
 
         Event firstSentEvent = new Event();
@@ -101,7 +102,7 @@ public class AsyncEventsTest
     {
         EventConsumer consumer = new EventConsumer();
 
-        AsyncEvents<Event> asyncEvents = new AsyncEvents<>( consumer );
+        AsyncEvents<Event> asyncEvents = newAsyncEvents( consumer );
         executor.submit( asyncEvents );
 
         asyncEvents.send( new Event() );
@@ -117,7 +118,7 @@ public class AsyncEventsTest
     {
         EventConsumer consumer = new EventConsumer();
 
-        AsyncEvents<Event> asyncEvents = new AsyncEvents<>( consumer );
+        AsyncEvents<Event> asyncEvents = newAsyncEvents( consumer );
         executor.submit( asyncEvents );
 
         asyncEvents.send( new Event() );
@@ -142,7 +143,7 @@ public class AsyncEventsTest
         final CountDownLatch startLatch = new CountDownLatch( 1 );
         final int threads = 10;
         final int iterations = 10_000;
-        final AsyncEvents<Event> asyncEvents = new AsyncEvents<>( consumer );
+        final AsyncEvents<Event> asyncEvents = newAsyncEvents( consumer );
         executor.submit( asyncEvents );
 
         ExecutorService threadPool = Executors.newFixedThreadPool( threads );

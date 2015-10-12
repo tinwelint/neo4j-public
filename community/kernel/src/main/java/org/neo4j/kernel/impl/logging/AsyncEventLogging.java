@@ -30,6 +30,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import static org.neo4j.concurrent.AsyncEvents.newAsyncEvents;
 import static org.neo4j.kernel.impl.util.CappedOperation.differentItemClasses;
 import static org.neo4j.kernel.impl.util.CappedOperation.time;
 
@@ -60,7 +61,7 @@ class AsyncEventLogging extends LifecycleAdapter implements Consumer<AsyncLogEve
     {
         this.errorHandler = errorHandler;
         this.executor = executor;
-        this.events = new AsyncEvents<>( this );
+        this.events = newAsyncEvents( this );
     }
 
     @Override
