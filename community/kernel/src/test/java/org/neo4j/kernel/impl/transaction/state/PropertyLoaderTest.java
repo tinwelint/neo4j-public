@@ -36,6 +36,7 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
@@ -221,7 +222,7 @@ public class PropertyLoaderTest
     private static PropertyBlock newSingleIntPropertyBlock( int value )
     {
         PropertyBlock block = new PropertyBlock();
-        PropertyStore.encodeValue( block, PROP_KEY_ID, value, null, null );
+        PropertyStore.encodeValue( block, PROP_KEY_ID, value, null, null, PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE );
         block.setKeyIndexId( PROP_KEY_ID );
         return block;
     }

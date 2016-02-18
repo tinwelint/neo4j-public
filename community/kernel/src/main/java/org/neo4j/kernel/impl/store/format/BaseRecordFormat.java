@@ -73,7 +73,7 @@ public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implem
     }
 
     @Override
-    public boolean isInUse( PageCursor cursor )
+    public boolean isInUse( PageCursor cursor, int recordSize )
     {
         return isInUse( cursor.getByte( cursor.getOffset() ) );
     }

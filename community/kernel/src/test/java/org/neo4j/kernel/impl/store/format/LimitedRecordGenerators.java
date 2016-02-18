@@ -37,6 +37,7 @@ import static java.lang.Math.abs;
 class LimitedRecordGenerators implements RecordGenerators
 {
     static final long NULL = -1;
+    static final float DEFAULT_NULL_FRACTION = 0.2f;
 
     private final RandomRule random;
     private final int entityBits;
@@ -45,15 +46,10 @@ class LimitedRecordGenerators implements RecordGenerators
     private final int tokenBits;
     private final long nullValue;
     private final float fractionNullValues;
+    private final int propertyPayloadSize;
 
     public LimitedRecordGenerators( RandomRule random, int entityBits, int propertyBits, int nodeLabelBits,
-            int tokenBits, long nullValue )
-    {
-        this( random, entityBits, propertyBits, nodeLabelBits, tokenBits, nullValue, 0.2f );
-    }
-
-    public LimitedRecordGenerators( RandomRule random, int entityBits, int propertyBits, int nodeLabelBits,
-            int tokenBits, long nullValue, float fractionNullValues )
+            int tokenBits, long nullValue, float fractionNullValues, int propertyPayloadSize )
     {
         this.random = random;
         this.entityBits = entityBits;
@@ -62,6 +58,7 @@ class LimitedRecordGenerators implements RecordGenerators
         this.tokenBits = tokenBits;
         this.nullValue = nullValue;
         this.fractionNullValues = fractionNullValues;
+        this.propertyPayloadSize = propertyPayloadSize;
     }
 
     @Override
@@ -117,7 +114,7 @@ class LimitedRecordGenerators implements RecordGenerators
                 // Dynamic records will not be written and read by the property record format,
                 // that happens in the store where it delegates to a "sub" store.
                 PropertyStore.encodeValue( block, random.nextInt( tokenBits ), random.propertyValue(),
-                        stringAllocator, arrayAllocator );
+                        stringAllocator, arrayAllocator, propertyPayloadSize );
                 int tentativeBlocksWithThisOne = blocksOccupied + block.getValueBlocks().length;
                 if ( tentativeBlocksWithThisOne <= 4 )
                 {

@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
-import org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 
 /**
@@ -294,9 +293,6 @@ public enum PropertyType
 
     private final int type;
 
-    // TODO In wait of a better place
-    private static int payloadSize = PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE;
-
     PropertyType( int type )
     {
         this.type = type;
@@ -366,28 +362,6 @@ public enum PropertyType
             throw new InvalidRecordException( "Unknown property type for type "
                                               + type );
         }
-    }
-
-    // TODO In wait of a better place
-    public static int getPayloadSize()
-    {
-        return payloadSize;
-    }
-
-    // TODO In wait of a better place
-    public static int getPayloadSizeLongs()
-    {
-        return payloadSize >>> 3;
-    }
-
-    // TODO In wait of a better place
-    public static void setPayloadSize( int newPayloadSize )
-    {
-        if ( newPayloadSize%8 != 0 )
-        {
-            throw new RuntimeException( "Payload must be divisible by 8" );
-        }
-        payloadSize = newPayloadSize;
     }
 
     public int calculateNumberOfBlocksUsed( long firstBlock )

@@ -140,9 +140,9 @@ public class PrepareTrackingRecordFormats implements RecordFormats
         }
 
         @Override
-        public boolean isInUse( PageCursor cursor )
+        public boolean isInUse( PageCursor cursor, int recordSize )
         {
-            return actual.isInUse( cursor );
+            return actual.isInUse( cursor, recordSize );
         }
 
         @Override

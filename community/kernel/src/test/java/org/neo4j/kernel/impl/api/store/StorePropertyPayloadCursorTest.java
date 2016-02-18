@@ -39,6 +39,7 @@ import org.neo4j.kernel.impl.store.DynamicStringStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.RecordCursor;
+import org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
@@ -55,6 +56,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.api.store.StorePropertyPayloadCursorTest.Param.param;
 import static org.neo4j.kernel.impl.api.store.StorePropertyPayloadCursorTest.Param.paramArg;
 import static org.neo4j.kernel.impl.api.store.StorePropertyPayloadCursorTest.Params.params;
+import static org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE;
 import static org.neo4j.test.Assert.assertObjectOrArrayEquals;
 
 @RunWith( Enclosed.class )
@@ -468,14 +470,14 @@ public class StorePropertyPayloadCursorTest
     {
         RecordAllocator stringAllocator = new RecordAllocator();
         RecordAllocator arrayAllocator = new RecordAllocator();
-        long[] blocks = new long[PropertyType.getPayloadSizeLongs()];
+        long[] blocks = new long[PropertyRecordFormat.NUMBER_OF_BLOCKS];
         int cursor = 0;
         for ( int i = 0; i < values.length; i++ )
         {
             Object value = values[i];
 
             PropertyBlock block = new PropertyBlock();
-            PropertyStore.encodeValue( block, i, value, stringAllocator, arrayAllocator );
+            PropertyStore.encodeValue( block, i, value, stringAllocator, arrayAllocator, DEFAULT_PAYLOAD_SIZE );
             long[] valueBlocks = block.getValueBlocks();
             System.arraycopy( valueBlocks, 0, blocks, cursor, valueBlocks.length );
             cursor += valueBlocks.length;

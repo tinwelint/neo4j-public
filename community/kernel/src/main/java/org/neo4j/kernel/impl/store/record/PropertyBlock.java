@@ -136,9 +136,9 @@ public class PropertyBlock implements Cloneable
 
     public void setValueBlocks( long[] blocks )
     {
-        int expectedPayloadSize = PropertyType.getPayloadSizeLongs();
-        assert ( blocks == null || blocks.length <= expectedPayloadSize) : (
-                "I was given an array of size " + blocks.length +", but I wanted it to be " + expectedPayloadSize );
+//        int expectedPayloadSize = PropertyType.getPayloadSizeLongs();
+//        assert ( blocks == null || blocks.length <= expectedPayloadSize) : (
+//                "I was given an array of size " + blocks.length +", but I wanted it to be " + expectedPayloadSize );
         this.valueBlocks = blocks;
         if ( valueRecords != null )
         {

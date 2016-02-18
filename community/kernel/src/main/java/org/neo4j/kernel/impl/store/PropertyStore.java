@@ -104,6 +104,11 @@ public class PropertyStore extends ComposableRecordStore<PropertyRecord,NoStoreH
         return propertyKeyTokenStore;
     }
 
+    public int getMaxBlocksPerRecord()
+    {
+        return getRecordDataSize() / PropertyRecord.PROPERTY_BLOCK_SIZE;
+    }
+
     @Override
     public void updateRecord( PropertyRecord record )
     {
@@ -218,16 +223,16 @@ public class PropertyStore extends ComposableRecordStore<PropertyRecord,NoStoreH
 
     public void encodeValue( PropertyBlock block, int keyId, Object value )
     {
-        encodeValue( block, keyId, value, stringStore, arrayStore );
+        encodeValue( block, keyId, value, stringStore, arrayStore, getRecordDataSize() );
     }
 
     public static void encodeValue( PropertyBlock block, int keyId, Object value,
-            DynamicRecordAllocator stringAllocator, DynamicRecordAllocator arrayAllocator )
+            DynamicRecordAllocator stringAllocator, DynamicRecordAllocator arrayAllocator, int payloadSize )
     {
         if ( value instanceof String )
         {   // Try short string first, i.e. inlined in the property block
             String string = (String) value;
-            if ( LongerShortString.encode( keyId, string, block, PropertyType.getPayloadSize() ) )
+            if ( LongerShortString.encode( keyId, string, block, payloadSize ) )
             {
                 return;
             }
@@ -287,7 +292,7 @@ public class PropertyStore extends ComposableRecordStore<PropertyRecord,NoStoreH
         }
         else if ( value.getClass().isArray() )
         {   // Try short array first, i.e. inlined in the property block
-            if ( ShortArray.encode( keyId, value, block, PropertyType.getPayloadSize() ) )
+            if ( ShortArray.encode( keyId, value, block, payloadSize ) )
             {
                 return;
             }
@@ -355,7 +360,7 @@ public class PropertyStore extends ComposableRecordStore<PropertyRecord,NoStoreH
     @Override
     public String toString()
     {
-        return super.toString() + "[blocksPerRecord:" + PropertyType.getPayloadSizeLongs() + "]";
+        return super.toString() + "[blocksPerRecord:" + getMaxBlocksPerRecord() + "]";
     }
 
     public Collection<PropertyRecord> getPropertyRecordChain( long firstRecordId )

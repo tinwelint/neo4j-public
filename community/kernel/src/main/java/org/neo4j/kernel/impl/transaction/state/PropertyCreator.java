@@ -23,7 +23,6 @@ import java.util.Iterator;
 
 import org.neo4j.kernel.impl.store.DynamicRecordAllocator;
 import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.id.IdSequence;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
@@ -38,19 +37,22 @@ public class PropertyCreator
     private final DynamicRecordAllocator arrayRecordAllocator;
     private final IdSequence propertyRecordIdGenerator;
     private final PropertyTraverser traverser;
+    private final int payloadSize;
 
     public PropertyCreator( PropertyStore propertyStore, PropertyTraverser traverser )
     {
-        this( propertyStore.getStringStore(), propertyStore.getArrayStore(), propertyStore, traverser );
+        this( propertyStore.getStringStore(), propertyStore.getArrayStore(), propertyStore, traverser,
+                propertyStore.getRecordDataSize() );
     }
 
     public PropertyCreator( DynamicRecordAllocator stringRecordAllocator, DynamicRecordAllocator arrayRecordAllocator,
-            IdSequence propertyRecordIdGenerator, PropertyTraverser traverser )
+            IdSequence propertyRecordIdGenerator, PropertyTraverser traverser, int payloadSize )
     {
         this.stringRecordAllocator = stringRecordAllocator;
         this.arrayRecordAllocator = arrayRecordAllocator;
         this.propertyRecordIdGenerator = propertyRecordIdGenerator;
         this.traverser = traverser;
+        this.payloadSize = payloadSize;
     }
 
     public <P extends PrimitiveRecord> void primitiveChangeProperty(
@@ -84,7 +86,7 @@ public class PropertyCreator
             propertyRecord.addDeletedRecord( record );
         }
         encodeValue( block, propertyKey, value );
-        if ( propertyRecord.size() > PropertyType.getPayloadSize() )
+        if ( propertyRecord.size() > payloadSize )
         {
             propertyRecord.removePropertyBlock( propertyKey );
             /*
@@ -109,7 +111,7 @@ public class PropertyCreator
 
     public PropertyBlock encodeValue( PropertyBlock block, int propertyKey, Object value )
     {
-        PropertyStore.encodeValue( block, propertyKey, value, stringRecordAllocator, arrayRecordAllocator );
+        PropertyStore.encodeValue( block, propertyKey, value, stringRecordAllocator, arrayRecordAllocator, payloadSize );
         return block;
     }
 
@@ -145,7 +147,7 @@ public class PropertyCreator
             assert propRecord.inUse() : propRecord;
             int propSize = propRecord.size();
             assert propSize > 0 : propRecord;
-            if ( propSize + newBlockSizeInBytes <= PropertyType.getPayloadSize() )
+            if ( propSize + newBlockSizeInBytes <= payloadSize )
             {
                 propRecord = change.forChangingData();
                 host = propRecord;
@@ -192,7 +194,7 @@ public class PropertyCreator
         while ( properties.hasNext() )
         {
             PropertyBlock block = properties.next();
-            if ( currentRecord.size() + block.getSize() > PropertyType.getPayloadSize() )
+            if ( currentRecord.size() + block.getSize() > payloadSize )
             {
                 // Here it means the current block is done for
                 PropertyRecord prevRecord = currentRecord;

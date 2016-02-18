@@ -115,7 +115,7 @@ public class ComposableRecordStore<RECORD extends AbstractBaseRecord, HEADER ext
     @Override
     protected boolean isInUse( PageCursor cursor )
     {
-        return recordFormat.isInUse( cursor );
+        return recordFormat.isInUse( cursor, recordSize );
     }
 
     @Override

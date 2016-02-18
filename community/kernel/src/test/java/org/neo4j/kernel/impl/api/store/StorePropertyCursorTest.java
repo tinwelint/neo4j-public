@@ -49,7 +49,6 @@ import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.logging.LogProvider;
@@ -182,6 +181,8 @@ public class StorePropertyCursorTest
                          "euismod nulla mollis id. ", "Lorem ipsum... ad infinitum..." ),
                     PropertyType.STRING}
     );
+
+    private static final int PAYLOAD_SIZE = 4 * PropertyRecord.PROPERTY_BLOCK_SIZE;
 
     /**
      * This is a work-around for a problem in Eclipse where a toString of a Parameter containing newline
@@ -556,7 +557,7 @@ public class StorePropertyCursorTest
         DynamicRecordAllocator arrayAllocator = store.getArrayStore();
 
         PropertyBlock block = new PropertyBlock();
-        PropertyStore.encodeValue( block, keyId, value, stringAllocator, arrayAllocator );
+        PropertyStore.encodeValue( block, keyId, value, stringAllocator, arrayAllocator, PAYLOAD_SIZE );
 
 
         PropertyRecord record = new PropertyRecord( recordId );
@@ -572,13 +573,13 @@ public class StorePropertyCursorTest
         DynamicRecordAllocator arrayAllocator = store.getArrayStore();
 
         PropertyBlock block1 = new PropertyBlock();
-        PropertyStore.encodeValue( block1, keyId1, value1, stringAllocator, arrayAllocator );
+        PropertyStore.encodeValue( block1, keyId1, value1, stringAllocator, arrayAllocator, PAYLOAD_SIZE );
         PropertyBlock block2 = new PropertyBlock();
-        PropertyStore.encodeValue( block2, keyId2, value2, stringAllocator, arrayAllocator );
+        PropertyStore.encodeValue( block2, keyId2, value2, stringAllocator, arrayAllocator, PAYLOAD_SIZE );
 
         PropertyRecord record = new PropertyRecord( recordId );
         record.addPropertyBlock( block1 );
-        if ( block1.getSize() + block2.getSize() <= PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE )
+        if ( block1.getSize() + block2.getSize() <= PAYLOAD_SIZE )
         {
             record.addPropertyBlock( block2 );
         }

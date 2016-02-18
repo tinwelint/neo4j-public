@@ -687,7 +687,7 @@ public enum ShortArray
             return false;
         }
         final int numberOfBytes = calculateNumberOfBlocksUsed( arrayLength, requiredBits ) * 8;
-        if ( Bits.requiredLongs( numberOfBytes ) > PropertyType.getPayloadSizeLongs() )
+        if ( Bits.requiredLongs( numberOfBytes ) > (payloadSizeInBytes / Long.BYTES) )
         {
             return false;
         }

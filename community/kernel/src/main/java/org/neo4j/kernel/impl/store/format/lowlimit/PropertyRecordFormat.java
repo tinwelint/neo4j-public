@@ -28,15 +28,18 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
+import static org.neo4j.kernel.impl.store.record.PropertyRecord.PROPERTY_BLOCK_SIZE;
+
 public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
 {
     public static final int DEFAULT_DATA_BLOCK_SIZE = 120;
-    public static final int DEFAULT_PAYLOAD_SIZE = 32;
+    public static final int NUMBER_OF_BLOCKS = 4;
+    public static final int DEFAULT_PAYLOAD_SIZE = NUMBER_OF_BLOCKS * PROPERTY_BLOCK_SIZE;
 
     public static final int RECORD_SIZE = 1/*next and prev high bits*/
             + 4/*next*/
             + 4/*prev*/
-            + DEFAULT_PAYLOAD_SIZE /*property blocks*/;
+            + (NUMBER_OF_BLOCKS * PROPERTY_BLOCK_SIZE) /*property blocks*/;
          // = 41
 
     public PropertyRecordFormat()
@@ -48,6 +51,12 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
     public PropertyRecord newRecord()
     {
         return new PropertyRecord( -1 );
+    }
+
+    @Override
+    public int getRecordHeaderSize()
+    {
+        return 1 + 4 + 4;
     }
 
     @Override
@@ -92,6 +101,7 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
         if ( record.inUse() )
         {
             // Set up the record header
+            int startOffset = cursor.getOffset();
             short prevModifier = record.getPrevProp() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0
                     : (short) ((record.getPrevProp() & 0xF00000000L) >> 28);
             short nextModifier = record.getNextProp() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0
@@ -106,6 +116,7 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
 
             // Then go through the blocks
             int longsAppended = 0; // For marking the end of blocks
+            int maxBlocks = (recordSize - (cursor.getOffset() - startOffset)) / PROPERTY_BLOCK_SIZE;
             for ( PropertyBlock block : record )
             {
                 long[] propBlockValues = block.getValueBlocks();
@@ -116,7 +127,7 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
 
                 longsAppended += propBlockValues.length;
             }
-            if ( longsAppended < PropertyType.getPayloadSizeLongs() )
+            if ( longsAppended < maxBlocks )
             {
                 cursor.putLong( 0 );
             }
@@ -140,10 +151,10 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
      * see if there are any PropertyBlocks in use in it.
      */
     @Override
-    public boolean isInUse( PageCursor cursor )
+    public boolean isInUse( PageCursor cursor, int recordSize )
     {
         cursor.setOffset( cursor.getOffset() /*skip...*/ + 1/*mod*/ + 4/*prev*/ + 4/*next*/ );
-        int blocks = PropertyType.getPayloadSizeLongs();
+        int blocks = (recordSize - 9) / 8;
         for ( int i = 0; i < blocks; i++ )
         {
             long block = cursor.getLong();

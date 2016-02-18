@@ -40,6 +40,8 @@ import static org.neo4j.kernel.impl.store.record.Record.NO_PREVIOUS_PROPERTY;
  */
 public class PropertyRecord extends AbstractBaseRecord implements Iterable<PropertyBlock>, Iterator<PropertyBlock>
 {
+    public static final int PROPERTY_BLOCK_SIZE = 8;
+
     private static final byte TYPE_NODE = 1;
     private static final byte TYPE_REL = 2;
 
@@ -52,13 +54,13 @@ public class PropertyRecord extends AbstractBaseRecord implements Iterable<Prope
     // by ensureBlocksLoaded().
     // Modifications to a property record are still done on the PropertyBlock abstraction and so it's also
     // that data that gets written to the log and record when it's time to do so.
-    private final long[] blocks = new long[PropertyType.getPayloadSizeLongs()];
+    private final long[] blocks = new long[10];
     private int blocksCursor;
 
     // These MUST ONLY be populated if we're accessing PropertyBlocks. On just loading this record only the
     // next/prev and blocks should be filled.
     private final PropertyBlock[] blockRecords =
-            new PropertyBlock[PropertyType.getPayloadSizeLongs() /*we can have at most these many*/];
+            new PropertyBlock[10 /*we can have at most these many*/];
     private boolean blocksLoaded;
     private int blockRecordsCursor;
     private long entityId;
@@ -224,10 +226,10 @@ public class PropertyRecord extends AbstractBaseRecord implements Iterable<Prope
     public void addPropertyBlock( PropertyBlock block )
     {
         ensureBlocksLoaded();
-        assert size() + block.getSize() <= PropertyType.getPayloadSize() :
-                "Exceeded capacity of property record " + this
-                + ". My current size is reported as " + size() + "The added block was " + block +
-                " (note that size is " + block.getSize() + ")";
+//        assert size() + block.getSize() <= PropertyType.getPayloadSize() :
+//                "Exceeded capacity of property record " + this
+//                + ". My current size is reported as " + size() + "The added block was " + block +
+//                " (note that size is " + block.getSize() + ")";
 
         blockRecords[blockRecordsCursor++] = block;
     }

@@ -23,10 +23,13 @@ import org.neo4j.kernel.impl.store.format.LimitedRecordGenerators;
 import org.neo4j.kernel.impl.store.format.RecordFormatTest;
 import org.neo4j.kernel.impl.store.format.RecordGenerators;
 import org.neo4j.kernel.impl.store.format.lowlimit.LowLimit;
+import static org.neo4j.kernel.impl.store.format.LimitedRecordGenerators.DEFAULT_NULL_FRACTION;
+import static org.neo4j.kernel.impl.store.record.PropertyRecord.PROPERTY_BLOCK_SIZE;
 
 public class LowLimitRecordFormatTest extends RecordFormatTest
 {
-    private static final RecordGenerators LOW_LIMITS = new LimitedRecordGenerators( random, 35, 36, 40, 16, NULL );
+    private static final RecordGenerators LOW_LIMITS =
+            new LimitedRecordGenerators( random, 35, 36, 40, 16, NULL, DEFAULT_NULL_FRACTION, 4 * PROPERTY_BLOCK_SIZE );
 
     public LowLimitRecordFormatTest()
     {

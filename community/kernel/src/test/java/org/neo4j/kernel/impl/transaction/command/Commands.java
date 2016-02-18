@@ -57,6 +57,8 @@ import org.neo4j.storageengine.api.schema.SchemaRule;
 
 import static java.util.Arrays.asList;
 
+import static org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE;
+
 public class Commands
 {
     public static NodeCommand createNode( long id, long... dynamicLabelRecordIds )
@@ -161,7 +163,7 @@ public class Commands
         PropertyBlock block = new PropertyBlock();
         if ( valueRecordIds.length == 0 )
         {
-            PropertyStore.encodeValue( block, key, 123 /*value*/, null, null );
+            PropertyStore.encodeValue( block, key, 123 /*value*/, null, null, DEFAULT_PAYLOAD_SIZE );
         }
         else
         {

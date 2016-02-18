@@ -23,6 +23,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import static org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE;
+
 import java.lang.reflect.Array;
 
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
@@ -31,8 +33,6 @@ import org.junit.Test;
 
 public class TestShortArray
 {
-    private static final int DEFAULT_PAYLOAD_SIZE = PropertyType.getPayloadSize();
-
     @Test
     public void canEncodeSomeSampleArraysWithDefaultPayloadSize() throws Exception
     {
@@ -64,7 +64,7 @@ public class TestShortArray
     public void canEncodeBiggerArraysWithBiggerPayloadSize() throws Exception
     {
         int[] intArray = intArray( 10, 2600 );
-        assertCanEncodeAndDecodeToSameValue( intArray, 32 );
+        assertCanEncodeAndDecodeToSameValue( intArray, DEFAULT_PAYLOAD_SIZE );
     }
 
     private void assertCanNotEncode( Object intArray )
@@ -90,7 +90,7 @@ public class TestShortArray
 
     private void assertCanEncodeAndDecodeToSameValue( Object value )
     {
-        assertCanEncodeAndDecodeToSameValue( value, PropertyType.getPayloadSize() );
+        assertCanEncodeAndDecodeToSameValue( value, DEFAULT_PAYLOAD_SIZE );
     }
 
     private void assertCanEncodeAndDecodeToSameValue( Object value, int payloadSize )

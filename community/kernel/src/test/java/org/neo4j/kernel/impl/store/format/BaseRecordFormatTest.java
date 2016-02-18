@@ -45,7 +45,7 @@ public class BaseRecordFormatTest
             cursor.putByte( cursor.getOffset(), inUseByte );
 
             // THEN
-            assertEquals( shouldBeInUse( inUseByte ), format.isInUse( cursor ) );
+            assertEquals( shouldBeInUse( inUseByte ), format.isInUse( cursor, 128 ) );
             inUseByte <<= 1;
             inUseByte |= 1;
         }

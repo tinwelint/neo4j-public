@@ -46,6 +46,7 @@ public class PropertyEncoderStep<RECORD extends PrimitiveRecord,INPUT extends In
     private final int arrayDataSize;
     private final int stringDataSize;
     private final MovingAverage averageBlocksPerBatch;
+    private final int payloadSize;
 
     protected PropertyEncoderStep( StageControl control, Configuration config,
             BatchingPropertyKeyTokenRepository propertyKeyHolder, PropertyStore propertyStore )
@@ -55,6 +56,7 @@ public class PropertyEncoderStep<RECORD extends PrimitiveRecord,INPUT extends In
         this.arrayDataSize = propertyStore.getArrayStore().getRecordDataSize();
         this.stringDataSize = propertyStore.getStringStore().getRecordDataSize();
         this.averageBlocksPerBatch = new MovingAverage( config.movingAverageSize() );
+        this.payloadSize = propertyStore.getRecordDataSize();
     }
 
     @Override
@@ -62,7 +64,7 @@ public class PropertyEncoderStep<RECORD extends PrimitiveRecord,INPUT extends In
     {
         RelativeIdRecordAllocator stringAllocator = new RelativeIdRecordAllocator( stringDataSize );
         RelativeIdRecordAllocator arrayAllocator = new RelativeIdRecordAllocator( arrayDataSize );
-        PropertyCreator propertyCreator = new PropertyCreator( stringAllocator, arrayAllocator, null, null );
+        PropertyCreator propertyCreator = new PropertyCreator( stringAllocator, arrayAllocator, null, null, payloadSize );
 
         int blockCountGuess = (int) averageBlocksPerBatch.average();
         PropertyBlock[] propertyBlocks = new PropertyBlock[blockCountGuess == 0

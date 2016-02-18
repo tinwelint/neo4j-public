@@ -20,11 +20,15 @@
 package org.neo4j.kernel.impl.store.format;
 
 import org.neo4j.kernel.impl.store.format.aligned.EnterpriseAligned;
+import static org.neo4j.kernel.impl.store.format.LimitedRecordGenerators.DEFAULT_NULL_FRACTION;
+import static org.neo4j.kernel.impl.store.record.PropertyRecord.PROPERTY_BLOCK_SIZE;
 
 public class EnterpriseAlignedRecordFormatTest extends RecordFormatTest
 {
-    protected static final RecordGenerators _58_BIT_LIMITS = new LimitedRecordGenerators( random, 58, 58, 58, 16, NULL );
-    protected static final RecordGenerators _50_BIT_LIMITS = new LimitedRecordGenerators( random, 50, 50, 50, 16, NULL );
+    protected static final RecordGenerators _58_BIT_LIMITS =
+            new LimitedRecordGenerators( random, 58, 58, 58, 16, NULL, DEFAULT_NULL_FRACTION, 4 * PROPERTY_BLOCK_SIZE );
+    protected static final RecordGenerators _50_BIT_LIMITS =
+            new LimitedRecordGenerators( random, 50, 50, 50, 16, NULL, DEFAULT_NULL_FRACTION, 4 * PROPERTY_BLOCK_SIZE );
 
     public EnterpriseAlignedRecordFormatTest()
     {

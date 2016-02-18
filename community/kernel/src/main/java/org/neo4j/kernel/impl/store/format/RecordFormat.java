@@ -73,7 +73,7 @@ public interface RecordFormat<RECORD extends AbstractBaseRecord>
      * in use status of.
      * @return whether or not the record at where the {@code cursor} is placed is in use.
      */
-    boolean isInUse( PageCursor cursor );
+    boolean isInUse( PageCursor cursor, int recordSize );
 
     /**
      * Reads data from {@code cursor} of the format specified by this implementation into {@code record}.

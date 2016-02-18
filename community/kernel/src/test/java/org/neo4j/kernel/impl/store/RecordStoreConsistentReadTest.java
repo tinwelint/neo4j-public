@@ -34,6 +34,7 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.UTF8;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.impl.store.format.lowlimit.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
@@ -451,7 +452,7 @@ public abstract class RecordStoreConsistentReadTest<R extends AbstractBaseRecord
                 }
             };
             String value = "a string too large to fit in the property block itself";
-            PropertyStore.encodeValue( block, 6, value, stringAllocator, null );
+            PropertyStore.encodeValue( block, 6, value, stringAllocator, null, PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE );
             if ( light )
             {
                 block.getValueRecords().clear();

@@ -572,8 +572,7 @@ public enum LongerShortString
      * E-  à  á  â  ã  ä  å  æ  ç    è  é  ê  ë  ì  í  î  ï
      * F-  ð  ñ  ò  ó  ô  õ  ö       ø  ù  ú  û  ü  ý  þ  ÿ
      */
-    public static boolean encode( int keyId, String string,
-                                  PropertyBlock target, int payloadSize )
+    public static boolean encode( int keyId, String string, PropertyBlock target, int payloadSize )
     {
         // NUMERICAL can carry most characters, so compare to that
         int dataLength = string.length();
@@ -599,10 +598,10 @@ public enum LongerShortString
         return encodeWithCharSet( keyId, string, target, payloadSize, dataLength );
     }
 
-    private static boolean encodeWithCharSet(int keyId, String string, PropertyBlock target, int payloadSize, int stringLength)
+    private static boolean encodeWithCharSet(int keyId, String string, PropertyBlock target, int payloadSize,
+            int stringLength )
     {
-        int maxBytes = PropertyType.getPayloadSize();
-        if ( stringLength <= maxBytes - 5 )
+        if ( stringLength <= payloadSize - 5 )
         {
             if ( encodeLatin1( keyId, string, target ) ) return true;
             if ( encodeUTF8( keyId, string, target, payloadSize ) ) return true;
