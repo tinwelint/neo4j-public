@@ -22,6 +22,8 @@ package org.neo4j.unsafe.impl.batchimport.cache;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 
 import org.junit.After;
 import org.junit.Test;
@@ -31,7 +33,11 @@ import org.junit.runners.Parameterized.Parameters;
 
 import static java.lang.System.currentTimeMillis;
 
+import org.neo4j.test.Race;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 @RunWith( Parameterized.class )
 public class LongArrayTest
@@ -83,6 +89,49 @@ public class LongArrayTest
 
         // THEN should also work
         array.close();
+    }
+
+    @Test
+    public void shouldDoCompareAndSwapSingleThreaded() throws Exception
+    {
+        // GIVEN
+        int index = 42;
+        long initialValue = 5;
+        LongArray array = newArray( 100, 0 );
+        array.set( index, initialValue );
+
+        // WHEN/THEN
+        assertFalse( array.cas( index, initialValue + 1, initialValue - 1  ) );
+        assertEquals( initialValue, array.get( index ) );
+        assertTrue( array.cas( index, initialValue, initialValue - 1  ) );
+        assertEquals( initialValue - 1, array.get( index ) );
+    }
+
+    @Test
+    public void shouldDoCopareAndSwapMultiThreaded() throws Throwable
+    {
+        // GIVEN
+        int index = 42;
+        LongArray array = newArray( 100, 0 );
+        int contestants = 100;
+        Race race = new Race( true );
+        for ( int i = 0; i < contestants; i++ )
+        {
+            int myValue = i;
+            race.addContestant( () ->
+            {
+                while ( !array.cas( index, myValue, myValue+1 ) )
+                {
+                    LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( 10 ) );
+                }
+            } );
+        }
+
+        // WHEN
+        race.go();
+
+        // THEN
+        assertEquals( contestants, array.get( index ) );
     }
 
     private void swap( long[] expected, int fromIndex, int toIndex, int items )

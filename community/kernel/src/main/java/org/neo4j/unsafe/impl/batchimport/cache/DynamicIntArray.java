@@ -49,6 +49,12 @@ public class DynamicIntArray extends DynamicNumberArray<IntArray> implements Int
     }
 
     @Override
+    public boolean cas( long index, int expectedValue, int value )
+    {
+        return at( index ).cas( index, expectedValue, value );
+    }
+
+    @Override
     public void swap( long fromIndex, long toIndex, int numberOfEntries )
     {
         // Let's just do this the stupid way. There's room for optimization here

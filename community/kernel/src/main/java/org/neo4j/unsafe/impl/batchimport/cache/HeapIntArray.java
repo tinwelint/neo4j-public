@@ -21,11 +21,18 @@ package org.neo4j.unsafe.impl.batchimport.cache;
 
 import java.util.Arrays;
 
+import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
+
+import static org.neo4j.unsafe.impl.batchimport.Utils.safeCastLongToInt;
+
 /**
  * A {@code long[]} on heap, abstracted into a {@link IntArray}.
  */
 public class HeapIntArray extends HeapNumberArray<IntArray> implements IntArray
 {
+    private static final int ARRAY_BASE_OFFSET = UnsafeUtil.arrayBaseOffset( int[].class );
+    private static final int ARRAY_INDEX_SCALE = UnsafeUtil.arrayIndexScale( int[].class );
+
     private final int[] array;
     private final int defaultValue;
 
@@ -53,6 +60,13 @@ public class HeapIntArray extends HeapNumberArray<IntArray> implements IntArray
     public void set( long index, int value )
     {
         array[index( index )] = value;
+    }
+
+    @Override
+    public boolean cas( long index, int expectedValue, int value )
+    {
+        int offset = UnsafeUtil.arrayOffset( safeCastLongToInt( index ), ARRAY_BASE_OFFSET, ARRAY_INDEX_SCALE );
+        return UnsafeUtil.compareAndSwapInt( array, offset, expectedValue, value );
     }
 
     @Override

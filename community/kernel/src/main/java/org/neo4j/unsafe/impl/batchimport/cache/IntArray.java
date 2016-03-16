@@ -30,4 +30,6 @@ public interface IntArray extends NumberArray<IntArray>
     int get( long index );
 
     void set( long index, int value );
+
+    boolean cas( long index, int expectedValue, int value );
 }

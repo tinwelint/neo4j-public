@@ -30,4 +30,6 @@ public interface LongArray extends NumberArray<LongArray>
     long get( long index );
 
     void set( long index, long value );
+
+    boolean cas( long index, long expectedValue, long value );
 }

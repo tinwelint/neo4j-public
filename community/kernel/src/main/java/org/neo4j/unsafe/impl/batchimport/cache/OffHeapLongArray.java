@@ -49,6 +49,12 @@ public class OffHeapLongArray extends OffHeapRegularNumberArray<LongArray> imple
     }
 
     @Override
+    public boolean cas( long index, long expectedValue, long value )
+    {
+        return UnsafeUtil.compareAndSwapLong( null, addressOf( index ), expectedValue, value );
+    }
+
+    @Override
     public void clear()
     {
         if ( isByteUniform( defaultValue ) )

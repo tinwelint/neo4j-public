@@ -49,6 +49,12 @@ public class DynamicLongArray extends DynamicNumberArray<LongArray> implements L
     }
 
     @Override
+    public boolean cas( long index, long expectedValue, long value )
+    {
+        return at( index ).cas( index, expectedValue, value );
+    }
+
+    @Override
     public void swap( long fromIndex, long toIndex, int numberOfEntries )
     {
         // Let's just do this the stupid way. There's room for optimization here

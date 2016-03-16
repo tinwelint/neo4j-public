@@ -49,6 +49,12 @@ public class OffHeapIntArray extends OffHeapRegularNumberArray<IntArray> impleme
     }
 
     @Override
+    public boolean cas( long index, int expectedValue, int value )
+    {
+        return UnsafeUtil.compareAndSwapInt( null, addressOf( index ), expectedValue, value );
+    }
+
+    @Override
     public void clear()
     {
         if ( isByteUniform( defaultValue ) )

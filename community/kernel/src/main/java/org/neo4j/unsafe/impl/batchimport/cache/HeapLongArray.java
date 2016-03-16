@@ -21,11 +21,18 @@ package org.neo4j.unsafe.impl.batchimport.cache;
 
 import java.util.Arrays;
 
+import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
+
+import static org.neo4j.unsafe.impl.batchimport.Utils.safeCastLongToInt;
+
 /**
  * A {@code long[]} on heap, abstracted into a {@link LongArray}.
  */
 public class HeapLongArray extends HeapNumberArray<LongArray> implements LongArray
 {
+    private static final int ARRAY_BASE_OFFSET = UnsafeUtil.arrayBaseOffset( long[].class );
+    private static final int ARRAY_INDEX_SCALE = UnsafeUtil.arrayIndexScale( long[].class );
+
     private final long[] array;
     private final long defaultValue;
 
@@ -53,6 +60,13 @@ public class HeapLongArray extends HeapNumberArray<LongArray> implements LongArr
     public void set( long index, long value )
     {
         array[index( index )] = value;
+    }
+
+    @Override
+    public boolean cas( long index, long expectedValue, long value )
+    {
+        int offset = UnsafeUtil.arrayOffset( safeCastLongToInt( index ), ARRAY_BASE_OFFSET, ARRAY_INDEX_SCALE );
+        return UnsafeUtil.compareAndSwapLong( array, offset, expectedValue, value );
     }
 
     @Override
