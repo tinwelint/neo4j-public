@@ -23,7 +23,14 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
-import org.neo4j.kernel.impl.store.record.Record;
+
+import static org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat.has;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitDecode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitEncode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitLength;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitSetHeader;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding.read5ByteValue;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding.write5ByteValue;
 
 /**
  * LEGEND:
@@ -41,11 +48,10 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
 {
     static final int RECORD_SIZE = 16;
 
-    private static final long NULL_LABELS = Record.NO_LABELS_FIELD.intValue();
-    private static final int DENSE_NODE_BIT       = 0b0000_1000;
-    private static final int HAS_RELATIONSHIP_BIT = 0b0001_0000;
-    private static final int HAS_PROPERTY_BIT     = 0b0010_0000;
-    private static final int HAS_LABELS_BIT       = 0b0100_0000;
+    // 1-byte header bits specific to this format
+    private static final int DENSE_NODE_BIT        =     0b0000_0100;
+    private static final int RELATIONSHIP_ENCODING = 3;//0b0001_1000;
+    private static final int PROPERTY_ENCODING     = 5;//0b0110_0000;
 
     public NodeRecordFormat()
     {
@@ -54,7 +60,7 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
 
     NodeRecordFormat( int recordSize )
     {
-        super( fixedRecordSize( recordSize ), 0 );
+        super( fixedRecordSize( recordSize ), 0, false );
     }
 
     @Override
@@ -64,45 +70,44 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     }
 
     @Override
-    protected void doReadInternal( NodeRecord record, PageCursor cursor, int recordSize, long headerByte,
+    protected void doReadInternal( NodeRecord record, PageCursor cursor, int recordSize, long header,
                                    boolean inUse )
     {
-        // Interpret the header byte
-        boolean dense = has( headerByte, DENSE_NODE_BIT );
+        // Interpret the header
+        boolean dense = has( header, DENSE_NODE_BIT );
 
         // Now read the rest of the data. The adapter will take care of moving the cursor over to the
         // other unit when we've exhausted the first one.
-        long nextRel = decode( cursor, headerByte, HAS_RELATIONSHIP_BIT, NULL );
-        long nextProp = decode( cursor, headerByte, HAS_PROPERTY_BIT, NULL );
-        long labelField = decode( cursor, headerByte, HAS_LABELS_BIT, NULL_LABELS );
+        long nextRel = _2bitDecode( cursor, NULL, header, RELATIONSHIP_ENCODING );
+        long nextProp = _2bitDecode( cursor, NULL, header, PROPERTY_ENCODING );
+        long labelField = read5ByteValue( cursor );
         record.initialize( inUse, nextProp, dense, nextRel, labelField );
     }
 
     @Override
     public int requiredDataLength( NodeRecord record )
     {
-        return  length( record.getNextRel(), NULL ) +
-                length( record.getNextProp(), NULL ) +
-                length( record.getLabelField(), NULL_LABELS );
+        return  5 +
+                _2bitLength( record.getNextRel(), NULL ) +
+                _2bitLength( record.getNextProp(), NULL );
     }
 
     @Override
-    protected byte headerBits( NodeRecord record )
+    protected long headerBits( NodeRecord record )
     {
-        byte header = 0;
-        header = set( header, DENSE_NODE_BIT, record.isDense() );
-        header = set( header, HAS_RELATIONSHIP_BIT, record.getNextRel(), NULL );
-        header = set( header, HAS_PROPERTY_BIT, record.getNextProp(), NULL );
-        header = set( header, HAS_LABELS_BIT, record.getLabelField(), NULL_LABELS );
+        long header = 0;
+        header ^= record.isDense() ? DENSE_NODE_BIT : 0;
+        header = _2bitSetHeader( record.getNextRel(), NULL, header, RELATIONSHIP_ENCODING );
+        header = _2bitSetHeader( record.getNextProp(), NULL, header, PROPERTY_ENCODING );
         return header;
     }
 
     @Override
-    protected void doWriteInternal( NodeRecord record, PageCursor cursor )
+    protected void doWriteInternal( NodeRecord record, PageCursor cursor, long header )
             throws IOException
     {
-        encode( cursor, record.getNextRel(), NULL );
-        encode( cursor, record.getNextProp(), NULL );
-        encode( cursor, record.getLabelField(), NULL_LABELS );
+        _2bitEncode( cursor, record.getNextRel(), header, RELATIONSHIP_ENCODING );
+        _2bitEncode( cursor, record.getNextProp(), header, PROPERTY_ENCODING );
+        write5ByteValue( cursor, record.getLabelField() );
     }
 }

@@ -24,6 +24,20 @@ import java.io.IOException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
+import static org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat.has;
+import static org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat.set;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitDecode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitEncode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitLength;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitSetHeader;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitSignedDecode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitSignedEncode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitSignedLength;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._1bitSignedSetHeader;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitDecode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitEncode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitLength;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitSetHeader;
 import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toAbsolute;
 import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
 
@@ -48,11 +62,18 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
 {
     static final int RECORD_SIZE = 32;
 
-    private static final int FIRST_IN_FIRST_CHAIN_BIT = 0b0000_1000;
-    private static final int FIRST_IN_SECOND_CHAIN_BIT = 0b0001_0000;
-    private static final int HAS_FIRST_CHAIN_NEXT_BIT = 0b0010_0000;
-    private static final int HAS_SECOND_CHAIN_NEXT_BIT = 0b0100_0000;
-    private static final int HAS_PROPERTY_BIT = 0b1000_0000;
+    // 2-byte header bits specific to this format
+    // TODO encode prev pointers differently depending on whether they are first or not
+    // TODO how would these look in a 3-byte header instead?
+    private static final int FIRST_IN_FIRST_CHAIN_BIT   =      0b0000_0000__0000_0100;
+    private static final int FIRST_IN_SECOND_CHAIN_BIT  =      0b0000_0000__0000_1000;
+    private static final int FIRST_CHAIN_NEXT_ENCODING  = 4; //0b0000_0000__0011_0000; // <-- sign+1b 3/6
+    private static final int SECOND_CHAIN_NEXT_ENCODING = 6; //0b0000_0000__1100_0000; // <-- sign+1b 3/6
+    private static final int PROPERTY_ENCODING          = 8; //0b0000_0011__0000_0000;
+    private static final int FIRST_CHAIN_PREV_ENCODING  = 10;//0b0000_1100__0000_0000; // <-- sign+1b 3/6
+    private static final int SECOND_CHAIN_PREV_ENCODING = 12;//0b0011_0000__0000_0000; // <-- sign+1b 3/6
+    private static final int FIRST_NODE_ENCODING        = 14;//0b0100_0000__0000_0000; // <-- 4/6
+    private static final int SECOND_NODE_ENCODING       = 15;//0b1000_0000__0000_0000; // <-- 4/6
 
     public RelationshipRecordFormat()
     {
@@ -61,7 +82,7 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
 
     RelationshipRecordFormat( int recordSize )
     {
-        super( fixedRecordSize( recordSize ), 0 );
+        super( fixedRecordSize( recordSize ), 0, true );
     }
 
     @Override
@@ -71,38 +92,50 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
     }
 
     @Override
-    protected void doReadInternal( RelationshipRecord record, PageCursor cursor, int recordSize, long headerByte,
-                                   boolean inUse )
+    protected void doReadInternal( RelationshipRecord record, PageCursor cursor, int recordSize, long header,
+            boolean inUse )
     {
         int type = cursor.getShort() & 0xFFFF;
         long recordId = record.getId();
         record.initialize( inUse,
-                decode( cursor, headerByte, HAS_PROPERTY_BIT, NULL ),
-                decode( cursor ),
-                decode( cursor ),
+                _2bitDecode( cursor, NULL, header, PROPERTY_ENCODING ),
+                _1bitDecode( cursor, header, FIRST_NODE_ENCODING ),
+                _1bitDecode( cursor, header, SECOND_NODE_ENCODING ),
                 type,
-                decodeAbsoluteOrRelative( cursor, headerByte, FIRST_IN_FIRST_CHAIN_BIT, recordId ),
-                decodeAbsoluteIfPresent( cursor, headerByte, HAS_FIRST_CHAIN_NEXT_BIT, recordId ),
-                decodeAbsoluteOrRelative( cursor, headerByte, FIRST_IN_SECOND_CHAIN_BIT, recordId ),
-                decodeAbsoluteIfPresent( cursor, headerByte, HAS_SECOND_CHAIN_NEXT_BIT, recordId ),
-                has( headerByte, FIRST_IN_FIRST_CHAIN_BIT ),
-                has( headerByte, FIRST_IN_SECOND_CHAIN_BIT ) );
+                decodeAbsoluteOrRelative( cursor, header, FIRST_CHAIN_PREV_ENCODING, FIRST_IN_FIRST_CHAIN_BIT, recordId ),
+                toAbsolute( _1bitSignedDecode( cursor, header, FIRST_CHAIN_NEXT_ENCODING ), recordId ),
+                decodeAbsoluteOrRelative( cursor, header, SECOND_CHAIN_PREV_ENCODING, FIRST_IN_SECOND_CHAIN_BIT, recordId ),
+                toAbsolute( _1bitSignedDecode( cursor, header, SECOND_CHAIN_NEXT_ENCODING ), recordId ),
+                has( header, FIRST_IN_FIRST_CHAIN_BIT ),
+                has( header, FIRST_IN_SECOND_CHAIN_BIT ) );
     }
 
-    private long decodeAbsoluteOrRelative( PageCursor cursor, long headerByte, int firstInStartBit, long recordId )
+    private long decodeAbsoluteOrRelative( PageCursor cursor, long header, int shift,
+            int firstInChainBit, long recordId )
     {
-        return has( headerByte, firstInStartBit ) ? decode( cursor ) : toAbsolute( decode( cursor ), recordId );
+        long decoded = _1bitSignedDecode( cursor, header, shift );
+        return has( header, firstInChainBit ) ? decoded : toAbsolute( decoded, recordId );
     }
 
     @Override
-    protected byte headerBits( RelationshipRecord record )
+    protected long headerBits( RelationshipRecord record )
     {
-        byte header = 0;
+        long header = 0;
         header = set( header, FIRST_IN_FIRST_CHAIN_BIT, record.isFirstInFirstChain() );
         header = set( header, FIRST_IN_SECOND_CHAIN_BIT, record.isFirstInSecondChain() );
-        header = set( header, HAS_PROPERTY_BIT, record.getNextProp(), NULL );
-        header = set( header, HAS_FIRST_CHAIN_NEXT_BIT, record.getFirstNextRel(), NULL );
-        header = set( header, HAS_SECOND_CHAIN_NEXT_BIT, record.getSecondNextRel(), NULL );
+        header = _2bitSetHeader( record.getNextProp(), NULL, header, PROPERTY_ENCODING );
+        // first node
+        header = _1bitSetHeader( record.getFirstNode(), header, FIRST_NODE_ENCODING );
+        header = _1bitSignedSetHeader( getFirstPrevReference( record ),
+                header, FIRST_CHAIN_PREV_ENCODING );
+        header = _1bitSignedSetHeader( toRelative( record.getFirstNextRel(), record.getId() ),
+                header, FIRST_CHAIN_NEXT_ENCODING );
+        // second node
+        header = _1bitSetHeader( record.getSecondNode(), header, SECOND_NODE_ENCODING );
+        header = _1bitSignedSetHeader( getSecondPrevReference( record ),
+                header, SECOND_CHAIN_PREV_ENCODING );
+        header = _1bitSignedSetHeader( toRelative( record.getSecondNextRel(), record.getId() ),
+                header, SECOND_CHAIN_NEXT_ENCODING );
         return header;
     }
 
@@ -111,56 +144,42 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
     {
         long recordId = record.getId();
         return Short.BYTES + // type
-               length( record.getNextProp(), NULL ) +
-               length( record.getFirstNode() ) +
-               length( record.getSecondNode() ) +
-               length( getFirstPrevReference( record, recordId ) ) +
-               getRelativeReferenceLength( record.getFirstNextRel(), recordId ) +
-               length( getSecondPrevReference( record, recordId ) ) +
-               getRelativeReferenceLength( record.getSecondNextRel(), recordId );
+               _2bitLength( record.getNextProp(), NULL ) +
+               _1bitLength( record.getFirstNode() ) +
+               _1bitLength( record.getSecondNode() ) +
+               _1bitSignedLength( getFirstPrevReference( record ) ) +
+               _1bitSignedLength( toRelative( record.getFirstNextRel(), recordId ) ) +
+               _1bitSignedLength( getSecondPrevReference( record ) ) +
+               _1bitSignedLength( toRelative( record.getSecondNextRel(), recordId ) );
     }
 
     @Override
-    protected void doWriteInternal( RelationshipRecord record, PageCursor cursor )
+    protected void doWriteInternal( RelationshipRecord record, PageCursor cursor, long header )
             throws IOException
     {
         cursor.putShort( (short) record.getType() );
         long recordId = record.getId();
-        encode( cursor, record.getNextProp(), NULL );
-        encode( cursor, record.getFirstNode() );
-        encode( cursor, record.getSecondNode() );
-
-        encode( cursor, getFirstPrevReference( record, recordId ) );
-        if ( record.getFirstNextRel() != NULL )
-        {
-            encode( cursor, toRelative( record.getFirstNextRel(), recordId ) );
-        }
-        encode( cursor, getSecondPrevReference( record, recordId ) );
-        if ( record.getSecondNextRel() != NULL )
-        {
-            encode( cursor, toRelative( record.getSecondNextRel(), recordId ) );
-        }
+        _2bitEncode( cursor, record.getNextProp(), header, PROPERTY_ENCODING );
+        _1bitEncode( cursor, record.getFirstNode(), header, FIRST_NODE_ENCODING );
+        _1bitEncode( cursor, record.getSecondNode(), header, SECOND_NODE_ENCODING );
+        _1bitSignedEncode( cursor, getFirstPrevReference( record ), header, FIRST_CHAIN_PREV_ENCODING );
+        _1bitSignedEncode( cursor, toRelative( record.getFirstNextRel(), recordId ), header, FIRST_CHAIN_NEXT_ENCODING );
+        _1bitSignedEncode( cursor, getSecondPrevReference( record ), header, SECOND_CHAIN_PREV_ENCODING );
+        _1bitSignedEncode( cursor, toRelative( record.getSecondNextRel(), recordId ), header, SECOND_CHAIN_NEXT_ENCODING );
     }
 
-    private long getSecondPrevReference( RelationshipRecord record, long recordId )
+    private long getPrevReference( boolean firstInChain, long prevId, long recordId )
     {
-        return record.isFirstInSecondChain() ? record.getSecondPrevRel() :
-                                   toRelative( record.getSecondPrevRel(), recordId );
+        return firstInChain ? prevId : toRelative( prevId, recordId );
     }
 
-    private long getFirstPrevReference( RelationshipRecord record, long recordId )
+    private long getSecondPrevReference( RelationshipRecord record )
     {
-        return record.isFirstInFirstChain() ? record.getFirstPrevRel()
-                                              : toRelative( record.getFirstPrevRel(), recordId );
+        return getPrevReference( record.isFirstInSecondChain(), record.getSecondPrevRel(), record.getId() );
     }
 
-    private int getRelativeReferenceLength( long absoluteReference, long recordId )
+    private long getFirstPrevReference( RelationshipRecord record )
     {
-        return absoluteReference != NULL ? length( toRelative( absoluteReference, recordId ) ) : 0;
-    }
-
-    private long decodeAbsoluteIfPresent( PageCursor cursor, long headerByte, int conditionBit, long recordId )
-    {
-        return has( headerByte, conditionBit ) ? toAbsolute( decode( cursor ), recordId ) : NULL;
+        return getPrevReference( record.isFirstInFirstChain(), record.getFirstPrevRel(), record.getId() );
     }
 }

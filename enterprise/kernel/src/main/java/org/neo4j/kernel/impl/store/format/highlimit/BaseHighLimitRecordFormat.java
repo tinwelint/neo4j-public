@@ -27,7 +27,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.CompositePageCursor;
 import org.neo4j.kernel.impl.store.StoreHeader;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
-import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
+import org.neo4j.kernel.impl.store.format.BaseRecordFormat;
 import org.neo4j.kernel.impl.store.id.IdSequence;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -76,73 +76,95 @@ import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.pageIdFor
  *
  * @param <RECORD> type of {@link AbstractBaseRecord}
  */
-abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
-        extends BaseOneByteHeaderRecordFormat<RECORD>
+abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord> extends BaseRecordFormat<RECORD>
 {
-    private static final int HEADER_BYTE = Byte.BYTES;
-
     static final long NULL = Record.NULL_REFERENCE.intValue();
-    static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
-    static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
+    private final boolean twoByteHeader;
+    private final int headerSize;
 
-    protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize )
+    protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize,
+            boolean twoByteHeader )
     {
-        super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
+        super( recordSize, recordHeaderSize, 50 );
+        this.twoByteHeader = twoByteHeader;
+        this.headerSize = twoByteHeader ? 2 : 1;
     }
 
+    private long readHeader( PageCursor cursor )
+    {
+        return twoByteHeader ? cursor.getShort() & 0xFFFF : cursor.getByte() & 0xFF;
+    }
+
+    private void writeHeader( PageCursor cursor, long header )
+    {
+        if ( twoByteHeader )
+        {
+            cursor.putShort( (short) header );
+        }
+        else
+        {
+            cursor.putByte( (byte) header );
+        }
+    }
+
+    @Override
     public void read( RECORD record, PageCursor primaryCursor, RecordLoad mode, int recordSize, PagedFile storeFile )
             throws IOException
     {
         int primaryStartOffset = primaryCursor.getOffset();
-        byte headerByte = primaryCursor.getByte();
-        boolean inUse = isInUse( headerByte );
-        boolean doubleRecordUnit = has( headerByte, HEADER_BIT_RECORD_UNIT );
-        if ( doubleRecordUnit )
+        long header = readHeader( primaryCursor );
+        byte unitHeader = (byte) (header & 0x3);
+        boolean inUse = unitHeader != 0;
+        if ( mode.shouldLoad( inUse ) )
         {
-            boolean firstRecordUnit = has( headerByte, HEADER_BIT_FIRST_RECORD_UNIT );
-            if ( !firstRecordUnit )
+            boolean doubleRecordUnit = unitHeader > 1;
+            if ( doubleRecordUnit )
             {
-                // This is a record unit and not even the first one, so you cannot go here directly and read it,
-                // it may only be read as part of reading the primary unit.
-                record.clear();
-                // Return and try again
-                return;
-            }
+                boolean firstRecordUnit = unitHeader == 2;
+                if ( !firstRecordUnit )
+                {
+                    // This is a record unit and not even the first one, so you cannot go here directly and read it,
+                    // it may only be read as part of reading the primary unit.
+                    record.clear();
+                    // Return and try again
+                    return;
+                }
 
-            // This is a record that is split into multiple record units. We need a bit more clever
-            // data structures here. For the time being this means instantiating one object,
-            // but the trade-off is a great reduction in complexity.
-            long secondaryId = Reference.decode( primaryCursor );
-            long pageId = pageIdForRecord( secondaryId, storeFile.pageSize(), recordSize );
-            int offset = offsetForId( secondaryId, storeFile.pageSize(), recordSize );
-            PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
-            if ( !secondaryCursor.next() )
+                // This is a record that is split into multiple record units. We need a bit more clever
+                // data structures here. For the time being this means instantiating one object,
+                // but the trade-off is a great reduction in complexity.
+                long secondaryId = Reference.decode( primaryCursor );
+                long pageId = pageIdForRecord( secondaryId, storeFile.pageSize(), recordSize );
+                int offset = offsetForId( secondaryId, storeFile.pageSize(), recordSize );
+                PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
+                if ( !secondaryCursor.next() )
+                {
+                    // We must have made an inconsistent read of the secondary record unit reference.
+                    // No point in trying to read this.
+                    record.clear();
+                    return;
+                }
+                secondaryCursor.setOffset( offset + headerSize );
+                int primarySize = recordSize - (primaryCursor.getOffset() - primaryStartOffset);
+                // We *could* sanity check the secondary record header byte here, but we won't. If it is wrong, then we most
+                // likely did an inconsistent read, in which case we'll just retry. Otherwise, if the header byte is wrong,
+                // then there is little we can do about it here, since we are not allowed to throw exceptions.
+
+                int secondarySize = recordSize - headerSize;
+                PageCursor composite = CompositePageCursor.compose(
+                        primaryCursor, primarySize, secondaryCursor, secondarySize );
+                doReadInternal( record, composite, recordSize, header, inUse );
+                record.setSecondaryUnitId( secondaryId );
+            }
+            else
             {
-                // We must have made an inconsistent read of the secondary record unit reference.
-                // No point in trying to read this.
-                record.clear();
-                return;
+                doReadInternal( record, primaryCursor, recordSize, header, inUse );
             }
-            secondaryCursor.setOffset( offset + HEADER_BYTE);
-            int primarySize = recordSize - (primaryCursor.getOffset() - primaryStartOffset);
-            // We *could* sanity check the secondary record header byte here, but we won't. If it is wrong, then we most
-            // likely did an inconsistent read, in which case we'll just retry. Otherwise, if the header byte is wrong,
-            // then there is little we can do about it here, since we are not allowed to throw exceptions.
-
-            int secondarySize = recordSize - HEADER_BYTE;
-            PageCursor composite = CompositePageCursor.compose(
-                    primaryCursor, primarySize, secondaryCursor, secondarySize );
-            doReadInternal( record, composite, recordSize, headerByte, inUse );
-            record.setSecondaryUnitId( secondaryId );
-        }
-        else
-        {
-            doReadInternal( record, primaryCursor, recordSize, headerByte, inUse );
         }
     }
 
     protected abstract void doReadInternal(
-            RECORD record, PageCursor cursor, int recordSize, long inUseByte, boolean inUse );
+            RECORD record, PageCursor cursor, int recordSize, long headerShort, boolean inUse );
 
     @Override
     public void write( RECORD record, PageCursor primaryCursor, int recordSize, PagedFile storeFile )
@@ -151,13 +173,11 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         if ( record.inUse() )
         {
             // Let the specific implementation provide the additional header bits and we'll provide the core format bits.
-            byte headerByte = headerBits( record );
-            assert (headerByte & 0x7) == 0 : "Format-specific header bits (" + headerByte +
-                    ") collides with format-generic header bits";
-            headerByte = set( headerByte, IN_USE_BIT, record.inUse() );
-            headerByte = set( headerByte, HEADER_BIT_RECORD_UNIT, record.requiresSecondaryUnit() );
-            headerByte = set( headerByte, HEADER_BIT_FIRST_RECORD_UNIT, true );
-            primaryCursor.putByte( headerByte );
+            long header = headerBits( record );
+            assert (header & 0x3) == 0 : "Format-specific header bits (" + header +
+                    ") collides with unit header bits";
+            header |= unitHeaderOf( record );
+            writeHeader( primaryCursor, header );
 
             if ( record.requiresSecondaryUnit() )
             {
@@ -174,17 +194,17 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
                     return;
                 }
                 secondaryCursor.setOffset( offset );
-                secondaryCursor.putByte( (byte) (IN_USE_BIT | HEADER_BIT_RECORD_UNIT) );
-                int recordSizeWithoutHeader = recordSize - HEADER_BYTE;
+                writeHeader( secondaryCursor, (byte) 3 );
+                int recordSizeWithoutHeader = recordSize - headerSize;
                 PageCursor composite = CompositePageCursor.compose(
                         primaryCursor, recordSizeWithoutHeader, secondaryCursor, recordSizeWithoutHeader );
 
                 Reference.encode( secondaryUnitId, composite );
-                doWriteInternal( record, composite );
+                doWriteInternal( record, composite, header );
             }
             else
             {
-                doWriteInternal( record, primaryCursor );
+                doWriteInternal( record, primaryCursor, header );
             }
         }
         else
@@ -193,11 +213,17 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         }
     }
 
-    /*
-     * Use this instead of {@link #markFirstByteAsUnused(PageCursor)} to mark both record units,
-     * if record has a reference to a secondary unit.
-     */
-    protected void markAsUnused( PageCursor cursor, PagedFile storeFile, RECORD record, int recordSize )
+    private byte unitHeaderOf( RECORD record )
+    {
+        // The base header is the part of the header that all high-limit w/ double-record unit capability share:
+        // 00: not in use
+        // 01: single unit record
+        // 10: double unit record, this is a primary record
+        // 11: double unit record, this is a secondary record
+        return record.inUse() ? (byte) (record.requiresSecondaryUnit() ? 2 : 1) : 0;
+    }
+
+    private void markAsUnused( PageCursor cursor, PagedFile storeFile, RECORD record, int recordSize )
             throws IOException
     {
         markAsUnused( cursor );
@@ -215,16 +241,43 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         }
     }
 
-    protected abstract void doWriteInternal( RECORD record, PageCursor cursor ) throws IOException;
+    private void markAsUnused( PageCursor cursor )
+    {
+        if ( twoByteHeader )
+        {
+            short header = cursor.getShort( cursor.getOffset() );
+            header &= ~3;
+            cursor.putShort( header );
+        }
+        else
+        {
+            byte header = cursor.getByte( cursor.getOffset() );
+            header &= ~3;
+            cursor.putByte( header );
+        }
+    }
 
-    protected abstract byte headerBits( RECORD record );
+    @Override
+    public boolean isInUse( PageCursor cursor )
+    {
+        return isInUse( twoByteHeader ? cursor.getShort() : cursor.getByte() );
+    }
+
+    protected boolean isInUse( short header )
+    {
+        return (header & 0x3) != 0;
+    }
+
+    protected abstract void doWriteInternal( RECORD record, PageCursor cursor, long header ) throws IOException;
+
+    protected abstract long headerBits( RECORD record );
 
     @Override
     public final void prepare( RECORD record, int recordSize, IdSequence idSequence )
     {
         if ( record.inUse() )
         {
-            int requiredLength = HEADER_BYTE + requiredDataLength( record );
+            int requiredLength = headerSize + requiredDataLength( record );
             boolean requiresSecondaryUnit = requiredLength > recordSize;
             record.setRequiresSecondaryUnit( requiresSecondaryUnit );
             if ( record.requiresSecondaryUnit() && !record.hasSecondaryUnitId() )
@@ -243,42 +296,4 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
      * @return length required to store the data in the given record.
      */
     protected abstract int requiredDataLength( RECORD record );
-
-    protected static int length( long reference )
-    {
-        return Reference.length( reference );
-    }
-
-    protected static int length( long reference, long nullValue )
-    {
-        return reference == nullValue ? 0 : length( reference );
-    }
-
-    protected static long decode( PageCursor cursor )
-    {
-        return Reference.decode( cursor );
-    }
-
-    protected static long decode( PageCursor cursor, long headerByte, int headerBitMask, long nullValue )
-    {
-        return has( headerByte, headerBitMask ) ? decode( cursor ) : nullValue;
-    }
-
-    protected static void encode( PageCursor cursor, long reference ) throws IOException
-    {
-        Reference.encode( reference, cursor );
-    }
-
-    protected static void encode( PageCursor cursor, long reference, long nullValue ) throws IOException
-    {
-        if ( reference != nullValue )
-        {
-            Reference.encode( reference, cursor );
-        }
-    }
-
-    protected static byte set( byte header, int bitMask, long reference, long nullValue )
-    {
-        return set( header, bitMask, reference != nullValue );
-    }
 }

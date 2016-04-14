@@ -24,6 +24,11 @@ import java.io.IOException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitDecode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitEncode;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitLength;
+import static org.neo4j.kernel.impl.store.format.SimpleNumberEncoding._2bitSetHeader;
+
 /**
  * LEGEND:
  * V: variable between 3B-8B
@@ -43,10 +48,12 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
 {
     static final int RECORD_SIZE = 32;
 
-    private static final int HAS_OUTGOING_BIT = 0b0000_1000;
-    private static final int HAS_INCOMING_BIT = 0b0001_0000;
-    private static final int HAS_LOOP_BIT     = 0b0010_0000;
-    private static final int HAS_NEXT_BIT     = 0b0100_0000;
+    // 2-byte header bits specific to this format
+    private static final int OUTGOING_ENCODING = 2; //0b0000_0000__0000_1100;
+    private static final int INCOMING_ENCODING = 4; //0b0000_0000__0011_0000;
+    private static final int LOOP_ENCODING     = 6; //0b0000_0000__1100_0000;
+    private static final int OWNER_ENCODING    = 8; //0b0000_0011__0000_0000;
+    private static final int NEXT_ENCODING     = 10;//0b0000_1100__0000_0000;
 
     public RelationshipGroupRecordFormat()
     {
@@ -55,7 +62,7 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
 
     RelationshipGroupRecordFormat( int recordSize )
     {
-        super( fixedRecordSize( recordSize ), 0 );
+        super( fixedRecordSize( recordSize ), 0, true );
     }
 
     @Override
@@ -65,26 +72,27 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     }
 
     @Override
-    protected void doReadInternal( RelationshipGroupRecord record, PageCursor cursor, int recordSize, long headerByte,
+    protected void doReadInternal( RelationshipGroupRecord record, PageCursor cursor, int recordSize, long header,
                                    boolean inUse )
     {
         record.initialize( inUse,
                 cursor.getShort() & 0xFFFF,
-                decode( cursor, headerByte, HAS_OUTGOING_BIT, NULL ),
-                decode( cursor, headerByte, HAS_INCOMING_BIT, NULL ),
-                decode( cursor, headerByte, HAS_LOOP_BIT, NULL ),
-                decode( cursor ),
-                decode( cursor, headerByte, HAS_NEXT_BIT, NULL ) );
+                _2bitDecode( cursor, NULL, header, OUTGOING_ENCODING ),
+                _2bitDecode( cursor, NULL, header, INCOMING_ENCODING ),
+                _2bitDecode( cursor, NULL, header, LOOP_ENCODING ),
+                _2bitDecode( cursor, NULL, header, OWNER_ENCODING ),
+                _2bitDecode( cursor, NULL, header, NEXT_ENCODING ) );
     }
 
     @Override
-    protected byte headerBits( RelationshipGroupRecord record )
+    protected long headerBits( RelationshipGroupRecord record )
     {
-        byte header = 0;
-        header = set( header, HAS_OUTGOING_BIT, record.getFirstOut(), NULL );
-        header = set( header, HAS_INCOMING_BIT, record.getFirstIn(), NULL );
-        header = set( header, HAS_LOOP_BIT, record.getFirstLoop(), NULL );
-        header = set( header, HAS_NEXT_BIT, record.getNext(), NULL );
+        long header = 0;
+        header = _2bitSetHeader( record.getFirstOut(), NULL, header, OUTGOING_ENCODING );
+        header = _2bitSetHeader( record.getFirstIn(), NULL, header, INCOMING_ENCODING );
+        header = _2bitSetHeader( record.getFirstLoop(), NULL, header, LOOP_ENCODING );
+        header = _2bitSetHeader( record.getOwningNode(), NULL, header, OWNER_ENCODING );
+        header = _2bitSetHeader( record.getNext(), NULL, header, NEXT_ENCODING );
         return header;
     }
 
@@ -92,22 +100,22 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     protected int requiredDataLength( RelationshipGroupRecord record )
     {
         return  2 + // type
-                length( record.getFirstOut(), NULL ) +
-                length( record.getFirstIn(), NULL ) +
-                length( record.getFirstLoop(), NULL ) +
-                length( record.getOwningNode() ) +
-                length( record.getNext(), NULL );
+                _2bitLength( record.getFirstOut(), NULL ) +
+                _2bitLength( record.getFirstIn(), NULL ) +
+                _2bitLength( record.getFirstLoop(), NULL ) +
+                _2bitLength( record.getOwningNode(), NULL ) +
+                _2bitLength( record.getNext(), NULL );
     }
 
     @Override
-    protected void doWriteInternal( RelationshipGroupRecord record, PageCursor cursor )
+    protected void doWriteInternal( RelationshipGroupRecord record, PageCursor cursor, long header )
             throws IOException
     {
         cursor.putShort( (short) record.getType() );
-        encode( cursor, record.getFirstOut(), NULL );
-        encode( cursor, record.getFirstIn(), NULL );
-        encode( cursor, record.getFirstLoop(), NULL );
-        encode( cursor, record.getOwningNode() );
-        encode( cursor, record.getNext(), NULL );
+        _2bitEncode( cursor, record.getFirstOut(), header, OUTGOING_ENCODING );
+        _2bitEncode( cursor, record.getFirstIn(), header, INCOMING_ENCODING );
+        _2bitEncode( cursor, record.getFirstLoop(), header, LOOP_ENCODING );
+        _2bitEncode( cursor, record.getOwningNode(), header, OWNER_ENCODING );
+        _2bitEncode( cursor, record.getNext(), header, NEXT_ENCODING );
     }
 }

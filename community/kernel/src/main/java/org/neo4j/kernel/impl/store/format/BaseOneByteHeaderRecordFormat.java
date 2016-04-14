@@ -77,7 +77,7 @@ public abstract class BaseOneByteHeaderRecordFormat<RECORD extends AbstractBaseR
      * @param bitMask mask for the bit to check, such as 0x1, 0x2 and 0x4.
      * @return whether or not that bit is set.
      */
-    protected static boolean has( long headerByte, int bitMask )
+    public static boolean has( long headerByte, int bitMask )
     {
         return (headerByte & bitMask) != 0;
     }
@@ -90,8 +90,8 @@ public abstract class BaseOneByteHeaderRecordFormat<RECORD extends AbstractBaseR
      * @param value {@code true} means setting the bits specified by the bit mask, {@code false} means clearing.
      * @return the {@code headerByte} with the changes incorporated.
      */
-    protected static byte set( byte headerByte, int bitMask, boolean value )
+    public static long set( long headerByte, int bitMask, boolean value )
     {
-        return (byte) (value ? headerByte | bitMask : headerByte);
+        return value ? headerByte | bitMask : headerByte;
     }
 }

@@ -33,8 +33,6 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.HEADER_BIT_FIRST_RECORD_UNIT;
-import static org.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.HEADER_BIT_RECORD_UNIT;
 
 public class BaseHighLimitRecordFormatTest
 {
@@ -52,13 +50,13 @@ public class BaseHighLimitRecordFormatTest
     {
         MyRecordFormat format = new MyRecordFormat();
         StubPageCursor cursor = new StubPageCursor( 0, 4 );
-        cursor.putByte( 0, (byte) (HEADER_BIT_RECORD_UNIT + HEADER_BIT_FIRST_RECORD_UNIT) );
+        cursor.putByte( 0, (byte) 0x2 );
         StubPagedFile pagedFile = new StubPagedFile( 3 )
         {
             @Override
             protected void prepareCursor( StubPageCursor cursor )
             {
-                cursor.putByte( 0, (byte) HEADER_BIT_RECORD_UNIT );
+                cursor.putByte( 0, (byte) 0x3 );
             }
         };
         format.shortsPerRecord.add( 2 );
@@ -93,11 +91,11 @@ public class BaseHighLimitRecordFormatTest
 
     private class MyRecordFormat extends BaseHighLimitRecordFormat<MyRecord>
     {
-        private Queue<Integer> shortsPerRecord = new ConcurrentLinkedQueue<>();
+        private final Queue<Integer> shortsPerRecord = new ConcurrentLinkedQueue<>();
 
         protected MyRecordFormat()
         {
-            super( (header) -> 4, 4 );
+            super( (header) -> 4, 4, false );
         }
 
         @Override
@@ -120,7 +118,7 @@ public class BaseHighLimitRecordFormatTest
         }
 
         @Override
-        protected void doWriteInternal( MyRecord record, PageCursor cursor ) throws IOException
+        protected void doWriteInternal( MyRecord record, PageCursor cursor, long header ) throws IOException
         {
             int intsPerRecord = getShortsPerRecord();
             for ( int i = 0; i < intsPerRecord; i++ )
@@ -134,7 +132,7 @@ public class BaseHighLimitRecordFormatTest
         }
 
         @Override
-        protected byte headerBits( MyRecord record )
+        protected long headerBits( MyRecord record )
         {
             return 0;
         }

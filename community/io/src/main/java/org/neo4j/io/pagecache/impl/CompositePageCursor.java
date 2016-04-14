@@ -195,7 +195,7 @@ public class CompositePageCursor extends PageCursor
     private PageCursor cursor( int offset, int width )
     {
         outOfBounds |= offset + width > firstLength + secondLength;
-        if ( offset < firstLength )
+        if ( offset + width < firstLength )
         {
             return offset + width <= firstLength ? first : byteCursor( offset );
         }
