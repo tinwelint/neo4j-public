@@ -44,7 +44,7 @@ public class ReferenceTest
     @Test
     public void shouldEncodeRandomLongs() throws Exception
     {
-        for ( int i = 0; i < 100_000_000; i++ )
+        for ( int i = 0; i < 100_000; i++ )
         {
             long reference = limit( random.nextLong() );
             assertDecodedMatchesEncoded( reference );
@@ -62,6 +62,12 @@ public class ReferenceTest
 
         long absoluteCandidate = Reference.toAbsolute( relative, basis );
         assertEquals( "Converted reference should be equal to initial value", absoluteReference, absoluteCandidate );
+    }
+
+    @Test
+    public void shouldEncodeDecodeMinusOne() throws Exception
+    {
+        assertDecodedMatchesEncoded( -1 );
     }
 
     private static long numberOfBits( int count )

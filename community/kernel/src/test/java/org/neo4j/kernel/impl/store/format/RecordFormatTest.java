@@ -46,7 +46,8 @@ import static java.lang.System.currentTimeMillis;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 @Ignore( "Not a test, a base class for testing formats" )
@@ -55,8 +56,8 @@ public abstract class RecordFormatTest
     private static final int PAGE_SIZE = 1_024;
 
     // Whoever is hit first
-    private static final long TEST_ITERATIONS = 20_000;
-    private static final long TEST_TIME = 500;
+    private static final long TEST_ITERATIONS = Long.MAX_VALUE;
+    private static final long TEST_TIME = 30_000;
     private static final long PRINT_RESULTS_THRESHOLD = SECONDS.toMillis( 1 );
     private static final int DATA_SIZE = 100;
     protected static final long NULL = Record.NULL_REFERENCE.intValue();
@@ -233,7 +234,10 @@ public abstract class RecordFormatTest
                 format.read( read, cursor, NORMAL, recordSize, storeFile );
             }
             while ( cursor.shouldRetry() );
-            assertFalse( "Out-of-bounds when reading record " + written, cursor.checkAndClearBoundsFlag() );
+            if ( cursor.checkAndClearBoundsFlag() )
+            {
+                fail( "Out-of-bounds when reading record " + written );
+            }
 
             // THEN
             if ( written.inUse() )
@@ -264,7 +268,10 @@ public abstract class RecordFormatTest
             int offset = Math.toIntExact( record.getId() * recordSize );
             cursor.setOffset( offset );
             format.write( record, cursor, recordSize, storeFile );
-            assertFalse( "Out-of-bounds when writing record " + record, cursor.checkAndClearBoundsFlag() );
+            if ( cursor.checkAndClearBoundsFlag() )
+            {
+                fail( "Out-of-bounds when reading record " + record );
+            }
         }
     }
 

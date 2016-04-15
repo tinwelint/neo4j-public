@@ -25,7 +25,8 @@ import org.neo4j.kernel.impl.store.format.RecordGenerators;
 
 public class HighLimitRecordFormatTest extends RecordFormatTest
 {
-    private static final RecordGenerators HIGH_LIMITS = new LimitedRecordGenerators( random, 50, 50, 50, 16, NULL );
+    private static final int BITS = 50;
+    private static final RecordGenerators HIGH_LIMITS = new LimitedRecordGenerators( random, BITS, BITS, BITS, 16, NULL );
 
     public HighLimitRecordFormatTest()
     {

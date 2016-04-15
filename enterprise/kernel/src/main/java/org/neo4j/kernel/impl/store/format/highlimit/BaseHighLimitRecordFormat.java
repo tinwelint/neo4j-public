@@ -90,6 +90,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
     }
 
+    @Override
     public void read( RECORD record, PageCursor primaryCursor, RecordLoad mode, int recordSize, PagedFile storeFile )
             throws IOException
     {
