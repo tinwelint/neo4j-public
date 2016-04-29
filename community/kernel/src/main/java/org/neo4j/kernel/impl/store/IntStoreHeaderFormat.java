@@ -45,6 +45,7 @@ public class IntStoreHeaderFormat implements StoreHeaderFormat<IntStoreHeader>
     @Override
     public IntStoreHeader readHeader( PageCursor cursor )
     {
+        cursor.consistentlyRead( 4 );
         return new IntStoreHeader( cursor.getInt() );
     }
 }

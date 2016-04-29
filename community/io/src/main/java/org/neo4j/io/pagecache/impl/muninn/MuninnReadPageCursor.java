@@ -88,6 +88,7 @@ final class MuninnReadPageCursor extends MuninnPageCursor
         lockStamp = page.unlockExclusive();
     }
 
+    @Override
     protected void releaseCursor()
     {
         nextCursor = cursorSets.readCursors;
@@ -103,6 +104,26 @@ final class MuninnReadPageCursor extends MuninnPageCursor
         if ( needsRetry )
         {
             startRetry();
+        }
+        return needsRetry;
+    }
+
+    @Override
+    public void consistentlyRead( int bytes )
+    {
+        do
+        {
+            super.consistentlyRead( bytes );
+        }
+        while ( shouldRetryInternal() );
+    }
+
+    private boolean shouldRetryInternal()
+    {
+        boolean needsRetry = !page.validateReadLock( lockStamp );
+        if ( needsRetry )
+        {
+            lockStamp = page.tryOptimisticReadLock();
         }
         return needsRetry;
     }

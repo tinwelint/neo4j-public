@@ -215,6 +215,12 @@ public class CompositePageCursor extends PageCursor
     }
 
     @Override
+    public void consistentlyRead( int bytes )
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public byte getByte()
     {
         PageCursor cursor = cursor( Byte.BYTES );

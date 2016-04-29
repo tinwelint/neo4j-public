@@ -214,6 +214,7 @@ public class KeyValueStoreFile implements Closeable
         do
         {
             cursor.setOffset( offset );
+            cursor.consistentlyRead( key.size() + value.size() );
             key.getFrom( cursor );
             value.getFrom( cursor );
         }

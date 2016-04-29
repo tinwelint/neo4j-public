@@ -45,6 +45,7 @@ public abstract class BaseOneByteHeaderRecordFormat<RECORD extends AbstractBaseR
 
     protected void markAsUnused( PageCursor cursor )
     {
+        cursor.consistentlyRead( 1 );
         byte inUseByte = cursor.getByte( cursor.getOffset() );
         inUseByte &= ~inUseBitMaskForFirstByte;
         cursor.putByte( inUseByte );
@@ -53,6 +54,7 @@ public abstract class BaseOneByteHeaderRecordFormat<RECORD extends AbstractBaseR
     @Override
     public boolean isInUse( PageCursor cursor )
     {
+        cursor.consistentlyRead( 1 );
         return isInUse( cursor.getByte( cursor.getOffset() ) );
     }
 

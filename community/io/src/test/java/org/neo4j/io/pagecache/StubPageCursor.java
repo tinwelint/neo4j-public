@@ -33,8 +33,8 @@ import org.neo4j.io.pagecache.impl.ByteBufferPage;
  */
 public class StubPageCursor extends PageCursor
 {
-    private long pageId;
-    private int pageSize;
+    private final long pageId;
+    private final int pageSize;
     protected ByteBufferPage page;
     private int currentOffset;
     private boolean observedOverflow;
@@ -55,6 +55,12 @@ public class StubPageCursor extends PageCursor
         this.pageId = initialPageId;
         this.pageSize = buffer.capacity();
         this.page = new ByteBufferPage( buffer );
+    }
+
+    @Override
+    public void consistentlyRead( int bytes )
+    {
+        // Do nothing
     }
 
     @Override

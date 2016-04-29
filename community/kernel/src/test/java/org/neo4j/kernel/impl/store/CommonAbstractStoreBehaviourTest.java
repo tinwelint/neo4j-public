@@ -322,6 +322,7 @@ public class CommonAbstractStoreBehaviourTest
             int offset = cursor.getOffset();
             long pageId = cursor.getCurrentPageId();
             long recordId = (offset + pageId * cursor.getCurrentPageSize()) / 4;
+            cursor.consistentlyRead( intsPerRecord*4 );
             boolean inUse = false;
             for ( int i = 0; i < intsPerRecord; i++ )
             {
@@ -377,6 +378,7 @@ public class CommonAbstractStoreBehaviourTest
         public LongLongHeader readHeader( PageCursor cursor )
         {
             LongLongHeader header = new LongLongHeader();
+            cursor.consistentlyRead( 16 );
             cursor.getLong(); // pretend to read fields into the header
             cursor.getLong();
             return header;

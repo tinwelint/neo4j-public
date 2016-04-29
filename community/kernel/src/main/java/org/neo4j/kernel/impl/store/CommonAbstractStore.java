@@ -317,12 +317,9 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
         {
             if ( cursor.next() )
             {
-                do
-                {
-                    cursor.setOffset( offset );
-                    cursor.getBytes( data );
-                }
-                while ( cursor.shouldRetry() );
+                cursor.setOffset( offset );
+                cursor.consistentlyRead( recordSize );
+                cursor.getBytes( data );
                 checkForDecodingErrors( cursor, id, CHECK );
             }
         }
@@ -750,6 +747,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
                 // If the version bytes are bigger than record size then we must also compare with subsets
                 // of those bytes in recordSize chunks
                 boolean mismatch = false;
+                cursor.consistentlyRead( Math.min( expectedVersionBytes.length, recordSize ) );
                 for ( int j = 0; i < expectedVersionBytes.length && j < recordSize; i++, j++ )
                 {
                     byte b = cursor.getByte( offset + j );
@@ -1038,12 +1036,9 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
         if ( cursor.next( pageId ) )
         {
             // There is a page in the store that covers this record, go read it
-            do
-            {
-                prepareForReading( cursor, offset, record );
-                recordFormat.read( record, cursor, mode, recordSize );
-            }
-            while ( cursor.shouldRetry() );
+            prepareForReading( cursor, offset, record );
+            cursor.consistentlyRead( recordSize );
+            recordFormat.read( record, cursor, mode, recordSize );
             checkForDecodingErrors( cursor, id, mode );
             verifyAfterReading( record, mode );
         }

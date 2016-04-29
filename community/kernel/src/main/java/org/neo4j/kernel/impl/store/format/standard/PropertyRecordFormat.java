@@ -154,6 +154,7 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
     {
         cursor.setOffset( cursor.getOffset() /*skip...*/ + 1/*mod*/ + 4/*prev*/ + 4/*next*/ );
         int blocks = PropertyType.getPayloadSizeLongs();
+        cursor.consistentlyRead( blocks*8 );
         for ( int i = 0; i < blocks; i++ )
         {
             long block = cursor.getLong();

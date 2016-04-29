@@ -59,6 +59,7 @@ public class MetaDataRecordFormat extends BaseOneByteHeaderRecordFormat<MetaData
         Position position = values[id];
         int offset = position.id() * recordSize;
         cursor.setOffset( offset );
+        cursor.consistentlyRead( RECORD_SIZE );
         boolean inUse = cursor.getByte() == Record.IN_USE.byteValue();
         long value = inUse ? cursor.getLong() : FIELD_NOT_PRESENT;
         record.initialize( inUse, value );

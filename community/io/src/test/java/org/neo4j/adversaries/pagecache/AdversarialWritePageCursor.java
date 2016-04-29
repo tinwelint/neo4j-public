@@ -52,6 +52,12 @@ class AdversarialWritePageCursor extends PageCursor
     }
 
     @Override
+    public void consistentlyRead( int bytes )
+    {
+        delegate.consistentlyRead( bytes );
+    }
+
+    @Override
     public byte getByte()
     {
         adversary.injectFailure( IndexOutOfBoundsException.class );

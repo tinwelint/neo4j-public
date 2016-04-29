@@ -184,6 +184,12 @@ class AdversarialReadPageCursor extends PageCursor
     }
 
     @Override
+    public void consistentlyRead( int bytes )
+    {
+        delegate.consistentlyRead( bytes );
+    }
+
+    @Override
     public byte getByte()
     {
         return inconsistently( delegate.getByte() ).byteValue();

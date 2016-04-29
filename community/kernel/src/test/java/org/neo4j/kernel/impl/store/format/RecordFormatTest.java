@@ -47,6 +47,7 @@ import org.neo4j.unsafe.impl.batchimport.store.BatchingIdSequence;
 import static java.lang.System.currentTimeMillis;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.io.ByteUnit.kibiBytes;
@@ -195,14 +196,11 @@ public abstract class RecordFormatTest
              Same retry is done on the store level in {@link org.neo4j.kernel.impl.store.CommonAbstractStore}
              */
             int offset = Math.toIntExact( written.getId() * recordSize );
-            do
-            {
-                cursor.setOffset( offset );
-                format.read( read, cursor, NORMAL, recordSize );
-            }
-            while ( cursor.shouldRetry() );
+            cursor.setOffset( offset );
+            cursor.consistentlyRead( recordSize );
+            format.read( read, cursor, NORMAL, recordSize );
             assertWithinBounds( written, cursor, "reading" );
-            cursor.checkAndClearCursorException();
+            assertFalse( "Out-of-bounds when reading record " + written, cursor.checkAndClearBoundsFlag() );
 
             // THEN
             if ( written.inUse() )

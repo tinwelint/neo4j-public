@@ -102,6 +102,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
     }
 
+    @Override
     public void read( RECORD record, PageCursor primaryCursor, RecordLoad mode, int recordSize )
             throws IOException
     {
@@ -140,6 +141,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
                 return;
             }
             secondaryCursor.setOffset( offset + HEADER_BYTE);
+            secondaryCursor.consistentlyRead( recordSize );
             int primarySize = recordSize - (primaryCursor.getOffset() - primaryStartOffset);
             // We *could* sanity check the secondary record header byte here, but we won't. If it is wrong, then we most
             // likely did an inconsistent read, in which case we'll just retry. Otherwise, if the header byte is wrong,
