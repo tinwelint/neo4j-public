@@ -357,9 +357,9 @@ public class KernelTransactionImplementationTest
         }
 
         // THEN start time and last tx when started should have been taken from when the transaction started
-        assertEquals( 5L, commitProcess.transaction.getLatestCommittedTxWhenStarted() );
-        assertEquals( startingTime, commitProcess.transaction.getTimeStarted() );
-        assertEquals( startingTime+5, commitProcess.transaction.getTimeCommitted() );
+        assertEquals( 5L, commitProcess.getLastCommittedTransaction().getLatestCommittedTxWhenStarted() );
+        assertEquals( startingTime, commitProcess.getLastCommittedTransaction().getTimeStarted() );
+        assertEquals( startingTime+5, commitProcess.getLastCommittedTransaction().getTimeCommitted() );
     }
 
     @Test
@@ -635,20 +635,5 @@ public class KernelTransactionImplementationTest
                 hooks, null, headerInformationFactory, commitProcess, transactionMonitor, storeReadLayer,
                 legacyIndexState, pool, new StandardConstraintSemantics(), clock, TransactionTracer.NULL,
                 new ProcedureCache(), mock( NeoStoreTransactionContext.class ), txTerminationAware );
-    }
-
-    public class CapturingCommitProcess implements TransactionCommitProcess
-    {
-        private long txId = 1;
-        private TransactionRepresentation transaction;
-
-        @Override
-        public long commit( TransactionRepresentation representation, LockGroup locks, CommitEvent commitEvent,
-                            TransactionApplicationMode mode ) throws TransactionFailureException
-        {
-            assert transaction == null : "Designed to only allow one transaction";
-            transaction = representation;
-            return txId++;
-        }
     }
 }
