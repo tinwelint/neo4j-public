@@ -27,11 +27,9 @@ import java.io.IOException;
 
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.Record;
-import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.IOCursor;
@@ -42,7 +40,6 @@ import org.neo4j.test.DatabaseRule;
 import org.neo4j.test.EmbeddedDatabaseRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class ZD3483InconsistenciesFixTest
 {
@@ -52,7 +49,6 @@ public class ZD3483InconsistenciesFixTest
     private NeoStores stores;
     private RelationshipStore relationshipStore;
     private NodeStore nodeStore;
-    private RelationshipGroupStore relationshipGroupStore;
 
     @Before
     public void before()
@@ -60,11 +56,10 @@ public class ZD3483InconsistenciesFixTest
         stores = db.getDependencyResolver().resolveDependency( NeoStores.class );
         relationshipStore = stores.getRelationshipStore();
         nodeStore = stores.getNodeStore();
-        relationshipGroupStore = stores.getRelationshipGroupStore();
     }
 
     @Test
-    public void shouldRepairTheirStoreIfSparseNode() throws Throwable
+    public void shouldRepairTheirStore() throws Throwable
     {
         createGistOfInconsistency();
 
@@ -72,31 +67,6 @@ public class ZD3483InconsistenciesFixTest
         // Node[663219] -> Relationship[1] -> Relationship[2] -> Relationship[74306456]
         nodeStore.updateRecord( new NodeRecord( 663219, false, 1, -1, true ) );
         nodeStore.updateRecord( new NodeRecord( 1, false, 1, -1, true ) );
-        relationshipStore.updateRecord( new RelationshipRecord( 1, true, 1, 663219, 2, 2/*degree*/, 2,
-                2/*degree*/, 2, true, true ) );
-        relationshipStore.updateRecord( new RelationshipRecord( 2, true, 1, 663219, 2, 1, -1,
-                1, 74306456, false, false ) );
-
-        // WHEN running the repair tool
-        new ZD3483InconsistenciesFix( db ).doRepair();
-
-        // THEN it should be fixed
-        printTransactionLog();
-        verifyFixed();
-    }
-
-    @Test
-    public void shouldRepairTheirStoreIfDenseNode() throws Throwable
-    {
-        createGistOfInconsistency();
-
-        // fake a chain in front of 663219, we're building simply:
-        // Node[663219] -> Group[1] -> Group[2] -in-> Relationship[1] -> Relationship[2] -> Relationship[74306456]
-        nodeStore.updateRecord( new NodeRecord( 663219, false, 1, -1, true ) );
-        nodeStore.updateRecord( new NodeRecord( 1, true/*dense*/, 1, -1, true ) );
-        relationshipGroupStore.setHighId( 5 );
-        relationshipGroupStore.updateRecord( new RelationshipGroupRecord( 1, 1, -1, -1, -1, 663219, 2, true ) );
-        relationshipGroupStore.updateRecord( new RelationshipGroupRecord( 2, 2, -1, 1, -1, 663219, -1, true ) );
         relationshipStore.updateRecord( new RelationshipRecord( 1, true, 1, 663219, 2, 2/*degree*/, 2,
                 2/*degree*/, 2, true, true ) );
         relationshipStore.updateRecord( new RelationshipRecord( 2, true, 1, 663219, 2, 1, -1,
@@ -129,8 +99,8 @@ public class ZD3483InconsistenciesFixTest
                 relationshipStore.getRecord( 74753399 ).getSecondNextRel() );
         assertEquals( Record.NO_NEXT_RELATIONSHIP.intValue(),
                 relationshipStore.getRecord( 74430152 ).getFirstNextRel() );
-        RelationshipRecord record = relationshipStore.getRecord( 74306456 );
-        assertTrue( relationshipStore.getRecord( record.getSecondPrevRel() ).inUse() );
+        assertEquals( Record.NO_NEXT_RELATIONSHIP.intValue(),
+                relationshipStore.getRecord( 74306456 ).getSecondPrevRel() );
     }
 
     private void createGistOfInconsistency()

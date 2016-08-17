@@ -22,17 +22,11 @@ package org.neo4j.kernel.impl.transaction.repair;
 import java.io.File;
 import org.neo4j.function.Consumer;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.RelationshipGroupStore;
-import org.neo4j.kernel.impl.store.RelationshipStore;
-import org.neo4j.kernel.impl.store.record.NodeRecord;
-import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 
@@ -77,16 +71,10 @@ public class ZD3483InconsistenciesFix
 
     public void doRepair() throws Throwable
     {
-        final long n1 = 26656330, n2 = 663261, n3 = 663219;
-
         DependencyResolver resolver = db.getDependencyResolver();
         NeoStores stores = resolver.resolveDependency( NeoStores.class );
-        RelationshipStore relationshipStore = stores.getRelationshipStore();
 
         // Get records and validate them
-        final RelationshipRecord actualPrevRelationshipOfTarget_74306456 =
-                findPrev( stores, n3, 74306456, 2, Direction.INCOMING );
-
         // Perform the changes
         try ( Locks.Client locks = resolver.resolveDependency( Locks.class ).newClient();
                 RepairTransaction tx = new RepairTransaction( locks, stores,
@@ -118,7 +106,9 @@ public class ZD3483InconsistenciesFix
                 @Override
                 public void accept( RelationshipRecord relationship )
                 {
-                    setPrev( relationship, n3, actualPrevRelationshipOfTarget_74306456.getId() );
+                    validateRelationshipAssumptions( relationship,
+                            27582139, 663219, 2, 74306455, 74306461, 74430148, 74298862 );
+                    relationship.setSecondPrevRel( NO_NEXT_RELATIONSHIP.intValue() );
                 }
             } );
             tx.repairRelationship( 74430148, new Consumer<RelationshipRecord>()
@@ -135,100 +125,6 @@ public class ZD3483InconsistenciesFix
         }
     }
 
-    private static void setPrev( RelationshipRecord relationship, long nodeId, long newPrevValue )
-    {
-        boolean found = false;
-        if ( nodeId == relationship.getFirstNode() )
-        {
-            relationship.setFirstPrevRel( newPrevValue );
-            found = true;
-        }
-        if ( nodeId == relationship.getSecondNode() )
-        {
-            relationship.setSecondPrevRel( newPrevValue );
-            found = true;
-        }
-        if ( !found )
-        {
-            throw new AssertionError( relationship + " is a relationship between two other nodes, not " + nodeId );
-        }
-    }
-
-    private static RelationshipRecord findPrev( NeoStores stores, long nodeId, long tooFarRelationshipId, int type,
-            Direction direction )
-    {
-        NodeStore nodeStore = stores.getNodeStore();
-        NodeRecord node = nodeStore.getRecord( nodeId );
-        long relId = node.getNextRel();
-        if ( node.isDense() )
-        {
-            relId = getStartOf( stores, nodeId, relId, type, direction );
-        }
-
-        StringBuilder observedChain = new StringBuilder();
-        RelationshipStore relationshipStore = stores.getRelationshipStore();
-        while ( !NO_NEXT_RELATIONSHIP.is( relId ) )
-        {
-            RelationshipRecord relationship = relationshipStore.getRecord( relId );
-            observedChain.append( "\n  " ).append( relationship.toString() );
-            if ( !relationship.inUse() )
-            {
-                break;
-            }
-            long nextRelId = getNextTargetOf( nodeId, relationship );
-            if ( nextRelId == tooFarRelationshipId )
-            {
-                return relationship;
-            }
-            relId = nextRelId;
-        }
-        throw new AssertionError( "Expected to find the previous relationship to " + tooFarRelationshipId +
-                ", but didn't. Observed this chain:" + observedChain );
-    }
-
-    private static long getNextTargetOf( long nodeId, RelationshipRecord relationship )
-    {
-        if ( nodeId == relationship.getFirstNode() )
-        {
-            return relationship.getFirstNextRel();
-        }
-        if ( nodeId == relationship.getSecondNode() )
-        {
-            return relationship.getSecondNextRel();
-        }
-        throw new AssertionError( "Next relationship " + relationship + " is a relationship between two other nodes" +
-                ", not " + nodeId );
-    }
-
-    private static long getStartOf( NeoStores stores, long nodeId, long groupId, int type, Direction direction )
-    {
-        StringBuilder observedChain = new StringBuilder();
-        RelationshipGroupStore groupStore = stores.getRelationshipGroupStore();
-        while ( !NO_NEXT_RELATIONSHIP.is( groupId ) )
-        {
-            RelationshipGroupRecord group = groupStore.getRecord( groupId );
-            observedChain.append( "\n  " ).append( group.toString() );
-            if ( group.getType() == type )
-            {
-                return getStartOf( group, direction );
-            }
-            groupId = group.getNext();
-        }
-        throw new AssertionError( "Expected to find relationships chain head for node:" + nodeId +
-                " with type:" + type + " and direction:" + direction + ", observed group chain:" + observedChain );
-    }
-
-    private static long getStartOf( RelationshipGroupRecord group, Direction direction )
-    {
-        switch ( direction )
-        {
-        case OUTGOING: return group.getFirstOut();
-        case INCOMING: return group.getFirstIn();
-        case BOTH: return group.getFirstLoop();
-        default: throw new IllegalArgumentException( "" + direction );
-        }
-    }
-
     private static void validateRelationshipAssumptions( RelationshipRecord relationship,
             long sourceNode, long targetNode, int type,
             long sourcePrev, long sourceNext, long targetPrev, long targetNext )
@@ -239,6 +135,7 @@ public class ZD3483InconsistenciesFix
         validateAssumption( "Target node", targetNode, relationship.getSecondNode() );
         validateAssumption( "Target prev", targetPrev, relationship.getSecondPrevRel() );
         validateAssumption( "Target next", targetNext, relationship.getSecondNextRel() );
+        validateAssumption( "Type", type, relationship.getType() );
     }
 
     /**
