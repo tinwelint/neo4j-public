@@ -87,7 +87,7 @@ public class ZD3483InconsistenciesFix
                 public void accept( RelationshipRecord relationship )
                 {
                     validateRelationshipAssumptions( relationship,
-                            26656330, 663261, 2, 74419400, 74430137, 74753399, 74306456 );
+                            3311437, 663219, 2, 74753402, 74753398, 74766418, 74430148 );
                     relationship.setSecondNextRel( NO_NEXT_RELATIONSHIP.intValue() );
                 }
             } );
@@ -129,13 +129,13 @@ public class ZD3483InconsistenciesFix
             long sourceNode, long targetNode, int type,
             long sourcePrev, long sourceNext, long targetPrev, long targetNext )
     {
-        validateAssumption( "Source node", sourceNode, relationship.getFirstNode() );
-        validateAssumption( "Source prev", sourcePrev, relationship.getFirstPrevRel() );
-        validateAssumption( "Source next", sourceNext, relationship.getFirstNextRel() );
-        validateAssumption( "Target node", targetNode, relationship.getSecondNode() );
-        validateAssumption( "Target prev", targetPrev, relationship.getSecondPrevRel() );
-        validateAssumption( "Target next", targetNext, relationship.getSecondNextRel() );
-        validateAssumption( "Type", type, relationship.getType() );
+        validateAssumption( "Source node", sourceNode, relationship.getFirstNode(), relationship );
+        validateAssumption( "Source prev", sourcePrev, relationship.getFirstPrevRel(), relationship );
+        validateAssumption( "Source next", sourceNext, relationship.getFirstNextRel(), relationship );
+        validateAssumption( "Target node", targetNode, relationship.getSecondNode(), relationship );
+        validateAssumption( "Target prev", targetPrev, relationship.getSecondPrevRel(), relationship );
+        validateAssumption( "Target next", targetNext, relationship.getSecondNextRel(), relationship );
+        validateAssumption( "Type", type, relationship.getType(), relationship );
     }
 
     /**
@@ -146,13 +146,15 @@ public class ZD3483InconsistenciesFix
      * @param message to print if an assumption didn't validate.
      * @param expectedValue
      * @param actualValue
+     * @param record
      */
-    private static void validateAssumption( String message, long expectedValue, long actualValue )
+    private static void validateAssumption( String message, long expectedValue, long actualValue,
+            RelationshipRecord record )
     {
         if ( expectedValue != actualValue )
         {
             throw new AssertionError( "False assumption about " + message + ", expected " + expectedValue +
-                    " but was " + actualValue );
+                    " but was " + actualValue + " in record " + record );
         }
     }
 }

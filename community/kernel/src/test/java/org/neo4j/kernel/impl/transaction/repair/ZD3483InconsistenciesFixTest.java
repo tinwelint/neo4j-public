@@ -108,7 +108,7 @@ public class ZD3483InconsistenciesFixTest
         relationshipStore.setHighId( 75_000_000 );
         nodeStore.setHighId( 670_000 );
         relationshipStore.updateRecord( new RelationshipRecord( 74753399, true,
-                26656330, 663261, 2, 74419400, 74430137, 74753399, 74306456, false, false ) );
+                3311437, 663219, 2, 74753402, 74753398, 74766418, 74430148, false, false ) );
         relationshipStore.updateRecord( new RelationshipRecord( 74430152, true,
                 26656330, 1345167, 2, 74430165, 74430148, 80981547, 51551984, false, false ) );
         relationshipStore.updateRecord( new RelationshipRecord( 74430148, true,
