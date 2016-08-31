@@ -59,4 +59,37 @@ public class RelationshipStore extends CommonAbstractStore<RelationshipRecord,No
     {
         processor.processRelationship( this, record );
     }
+
+//    private long accessCount = 0;
+//    private long previousPage = 0;
+//    private long pageChangeCount = 0;
+//    private long currentConsecutivePageAccess = 0;
+//    private long longestConsecutivePageAccess = 0;
+//
+//    @Override
+//    protected void readIntoRecord( long id, RelationshipRecord record, RecordLoad mode, long pageId, int offset,
+//            PageCursor cursor ) throws IOException
+//    {
+//        accessCount++;
+//        if ( pageId != previousPage )
+//        {
+//            pageChangeCount++;
+//            previousPage = pageId;
+//            longestConsecutivePageAccess = Long.max( longestConsecutivePageAccess, currentConsecutivePageAccess );
+//            currentConsecutivePageAccess = 0;
+//        }
+//        else
+//        {
+//            currentConsecutivePageAccess++;
+//        }
+//        super.readIntoRecord( id, record, mode, pageId, offset, cursor );
+//    }
+//
+//    @Override
+//    public void close()
+//    {
+//        System.out.println( "access:" + accessCount + ", pageChange:" + pageChangeCount +
+//                ", " + ((double) pageChangeCount / accessCount) + " longestPageAccess:" + longestConsecutivePageAccess );
+//        super.close();
+//    }
 }
