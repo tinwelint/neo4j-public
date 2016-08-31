@@ -32,6 +32,7 @@ import org.neo4j.storageengine.api.RelationshipItem;
 public class CursorRelationshipIterator implements RelationshipIterator, Resource
 {
     private Cursor<RelationshipItem> cursor;
+    private boolean hasDeterminedNext;
     private boolean hasNext;
 
     private long id;
@@ -42,7 +43,6 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
     public CursorRelationshipIterator( Cursor<RelationshipItem> resourceCursor )
     {
         cursor = resourceCursor;
-        hasNext = nextCursor();
     }
 
     private boolean nextCursor()
@@ -62,6 +62,11 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
     @Override
     public boolean hasNext()
     {
+        if ( !hasDeterminedNext )
+        {
+            hasNext = nextCursor();
+            hasDeterminedNext = true;
+        }
         return hasNext;
     }
 
@@ -83,7 +88,7 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
             }
             finally
             {
-                hasNext = nextCursor();
+                hasDeterminedNext = false;
             }
         }
         throw new NoSuchElementException();
