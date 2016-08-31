@@ -49,16 +49,19 @@ public class RelationshipLinkbackProcessor implements RecordProcessor<Relationsh
         {
             if ( firstIsDense == denseNodes )
             {
-                long prevRel = cache.getAndPutRelationship( record.getFirstNode(),
+                long nextRel = cache.getAndPutRelationship( record.getFirstNode(),
                         Direction.BOTH, record.getId(), false );
-                if ( prevRel == ID_NOT_FOUND )
-                {   // First one
-                    record.setFirstInFirstChain( true );
-                    record.setFirstInSecondChain( true );
-                    prevRel = cache.getCount( record.getFirstNode(), Direction.BOTH );
+                if ( nextRel != ID_NOT_FOUND )
+                {
+                    record.setFirstNextRel( nextRel );
+                    record.setSecondNextRel( nextRel );
                 }
-                record.setFirstPrevRel( prevRel );
-                record.setSecondPrevRel( prevRel );
+                if ( record.getFirstPrevRel() == ID_NOT_FOUND )
+                {
+                    long degree = cache.getCount( record.getFirstNode(), Direction.BOTH );
+                    record.setFirstPrevRel( degree );
+                    record.setSecondPrevRel( degree );
+                }
                 changed = true;
             }
         }
@@ -67,14 +70,16 @@ public class RelationshipLinkbackProcessor implements RecordProcessor<Relationsh
             // Start node
             if ( firstIsDense == denseNodes )
             {
-                long firstPrevRel = cache.getAndPutRelationship( record.getFirstNode(),
+                long firstNextRel = cache.getAndPutRelationship( record.getFirstNode(),
                         Direction.OUTGOING, record.getId(), false );
-                if ( firstPrevRel == ID_NOT_FOUND )
-                {   // First one
-                    record.setFirstInFirstChain( true );
-                    firstPrevRel = cache.getCount( record.getFirstNode(), Direction.OUTGOING );
+                if ( firstNextRel != ID_NOT_FOUND )
+                {
+                    record.setFirstNextRel( firstNextRel );
                 }
-                record.setFirstPrevRel( firstPrevRel );
+                if ( record.getFirstPrevRel() == -1 )
+                {
+                    record.setFirstPrevRel( cache.getCount( record.getFirstNode(), Direction.OUTGOING ) );
+                }
                 changed = true;
             }
 
@@ -82,14 +87,16 @@ public class RelationshipLinkbackProcessor implements RecordProcessor<Relationsh
             boolean secondIsDense = cache.isDense( record.getSecondNode() );
             if ( secondIsDense == denseNodes )
             {
-                long secondPrevRel = cache.getAndPutRelationship( record.getSecondNode(),
+                long secondNextRel = cache.getAndPutRelationship( record.getSecondNode(),
                         Direction.INCOMING, record.getId(), false );
-                if ( secondPrevRel == ID_NOT_FOUND )
-                {   // First one
-                    record.setFirstInSecondChain( true );
-                    secondPrevRel = cache.getCount( record.getSecondNode(), Direction.INCOMING );
+                if ( secondNextRel != ID_NOT_FOUND )
+                {
+                    record.setSecondNextRel( secondNextRel );
                 }
-                record.setSecondPrevRel( secondPrevRel );
+                if ( record.getSecondPrevRel() == ID_NOT_FOUND )
+                {
+                    record.setSecondPrevRel( cache.getCount( record.getSecondNode(), Direction.INCOMING ) );
+                }
                 changed = true;
             }
         }

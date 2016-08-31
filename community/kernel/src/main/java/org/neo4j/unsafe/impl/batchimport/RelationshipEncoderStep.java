@@ -64,20 +64,23 @@ public class RelationshipEncoderStep extends ForkedProcessorStep<Batch<InputRela
             boolean loop = startNode == endNode;
             if ( startNode % processors == id )
             {
-                long firstNextRel = cache.getAndPutRelationship(
+                long firstPrevRel = cache.getAndPutRelationship(
                         startNode, loop ? BOTH : OUTGOING, relationship.getId(), true );
-                relationship.setFirstNextRel( firstNextRel );
+                relationship.setFirstPrevRel( firstPrevRel );
                 if ( loop )
                 {
-                    relationship.setSecondNextRel( firstNextRel );
+                    relationship.setSecondPrevRel( firstPrevRel );
                 }
             }
 
             if ( !loop && endNode % processors == id )
             {
-                relationship.setSecondNextRel( cache.getAndPutRelationship(
+                relationship.setSecondPrevRel( cache.getAndPutRelationship(
                         endNode, INCOMING, relationship.getId(), true ) );
             }
+
+            relationship.setFirstInFirstChain( relationship.getFirstPrevRel() == -1 );
+            relationship.setFirstInSecondChain( relationship.getSecondPrevRel() == -1 );
         }
     }
 }

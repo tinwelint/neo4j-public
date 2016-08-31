@@ -373,7 +373,7 @@ public class NodeRelationshipCache implements MemoryStatsVisitor.Visitable
         return changeBitWasFlipped;
     }
 
-    private static boolean nodeIsChanged( ByteArray array, long nodeId, long mask )
+    private boolean nodeIsChanged( ByteArray array, long nodeId, long mask )
     {
         int bits = array.getInt( nodeId, SPARSE_COUNT_OFFSET );
 
@@ -387,7 +387,8 @@ public class NodeRelationshipCache implements MemoryStatsVisitor.Visitable
         {
             return false;
         }
-        return (bits & mask) != 0;
+        long check = (bits & mask);
+        return forward ? check != 0 : check == 0;
     }
 
     private void setRelationshipId( ByteArray array, long nodeId, long firstRelId )
@@ -422,8 +423,6 @@ public class NodeRelationshipCache implements MemoryStatsVisitor.Visitable
      */
     public long getFirstRel( long nodeId, GroupVisitor visitor )
     {
-        assert forward : "This should only be done at forward scan";
-
         ByteArray array = this.array.at( nodeId );
         long id = getRelationshipId( array, nodeId );
         if ( id != EMPTY && isDense( array, nodeId ) )

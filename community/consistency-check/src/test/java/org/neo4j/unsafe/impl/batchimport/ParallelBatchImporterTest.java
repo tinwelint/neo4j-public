@@ -54,7 +54,6 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.io.fs.watcher.FileWatcher;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -101,8 +100,8 @@ public class ParallelBatchImporterTest
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( directory ).around( random ).around( fileSystemRule );
 
-    private static final int NODE_COUNT = 10_000;
-    private static final int RELATIONSHIPS_PER_NODE = 5;
+    private static final int NODE_COUNT = 60;
+    private static final int RELATIONSHIPS_PER_NODE = 6;
     private static final int RELATIONSHIP_COUNT = NODE_COUNT * RELATIONSHIPS_PER_NODE;
     protected final Configuration config = new Configuration.Default()
     {

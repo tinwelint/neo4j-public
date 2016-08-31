@@ -320,11 +320,6 @@ public class ParallelBatchImporter implements BatchImporter
                     storeUpdateMonitor, nextRelationshipId );
             executeStage( relationshipStage );
 
-            // Stage 4a -- set node nextRel fields for dense nodes
-            executeStage( new NodeFirstRelationshipStage( topic, nodeConfig, neoStore.getNodeStore(),
-                    neoStore.getTemporaryRelationshipGroupStore(), nodeRelationshipCache, true/*dense*/,
-                    currentTypeId ) );
-
             // Stage 5a -- link relationship chains together for dense nodes
             nodeRelationshipCache.setForwardScan( false );
             executeStage( new RelationshipLinkbackStage( topic,
@@ -332,20 +327,27 @@ public class ParallelBatchImporter implements BatchImporter
                     neoStore.getRelationshipStore(),
                     nodeRelationshipCache, nextRelationshipId,
                     relationshipStage.getNextRelationshipId(), true/*dense*/ ) );
+
+            // Stage 4a -- set node nextRel fields for dense nodes
+            executeStage( new NodeFirstRelationshipStage( topic, nodeConfig, neoStore.getNodeStore(),
+                    neoStore.getTemporaryRelationshipGroupStore(), nodeRelationshipCache, true/*dense*/,
+                    currentTypeId ) );
+
             nextRelationshipId = relationshipStage.getNextRelationshipId();
             nodeRelationshipCache.clearChangedChunks( true/*dense*/ ); // cheap higher level clearing
         }
 
         String topic = " Sparse";
         nodeRelationshipCache.setForwardScan( true );
-        // Stage 4b -- set node nextRe fields for sparse nodes
-        executeStage( new NodeFirstRelationshipStage( topic, nodeConfig, neoStore.getNodeStore(),
-                neoStore.getTemporaryRelationshipGroupStore(), nodeRelationshipCache, false/*sparse*/, -1 ) );
 
         // Stage 5b -- link relationship chains together for sparse nodes
         nodeRelationshipCache.setForwardScan( false );
         executeStage( new RelationshipLinkbackStage( topic, relationshipConfig, neoStore.getRelationshipStore(),
                 nodeRelationshipCache, 0, nextRelationshipId, false/*sparse*/ ) );
+
+        // Stage 4b -- set node nextRe fields for sparse nodes
+        executeStage( new NodeFirstRelationshipStage( topic, nodeConfig, neoStore.getNodeStore(),
+                neoStore.getTemporaryRelationshipGroupStore(), nodeRelationshipCache, false/*sparse*/, -1 ) );
 
         if ( minorityRelationshipTypes.length > 0 )
         {
