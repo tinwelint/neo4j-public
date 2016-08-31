@@ -325,7 +325,7 @@ public class ParallelBatchImporter implements BatchImporter
         {
             // Do some batch insertion style random-access insertions for super small minority types
             executeStages( new BatchInsertRelationshipsStage( config, idMapper,
-                    perTypeIterator.getMinorityRelationships(), neoStore, nextRelationshipId ) );
+                    perTypeIterator.getMinorityRelationships(), neoStore, storeUpdateMonitor, nextRelationshipId ) );
         }
     }
 

@@ -38,6 +38,7 @@ import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchSender;
 import org.neo4j.unsafe.batchinsert.DirectRecordAccessSet;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
+import org.neo4j.unsafe.impl.batchimport.EntityStoreUpdaterStep.Monitor;
 import org.neo4j.unsafe.impl.batchimport.staging.ProcessorStep;
 import org.neo4j.unsafe.impl.batchimport.staging.StageControl;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingIdSequence;
@@ -58,12 +59,14 @@ public class BatchInsertRelationshipsStep extends ProcessorStep<Batch<InputRelat
     // Reusable instances for less GC
     private final ReusableIteratorCostume<PropertyBlock> blockIterator = new ReusableIteratorCostume<>();
     private final IdSequence relationshipIdGenerator;
+    private final Monitor storeUpdateMonitor;
 
     public BatchInsertRelationshipsStep( StageControl control, Configuration config, BatchingNeoStores store,
-            ToIntFunction<Object> typeToId, long nextRelationshipId )
+            ToIntFunction<Object> typeToId, long nextRelationshipId, Monitor storeUpdateMonitor )
     {
         super( control, "INSERT", config, 1 );
         this.typeToId = typeToId;
+        this.storeUpdateMonitor = storeUpdateMonitor;
         RecordStore<RelationshipGroupRecord> relationshipGroupStore = store.getTemporaryRelationshipGroupStore();
         RelationshipGroupGetter groupGetter = new RelationshipGroupGetter( relationshipGroupStore );
         this.relationshipCreator = new RelationshipCreator( groupGetter, config.denseNodeThreshold() );
@@ -94,6 +97,7 @@ public class BatchInsertRelationshipsStep extends ProcessorStep<Batch<InputRelat
                 long id = relationshipIdGenerator.nextId();
                 int typeId = typeToId.applyAsInt( input.typeAsObject() );
                 relationshipCreator.relationshipCreate( id, typeId, startNodeId, endNodeId, recordAccess, noopLockClient );
+                storeUpdateMonitor.entitiesWritten( RelationshipRecord.class, 1 );
 
                 // Set properties
                 RelationshipRecord record = recordAccess.getRelRecords().getOrLoad( id, null ).forChangingData();
