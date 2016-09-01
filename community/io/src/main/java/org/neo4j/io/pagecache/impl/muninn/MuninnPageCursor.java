@@ -745,7 +745,11 @@ abstract class MuninnPageCursor extends PageCursor
     @Override
     public void clearCursorException()
     {
-        clearCursorError( this );
+        cursorException = null;
+        if ( linkedCursor != null )
+        {
+            clearCursorError( linkedCursor );
+        }
     }
 
     private void clearCursorError( MuninnPageCursor cursor )

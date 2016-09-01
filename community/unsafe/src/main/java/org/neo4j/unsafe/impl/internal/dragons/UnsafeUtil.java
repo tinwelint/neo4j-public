@@ -57,7 +57,7 @@ public final class UnsafeUtil
      * and verify that our code does not assume that memory is clean when allocated.
      */
     private static final boolean DIRTY_MEMORY = flag( UnsafeUtil.class, "DIRTY_MEMORY", false );
-    private static final boolean CHECK_NATIVE_ACCESS = flag( UnsafeUtil.class, "CHECK_NATIVE_ACCESS", false );
+    private static final boolean CHECK_NATIVE_ACCESS = false;
 
     private static final Unsafe unsafe;
     private static final MethodHandle sharedStringConstructor;
