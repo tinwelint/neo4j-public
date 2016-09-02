@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2016 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.unsafe.impl.batchimport.input.csv;
 
 import java.io.File;
@@ -22,7 +41,6 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.InputGroupsDeserializer.Deser
 
 import static java.lang.Long.max;
 import static java.nio.charset.Charset.defaultCharset;
-
 import static org.neo4j.csv.reader.Readables.files;
 import static org.neo4j.unsafe.impl.batchimport.input.InputEntity.NO_LABELS;
 import static org.neo4j.unsafe.impl.batchimport.input.InputEntity.NO_PROPERTIES;
@@ -67,35 +85,7 @@ public class SnapDatasetInput implements Input
             @Override
             public InputIterator<InputNode> iterator()
             {
-                return new InputIterator.Adapter<InputNode>()
-                {
-                    // This is given that relationships are sorted by start node
-                    private final InputIterator<InputRelationship> relationships = relationships().iterator();
-                    private long currentNodeId;
-                    private long highestNodeId;
-
-                    @Override
-                    protected InputNode fetchNextOrNull()
-                    {
-                        if ( currentNodeId <= highestNodeId )
-                        {
-                            return node( currentNodeId++ );
-                        }
-
-                        while ( relationships.hasNext() && currentNodeId >= highestNodeId )
-                        {
-                            InputRelationship nextRelationship = relationships.next();
-                            highestNodeId = max( highestNodeId,
-                                    max( (Long) nextRelationship.startNode(), (Long) nextRelationship.endNode() ) );
-                        }
-                        return currentNodeId <= highestNodeId ? node( currentNodeId++ ) : null;
-                    }
-
-                    private InputNode node( long nodeId )
-                    {
-                        return new InputNode( "", 0, 0, nodeId, NO_PROPERTIES, null, NO_LABELS, null );
-                    }
-                };
+                return new AmazonInputNodeInputIterator();
             }
 
             @Override
@@ -109,53 +99,10 @@ public class SnapDatasetInput implements Input
     @Override
     public InputIterable<InputRelationship> relationships()
     {
-        return new InputIterable<InputRelationship>()
-        {
-            @Override
-            public InputIterator<InputRelationship> iterator()
-            {
-                DeserializerFactory<InputRelationship> factory = (dataStream, dataHeader, decorator) ->
-                        new InputEntityDeserializer<>( dataHeader, dataStream, config.delimiter(),
-                                new InputRelationshipDeserialization( dataStream, dataHeader, groups ),
-                                decorator, new InputRelationshipValidator(), collector );
-                Data<InputRelationship> data = data( defaultRelationshipType( relationshipType ),
-                        fileWithFirstCommentLinesRemoved( theInputFile ) ).create( config );
-                InputIterator<InputRelationship> bla = new ParallelInputEntityDeserializer<>( data, relationshipheader, config, idType,
-                        maxProcessors, factory, InputRelationship.class  );
-                return new InputIterator.Delegate<InputRelationship>( bla )
-                {
-                    int count = 0;
-
-                    @Override
-                    protected InputRelationship fetchNextOrNull()
-                    {
-                        InputRelationship a = super.fetchNextOrNull();
-//                        System.out.println( a );
-                        if ( a != null )
-                        {
-                            count++;
-                        }
-                        return a;
-                    }
-
-                    @Override
-                    public void close()
-                    {
-                        System.out.println( count );
-                        super.close();
-                    }
-                };
-            }
-
-            @Override
-            public boolean supportsMultiplePasses()
-            {
-                return true;
-            }
-        };
+        return new AmazonRelationshipInputIterable();
     }
 
-    protected Supplier<CharReadable> fileWithFirstCommentLinesRemoved( File file )
+    private Supplier<CharReadable> fileWithFirstCommentLinesRemoved( File file )
     {
         return () ->
         {
@@ -248,6 +195,93 @@ public class SnapDatasetInput implements Input
         public int badEntries()
         {
             return 0;
+        }
+    }
+
+    private class AmazonRelationshipInputIterable implements InputIterable<InputRelationship>
+    {
+        @Override
+        public InputIterator<InputRelationship> iterator()
+        {
+            DeserializerFactory<InputRelationship> factory = ( dataStream, dataHeader, decorator ) -> {
+                final InputRelationshipDeserialization inputRelationshipDeserialization =
+                        new InputRelationshipDeserialization( dataStream, dataHeader, groups );
+
+                return new InputEntityDeserializer<>( dataHeader, dataStream, config.delimiter(),
+                        inputRelationshipDeserialization, decorator, new InputRelationshipValidator(), collector );
+            };
+            Data<InputRelationship> amazonDataStream = data( defaultRelationshipType( relationshipType ),
+                    fileWithFirstCommentLinesRemoved( theInputFile ) )
+                    .create( config );
+            InputIterator<InputRelationship> amazonDataInputIterator =
+                    new ParallelInputEntityDeserializer<>( amazonDataStream, relationshipheader, config, idType,
+                            maxProcessors, factory, InputRelationship.class );
+            return new CountingAmazonRelationshipIterator( amazonDataInputIterator );
+        }
+
+        @Override
+        public boolean supportsMultiplePasses()
+        {
+            return true;
+        }
+
+        private class CountingAmazonRelationshipIterator extends InputIterator.Delegate<InputRelationship>
+        {
+            int count;
+
+            CountingAmazonRelationshipIterator( InputIterator<InputRelationship> bla )
+            {
+                super( bla );
+                count = 0;
+            }
+
+            @Override
+            protected InputRelationship fetchNextOrNull()
+            {
+                InputRelationship a = super.fetchNextOrNull();
+                if ( a != null )
+                {
+                    count++;
+                }
+                return a;
+            }
+
+            @Override
+            public void close()
+            {
+                System.out.println( count );
+                super.close();
+            }
+        }
+    }
+
+    private class AmazonInputNodeInputIterator extends InputIterator.Adapter<InputNode>
+    {
+        // This is given that relationships are sorted by start node
+        private final InputIterator<InputRelationship> relationships = relationships().iterator();
+        private long currentNodeId;
+        private long highestNodeId;
+
+        @Override
+        protected InputNode fetchNextOrNull()
+        {
+            if ( currentNodeId <= highestNodeId )
+            {
+                return node( currentNodeId++ );
+            }
+
+            while ( relationships.hasNext() && currentNodeId >= highestNodeId )
+            {
+                InputRelationship nextRelationship = relationships.next();
+                highestNodeId = max( highestNodeId,
+                        max( (Long) nextRelationship.startNode(), (Long) nextRelationship.endNode() ) );
+            }
+            return currentNodeId <= highestNodeId ? node( currentNodeId++ ) : null;
+        }
+
+        private InputNode node( long nodeId )
+        {
+            return new InputNode( "", 0, 0, nodeId, NO_PROPERTIES, null, NO_LABELS, null );
         }
     }
 }
