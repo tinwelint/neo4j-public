@@ -23,8 +23,10 @@ import java.util.function.Consumer;
 
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
+import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.RecordCursors;
 import org.neo4j.kernel.impl.store.record.Record;
+import org.neo4j.kernel.impl.store.record.RelationshipGroup;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.storageengine.api.Direction;
@@ -42,14 +44,14 @@ public class StoreNodeRelationshipCursor extends StoreAbstractRelationshipCursor
 {
     private final RelationshipGroupRecord groupRecord;
     private final Consumer<StoreNodeRelationshipCursor> instanceCache;
-    private boolean isDense;
+    private final RecordCursor<RelationshipGroupRecord> relationshipGroupCursor;
+    private RelationshipGroup[] relationshipGroups;
     private long relationshipId;
     private long fromNodeId;
     private Direction direction;
     private int[] relTypes;
     private int groupChainIndex;
     private boolean end;
-    private final RecordCursors cursors;
 
     public StoreNodeRelationshipCursor( RelationshipRecord relationshipRecord,
             RelationshipGroupRecord groupRecord,
@@ -60,39 +62,45 @@ public class StoreNodeRelationshipCursor extends StoreAbstractRelationshipCursor
         super( relationshipRecord, cursors, lockService );
         this.groupRecord = groupRecord;
         this.instanceCache = instanceCache;
-        this.cursors = cursors;
+        this.relationshipGroupCursor = cursors.relationshipGroup();
     }
 
-    public StoreNodeRelationshipCursor init( boolean isDense,
-            long firstRelId,
+    public StoreNodeRelationshipCursor init(
+            RelationshipGroup[] relationshipGroups,
             long fromNodeId,
             Direction direction )
     {
-        return init( isDense, firstRelId, fromNodeId, direction, null );
+        return init( relationshipGroups, fromNodeId, direction, null );
     }
 
-    public StoreNodeRelationshipCursor init( boolean isDense,
-            long firstRelId,
+    /**
+     * @param relationshipGroups groups loaded together with node record.
+     * @param fromNodeId node id to traverse relationships from
+     * @param direction {@link Direction} to traverse relationships of
+     * @param relTypes relationship type ids to traverse
+     * @return this cursor
+     */
+    public StoreNodeRelationshipCursor init(
+            RelationshipGroup[] relationshipGroups,
             long fromNodeId,
             Direction direction,
             int... relTypes )
     {
-        this.isDense = isDense;
-        this.relationshipId = firstRelId;
+        this.relationshipGroups = relationshipGroups;
         this.fromNodeId = fromNodeId;
         this.direction = direction;
         this.relTypes = relTypes;
         this.end = false;
 
-        if ( isDense && relationshipId != Record.NO_NEXT_RELATIONSHIP.intValue() )
-        {
-            cursors.relationshipGroup().next( firstRelId, groupRecord, FORCE );
+//        if ( relationshipId != Record.NO_NEXT_RELATIONSHIP.intValue() )
+//        {
+//            cursors.relationshipGroup().next( firstRelId, groupRecord, FORCE );
             relationshipId = nextChainStart();
-        }
-        else
-        {
-            relationshipId = firstRelId;
-        }
+//        }
+//        else
+//        {
+//            relationshipId = firstRelId;
+//        }
 
         return this;
     }
@@ -194,33 +202,38 @@ public class StoreNodeRelationshipCursor extends StoreAbstractRelationshipCursor
         {
             while ( !end )
             {
-                // We check inUse flag here since we can actually follow pointers in unused records
-                // to guard for and overcome concurrent deletes in the relationship group chain
-                if ( groupRecord.inUse() && checkType( groupRecord.getType() ) )
-                {
-                    // Go to the next chain (direction) within this group
-                    while ( groupChainIndex < GROUP_CHAINS.length )
-                    {
-                        GroupChain groupChain = GROUP_CHAINS[groupChainIndex++];
-                        long chainStart = groupChain.chainStart( groupRecord );
-                        if ( !NULL_REFERENCE.is( chainStart )
-                             && (direction == Direction.BOTH || groupChain.matchesDirection( direction )) )
-                        {
-                            return chainStart;
-                        }
-                    }
-                }
-                // Go to the next group
-                if ( !NULL_REFERENCE.is( groupRecord.getNext() ) )
-                {
-                    cursors.relationshipGroup().next( groupRecord.getNext(), groupRecord, FORCE );
-                }
-                else
-                {
-                    end = true;
-                }
-                groupChainIndex = 0;
+
             }
+
+//            while ( !end )
+//            {
+//                // We check inUse flag here since we can actually follow pointers in unused records
+//                // to guard for and overcome concurrent deletes in the relationship group chain
+//                if ( groupRecord.inUse() && checkType( groupRecord.getType() ) )
+//                {
+//                    // Go to the next chain (direction) within this group
+//                    while ( groupChainIndex < GROUP_CHAINS.length )
+//                    {
+//                        GroupChain groupChain = GROUP_CHAINS[groupChainIndex++];
+//                        long chainStart = groupChain.chainStart( groupRecord );
+//                        if ( !NULL_REFERENCE.is( chainStart )
+//                             && (direction == Direction.BOTH || groupChain.matchesDirection( direction )) )
+//                        {
+//                            return chainStart;
+//                        }
+//                    }
+//                }
+//                // Go to the next group
+//                if ( !NULL_REFERENCE.is( groupRecord.getNext() ) )
+//                {
+//                    relationshipGroupCursor.next( groupRecord.getNext(), groupRecord, FORCE );
+//                }
+//                else
+//                {
+//                    end = true;
+//                }
+//                groupChainIndex = 0;
+//            }
         }
         catch ( InvalidRecordException e )
         {

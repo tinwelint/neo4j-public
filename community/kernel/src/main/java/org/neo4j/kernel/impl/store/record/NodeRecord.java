@@ -24,71 +24,63 @@ import java.util.Collection;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
+
+import static org.neo4j.collection.primitive.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 import static org.neo4j.helpers.collection.Iterables.filter;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
+import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 
 public class NodeRecord extends PrimitiveRecord
 {
-    private long nextRel;
     private long labels;
     private Collection<DynamicRecord> dynamicLabelRecords;
     private boolean isLight;
-    private boolean dense;
+    // Compact representation of zero or more relationship groups, for low memory usage and fast loading
+    // Format: [type(4B),headCount][heads...][...]
+    private long[] relationshipGroups;
 
     public NodeRecord( long id )
     {
         super( id );
     }
 
-    public NodeRecord initialize( boolean inUse, long nextProp, boolean dense, long nextRel, long labels )
+    public NodeRecord initialize( boolean inUse, long nextProp, long labels, long[] relationshipGroups )
     {
         super.initialize( inUse, nextProp );
-        this.nextRel = nextRel;
-        this.dense = dense;
         this.labels = labels;
         this.dynamicLabelRecords = emptyList();
         this.isLight = true;
+        this.relationshipGroups = relationshipGroups;
         return this;
     }
 
     @Deprecated
-    public NodeRecord( long id, boolean dense, long nextRel, long nextProp )
+    public NodeRecord( long id, long nextProp, long[] relationshipGroups )
     {
-        this( id, false, dense, nextRel, nextProp, 0 );
+        this( id, false, nextProp, NO_LABELS_FIELD.intValue(), relationshipGroups );
     }
 
     @Deprecated
-    public NodeRecord( long id, boolean inUse, boolean dense, long nextRel, long nextProp, long labels )
+    public NodeRecord( long id, boolean inUse, long nextProp, long labels, long[] relationshipGroups )
     {
         super( id, nextProp );
-        this.nextRel = nextRel;
-        this.dense = dense;
         this.labels = labels;
+        this.relationshipGroups = relationshipGroups;
         setInUse( inUse );
     }
 
     @Deprecated
-    public NodeRecord( long id, boolean dense, long nextRel, long nextProp, boolean inUse )
+    public NodeRecord( long id, long nextProp, boolean inUse, long[] relationshipGroups )
     {
-        this(id, dense, nextRel, nextProp);
+        this( id, nextProp, relationshipGroups );
         setInUse( inUse );
     }
 
     @Override
     public void clear()
     {
-        initialize( false, Record.NO_NEXT_PROPERTY.intValue(), false,
-                Record.NO_NEXT_RELATIONSHIP.intValue(), Record.NO_LABELS_FIELD.intValue() );
-    }
-
-    public long getNextRel()
-    {
-        return nextRel;
-    }
-
-    public void setNextRel( long nextRel )
-    {
-        this.nextRel = nextRel;
+        initialize( false, Record.NO_NEXT_PROPERTY.intValue(), Record.NO_LABELS_FIELD.intValue(),
+                EMPTY_LONG_ARRAY );
     }
 
     /**
@@ -134,27 +126,16 @@ public class NodeRecord extends PrimitiveRecord
         return filter( notInUseFilter(), dynamicLabelRecords );
     }
 
-    public boolean isDense()
-    {
-        return dense;
-    }
-
-    public void setDense( boolean dense )
-    {
-        this.dense = dense;
-    }
-
     @Override
     public String toString()
     {
-        String denseInfo = (dense ? "group" : "rel") + "=" + nextRel;
         String lightHeavyInfo = isLight ? "light" :
                                 dynamicLabelRecords.isEmpty() ?
                                 "heavy" : "heavy,dynlabels=" + dynamicLabelRecords;
 
         return "Node[" + getId() +
                ",used=" + inUse() +
-               "," + denseInfo +
+               ",rel-groups" + RelationshipGroups.stringify( relationshipGroups ) +
                ",prop=" + getNextProp() +
                ",labels=" + parseLabelsField( this ) +
                "," + lightHeavyInfo +
@@ -170,7 +151,7 @@ public class NodeRecord extends PrimitiveRecord
     @Override
     public NodeRecord clone()
     {
-        NodeRecord clone = new NodeRecord( getId() ).initialize( inUse(), nextProp, dense, nextRel, labels );
+        NodeRecord clone = new NodeRecord( getId() ).initialize( inUse(), nextProp, labels, relationshipGroups );
         clone.isLight = isLight;
 
         if ( dynamicLabelRecords.size() > 0 )
