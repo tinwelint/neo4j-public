@@ -163,7 +163,7 @@ public class EncodingIdMapper implements IdMapper
         this.trackerFactory = trackerFactory;
         this.comparator = comparator;
         this.processorsForSorting = max( processorsForSorting, 1 );
-        this.dataCache = cacheFactory.newDynamicLongArray( chunkSize, GAP_VALUE );
+        this.dataCache = cacheFactory.newLongArray( 126_000_000, GAP_VALUE ); //cacheFactory.newDynamicLongArray( chunkSize, GAP_VALUE );
         this.encoder = encoder;
         this.radixFactory = radixFactory;
         this.radix = radixFactory.newInstance();

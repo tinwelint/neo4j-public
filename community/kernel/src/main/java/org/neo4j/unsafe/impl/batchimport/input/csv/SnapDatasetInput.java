@@ -20,18 +20,15 @@ import org.neo4j.unsafe.impl.batchimport.input.InputNode;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.input.csv.InputGroupsDeserializer.DeserializerFactory;
 
-import static java.lang.Long.max;
 import static java.nio.charset.Charset.defaultCharset;
 
 import static org.neo4j.csv.reader.Readables.files;
-import static org.neo4j.unsafe.impl.batchimport.input.InputEntity.NO_LABELS;
-import static org.neo4j.unsafe.impl.batchimport.input.InputEntity.NO_PROPERTIES;
 import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.defaultRelationshipType;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.data;
 
 public class SnapDatasetInput implements Input
 {
-    private final IdType idType = IdType.ACTUAL;
+    private final IdType idType = IdType.INTEGER;
     private final File theInputFile;
     private final Configuration config = Configuration.TABS;
     private final int maxProcessors;
@@ -67,35 +64,62 @@ public class SnapDatasetInput implements Input
             @Override
             public InputIterator<InputNode> iterator()
             {
-                return new InputIterator.Adapter<InputNode>()
-                {
-                    // This is given that relationships are sorted by start node
-                    private final InputIterator<InputRelationship> relationships = relationships().iterator();
-                    private long currentNodeId;
-                    private long highestNodeId;
+//                return new InputIterator.Adapter<InputNode>()
+//                {
+//                    // This is given that relationships are sorted by start node
+//                    private final InputIterator<InputRelationship> relationships = relationships().iterator();
+//                    private long currentNodeId;
+//                    private long highestNodeId;
+//
+//                    @Override
+//                    protected InputNode fetchNextOrNull()
+//                    {
+//                        if ( currentNodeId <= highestNodeId )
+//                        {
+//                            return node( currentNodeId++ );
+//                        }
+//
+//                        while ( relationships.hasNext() && currentNodeId >= highestNodeId )
+//                        {
+//                            InputRelationship nextRelationship = relationships.next();
+//                            highestNodeId = max( highestNodeId,
+//                                    max( (Long) nextRelationship.startNode(), (Long) nextRelationship.endNode() ) );
+//                        }
+//                        return currentNodeId <= highestNodeId ? node( currentNodeId++ ) : null;
+//                    }
+//
+//                    private InputNode node( long nodeId )
+//                    {
+//                        return new InputNode( "", relationships.lineNumber(), relationships.position(),
+//                                nodeId, NO_PROPERTIES, null, NO_LABELS, null );
+//                    }
+//
+//                    @Override
+//                    public int processors( int delta )
+//                    {
+//                        return relationships.processors( delta );
+//                    }
+//
+//                    @Override
+//                    public String sourceDescription()
+//                    {
+//                        return relationships.sourceDescription();
+//                    }
+//
+//                    @Override
+//                    public long lineNumber()
+//                    {
+//                        return relationships.lineNumber();
+//                    }
+//
+//                    @Override
+//                    public long position()
+//                    {
+//                        return relationships.position();
+//                    }
+//                };
 
-                    @Override
-                    protected InputNode fetchNextOrNull()
-                    {
-                        if ( currentNodeId <= highestNodeId )
-                        {
-                            return node( currentNodeId++ );
-                        }
-
-                        while ( relationships.hasNext() && currentNodeId >= highestNodeId )
-                        {
-                            InputRelationship nextRelationship = relationships.next();
-                            highestNodeId = max( highestNodeId,
-                                    max( (Long) nextRelationship.startNode(), (Long) nextRelationship.endNode() ) );
-                        }
-                        return currentNodeId <= highestNodeId ? node( currentNodeId++ ) : null;
-                    }
-
-                    private InputNode node( long nodeId )
-                    {
-                        return new InputNode( "", 0, 0, nodeId, NO_PROPERTIES, null, NO_LABELS, null );
-                    }
-                };
+                return new SimpleIdRangeInputNodeIterator( 0, 125_000_000 );
             }
 
             @Override
