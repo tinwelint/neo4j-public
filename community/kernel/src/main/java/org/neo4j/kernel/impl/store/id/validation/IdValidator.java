@@ -45,7 +45,7 @@ public final class IdValidator
      */
     public static void assertIdWithinCapacity( long id, long maxId )
     {
-        if ( id < 0 )
+        if ( id <= 0 )
         {
             throw new NegativeIdException( id );
         }

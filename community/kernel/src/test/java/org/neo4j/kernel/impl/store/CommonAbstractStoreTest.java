@@ -44,7 +44,6 @@ import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.id.validation.IdCapacityExceededException;
 import org.neo4j.kernel.impl.store.id.validation.NegativeIdException;
@@ -252,7 +251,7 @@ public class CommonAbstractStoreTest
     public void throwsWhenRecordWithReservedIdIsUpdated()
     {
         TheStore store = newStore();
-        TheRecord record = newRecord( IdGeneratorImpl.INTEGER_MINUS_ONE );
+        TheRecord record = newRecord( 0 );
 
         try
         {

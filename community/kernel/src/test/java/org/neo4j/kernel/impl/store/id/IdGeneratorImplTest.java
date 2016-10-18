@@ -107,21 +107,6 @@ public class IdGeneratorImplTest
         }
     }
 
-    /**
-     * It should be fine to set high id to {@link IdGeneratorImpl#INTEGER_MINUS_ONE}.
-     * It will just be never returned from {@link IdGeneratorImpl#nextId()}.
-     */
-    @Test
-    public void highIdCouldBeSetToReservedId()
-    {
-        IdGeneratorImpl.createGenerator( fsr.get(), file, 0, false );
-        IdGenerator idGenerator = new IdGeneratorImpl( fsr.get(), file, 1, Long.MAX_VALUE, false, 0 );
-
-        idGenerator.setHighId( IdGeneratorImpl.INTEGER_MINUS_ONE );
-
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE + 1, idGenerator.nextId() );
-    }
-
     @Test
     public void correctDefragCountWhenHaveIdsInFile()
     {

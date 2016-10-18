@@ -21,35 +21,10 @@ package org.neo4j.unsafe.impl.batchimport.store;
 
 import org.junit.Test;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
-
 import static org.junit.Assert.assertEquals;
 
 public class BatchingIdSequenceTest
 {
-
-    @Test
-    public void ShouldSkipNullId() throws Exception
-    {
-        BatchingIdSequence idSequence = new BatchingIdSequence();
-
-        idSequence.set( IdGeneratorImpl.INTEGER_MINUS_ONE - 1 );
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE - 1, idSequence.peek() );
-
-        // The 'NULL Id' should be skipped, and never be visible anywhere.
-        // Peek should always return what nextId will return
-
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE - 1, idSequence.nextId() );
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE + 1, idSequence.peek() );
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE + 1, idSequence.nextId() );
-
-        // And what if someone were to set it directly to the NULL id
-        idSequence.set( IdGeneratorImpl.INTEGER_MINUS_ONE );
-
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE + 1, idSequence.peek() );
-        assertEquals( IdGeneratorImpl.INTEGER_MINUS_ONE + 1, idSequence.nextId() );
-    }
-
     @Test
     public void resetShouldSetDefault() throws Exception
     {

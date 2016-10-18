@@ -21,21 +21,13 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
-
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.RecordCursor;
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
-import org.neo4j.unsafe.impl.batchimport.StoreWithReservedId;
-
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -46,29 +38,6 @@ import static org.neo4j.unsafe.impl.batchimport.RecordIdIterator.allIn;
 
 public class ReadRecordsStepTest
 {
-    @Test
-    public void reservedIdIsSkipped()
-    {
-        long highId = 5;
-        int batchSize = (int) highId;
-        org.neo4j.unsafe.impl.batchimport.Configuration config = withBatchSize( DEFAULT, batchSize );
-        NodeStore store = StoreWithReservedId.newNodeStoreMock( highId );
-        when( store.getHighId() ).thenReturn( highId );
-        when( store.getRecordsPerPage() ).thenReturn( 10 );
-
-        ReadRecordsStep<NodeRecord> step = new ReadRecordsStep<>( mock( StageControl.class ), config,
-                store, allIn( store, config ) );
-        step.start( 0 );
-
-        Object batch = step.nextBatchOrNull( 0, batchSize );
-
-        assertNotNull( batch );
-
-        NodeRecord[] records = (NodeRecord[]) batch;
-        boolean hasRecordWithReservedId = Stream.of( records ).anyMatch( recordWithReservedId() );
-        assertFalse( "Batch contains record with reserved id " + Arrays.toString( records ), hasRecordWithReservedId );
-    }
-
     @Test
     public void shouldContinueThroughBigIdHoles() throws Exception
     {
@@ -104,11 +73,6 @@ public class ReadRecordsStepTest
         assertEquals( highId - 1, second[second.length-1].getId() );
 
         assertNull( third );
-    }
-
-    private static Predicate<NodeRecord> recordWithReservedId()
-    {
-        return record -> record.getId() == IdGeneratorImpl.INTEGER_MINUS_ONE;
     }
 
     private static class ControlledRecordCursor<RECORD extends AbstractBaseRecord> implements RecordCursor<RECORD>

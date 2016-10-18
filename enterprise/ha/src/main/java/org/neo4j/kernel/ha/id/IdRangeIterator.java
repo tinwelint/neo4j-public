@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.ha.id;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.kernel.impl.store.id.IdRange;
 
 import java.util.Arrays;
@@ -60,13 +59,7 @@ public class IdRangeIterator
                 return defrag[position];
             }
 
-            long candidate = nextRangeCandidate();
-            if ( candidate == IdGeneratorImpl.INTEGER_MINUS_ONE )
-            {
-                position++;
-                candidate = nextRangeCandidate();
-            }
-            return candidate;
+            return nextRangeCandidate();
         }
         finally
         {

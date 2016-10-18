@@ -22,7 +22,6 @@ package org.neo4j.unsafe.impl.batchimport;
 import java.util.Collection;
 
 import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchSender;
 import org.neo4j.unsafe.impl.batchimport.staging.ProcessorStep;
@@ -56,7 +55,7 @@ public class UpdateRecordsStep<RECORD extends AbstractBaseRecord>
         int recordsUpdatedInThisBatch = 0;
         for ( RECORD record : batch )
         {
-            if ( record != null && record.inUse() && !IdValidator.isReservedId( record.getId() ) )
+            if ( record != null && record.inUse() )
             {
                 update( record );
                 recordsUpdatedInThisBatch++;

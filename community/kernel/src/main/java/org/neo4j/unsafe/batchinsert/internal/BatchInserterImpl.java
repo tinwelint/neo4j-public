@@ -788,7 +788,7 @@ public class BatchInserterImpl implements BatchInserter
     @Override
     public void createNode( long id, Map<String, Object> properties, Label... labels )
     {
-        IdValidator.assertValidId( id, maxNodeId );
+        IdValidator.assertIdWithinCapacity( id, maxNodeId );
         if ( nodeStore.isInUse( id ) )
         {
             throw new IllegalArgumentException( "id=" + id + " already in use" );

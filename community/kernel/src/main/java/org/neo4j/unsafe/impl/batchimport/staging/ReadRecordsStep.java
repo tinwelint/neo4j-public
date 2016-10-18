@@ -25,7 +25,6 @@ import java.util.Arrays;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.unsafe.impl.batchimport.RecordIdIterator;
 
@@ -81,7 +80,7 @@ public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends IoProduc
             int i = 0;
             while ( ids.hasNext() )
             {
-                if ( cursor.next( ids.next() ) && !IdValidator.isReservedId( record.getId() ) )
+                if ( cursor.next( ids.next() ) )
                 {
                     batch[i++] = (RECORD) record.clone();
                 }

@@ -30,7 +30,6 @@ import org.neo4j.unsafe.impl.batchimport.stats.Keys;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
-import static org.neo4j.kernel.impl.store.id.IdGeneratorImpl.INTEGER_MINUS_ONE;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.withBatchSize;
 import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTREAM;
@@ -68,69 +67,6 @@ public class AssignRelationshipIdBatchStepTest
             // THEN
             assertEquals( 100, first.firstRecordId );
             assertEquals( 100 + config.batchSize(), second.firstRecordId );
-        }
-    }
-
-    @Test
-    public void shouldAvoidReservedId() throws Exception
-    {
-        // GIVEN
-        try ( Step<Batch<InputRelationship,RelationshipRecord>> step =
-                      new AssignRelationshipIdBatchStep( control, config, INTEGER_MINUS_ONE - 15 );
-              CapturingStep<Batch<InputRelationship,RelationshipRecord>> results = new CapturingStep<>( control, "end", config ) )
-        {
-            step.setDownstream( results );
-            step.start( ORDER_SEND_DOWNSTREAM );
-            results.start( ORDER_SEND_DOWNSTREAM );
-
-            // WHEN
-            Batch<InputRelationship,RelationshipRecord> first = new Batch<>( new InputRelationship[config.batchSize()] );
-            step.receive( 0, first );
-            Batch<InputRelationship,RelationshipRecord> second = new Batch<>( new InputRelationship[config.batchSize()] );
-            step.receive( 1, second );
-            Batch<InputRelationship,RelationshipRecord> third = new Batch<>( new InputRelationship[config.batchSize()] );
-            step.receive( 2, third );
-            while ( results.stats().stat( Keys.done_batches ).asLong() < 3 )
-            {
-                // wait
-            }
-            assertEquals( 3, results.receivedBatches().size() );
-
-            // THEN
-            assertEquals( INTEGER_MINUS_ONE - 15, first.firstRecordId );
-            assertEquals( INTEGER_MINUS_ONE + 1, second.firstRecordId );
-            assertEquals( second.firstRecordId + config.batchSize(), third.firstRecordId );
-        }
-    }
-
-    @Test
-    public void shouldAvoidReservedIdAsFirstAssignment() throws Exception
-    {
-        // GIVEN
-        try (
-                Step<Batch<InputRelationship,RelationshipRecord>> step =
-                new AssignRelationshipIdBatchStep( control, config, INTEGER_MINUS_ONE - 5 );
-                CapturingStep<Batch<InputRelationship,RelationshipRecord>> results =
-                        new CapturingStep<>( control, "end", config ) )
-        {
-            step.setDownstream( results );
-            step.start( ORDER_SEND_DOWNSTREAM );
-            results.start( ORDER_SEND_DOWNSTREAM );
-
-            // WHEN
-            Batch<InputRelationship,RelationshipRecord> first = new Batch<>( new InputRelationship[config.batchSize()] );
-            step.receive( 0, first );
-            Batch<InputRelationship,RelationshipRecord> second = new Batch<>( new InputRelationship[config.batchSize()] );
-            step.receive( 1, second );
-            while ( results.stats().stat( Keys.done_batches ).asLong() < 2 )
-            {
-                // wait
-            }
-            assertEquals( 2, results.receivedBatches().size() );
-
-            // THEN
-            assertEquals( INTEGER_MINUS_ONE + 1, first.firstRecordId );
-            assertEquals( first.firstRecordId + config.batchSize(), second.firstRecordId );
         }
     }
 }

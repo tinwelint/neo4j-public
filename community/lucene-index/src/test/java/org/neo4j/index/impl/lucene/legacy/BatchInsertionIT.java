@@ -28,7 +28,6 @@ import java.util.Collections;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.kernel.impl.store.id.validation.ReservedIdException;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
@@ -166,7 +165,7 @@ public class BatchInsertionIT
         try
         {
             // when
-            long id = IdGeneratorImpl.INTEGER_MINUS_ONE;
+            long id = 0;
             inserter.createNode( id, null );
 
             // then throws

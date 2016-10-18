@@ -19,7 +19,6 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchSender;
@@ -44,14 +43,6 @@ public class AssignRelationshipIdBatchStep extends ProcessorStep<Batch<InputRela
     @Override
     protected void process( Batch<InputRelationship,RelationshipRecord> batch, BatchSender sender ) throws Throwable
     {
-        if ( nextId <= IdGeneratorImpl.INTEGER_MINUS_ONE &&
-                nextId + batch.input.length >= IdGeneratorImpl.INTEGER_MINUS_ONE )
-        {
-            // There's this pesky INTEGER_MINUS_ONE ID again. Easiest is to simply skip this batch of ids
-            // or at least the part up to that id and just continue after it.
-            nextId = IdGeneratorImpl.INTEGER_MINUS_ONE + 1;
-        }
-
         // Assign first record id and send
         batch.firstRecordId = nextId;
         sender.send( batch );

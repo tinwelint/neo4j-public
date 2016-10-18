@@ -148,11 +148,6 @@ public class IdGeneratorImpl implements IdGenerator
         }
 
         long id = highId.get();
-        if ( IdValidator.isReservedId( id ) )
-        {
-            id = highId.incrementAndGet();
-        }
-        IdValidator.assertValidId( id, max );
         highId.incrementAndGet();
         return id;
     }
@@ -241,11 +236,6 @@ public class IdGeneratorImpl implements IdGenerator
     @Override
     public synchronized void freeId( long id )
     {
-        if ( IdValidator.isReservedId( id ) )
-        {
-            return;
-        }
-
         if ( fileChannel == null )
         {
             throw new IllegalStateException( "Generator closed " + file );

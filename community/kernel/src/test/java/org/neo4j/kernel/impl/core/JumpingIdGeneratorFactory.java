@@ -28,7 +28,6 @@ import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdRange;
 import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.test.impl.EphemeralIdGenerator;
 
 public class JumpingIdGeneratorFactory implements IdGeneratorFactory
@@ -97,13 +96,7 @@ public class JumpingIdGeneratorFactory implements IdGeneratorFactory
 
         private long tryNextId()
         {
-            long result = nextId.getAndIncrement();
-            if ( IdValidator.isReservedId( result ) )
-            {
-                result = nextId.getAndIncrement();
-                leftToNextJump--;
-            }
-            return result;
+            return nextId.getAndIncrement();
         }
 
         @Override
