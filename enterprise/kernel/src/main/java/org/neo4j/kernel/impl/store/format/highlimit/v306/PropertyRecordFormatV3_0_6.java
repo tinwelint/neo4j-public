@@ -200,8 +200,8 @@ class PropertyRecordFormatV3_0_6 extends BaseOneByteHeaderRecordFormat<PropertyR
         long nextMod = cursor.getShort() & 0xFFFFL;
         long nextProp = cursor.getInt() & 0xFFFFFFFFL;
         record.initialize( true,
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( prevProp, prevMod << 32 ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( nextProp, nextMod << 32 ) );
+                longFromIntAndMod( prevProp, prevMod << 32 ),
+                longFromIntAndMod( nextProp, nextMod << 32 ) );
         // skip padding bytes
         cursor.setOffset( cursor.getOffset() + PROPERTY_BLOCKS_PADDING );
     }

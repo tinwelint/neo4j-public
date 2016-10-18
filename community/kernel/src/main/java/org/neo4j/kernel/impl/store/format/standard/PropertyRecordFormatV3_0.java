@@ -27,7 +27,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
-public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
+public class PropertyRecordFormatV3_0 extends BaseRecordFormat<PropertyRecord>
 {
     public static final int DEFAULT_DATA_BLOCK_SIZE = 120;
     public static final int DEFAULT_PAYLOAD_SIZE = 32;
@@ -38,7 +38,7 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
             + DEFAULT_PAYLOAD_SIZE /*property blocks*/;
     // = 41
 
-    public PropertyRecordFormat()
+    public PropertyRecordFormatV3_0()
     {
         super( fixedRecordSize( RECORD_SIZE ), 0, StandardFormatSettings.PROPERTY_RECORD_MAXIMUM_ID_BITS );
     }
@@ -63,8 +63,8 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
         long prevProp = cursor.getInt() & 0xFFFFFFFFL;
         long nextProp = cursor.getInt() & 0xFFFFFFFFL;
         record.initialize( false,
-                zeroBasedLongFromIntAndMod( prevProp, prevMod ),
-                zeroBasedLongFromIntAndMod( nextProp, nextMod ) );
+                longFromIntAndMod( prevProp, prevMod ),
+                longFromIntAndMod( nextProp, nextMod ) );
         while ( cursor.getOffset() - offsetAtBeginning < RECORD_SIZE )
         {
             long block = cursor.getLong();

@@ -72,12 +72,6 @@ public class IdGeneratorImpl implements IdGenerator
     private static final byte CLEAN_GENERATOR = (byte) 0;
     private static final byte STICKY_GENERATOR = (byte) 1;
 
-    /**
-     * Invalid and reserved id value. Represents special values, f.ex. the end of a relationships/property chain.
-     * Please use {@link IdValidator} to validate generated ids.
-     */
-    public static final long INTEGER_MINUS_ONE = 0xFFFFFFFFL;  // 4294967295L;
-
     // number of defragged ids to grab from file in batch (also used for write)
     private int grabSize = -1;
     private final AtomicLong highId = new AtomicLong( -1 );

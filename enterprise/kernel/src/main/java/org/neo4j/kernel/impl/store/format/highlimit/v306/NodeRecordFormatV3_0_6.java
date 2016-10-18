@@ -168,8 +168,8 @@ class NodeRecordFormatV3_0_6 extends BaseHighLimitRecordFormatV3_0_6<NodeRecord>
         long labels = lsbLabels | (hsbLabels << 32);
 
         record.initialize( inUse,
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( nextProp, propModifier ), dense,
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( nextRel, relModifier ), labels );
+                longFromIntAndMod( nextProp, propModifier ), dense,
+                longFromIntAndMod( nextRel, relModifier ), labels );
     }
 
     private void writeFixedReferencesRecord( NodeRecord record, PageCursor cursor )

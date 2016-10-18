@@ -27,7 +27,7 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 
-public class RelationshipGroupRecordFormat extends BaseOneByteHeaderRecordFormat<RelationshipGroupRecord>
+public class RelationshipGroupRecordFormatV3_0 extends BaseOneByteHeaderRecordFormat<RelationshipGroupRecord>
 {
    /* Record layout
     *
@@ -38,7 +38,7 @@ public class RelationshipGroupRecordFormat extends BaseOneByteHeaderRecordFormat
 
     public static final int RECORD_SIZE = 25;
 
-    public RelationshipGroupRecordFormat()
+    public RelationshipGroupRecordFormatV3_0()
     {
         super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT,
                 StandardFormatSettings.RELATIONSHIP_GROUP_MAXIMUM_ID_BITS );
@@ -72,11 +72,11 @@ public class RelationshipGroupRecordFormat extends BaseOneByteHeaderRecordFormat
             long nextLoopMod = (highByte & 0x70) << 28;
 
             record.initialize( inUse, type,
-                    zeroBasedLongFromIntAndMod( nextOutLowBits, nextOutMod ),
-                    zeroBasedLongFromIntAndMod( nextInLowBits, nextInMod ),
-                    zeroBasedLongFromIntAndMod( nextLoopLowBits, nextLoopMod ),
+                    longFromIntAndMod( nextOutLowBits, nextOutMod ),
+                    longFromIntAndMod( nextInLowBits, nextInMod ),
+                    longFromIntAndMod( nextLoopLowBits, nextLoopMod ),
                     owningNode,
-                    zeroBasedLongFromIntAndMod( nextLowBits, nextMod ) );
+                    longFromIntAndMod( nextLowBits, nextMod ) );
         }
     }
 

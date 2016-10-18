@@ -48,25 +48,25 @@ public class StandardV3_0 extends BaseRecordFormats
     @Override
     public RecordFormat<NodeRecord> node()
     {
-        return new NodeRecordFormat();
+        return new NodeRecordFormatV3_0();
     }
 
     @Override
     public RecordFormat<RelationshipGroupRecord> relationshipGroup()
     {
-        return new RelationshipGroupRecordFormat();
+        return new RelationshipGroupRecordFormatV3_0();
     }
 
     @Override
     public RecordFormat<RelationshipRecord> relationship()
     {
-        return new RelationshipRecordFormat();
+        return new RelationshipRecordFormatV3_0();
     }
 
     @Override
     public RecordFormat<PropertyRecord> property()
     {
-        return new PropertyRecordFormat();
+        return new PropertyRecordFormatV3_0();
     }
 
     @Override
@@ -90,7 +90,7 @@ public class StandardV3_0 extends BaseRecordFormats
     @Override
     public RecordFormat<DynamicRecord> dynamic()
     {
-        return new DynamicRecordFormat();
+        return new DynamicRecordFormatV3_0();
     }
 
     @Override

@@ -34,40 +34,6 @@ public final class IdValidator
     }
 
     /**
-     * Checks if the given id is reserved, i.e. {@link IdGeneratorImpl#INTEGER_MINUS_ONE}.
-     *
-     * @param id the id to check.
-     * @return <code>true</code> if the given id is {@link IdGeneratorImpl#INTEGER_MINUS_ONE}, <code>false</code>
-     * otherwise.
-     * @see IdGeneratorImpl#INTEGER_MINUS_ONE
-     */
-    public static boolean isReservedId( long id )
-    {
-        return id == IdGeneratorImpl.INTEGER_MINUS_ONE;
-    }
-
-    /**
-     * Asserts that the given id is valid:
-     * <ul>
-     * <li>non-negative
-     * <li>less than the given max id
-     * <li>not equal to {@link IdGeneratorImpl#INTEGER_MINUS_ONE}
-     * </ul>
-     *
-     * @param id the id to check.
-     * @param maxId the max allowed id.
-     * @see IdGeneratorImpl#INTEGER_MINUS_ONE
-     */
-    public static void assertValidId( long id, long maxId )
-    {
-        if ( isReservedId( id ) )
-        {
-            throw new ReservedIdException( id );
-        }
-        assertIdWithinCapacity( id, maxId );
-    }
-
-    /**
      * Asserts that the given id is valid with respect to given max id:
      * <ul>
      * <li>non-negative

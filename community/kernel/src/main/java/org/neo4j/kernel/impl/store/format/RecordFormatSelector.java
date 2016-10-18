@@ -38,6 +38,7 @@ import org.neo4j.kernel.impl.store.format.standard.StandardV2_1;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_2;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
+import org.neo4j.kernel.impl.store.format.standard.StandardV3_2;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -62,7 +63,8 @@ public class RecordFormatSelector
             StandardV2_1.RECORD_FORMATS,
             StandardV2_2.RECORD_FORMATS,
             StandardV2_3.RECORD_FORMATS,
-            StandardV3_0.RECORD_FORMATS
+            StandardV3_0.RECORD_FORMATS,
+            StandardV3_2.RECORD_FORMATS
     );
 
     private RecordFormatSelector()

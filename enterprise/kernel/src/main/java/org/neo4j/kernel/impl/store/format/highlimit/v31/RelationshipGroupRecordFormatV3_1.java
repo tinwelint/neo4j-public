@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.highlimit.v31;
 
 import java.io.IOException;
 
@@ -49,7 +49,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
  * 4B   owning node
  * => 24B
  */
-class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<RelationshipGroupRecord>
+class RelationshipGroupRecordFormatV3_1 extends BaseHighLimitRecordFormatV3_1<RelationshipGroupRecord>
 {
     private static final int TYPE_BYTES = 3;
 
@@ -77,12 +77,12 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     private static final long ONE_BIT_OVERFLOW_BIT_MASK = 0xFFFF_FFFE_0000_0000L;
     private static final long HIGH_DWORD_LAST_BIT_MASK = 0x100000000L;
 
-    public RelationshipGroupRecordFormat()
+    public RelationshipGroupRecordFormatV3_1()
     {
         this( RECORD_SIZE );
     }
 
-    RelationshipGroupRecordFormat( int recordSize )
+    RelationshipGroupRecordFormatV3_1( int recordSize )
     {
         super( fixedRecordSize( recordSize ), 0 );
     }
@@ -198,11 +198,11 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
         long owningNodeMod = (modifiers & OWNING_NODE_BIT) << 28;
 
         record.initialize( inUse, type,
-                zeroBasedLongFromIntAndMod( firstOutLowBits, firstOutMod ),
-                zeroBasedLongFromIntAndMod( firstInLowBits, firstInMod ),
-                zeroBasedLongFromIntAndMod( firstLoopLowBits, firstLoopMod ),
-                zeroBasedLongFromIntAndMod( owningNodeLowBits, owningNodeMod ),
-                zeroBasedLongFromIntAndMod( nextLowBits, nextMod ) );
+                longFromIntAndMod( firstOutLowBits, firstOutMod ),
+                longFromIntAndMod( firstInLowBits, firstInMod ),
+                longFromIntAndMod( firstLoopLowBits, firstLoopMod ),
+                longFromIntAndMod( owningNodeLowBits, owningNodeMod ),
+                longFromIntAndMod( nextLowBits, nextMod ) );
     }
 
     private void writeFixedReferencesRecord( RelationshipGroupRecord record, PageCursor cursor )

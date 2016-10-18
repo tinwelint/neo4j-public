@@ -195,11 +195,11 @@ class RelationshipGroupRecordFormatV3_0_6 extends BaseHighLimitRecordFormatV3_0_
         long owningNodeMod = (modifiers & OWNING_NODE_BIT) << 28;
 
         record.initialize( inUse, type,
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( firstOutLowBits, firstOutMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( firstInLowBits, firstInMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( firstLoopLowBits, firstLoopMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( owningNodeLowBits, owningNodeMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( nextLowBits, nextMod ) );
+                longFromIntAndMod( firstOutLowBits, firstOutMod ),
+                longFromIntAndMod( firstInLowBits, firstInMod ),
+                longFromIntAndMod( firstLoopLowBits, firstLoopMod ),
+                longFromIntAndMod( owningNodeLowBits, owningNodeMod ),
+                longFromIntAndMod( nextLowBits, nextMod ) );
     }
 
     private void writeFixedReferencesRecord( RelationshipGroupRecord record, PageCursor cursor )

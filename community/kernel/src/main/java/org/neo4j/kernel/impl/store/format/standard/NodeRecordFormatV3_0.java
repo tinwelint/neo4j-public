@@ -27,12 +27,12 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
-public class NodeRecordFormat extends BaseOneByteHeaderRecordFormat<NodeRecord>
+public class NodeRecordFormatV3_0 extends BaseOneByteHeaderRecordFormat<NodeRecord>
 {
     // in_use(byte)+next_rel_id(int)+next_prop_id(int)+labels(5)+extra(byte)
     public static final int RECORD_SIZE = 15;
 
-    public NodeRecordFormat()
+    public NodeRecordFormatV3_0()
     {
         super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, StandardFormatSettings.NODE_RECORD_MAXIMUM_ID_BITS );
     }
@@ -65,8 +65,8 @@ public class NodeRecordFormat extends BaseOneByteHeaderRecordFormat<NodeRecord>
             boolean dense = (extra & 0x1) > 0;
 
             record.initialize( inUse,
-                    zeroBasedLongFromIntAndMod( nextProp, propModifier ), dense,
-                    zeroBasedLongFromIntAndMod( nextRel, relModifier ), labels );
+                    longFromIntAndMod( nextProp, propModifier ), dense,
+                    longFromIntAndMod( nextRel, relModifier ), labels );
         }
     }
 

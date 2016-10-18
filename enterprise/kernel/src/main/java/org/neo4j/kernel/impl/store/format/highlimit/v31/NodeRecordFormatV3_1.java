@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.highlimit.v31;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ import org.neo4j.kernel.impl.store.record.Record;
  * 5B   labels
  * => 15B
  */
-class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
+class NodeRecordFormatV3_1 extends BaseHighLimitRecordFormatV3_1<NodeRecord>
 {
     static final int RECORD_SIZE = 16;
     // size of the record in fixed references format;
@@ -66,12 +66,12 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     private static final long LOWER_NIBBLE_READ_MASK = 0xFL;
     private static final long HIGHER_NIBBLE_READ_MASK = 0xF0L;
 
-    public NodeRecordFormat()
+    public NodeRecordFormatV3_1()
     {
         this( RECORD_SIZE );
     }
 
-    NodeRecordFormat( int recordSize )
+    NodeRecordFormatV3_1( int recordSize )
     {
         super( fixedRecordSize( recordSize ), 0 );
     }
@@ -168,8 +168,8 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
         long labels = lsbLabels | (hsbLabels << 32);
 
         record.initialize( inUse,
-                zeroBasedLongFromIntAndMod( nextProp, propModifier ), dense,
-                zeroBasedLongFromIntAndMod( nextRel, relModifier ), labels );
+                longFromIntAndMod( nextProp, propModifier ), dense,
+                longFromIntAndMod( nextRel, relModifier ), labels );
     }
 
     private void writeFixedReferencesRecord( NodeRecord record, PageCursor cursor )

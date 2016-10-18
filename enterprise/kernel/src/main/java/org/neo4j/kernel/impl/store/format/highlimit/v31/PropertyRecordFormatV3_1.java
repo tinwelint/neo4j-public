@@ -17,19 +17,20 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.highlimit.v31;
 
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
+import org.neo4j.kernel.impl.store.format.highlimit.Reference;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
-import static org.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.HEADER_BIT_FIXED_REFERENCE;
-import static org.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.HEADER_BYTE;
-import static org.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.NULL;
+import static org.neo4j.kernel.impl.store.format.highlimit.v31.BaseHighLimitRecordFormatV3_1.HEADER_BIT_FIXED_REFERENCE;
+import static org.neo4j.kernel.impl.store.format.highlimit.v31.BaseHighLimitRecordFormatV3_1.HEADER_BYTE;
+import static org.neo4j.kernel.impl.store.format.highlimit.v31.BaseHighLimitRecordFormatV3_1.NULL;
 import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toAbsolute;
 import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
 
@@ -61,10 +62,10 @@ import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
  * => 48B
  *
  * </pre>
- * Unlike other high limit records {@link BaseHighLimitRecordFormat} fixed reference marker in property record
+ * Unlike other high limit records {@link BaseHighLimitRecordFormatV3_1} fixed reference marker in property record
  * format header is not inverted: 1 - fixed reference format used; 0 - variable length format used.
  */
-class PropertyRecordFormat extends BaseOneByteHeaderRecordFormat<PropertyRecord>
+class PropertyRecordFormatV3_1 extends BaseOneByteHeaderRecordFormat<PropertyRecord>
 {
     static final int RECORD_SIZE = 48;
     private static final int PROPERTY_BLOCKS_PADDING = 3;
@@ -78,9 +79,9 @@ class PropertyRecordFormat extends BaseOneByteHeaderRecordFormat<PropertyRecord>
     private static final long HIGH_DWORD_LOWER_WORD_MASK = 0xFFFF_0000_0000L;
     private static final long HIGH_DWORD_LOWER_WORD_CHECK_MASK = 0xFFFF_0000_0000_0000L;
 
-    protected PropertyRecordFormat()
+    protected PropertyRecordFormatV3_1()
     {
-        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
+        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimitV3_1.DEFAULT_MAXIMUM_BITS_PER_ID );
     }
 
     @Override
@@ -200,8 +201,8 @@ class PropertyRecordFormat extends BaseOneByteHeaderRecordFormat<PropertyRecord>
         long nextMod = cursor.getShort() & 0xFFFFL;
         long nextProp = cursor.getInt() & 0xFFFFFFFFL;
         record.initialize( true,
-                zeroBasedLongFromIntAndMod( prevProp, prevMod << 32 ),
-                zeroBasedLongFromIntAndMod( nextProp, nextMod << 32 ) );
+                longFromIntAndMod( prevProp, prevMod << 32 ),
+                longFromIntAndMod( nextProp, nextMod << 32 ) );
         // skip padding bytes
         cursor.setOffset( cursor.getOffset() + PROPERTY_BLOCKS_PADDING );
     }

@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.highlimit.v31;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
 import org.neo4j.kernel.impl.store.format.Capability;
@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
+import org.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 import org.neo4j.kernel.impl.store.format.standard.LabelTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.PropertyKeyTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipTypeTokenRecordFormat;
@@ -40,48 +41,48 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 /**
  * Record format with very high limits, 50-bit per ID, while at the same time keeping store size small.
  *
- * @see BaseHighLimitRecordFormat
+ * @see BaseHighLimitRecordFormatV3_1
  */
-public class HighLimit extends BaseRecordFormats
+public class HighLimitV3_1 extends BaseRecordFormats
 {
     /**
      * Default maximum number of bits that can be used to represent id
      */
     static final int DEFAULT_MAXIMUM_BITS_PER_ID = 50;
 
-    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V3_2_0.versionString();
+    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V3_1_0.versionString();
 
-    public static final RecordFormats RECORD_FORMATS = new HighLimit();
+    public static final RecordFormats RECORD_FORMATS = new HighLimitV3_1();
     public static final String NAME = "high_limit";
 
-    public HighLimit()
+    public HighLimitV3_1()
     {
         super( STORE_VERSION, 3, Capability.DENSE_NODES, Capability.RELATIONSHIP_TYPE_3BYTES, Capability.SCHEMA,
-                Capability.LUCENE_5, Capability.ID_ZERO_RESERVED );
+                Capability.LUCENE_5 );
     }
 
     @Override
     public RecordFormat<NodeRecord> node()
     {
-        return new NodeRecordFormat();
+        return new NodeRecordFormatV3_1();
     }
 
     @Override
     public RecordFormat<RelationshipRecord> relationship()
     {
-        return new RelationshipRecordFormat();
+        return new RelationshipRecordFormatV3_1();
     }
 
     @Override
     public RecordFormat<RelationshipGroupRecord> relationshipGroup()
     {
-        return new RelationshipGroupRecordFormat();
+        return new RelationshipGroupRecordFormatV3_1();
     }
 
     @Override
     public RecordFormat<PropertyRecord> property()
     {
-        return new PropertyRecordFormat();
+        return new PropertyRecordFormatV3_1();
     }
 
     @Override
@@ -105,7 +106,7 @@ public class HighLimit extends BaseRecordFormats
     @Override
     public RecordFormat<DynamicRecord> dynamic()
     {
-        return new DynamicRecordFormat();
+        return new DynamicRecordFormatV3_1();
     }
 
     @Override

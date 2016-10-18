@@ -270,14 +270,14 @@ class RelationshipRecordFormatV3_0_6 extends BaseHighLimitRecordFormatV3_0_6<Rel
         long nextPropMod = (modifiers & NEXT_PROP_BIT) << 26;
 
         record.initialize( inUse,
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( nextProp, nextPropMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( firstNode, firstNodeMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( secondNode, secondNodeMod ),
+                longFromIntAndMod( nextProp, nextPropMod ),
+                longFromIntAndMod( firstNode, firstNodeMod ),
+                longFromIntAndMod( secondNode, secondNodeMod ),
                 type,
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( firstPrevRel, firstPrevRelMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( firstNextRel, firstNextRelMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( secondPrevRel, secondPrevRelMod ),
-                BaseHighLimitRecordFormatV3_0_6.longFromIntAndMod( secondNextRel, secondNextRelMod ),
+                longFromIntAndMod( firstPrevRel, firstPrevRelMod ),
+                longFromIntAndMod( firstNextRel, firstNextRelMod ),
+                longFromIntAndMod( secondPrevRel, secondPrevRelMod ),
+                longFromIntAndMod( secondNextRel, secondNextRelMod ),
                 has( headerByte, FIRST_IN_FIRST_CHAIN_BIT ),
                 has( headerByte, FIRST_IN_SECOND_CHAIN_BIT ) );
     }

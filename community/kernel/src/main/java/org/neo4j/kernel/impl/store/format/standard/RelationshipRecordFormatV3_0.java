@@ -27,7 +27,7 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
-public class RelationshipRecordFormat extends BaseOneByteHeaderRecordFormat<RelationshipRecord>
+public class RelationshipRecordFormatV3_0 extends BaseOneByteHeaderRecordFormat<RelationshipRecord>
 {
     // record header size
     // directed|in_use(byte)+first_node(int)+second_node(int)+rel_type(int)+
@@ -35,7 +35,7 @@ public class RelationshipRecordFormat extends BaseOneByteHeaderRecordFormat<Rela
     // second_next_rel_id+next_prop_id(int)+first-in-chain-markers(1)
     public static final int RECORD_SIZE = 34;
 
-    public RelationshipRecordFormat()
+    public RelationshipRecordFormatV3_0()
     {
         super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, StandardFormatSettings.RELATIONSHIP_MAXIMUM_ID_BITS );
     }
@@ -90,14 +90,14 @@ public class RelationshipRecordFormat extends BaseOneByteHeaderRecordFormat<Rela
             byte extraByte = cursor.getByte();
 
             record.initialize( inUse,
-                    zeroBasedLongFromIntAndMod( nextProp, nextPropMod ),
-                    zeroBasedLongFromIntAndMod( firstNode, firstNodeMod ),
-                    zeroBasedLongFromIntAndMod( secondNode, secondNodeMod ),
+                    longFromIntAndMod( nextProp, nextPropMod ),
+                    longFromIntAndMod( firstNode, firstNodeMod ),
+                    longFromIntAndMod( secondNode, secondNodeMod ),
                     type,
-                    zeroBasedLongFromIntAndMod( firstPrevRel, firstPrevRelMod ),
-                    zeroBasedLongFromIntAndMod( firstNextRel, firstNextRelMod ),
-                    zeroBasedLongFromIntAndMod( secondPrevRel, secondPrevRelMod ),
-                    zeroBasedLongFromIntAndMod( secondNextRel, secondNextRelMod ),
+                    longFromIntAndMod( firstPrevRel, firstPrevRelMod ),
+                    longFromIntAndMod( firstNextRel, firstNextRelMod ),
+                    longFromIntAndMod( secondPrevRel, secondPrevRelMod ),
+                    longFromIntAndMod( secondNextRel, secondNextRelMod ),
                     (extraByte & 0x1) != 0,
                     (extraByte & 0x2) != 0 );
         }

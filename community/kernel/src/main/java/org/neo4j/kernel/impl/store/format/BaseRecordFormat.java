@@ -25,7 +25,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.IntStoreHeader;
 import org.neo4j.kernel.impl.store.StoreHeader;
 import org.neo4j.kernel.impl.store.id.IdSequence;
-import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 
@@ -41,6 +40,10 @@ public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implem
     public static final int IN_USE_BIT = 0b0000_0001;
     public static final Function<StoreHeader,Integer> INT_STORE_HEADER_READER =
             (header) -> ((IntStoreHeader)header).value();
+    /**
+     * Reserved ID which is used in some record implementations
+     */
+    public static final long INTEGER_MINUS_ONE = 0xFFFFFFFFL;  // 4294967295L;
 
     public static Function<StoreHeader,Integer> fixedRecordSize( int recordSize )
     {
@@ -76,9 +79,33 @@ public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implem
         return Record.NULL_REFERENCE.intValue();
     }
 
+    /**
+     * Formats using this has got a special ID (0xFFFFFFFF - 1) marking a null ID, so special checking is
+     * required when reading.
+     *
+     * @param base low 4 bytes
+     * @param modifier high bits
+     * @return combined base and modified into ID, or -1 if combination is the special ID.
+     */
     public static long longFromIntAndMod( long base, long modifier )
     {
-        return modifier == 0 && IdValidator.isReservedId( base ) ? -1 : base | modifier;
+        return modifier == 0 && base == INTEGER_MINUS_ONE ? Record.NULL_REFERENCE.longValue() :
+                zeroBasedLongFromIntAndMod( base, modifier );
+    }
+
+    /**
+     * Formats using this should also have {@link Capability#ID_ZERO_RESERVED}, i.e. not have the special
+     * reserved (0xFFFFFFFF - 1) ID for null, instead 0. Reading 0, e.g. base == 0 && modifier == 0 will
+     * have this method return -1 since on {@link AbstractBaseRecord record-instance-level} we still compare
+     * with {@link Record#NULL_REFERENCE} which isn't tied to a particular format.
+     *
+     * @param base low 4 bytes
+     * @param modifier high bits
+     * @return combined base and modified into ID, or -1 if both base and modifier are 0.
+     */
+    public static long zeroBasedLongFromIntAndMod( long base, long modifier )
+    {
+        return modifier == 0 && base == 0 ? Record.NULL_REFERENCE.longValue() : base | modifier;
     }
 
     @Override

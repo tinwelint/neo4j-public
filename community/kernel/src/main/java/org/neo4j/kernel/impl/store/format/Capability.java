@@ -48,6 +48,11 @@ public enum Capability
     VERSION_TRAILERS( CapabilityType.STORE ),
 
     /**
+     * The ID marking a null field is 0, not the 0xFFFFFFFF - 1 ID.
+     */
+    ID_ZERO_RESERVED( CapabilityType.FORMAT, CapabilityType.STORE ),
+
+    /**
      * Lucene version 3.x
      */
     LUCENE_3( CapabilityType.INDEX ),

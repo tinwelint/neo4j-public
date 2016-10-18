@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.highlimit.v31;
 
 import java.io.IOException;
 
@@ -55,7 +55,7 @@ import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
  * 4B   end node chain next relationship
  * => 28B
  */
-class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRecord>
+class RelationshipRecordFormatV3_1 extends BaseHighLimitRecordFormatV3_1<RelationshipRecord>
 {
     static final int RECORD_SIZE = 32;
     static final int FIXED_FORMAT_RECORD_SIZE = HEADER_BYTE +
@@ -91,12 +91,12 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
 
     private static final long TWO_BIT_FIXED_REFERENCE_BIT_MASK = 0x300000000L;
 
-    public RelationshipRecordFormat()
+    public RelationshipRecordFormatV3_1()
     {
         this( RECORD_SIZE );
     }
 
-    RelationshipRecordFormat( int recordSize )
+    RelationshipRecordFormatV3_1( int recordSize )
     {
         super( fixedRecordSize( recordSize ), 0 );
     }
@@ -279,14 +279,14 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
         long nextPropMod = (modifiers & NEXT_PROP_BIT) << 26;
 
         record.initialize( inUse,
-                zeroBasedLongFromIntAndMod( nextProp, nextPropMod ),
-                zeroBasedLongFromIntAndMod( firstNode, firstNodeMod ),
-                zeroBasedLongFromIntAndMod( secondNode, secondNodeMod ),
+                longFromIntAndMod( nextProp, nextPropMod ),
+                longFromIntAndMod( firstNode, firstNodeMod ),
+                longFromIntAndMod( secondNode, secondNodeMod ),
                 type,
-                zeroBasedLongFromIntAndMod( firstPrevRel, firstPrevRelMod ),
-                zeroBasedLongFromIntAndMod( firstNextRel, firstNextRelMod ),
-                zeroBasedLongFromIntAndMod( secondPrevRel, secondPrevRelMod ),
-                zeroBasedLongFromIntAndMod( secondNextRel, secondNextRelMod ),
+                longFromIntAndMod( firstPrevRel, firstPrevRelMod ),
+                longFromIntAndMod( firstNextRel, firstNextRelMod ),
+                longFromIntAndMod( secondPrevRel, secondPrevRelMod ),
+                longFromIntAndMod( secondNextRel, secondNextRelMod ),
                 has( headerByte, FIRST_IN_FIRST_CHAIN_BIT ),
                 has( headerByte, FIRST_IN_SECOND_CHAIN_BIT ) );
     }
