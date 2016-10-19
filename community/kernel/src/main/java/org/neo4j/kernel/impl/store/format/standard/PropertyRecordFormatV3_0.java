@@ -40,7 +40,7 @@ public class PropertyRecordFormatV3_0 extends BaseRecordFormat<PropertyRecord>
 
     public PropertyRecordFormatV3_0()
     {
-        super( fixedRecordSize( RECORD_SIZE ), 0, StandardFormatSettings.PROPERTY_RECORD_MAXIMUM_ID_BITS );
+        super( fixedRecordSize( RECORD_SIZE ), 0, StandardFormatSettings.PROPERTY_RECORD_MAXIMUM_ID_BITS, 0 );
     }
 
     @Override

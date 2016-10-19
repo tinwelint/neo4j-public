@@ -83,4 +83,10 @@ public class NoRecordFormat<RECORD extends AbstractBaseRecord> implements Record
     {
         return 0;
     }
+
+    @Override
+    public int getMinId()
+    {
+        return 0;
+    }
 }

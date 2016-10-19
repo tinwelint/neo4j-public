@@ -33,6 +33,8 @@ public final class StandardFormatSettings
     public static final int RELATIONSHIP_TYPE_TOKEN_MAXIMUM_ID_BITS = 16;
     public static final int RELATIONSHIP_GROUP_MAXIMUM_ID_BITS = 35;
 
+    public static final int MINIMUM_ID = 1;
+
     private StandardFormatSettings()
     {
     }

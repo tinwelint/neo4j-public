@@ -53,11 +53,13 @@ public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implem
     private final Function<StoreHeader,Integer> recordSize;
     private final int recordHeaderSize;
     private final long maxId;
+    private final int minId;
 
-    protected BaseRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize, int idBits )
+    protected BaseRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize, int idBits, int minId )
     {
         this.recordSize = recordSize;
         this.recordHeaderSize = recordHeaderSize;
+        this.minId = minId;
         this.maxId = (1L << idBits) - 1;
     }
 
@@ -123,12 +125,17 @@ public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implem
     public int hashCode()
     {
         return getClass().hashCode();
-
     }
 
     @Override
     public final long getMaxId()
     {
         return maxId;
+    }
+
+    @Override
+    public int getMinId()
+    {
+        return minId;
     }
 }

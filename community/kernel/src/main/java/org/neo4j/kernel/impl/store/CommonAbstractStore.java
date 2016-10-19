@@ -46,6 +46,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.string.UTF8;
 
+import static java.lang.Integer.max;
 import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
 import static org.neo4j.helpers.ArrayUtil.contains;
 import static org.neo4j.helpers.Exceptions.launderedException;
@@ -923,7 +924,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
     @Override
     public int getNumberOfReservedLowIds()
     {
-        return storeHeaderFormat.numberOfReservedRecords();
+        return max( storeHeaderFormat.numberOfReservedRecords(), recordFormat.getMinId() );
     }
 
     public IdType getIdType()

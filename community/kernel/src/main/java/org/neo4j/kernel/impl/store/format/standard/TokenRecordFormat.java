@@ -31,7 +31,7 @@ public abstract class TokenRecordFormat<RECORD extends TokenRecord> extends Base
 
     protected TokenRecordFormat( int recordSize, int idBits )
     {
-        super( fixedRecordSize( recordSize ), 0, IN_USE_BIT, idBits );
+        super( fixedRecordSize( recordSize ), 0, IN_USE_BIT, idBits, 0 );
     }
 
     @Override

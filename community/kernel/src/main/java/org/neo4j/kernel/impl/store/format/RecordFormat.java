@@ -142,7 +142,13 @@ public interface RecordFormat<RECORD extends AbstractBaseRecord>
     int hashCode();
 
     /**
-     * Maximum number that can be used to as id in specified format
+     * Minimum id that can be used to as id in specified format
+     * @return minimum possible id
+     */
+    int getMinId();
+
+    /**
+     * Maximum id that can be used to as id in specified format
      * @return maximum possible id
      */
     long getMaxId();

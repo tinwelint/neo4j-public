@@ -30,7 +30,7 @@ class RelationshipRecordFormatV2_0 extends BaseOneByteHeaderRecordFormat<Relatio
 {
     RelationshipRecordFormatV2_0()
     {
-        super( fixedRecordSize( 33 ), 0, IN_USE_BIT, StandardFormatSettings.RELATIONSHIP_MAXIMUM_ID_BITS );
+        super( fixedRecordSize( 33 ), 0, IN_USE_BIT, StandardFormatSettings.RELATIONSHIP_MAXIMUM_ID_BITS, 0 );
     }
 
     @Override

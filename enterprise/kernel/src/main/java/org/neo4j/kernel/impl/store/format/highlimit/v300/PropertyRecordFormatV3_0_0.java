@@ -53,7 +53,7 @@ public class PropertyRecordFormatV3_0_0 extends BaseOneByteHeaderRecordFormat<Pr
 
     public PropertyRecordFormatV3_0_0()
     {
-        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimitV3_0_0.DEFAULT_MAXIMUM_BITS_PER_ID );
+        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimitV3_0_0.DEFAULT_MAXIMUM_BITS_PER_ID, 0 );
     }
 
     @Override

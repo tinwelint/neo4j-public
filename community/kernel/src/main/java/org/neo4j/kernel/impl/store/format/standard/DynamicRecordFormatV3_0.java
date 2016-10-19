@@ -36,7 +36,7 @@ public class DynamicRecordFormatV3_0 extends BaseOneByteHeaderRecordFormat<Dynam
     public DynamicRecordFormatV3_0()
     {
         super( INT_STORE_HEADER_READER, RECORD_HEADER_SIZE, 0x10/*the inUse bit is the lsb in the second nibble*/,
-                StandardFormatSettings.DYNAMIC_RECORD_MAXIMUM_ID_BITS );
+                StandardFormatSettings.DYNAMIC_RECORD_MAXIMUM_ID_BITS, 0 );
     }
 
     @Override

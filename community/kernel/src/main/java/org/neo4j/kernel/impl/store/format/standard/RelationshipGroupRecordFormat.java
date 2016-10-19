@@ -41,7 +41,7 @@ public class RelationshipGroupRecordFormat extends BaseOneByteHeaderRecordFormat
     public RelationshipGroupRecordFormat()
     {
         super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT,
-                StandardFormatSettings.RELATIONSHIP_GROUP_MAXIMUM_ID_BITS );
+                StandardFormatSettings.RELATIONSHIP_GROUP_MAXIMUM_ID_BITS, StandardFormatSettings.MINIMUM_ID );
     }
 
     @Override

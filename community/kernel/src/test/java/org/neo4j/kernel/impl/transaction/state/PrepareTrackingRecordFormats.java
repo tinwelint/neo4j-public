@@ -220,6 +220,12 @@ public class PrepareTrackingRecordFormats implements RecordFormats
         }
 
         @Override
+        public int getMinId()
+        {
+            return actual.getMinId();
+        }
+
+        @Override
         public boolean equals( Object otherFormat )
         {
             return actual.equals( otherFormat );

@@ -51,7 +51,7 @@ public class DynamicRecordFormatV3_1 extends BaseOneByteHeaderRecordFormat<Dynam
 
     public DynamicRecordFormatV3_1()
     {
-        super( INT_STORE_HEADER_READER, RECORD_HEADER_SIZE, IN_USE_BIT, HighLimitV3_1.DEFAULT_MAXIMUM_BITS_PER_ID );
+        super( INT_STORE_HEADER_READER, RECORD_HEADER_SIZE, IN_USE_BIT, HighLimitV3_1.DEFAULT_MAXIMUM_BITS_PER_ID, 0 );
     }
 
     @Override

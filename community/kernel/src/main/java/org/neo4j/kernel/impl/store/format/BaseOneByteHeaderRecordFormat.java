@@ -37,9 +37,9 @@ public abstract class BaseOneByteHeaderRecordFormat<RECORD extends AbstractBaseR
     private final int inUseBitMaskForFirstByte;
 
     protected BaseOneByteHeaderRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize,
-            int inUseBitMaskForFirstByte, int idBits )
+            int inUseBitMaskForFirstByte, int idBits, int minId )
     {
-        super( recordSize, recordHeaderSize, idBits );
+        super( recordSize, recordHeaderSize, idBits, minId );
         this.inUseBitMaskForFirstByte = inUseBitMaskForFirstByte;
     }
 

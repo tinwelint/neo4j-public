@@ -105,4 +105,10 @@ public class ForcedSecondaryUnitRecordFormat<RECORD extends AbstractBaseRecord> 
     {
         return actual.getMaxId();
     }
+
+    @Override
+    public int getMinId()
+    {
+        return actual.getMinId();
+    }
 }

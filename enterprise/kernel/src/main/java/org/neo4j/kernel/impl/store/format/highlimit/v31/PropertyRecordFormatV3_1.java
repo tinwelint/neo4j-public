@@ -81,7 +81,7 @@ class PropertyRecordFormatV3_1 extends BaseOneByteHeaderRecordFormat<PropertyRec
 
     protected PropertyRecordFormatV3_1()
     {
-        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimitV3_1.DEFAULT_MAXIMUM_BITS_PER_ID );
+        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimitV3_1.DEFAULT_MAXIMUM_BITS_PER_ID, 0 );
     }
 
     @Override

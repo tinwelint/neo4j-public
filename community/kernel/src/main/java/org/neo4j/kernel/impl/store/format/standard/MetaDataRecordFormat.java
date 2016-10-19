@@ -36,7 +36,7 @@ public class MetaDataRecordFormat extends BaseOneByteHeaderRecordFormat<MetaData
 
     public MetaDataRecordFormat()
     {
-        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, ID_BITS );
+        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, ID_BITS, 0 );
     }
 
     @Override
