@@ -94,6 +94,7 @@ public class IdGenerators
      */
     public static IdGenerator startingFromTheBeginning()
     {
-        return startingFrom( 0 );
+        // TODO shouldn't we consult stores about which is their low id / number of reserved ids?
+        return startingFrom( 1 );
     }
 }

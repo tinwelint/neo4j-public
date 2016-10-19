@@ -266,7 +266,7 @@ public class ParallelBatchImporter implements BatchImporter
                 neoStore.getRelationshipTypeRepository(),
                 inputCache );
 
-        long nextRelationshipId = 0;
+        long nextRelationshipId = neoStore.getRelationshipStore().getNumberOfReservedLowIds();
         Configuration relationshipConfig = withBatchSize( config,
                 neoStore.getRelationshipStore().getRecordsPerPage() );
         Configuration nodeConfig = withBatchSize( config, neoStore.getNodeStore().getRecordsPerPage() );
