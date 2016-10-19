@@ -214,9 +214,9 @@ class PropertyRecordFormat extends BaseOneByteHeaderRecordFormat<PropertyRecord>
         short prevModifier = record.getPrevProp() == NULL ? 0 : (short) ((record.getPrevProp() & HIGH_DWORD_LOWER_WORD_MASK) >> 32);
         short nextModifier = record.getNextProp() == NULL ? 0 : (short) ((record.getNextProp() & HIGH_DWORD_LOWER_WORD_MASK) >> 32);
         cursor.putShort( prevModifier );
-        cursor.putInt( (int) record.getPrevProp() );
+        cursor.putInt( (int) zeroForNull( record.getPrevProp() ) );
         cursor.putShort( nextModifier );
-        cursor.putInt( (int) record.getNextProp() );
+        cursor.putInt( (int) zeroForNull( record.getNextProp() ) );
         // skip bytes before start reading property blocks to have
         // aligned access and fixed position of property blocks
         cursor.setOffset( cursor.getOffset() + PROPERTY_BLOCKS_PADDING );

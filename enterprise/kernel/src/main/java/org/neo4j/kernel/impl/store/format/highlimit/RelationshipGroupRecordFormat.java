@@ -222,11 +222,11 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
 
         writeType( cursor, record.getType() );
 
-        cursor.putInt( (int) record.getNext() );
-        cursor.putInt( (int) record.getFirstOut() );
-        cursor.putInt( (int) record.getFirstIn() );
-        cursor.putInt( (int) record.getFirstLoop() );
-        cursor.putInt( (int) record.getOwningNode() );
+        cursor.putInt( (int) zeroForNull( record.getNext() ) );
+        cursor.putInt( (int) zeroForNull( record.getFirstOut() ) );
+        cursor.putInt( (int) zeroForNull( record.getFirstIn() ) );
+        cursor.putInt( (int) zeroForNull( record.getFirstLoop() ) );
+        cursor.putInt( (int) zeroForNull( record.getOwningNode() ) );
     }
 
     private int getType( PageCursor cursor )

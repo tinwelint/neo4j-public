@@ -327,12 +327,12 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
                                    secondPrevRelMod | secondNextRelMod | nextPropMod);
 
         cursor.putByte( (byte) modifiers );
-        cursor.putInt( (int) firstNode );
-        cursor.putInt( (int) secondNode );
-        cursor.putInt( (int) firstPrevRel );
-        cursor.putInt( (int) firstNextRel );
-        cursor.putInt( (int) secondPrevRel );
-        cursor.putInt( (int) secondNextRel );
-        cursor.putInt( (int) nextProp );
+        cursor.putInt( (int) zeroForNull( firstNode ) );
+        cursor.putInt( (int) zeroForNull( secondNode ) );
+        cursor.putInt( (int) zeroForNull( firstPrevRel ) );
+        cursor.putInt( (int) zeroForNull( firstNextRel ) );
+        cursor.putInt( (int) zeroForNull( secondPrevRel ) );
+        cursor.putInt( (int) zeroForNull( secondNextRel ) );
+        cursor.putInt( (int) zeroForNull( nextProp ) );
     }
 }

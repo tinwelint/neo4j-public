@@ -185,8 +185,8 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
         short modifiers = (short) ( relModifier | propModifier );
 
         cursor.putByte( (byte) modifiers );
-        cursor.putInt( (int) nextRel );
-        cursor.putInt( (int) nextProp );
+        cursor.putInt( (int) zeroForNull( nextRel ) );
+        cursor.putInt( (int) zeroForNull( nextProp ) );
 
         // lsb of labels
         long labelField = record.getLabelField();

@@ -101,10 +101,10 @@ public class RelationshipGroupRecordFormat extends BaseOneByteHeaderRecordFormat
             cursor.putByte( (byte) (nextLoopMod | nextInMod) );
 
             cursor.putShort( (short) record.getType() );
-            cursor.putInt( (int) record.getNext() );
-            cursor.putInt( (int) record.getFirstOut() );
-            cursor.putInt( (int) record.getFirstIn() );
-            cursor.putInt( (int) record.getFirstLoop() );
+            cursor.putInt( (int) zeroForNull( record.getNext() ) );
+            cursor.putInt( (int) zeroForNull( record.getFirstOut() ) );
+            cursor.putInt( (int) zeroForNull( record.getFirstIn() ) );
+            cursor.putInt( (int) zeroForNull( record.getFirstLoop() ) );
             cursor.putInt( (int) record.getOwningNode() );
             cursor.putByte( (byte) (record.getOwningNode() >> 32) );
         }

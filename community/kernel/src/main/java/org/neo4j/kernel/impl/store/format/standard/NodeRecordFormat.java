@@ -89,8 +89,8 @@ public class NodeRecordFormat extends BaseOneByteHeaderRecordFormat<NodeRecord>
             inUseUnsignedByte = (short) ( inUseUnsignedByte | relModifier | propModifier );
 
             cursor.putByte( (byte) inUseUnsignedByte );
-            cursor.putInt( (int) nextRel );
-            cursor.putInt( (int) nextProp );
+            cursor.putInt( (int) zeroForNull( nextRel ) );
+            cursor.putInt( (int) zeroForNull( nextProp ) );
 
             // lsb of labels
             long labelField = record.getLabelField();

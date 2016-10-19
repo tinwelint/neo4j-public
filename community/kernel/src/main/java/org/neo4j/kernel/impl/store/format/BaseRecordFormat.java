@@ -110,6 +110,11 @@ public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implem
         return modifier == 0 && base == 0 ? Record.NULL_REFERENCE.longValue() : base | modifier;
     }
 
+    public static long zeroForNull( long id )
+    {
+        return Record.NULL_REFERENCE.is( id ) ? 0 : id;
+    }
+
     @Override
     public void prepare( RECORD record, int recordSize, IdSequence idSequence )
     {   // Do nothing by default

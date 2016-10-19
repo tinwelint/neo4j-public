@@ -150,7 +150,7 @@ public class DynamicRecordFormat extends BaseOneByteHeaderRecordFormat<DynamicRe
             firstInteger |= highByteInFirstInteger;
 
             cursor.putInt( firstInteger );
-            cursor.putInt( (int) nextBlock );
+            cursor.putInt( (int) zeroForNull( nextBlock ) );
             cursor.putBytes( record.getData() );
         }
         else

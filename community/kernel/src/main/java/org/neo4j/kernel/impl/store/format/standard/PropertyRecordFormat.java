@@ -112,8 +112,8 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
              * [pppp,nnnn] previous, next high bits
              */
             cursor.putByte( modifiers );
-            cursor.putInt( (int) record.getPrevProp() );
-            cursor.putInt( (int) record.getNextProp() );
+            cursor.putInt( (int) zeroForNull( record.getPrevProp() ) );
+            cursor.putInt( (int) zeroForNull( record.getNextProp() ) );
 
             // Then go through the blocks
             int longsAppended = 0; // For marking the end of blocks
