@@ -554,7 +554,7 @@ public class TransactionRecordStateTest
         // GIVEN
         NeoStores neoStores = neoStoresRule.open( GraphDatabaseSettings.dense_node_threshold.name(), "1" );
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        long nodeId = 0, relId1 = 1, relId2 = 2, relId3 = 3;
+        long nodeId = 1, relId1 = 1, relId2 = 2, relId3 = 3;
         recordState.nodeCreate( nodeId );
         recordState.relCreate( relId1, 0, nodeId, nodeId );
         recordState.relCreate( relId2, 0, nodeId, nodeId );
@@ -607,17 +607,18 @@ public class TransactionRecordStateTest
         NeoStores neoStore = neoStoresRule.open( GraphDatabaseSettings.dense_node_threshold.name(), "5" );
         int A = 0, B = 1;
         TransactionRecordState state = newTransactionRecordState( neoStore );
-        state.nodeCreate( 0 );
-        state.relCreate( 0, A, 0, 0 );
-        state.relCreate( 1, A, 0, 0 );
-        state.relCreate( 2, A, 0, 0 );
-        state.relCreate( 3, A, 0, 0 );
-        state.relCreate( 4, B, 0, 0 );
+        long nodeId = 1;
+        state.nodeCreate( nodeId );
+        state.relCreate( 0, A, nodeId, nodeId );
+        state.relCreate( 1, A, nodeId, nodeId );
+        state.relCreate( 2, A, nodeId, nodeId );
+        state.relCreate( 3, A, nodeId, nodeId );
+        state.relCreate( 4, B, nodeId, nodeId );
         apply( neoStore, state );
 
         // When doing a tx where a relationship of type A for the node is create and rel of type B is deleted
         state = newTransactionRecordState( neoStore );
-        state.relCreate( 5, A, 0, 0 ); // here this node should be converted to dense and the groups should be created
+        state.relCreate( 5, A, nodeId, nodeId ); // here this node should be converted to dense and the groups should be created
         state.relDelete( 4 ); // here the group B should be delete
 
         // Then
@@ -633,7 +634,7 @@ public class TransactionRecordStateTest
         // GIVEN
         NeoStores neoStores = neoStoresRule.open( GraphDatabaseSettings.dense_node_threshold.name(), "1" );
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        long nodeId1 = 0, nodeId2 = 1, relId1 = 1, relId2 = 2, relId4 = 10;
+        long nodeId1 = 1, nodeId2 = 2, relId1 = 1, relId2 = 2, relId4 = 10;
         recordState.nodeCreate( nodeId1 );
         recordState.nodeCreate( nodeId2 );
         recordState.relCreate( relId1, 0, nodeId1, nodeId1 );

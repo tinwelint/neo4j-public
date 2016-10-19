@@ -56,7 +56,7 @@ import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
  */
 public class RecordFormatSelector
 {
-    private static final RecordFormats DEFAULT_FORMAT = StandardV3_0.RECORD_FORMATS;
+    private static final RecordFormats DEFAULT_FORMAT = StandardV3_2.RECORD_FORMATS;
 
     private static final Iterable<RecordFormats> KNOWN_FORMATS = asList(
             StandardV2_0.RECORD_FORMATS,

@@ -199,7 +199,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
 
     protected void initialiseNewStoreFile( PagedFile file ) throws IOException
     {
-        if ( getNumberOfReservedLowIds() > 0 )
+        if ( storeHeaderFormat.numberOfReservedRecords() > 0 )
         {
             try ( PageCursor pageCursor = file.io( 0, PF_SHARED_WRITE_LOCK ) )
             {
