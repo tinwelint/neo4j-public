@@ -755,7 +755,6 @@ public class TestPropertyBlocks extends AbstractNeo4jTestCase
         node.setProperty( "four", 4 );
         newTransaction();
         assertEquals( "Invalid assumption: property record count", propcount + 1, propertyRecordsInUse() );
-        assertEquals( "Invalid assumption: property record count", propcount + 1, propertyRecordsInUse() );
         node.setProperty( "final", 666 );
         newTransaction();
         assertEquals( "Invalid assumption: property record count", propcount + 2, propertyRecordsInUse() );
