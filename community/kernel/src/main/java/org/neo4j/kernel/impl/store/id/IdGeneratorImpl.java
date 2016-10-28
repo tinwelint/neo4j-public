@@ -198,7 +198,7 @@ public class IdGeneratorImpl implements IdGenerator
     @Override
     public void setHighId( long id )
     {
-        IdValidator.assertIdWithinCapacity( id, max );
+        IdValidator.assertIdWithinCapacity( id, 0, max );
         highId.set( id );
     }
 

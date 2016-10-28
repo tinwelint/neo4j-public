@@ -51,6 +51,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.io.ByteUnit.kibiBytes;
+import static org.neo4j.kernel.impl.store.format.LimitedRecordGenerators.DEFAULT_FRACTION_NULL;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 public abstract class AbstractRecordFormatTest
@@ -78,15 +79,11 @@ public abstract class AbstractRecordFormatTest
     public RecordKeys keys = FullyCoveringRecordKeys.INSTANCE;
 
     private final RecordFormats formats;
-    private final int entityBits;
-    private final int propertyBits;
     private RecordGenerators generators;
 
-    protected AbstractRecordFormatTest( RecordFormats formats, int entityBits, int propertyBits )
+    protected AbstractRecordFormatTest( RecordFormats formats )
     {
         this.formats = formats;
-        this.entityBits = entityBits;
-        this.propertyBits = propertyBits;
     }
 
     @BeforeClass
@@ -98,7 +95,7 @@ public abstract class AbstractRecordFormatTest
     @Before
     public void before()
     {
-        generators = new LimitedRecordGenerators( random.randoms(), entityBits, propertyBits, 40, 16, -1 );
+        generators = new LimitedRecordGenerators( random.randoms(), -1, DEFAULT_FRACTION_NULL, formats );
     }
 
     @Test

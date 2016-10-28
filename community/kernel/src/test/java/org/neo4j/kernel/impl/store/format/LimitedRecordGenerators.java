@@ -40,31 +40,34 @@ import static java.lang.Math.toIntExact;
 public class LimitedRecordGenerators implements RecordGenerators
 {
     static final long NULL = -1;
+    public static final float DEFAULT_FRACTION_NULL = 0.2f;
 
     private final Randoms random;
-    private final int entityBits;
-    private final int propertyBits;
-    private final int nodeLabelBits;
-    private final int tokenBits;
     private final long nullValue;
     private final float fractionNullValues;
+    private final RecordFormat<RelationshipTypeTokenRecord> relationshipTypeTokenFormat;
+    private final RecordFormat<RelationshipTypeTokenRecord> propertyKeyTokenFormat;
+    private final RecordFormat<RelationshipTypeTokenRecord> labelTokenFormat;
+    private final RecordFormat<NodeRecord> nodeFormat;
+    private final RecordFormat<RelationshipRecord> relationshipFormat;
+    private final RecordFormat<RelationshipGroupRecord> relationshipGroupFormat;
+    private final RecordFormat<DynamicRecord> dynamicFormat;
+    private final RecordFormat<PropertyRecord> propertyFormat;
 
-    public LimitedRecordGenerators( Randoms random, int entityBits, int propertyBits, int nodeLabelBits,
-            int tokenBits, long nullValue )
-    {
-        this( random, entityBits, propertyBits, nodeLabelBits, tokenBits, nullValue, 0.2f );
-    }
-
-    public LimitedRecordGenerators( Randoms random, int entityBits, int propertyBits, int nodeLabelBits,
-            int tokenBits, long nullValue, float fractionNullValues )
+    public LimitedRecordGenerators( Randoms random, long nullValue, float fractionNullValues, RecordFormats formats )
     {
         this.random = random;
-        this.entityBits = entityBits;
-        this.propertyBits = propertyBits;
-        this.nodeLabelBits = nodeLabelBits;
-        this.tokenBits = tokenBits;
         this.nullValue = nullValue;
         this.fractionNullValues = fractionNullValues;
+
+        this.relationshipTypeTokenFormat = formats.relationshipTypeToken();
+        this.propertyKeyTokenFormat = formats.relationshipTypeToken();
+        this.labelTokenFormat = formats.relationshipTypeToken();
+        this.nodeFormat = formats.node();
+        this.relationshipFormat = formats.relationship();
+        this.relationshipGroupFormat = formats.relationshipGroup();
+        this.dynamicFormat = formats.dynamic();
+        this.propertyFormat = formats.property();
     }
 
     @Override
@@ -72,7 +75,7 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         return (recordSize, format, recordId) -> new RelationshipTypeTokenRecord( toIntExact( recordId ) ).initialize(
                 random.nextBoolean(),
-                randomInt( tokenBits ) );
+                randomInt( relationshipTypeTokenFormat ) );
     }
 
     @Override
@@ -80,12 +83,12 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         return (recordSize, format, recordId) -> new RelationshipGroupRecord( recordId ).initialize(
                 random.nextBoolean(),
-                randomInt( tokenBits ),
-                randomLongOrOccasionallyNull( entityBits ),
-                randomLongOrOccasionallyNull( entityBits ),
-                randomLongOrOccasionallyNull( entityBits ),
-                randomLongOrOccasionallyNull( entityBits ),
-                randomLongOrOccasionallyNull( entityBits ) );
+                randomInt( relationshipTypeTokenFormat ),
+                randomLongOrOccasionallyNull( relationshipFormat ),
+                randomLongOrOccasionallyNull( relationshipFormat ),
+                randomLongOrOccasionallyNull( relationshipFormat ),
+                randomLongOrOccasionallyNull( nodeFormat ),
+                randomLongOrOccasionallyNull( relationshipGroupFormat ) );
     }
 
     @Override
@@ -93,10 +96,10 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         return (recordSize, format, recordId) -> new RelationshipRecord( recordId ).initialize(
                 random.nextBoolean(),
-                randomLongOrOccasionallyNull( propertyBits ),
-                random.nextLong( entityBits ), random.nextLong( entityBits ), randomInt( tokenBits ),
-                randomLongOrOccasionallyNull( entityBits ), randomLongOrOccasionallyNull( entityBits ),
-                randomLongOrOccasionallyNull( entityBits ), randomLongOrOccasionallyNull( entityBits ),
+                randomLongOrOccasionallyNull( propertyFormat ),
+                randomLong( nodeFormat ), randomLong( nodeFormat ), randomInt( relationshipTypeTokenFormat ),
+                randomLongOrOccasionallyNull( relationshipFormat ), randomLongOrOccasionallyNull( relationshipFormat ),
+                randomLongOrOccasionallyNull( relationshipFormat ), randomLongOrOccasionallyNull( relationshipFormat ),
                 random.nextBoolean(), random.nextBoolean() );
     }
 
@@ -105,7 +108,7 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         return (recordSize, format, recordId) -> new PropertyKeyTokenRecord( toIntExact( recordId ) ).initialize(
                 random.nextBoolean(),
-                random.nextInt( tokenBits ),
+                randomInt( propertyKeyTokenFormat ),
                 abs( random.nextInt() ) );
     }
 
@@ -124,7 +127,7 @@ public class LimitedRecordGenerators implements RecordGenerators
                 PropertyBlock block = new PropertyBlock();
                 // Dynamic records will not be written and read by the property record format,
                 // that happens in the store where it delegates to a "sub" store.
-                PropertyStore.encodeValue( block, random.nextInt( tokenBits ), random.propertyValue(),
+                PropertyStore.encodeValue( block, randomInt( propertyKeyTokenFormat ), random.propertyValue(),
                         stringAllocator, arrayAllocator );
                 int tentativeBlocksWithThisOne = blocksOccupied + block.getValueBlocks().length;
                 if ( tentativeBlocksWithThisOne <= 4 )
@@ -133,8 +136,8 @@ public class LimitedRecordGenerators implements RecordGenerators
                     blocksOccupied = tentativeBlocksWithThisOne;
                 }
             }
-            record.setPrevProp( randomLongOrOccasionallyNull( propertyBits ) );
-            record.setNextProp( randomLongOrOccasionallyNull( propertyBits ) );
+            record.setPrevProp( randomLongOrOccasionallyNull( propertyFormat ) );
+            record.setNextProp( randomLongOrOccasionallyNull( propertyFormat ) );
             return record;
         };
     }
@@ -144,10 +147,10 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         return (recordSize, format, recordId) -> new NodeRecord( recordId ).initialize(
                 random.nextBoolean(),
-                randomLongOrOccasionallyNull( propertyBits ),
+                randomLongOrOccasionallyNull( propertyFormat ),
                 random.nextBoolean(),
-                randomLongOrOccasionallyNull( entityBits ),
-                randomLongOrOccasionallyNull( nodeLabelBits, 0 ) );
+                randomLongOrOccasionallyNull( relationshipFormat ),
+                randomLongOrOccasionallyNull( dynamicFormat, 0 ) );
     }
 
     @Override
@@ -155,7 +158,7 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         return (recordSize, format, recordId) -> new LabelTokenRecord( toIntExact( recordId ) ).initialize(
                 random.nextBoolean(),
-                random.nextInt( tokenBits ) );
+                randomInt( labelTokenFormat ) );
     }
 
     @Override
@@ -164,7 +167,7 @@ public class LimitedRecordGenerators implements RecordGenerators
         return (recordSize, format, recordId) -> {
             int dataSize = recordSize - format.getRecordHeaderSize();
             int length = random.nextBoolean() ? dataSize : random.nextInt( dataSize );
-            long next = length == dataSize ? randomLong( propertyBits ) : nullValue;
+            long next = length == dataSize ? randomLong( propertyFormat ) : nullValue;
             DynamicRecord record = new DynamicRecord( max( 1, recordId ) ).initialize( random.nextBoolean(),
                     random.nextBoolean(), next, random.nextInt( PropertyType.values().length ), length );
             byte[] data = new byte[record.getLength()];
@@ -174,27 +177,23 @@ public class LimitedRecordGenerators implements RecordGenerators
         };
     }
 
-    private int randomInt( int maxBits )
+    private int randomInt( RecordFormat<?> format )
     {
-        int bits = random.nextInt( maxBits + 1 );
-        int max = 1 << bits;
-        return random.nextInt( max );
+        return random.nextInt( toIntExact( format.getMaxId() - format.getMinId() ) ) + format.getMinId();
     }
 
-    private long randomLong( int maxBits )
+    private long randomLong( RecordFormat<?> format )
     {
-        int bits = random.nextInt( maxBits + 1 );
-        long max = 1L << bits;
-        return random.nextLong( max );
+        return random.nextLong( format.getMaxId() - format.getMinId() ) + format.getMinId();
     }
 
-    private long randomLongOrOccasionallyNull( int maxBits )
+    private long randomLongOrOccasionallyNull( RecordFormat<?> format )
     {
-        return randomLongOrOccasionallyNull( maxBits, NULL );
+        return randomLongOrOccasionallyNull( format, NULL );
     }
 
-    private long randomLongOrOccasionallyNull( int maxBits, long nullValue )
+    private long randomLongOrOccasionallyNull( RecordFormat<?> format, long nullValue )
     {
-        return random.nextFloat() < fractionNullValues ? nullValue : randomLong( maxBits );
+        return random.nextFloat() < fractionNullValues ? nullValue : randomLong( format );
     }
 }

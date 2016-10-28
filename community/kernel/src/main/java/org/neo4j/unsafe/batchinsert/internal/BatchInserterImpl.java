@@ -212,6 +212,7 @@ public class BatchInserterImpl implements BatchInserter
     private final LabelTokenStore labelTokenStore;
     private final Locks.Client noopLockClient = new NoOpClient();
     private final long maxNodeId;
+    private final int minNodeId;
     private final RecordCursors cursors;
 
     BatchInserterImpl( File storeDir,
@@ -254,6 +255,7 @@ public class BatchInserterImpl implements BatchInserter
                 recordFormats, internalLogProvider );
 
         maxNodeId = recordFormats.node().getMaxId();
+        minNodeId = recordFormats.node().getMinId();
 
         if ( dump )
         {
@@ -788,7 +790,7 @@ public class BatchInserterImpl implements BatchInserter
     @Override
     public void createNode( long id, Map<String, Object> properties, Label... labels )
     {
-        IdValidator.assertIdWithinCapacity( id, maxNodeId );
+        IdValidator.assertIdWithinCapacity( id, minNodeId, maxNodeId );
         if ( nodeStore.isInUse( id ) )
         {
             throw new IllegalArgumentException( "id=" + id + " already in use" );

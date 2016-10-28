@@ -55,7 +55,7 @@ abstract class StoreScanAsInputIterable<INPUT extends InputEntity,RECORD extends
         return new InputIterator.Adapter<INPUT>()
         {
             private final long highId = store.getHighId();
-            private long id;
+            private long id = store.getNumberOfReservedLowIds();
 
             @Override
             public String sourceDescription()

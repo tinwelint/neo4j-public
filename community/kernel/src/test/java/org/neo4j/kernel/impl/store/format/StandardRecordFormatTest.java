@@ -25,6 +25,6 @@ public class StandardRecordFormatTest extends AbstractRecordFormatTest
 {
     public StandardRecordFormatTest()
     {
-        super( StandardV3_0.RECORD_FORMATS, 35, 36 );
+        super( StandardV3_0.RECORD_FORMATS );
     }
 }

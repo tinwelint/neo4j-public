@@ -43,11 +43,15 @@ public final class IdValidator
      * @param id the id to check.
      * @param maxId the max allowed id.
      */
-    public static void assertIdWithinCapacity( long id, long maxId )
+    public static void assertIdWithinCapacity( long id, long minId, long maxId )
     {
         if ( id < 0 )
         {
             throw new NegativeIdException( id );
+        }
+        if ( id < minId )
+        {
+            throw new NegativeIdException( minId );
         }
         if ( id > maxId )
         {
