@@ -1251,6 +1251,7 @@ public class BatchInsertTest
 
         // Then
         GraphDatabaseService db = switchToEmbeddedGraphDatabaseService( inserter );
+        long firstNodeId = -1;
         try
         {
             try ( Transaction tx = db.beginTx() )
@@ -1261,7 +1262,9 @@ public class BatchInsertTest
                 assertEquals( label.name(), constraint.getLabel().name() );
                 assertEquals( propertyKey, single( constraint.getPropertyKeys() ) );
 
-                db.createNode( label ).setProperty( propertyKey, duplicatedValue );
+                Node node = db.createNode( label );
+                firstNodeId = node.getId();
+                node.setProperty( propertyKey, duplicatedValue );
 
                 tx.success();
             }
@@ -1276,8 +1279,8 @@ public class BatchInsertTest
         catch ( ConstraintViolationException e )
         {
             assertEquals( e.getMessage(),
-                    "Node 0 already exists with label " + label.name() + " and property \"" + propertyKey + "\"=[" +
-                    duplicatedValue + "]"
+                    "Node " + firstNodeId + " already exists with label " + label.name() +
+                    " and property \"" + propertyKey + "\"=[" + duplicatedValue + "]"
             );
         }
         finally
@@ -1370,8 +1373,8 @@ public class BatchInsertTest
         // When
         inserter.createDeferredConstraint( label ).assertPropertyIsUnique( property ).create();
 
-        inserter.createNode( Collections.<String,Object>singletonMap( property, value ), label );
-        inserter.createNode( Collections.<String,Object>singletonMap( property, value ), label );
+        long firstNodeId = inserter.createNode( Collections.<String,Object>singletonMap( property, value ), label );
+        long secondNodeId = inserter.createNode( Collections.<String,Object>singletonMap( property, value ), label );
 
         // Then
         try
@@ -1382,7 +1385,8 @@ public class BatchInsertTest
         catch ( RuntimeException ex )
         {
             // good
-            assertEquals( new PreexistingIndexEntryConflictException( value, 0, 1 ), ex.getCause() );
+            assertEquals( new PreexistingIndexEntryConflictException( value, firstNodeId, secondNodeId ),
+                    ex.getCause() );
         }
     }
 

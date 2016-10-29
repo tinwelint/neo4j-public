@@ -78,8 +78,8 @@ public class IndexWorkSyncTransactionApplicationStressIT
                                           .around( pageCacheRule )
                                           .around( storageEngineRule );
 
-    private final int labelId = 0;
-    private final int propertyKeyId = 0;
+    private final int labelId = 1;
+    private final int propertyKeyId = 1;
 
     @Test
     public void shouldApplyIndexUpdatesInWorkSyncedBatches() throws Exception

@@ -157,14 +157,14 @@ public class NeoStoreIndexStoreViewTest
 
         // then
         assertEquals( "allocated locks: " + lockMocks.keySet(), 2, lockMocks.size() );
-        Lock lock0 = lockMocks.get( 0L );
-        Lock lock1 = lockMocks.get( 1L );
-        assertNotNull( "Lock[node=0] never acquired", lock0 );
-        assertNotNull( "Lock[node=1] never acquired", lock1 );
+        Lock lock0 = lockMocks.get( alistair.getId() );
+        Lock lock1 = lockMocks.get( stefan.getId() );
+        assertNotNull( "Lock[node=" + alistair.getId() + "] never acquired", lock0 );
+        assertNotNull( "Lock[node=" + stefan.getId() + "] never acquired", lock1 );
         InOrder order = inOrder( locks, lock0, lock1 );
-        order.verify( locks ).acquireNodeLock( 0, LockService.LockType.READ_LOCK );
+        order.verify( locks ).acquireNodeLock( alistair.getId(), LockService.LockType.READ_LOCK );
         order.verify( lock0 ).release();
-        order.verify( locks ).acquireNodeLock( 1, LockService.LockType.READ_LOCK );
+        order.verify( locks ).acquireNodeLock( stefan.getId(), LockService.LockType.READ_LOCK );
         order.verify( lock1 ).release();
         order.verifyNoMoreInteractions();
     }

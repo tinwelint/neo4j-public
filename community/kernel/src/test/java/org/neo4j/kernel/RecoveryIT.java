@@ -42,6 +42,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.storemigration.LogFiles;
 import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.internal.DatabaseHealth;
@@ -84,9 +85,10 @@ public class RecoveryIT
         GraphDatabaseService recoveredDatabase = startDatabase( restoreDbStoreDir );
         NeoStores neoStore = ((GraphDatabaseAPI) recoveredDatabase).getDependencyResolver()
                 .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
-        assertEquals( numberOfNodes, neoStore.getNodeStore().getHighId() );
+        NodeStore nodeStore = neoStore.getNodeStore();
+        assertEquals( numberOfNodes, nodeStore.getHighId() - nodeStore.getNumberOfReservedLowIds() );
         // Make sure id generator has been rebuilt so this doesn't throw null pointer exception
-        assertTrue( neoStore.getNodeStore().nextId() > 0 );
+        assertTrue( nodeStore.nextId() > 0 );
 
         database.shutdown();
         recoveredDatabase.shutdown();

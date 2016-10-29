@@ -85,10 +85,10 @@ public class TestIdGeneratorRebuilding
         store.makeStoreOk();
 
         // ... that contain a number of records ...
-        NodeRecord record = new NodeRecord( 0 );
+        NodeRecord record = new NodeRecord( store.nextId() );
         record.setInUse( true );
         int highestId = 50;
-        for ( int i = 0; i < highestId; i++ )
+        for ( int i = record.getIntId(); i < highestId; i++ )
         {
             assertThat( store.nextId(), is( (long) i ) );
             record.setId( i );
@@ -134,7 +134,7 @@ public class TestIdGeneratorRebuilding
         DynamicStringStore store = neoStores.getPropertyStore().getStringStore();
 
         // ... that contain a number of records ...
-        DynamicRecord record = new DynamicRecord( 1 );
+        DynamicRecord record = new DynamicRecord( store.nextId() );
         record.setInUse( true, PropertyType.STRING.intValue() );
         int highestId = 50;
         for ( int i = 1; i <= highestId; i++ ) // id '0' is the dynamic store header
@@ -191,7 +191,7 @@ public class TestIdGeneratorRebuilding
 
         // ... that contain enough records to fill several file pages ...
         int recordsPerPage = store.getRecordsPerPage();
-        NodeRecord record = new NodeRecord( 0 );
+        NodeRecord record = new NodeRecord( store.nextId() );
         record.setInUse( true );
         int highestId = recordsPerPage * 3; // 3 pages worth of records
         for ( int i = 0; i < highestId; i++ )

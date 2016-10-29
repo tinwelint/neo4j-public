@@ -195,11 +195,11 @@ public class TransactionRecordStateTest
 
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        long nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         int labelId = 5, propertyKeyId = 7;
 
         // -- an index
-        long ruleId = 0;
+        long ruleId = neoStores.getSchemaStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
         SchemaRule rule = indexRule( ruleId, labelId, propertyKeyId, PROVIDER_DESCRIPTOR );
         recordState.createSchemaRule( rule );
@@ -247,15 +247,15 @@ public class TransactionRecordStateTest
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         recordState.nodeCreate( nodeId );
-        int index = 0;
+        int index = (int) neoStores.getPropertyKeyTokenStore().nextId();
         recordState.nodeAddProperty( nodeId, index, string( 70 ) ); // will require a block of size 1
         apply( neoStores, recordState );
 
         // WHEN
         recordState = newTransactionRecordState( neoStores );
-        int index2 = 1;
+        int index2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
         recordState.nodeAddProperty( nodeId, index2, string( 40 ) ); // will require a block of size 4
 
         // THEN
@@ -289,9 +289,11 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        long nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2, labelId = 3;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int labelId = (int) neoStores.getLabelTokenStore().nextId();
         long[] labelIds = new long[]{labelId};
         Object value1 = LONG_STRING, value2 = LONG_STRING.getBytes();
         recordState.nodeCreate( nodeId );
@@ -316,9 +318,12 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        long nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2, labelId1 = 3, labelId2 = 4;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int labelId1 = (int) neoStores.getLabelTokenStore().nextId();
+        int labelId2 = (int) neoStores.getLabelTokenStore().nextId();
         Object value1 = "first", value2 = 4;
         recordState.nodeCreate( nodeId );
         recordState.nodeAddProperty( nodeId, propertyKey1, value1 );
@@ -342,9 +347,11 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        long nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2, labelId = 3;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int labelId = (int) neoStores.getLabelTokenStore().nextId();
         long[] labelIds = new long[]{labelId};
         Object value1 = "first", value2 = 4;
         recordState.nodeCreate( nodeId );
@@ -370,9 +377,12 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        long nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2, labelId1 = 3, labelId2 = 4;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int labelId1 = (int) neoStores.getLabelTokenStore().nextId();
+        int labelId2 = (int) neoStores.getLabelTokenStore().nextId();
         Object value1 = "first", value2 = 4;
         recordState.nodeCreate( nodeId );
         DefinedProperty property1 = recordState.nodeAddProperty( nodeId, propertyKey1, value1 );
@@ -399,9 +409,12 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        long nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2, labelId1 = 3, labelId2 = 4;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int labelId1 = (int) neoStores.getLabelTokenStore().nextId();
+        int labelId2 = (int) neoStores.getLabelTokenStore().nextId();
         Object value1 = "first", value2 = 4;
         recordState.nodeCreate( nodeId );
         recordState.nodeAddProperty( nodeId, propertyKey1, value1 );
@@ -428,9 +441,10 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        int nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
         Object value1 = "first", value2 = 4;
         recordState.nodeCreate( nodeId );
         DefinedProperty property1 = recordState.nodeAddProperty( nodeId, propertyKey1, value1 );
@@ -456,10 +470,11 @@ public class TransactionRecordStateTest
     {
         // GIVEN
         NeoStores neoStores = neoStoresRule.open();
-        int nodeId = 0;
+        long nodeId = neoStores.getNodeStore().nextId();
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        int propertyKey1 = 1, propertyKey2 = 2;
-        int labelId = 3;
+        int propertyKey1 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int propertyKey2 = (int) neoStores.getPropertyKeyTokenStore().nextId();
+        int labelId = (int) neoStores.getLabelTokenStore().nextId();
         Object value1 = "first", value2 = 4;
         recordState.nodeCreate( nodeId );
         recordState.addLabelToNode( labelId, nodeId );
@@ -527,11 +542,13 @@ public class TransactionRecordStateTest
         // GIVEN
         NeoStores neoStores = neoStoresRule.open( GraphDatabaseSettings.dense_node_threshold.name(), "1" );
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        long nodeId = 0, relId = 1;
+        long nodeId = neoStores.getNodeStore().nextId(), relId = neoStores.getRelationshipStore().nextId();
+        int typeId = (int) neoStores.getRelationshipTypeTokenStore().nextId();
+        int keyId = (int) neoStores.getPropertyKeyTokenStore().nextId();
         recordState.nodeCreate( nodeId );
-        recordState.relCreate( relId++, 0, nodeId, nodeId );
-        recordState.relCreate( relId, 0, nodeId, nodeId );
-        recordState.nodeAddProperty( nodeId, 0, 101 );
+        recordState.relCreate( relId++, typeId, nodeId, nodeId );
+        recordState.relCreate( relId, typeId, nodeId, nodeId );
+        recordState.nodeAddProperty( nodeId, keyId, 101 );
 
         // WHEN
         Collection<StorageCommand> commands = new ArrayList<>();
@@ -554,7 +571,9 @@ public class TransactionRecordStateTest
         // GIVEN
         NeoStores neoStores = neoStoresRule.open( GraphDatabaseSettings.dense_node_threshold.name(), "1" );
         TransactionRecordState recordState = newTransactionRecordState( neoStores );
-        long nodeId = 1, relId1 = 1, relId2 = 2, relId3 = 3;
+        long nodeId = neoStores.getNodeStore().nextId(), relId1 = neoStores.getRelationshipStore().nextId();
+        long relId2 = neoStores.getRelationshipStore().nextId(), relId3 = neoStores.getRelationshipStore().nextId();
+        int typeId = (int) neoStores.getRelationshipTypeTokenStore().nextId();
         recordState.nodeCreate( nodeId );
         recordState.relCreate( relId1, 0, nodeId, nodeId );
         recordState.relCreate( relId2, 0, nodeId, nodeId );
@@ -605,21 +624,24 @@ public class TransactionRecordStateTest
         // - dense node threshold of 5
         // - node with 4 rels of type A and 1 rel of type B
         NeoStores neoStore = neoStoresRule.open( GraphDatabaseSettings.dense_node_threshold.name(), "5" );
-        int A = 0, B = 1;
+        int A = (int) neoStore.getRelationshipTypeTokenStore().nextId();
+        int B = (int) neoStore.getRelationshipTypeTokenStore().nextId();
         TransactionRecordState state = newTransactionRecordState( neoStore );
-        long nodeId = 1;
+        long nodeId = neoStore.getNodeStore().nextId();
         state.nodeCreate( nodeId );
-        state.relCreate( 0, A, nodeId, nodeId );
-        state.relCreate( 1, A, nodeId, nodeId );
-        state.relCreate( 2, A, nodeId, nodeId );
-        state.relCreate( 3, A, nodeId, nodeId );
-        state.relCreate( 4, B, nodeId, nodeId );
+        state.relCreate( neoStore.getRelationshipStore().nextId(), A, nodeId, nodeId );
+        state.relCreate( neoStore.getRelationshipStore().nextId(), A, nodeId, nodeId );
+        state.relCreate( neoStore.getRelationshipStore().nextId(), A, nodeId, nodeId );
+        state.relCreate( neoStore.getRelationshipStore().nextId(), A, nodeId, nodeId );
+        long rel;
+        state.relCreate( rel = neoStore.getRelationshipStore().nextId(), B, nodeId, nodeId );
         apply( neoStore, state );
 
         // When doing a tx where a relationship of type A for the node is create and rel of type B is deleted
         state = newTransactionRecordState( neoStore );
-        state.relCreate( 5, A, nodeId, nodeId ); // here this node should be converted to dense and the groups should be created
-        state.relDelete( 4 ); // here the group B should be delete
+        // here this node should be converted to dense and the groups should be created
+        state.relCreate( neoStore.getRelationshipStore().nextId(), A, nodeId, nodeId );
+        state.relDelete( rel ); // here the group B should be delete
 
         // Then
         Collection<StorageCommand> commands = new ArrayList<>();

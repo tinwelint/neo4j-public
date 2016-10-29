@@ -440,7 +440,7 @@ public class DiskLayer implements StoreReadLayer
         return new PrimitiveLongBaseIterator()
         {
             private long highId = nodeStore.getHighestPossibleIdInUse();
-            private long currentId;
+            private long currentId = nodeStore.getNumberOfReservedLowIds();
             private final NodeRecord record = new NodeRecord( -1 ); // reused
 
             @Override
@@ -485,7 +485,7 @@ public class DiskLayer implements StoreReadLayer
         return new RelationshipIterator.BaseIterator()
         {
             private long highId = relationshipStore.getHighestPossibleIdInUse();
-            private long currentId;
+            private long currentId = relationshipStore.getNumberOfReservedLowIds();
             private final RelationshipRecord reusableRecord = new RelationshipRecord( -1 ); // reused
 
             @Override

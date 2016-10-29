@@ -46,10 +46,7 @@ import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.PropertyKeyTokenRecordFormat;
-import org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat;
-import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
@@ -586,14 +583,6 @@ public class IdGeneratorTest
         closeIdGenerator( idGenerator );
     }
 
-    @Test
-    public void makeSureMagicMinusOneIsNotReturnedFromNodeIdGenerator() throws Exception
-    {
-        makeSureMagicMinusOneIsSkipped( new NodeRecordFormat() );
-        makeSureMagicMinusOneIsSkipped( new RelationshipRecordFormat() );
-        makeSureMagicMinusOneIsSkipped( new PropertyRecordFormat());
-    }
-
     private void makeSureMagicMinusOneIsSkipped( RecordFormat format )
     {
         deleteIdGeneratorFile();
@@ -607,24 +596,6 @@ public class IdGeneratorTest
         assertEquals( id + 3, idGenerator.nextId() );
         assertEquals( id + 4, idGenerator.nextId() );
         assertEquals( id + 5, idGenerator.nextId() );
-        closeIdGenerator( idGenerator );
-    }
-
-    @Test
-    public void makeSureMagicMinusOneCannotBeReturnedEvenIfFreed() throws Exception
-    {
-        IdGeneratorImpl.createGenerator( fs, idGeneratorFile(), 0, false );
-        IdGenerator idGenerator = new IdGeneratorImpl( fs, idGeneratorFile(), 1, new NodeRecordFormat().getMaxId(), false, 0 );
-        long magicMinusOne = (long) Math.pow( 2, 32 ) - 1;
-        idGenerator.setHighId( magicMinusOne );
-        assertEquals( magicMinusOne + 1, idGenerator.nextId() );
-        idGenerator.freeId( magicMinusOne - 1 );
-        idGenerator.freeId( magicMinusOne );
-        closeIdGenerator( idGenerator );
-
-        idGenerator = new IdGeneratorImpl( fs, idGeneratorFile(), 1, new NodeRecordFormat().getMaxId(), false, 0 );
-        assertEquals( magicMinusOne - 1, idGenerator.nextId() );
-        assertEquals( magicMinusOne + 2, idGenerator.nextId() );
         closeIdGenerator( idGenerator );
     }
 

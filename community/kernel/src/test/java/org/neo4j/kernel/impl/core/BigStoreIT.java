@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.core;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -54,6 +55,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.AbstractNeo4jTestCase.deleteFileOrDirectory;
 
+@Ignore
 public class BigStoreIT implements RelationshipType
 {
     private static final RelationshipType OTHER_TYPE = RelationshipType.withName( "OTHER" );
@@ -306,7 +308,7 @@ public class BigStoreIT implements RelationshipType
 
     private static <T> Collection<T> asSet( Collection<T> collection )
     {
-        return new HashSet<T>( collection );
+        return new HashSet<>( collection );
     }
 
     private void setHighId( IdType type, long highId )
