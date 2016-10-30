@@ -36,10 +36,12 @@ public class JumpingIdGeneratorFactory implements IdGeneratorFactory
     private final IdGenerator forTheRest = new EphemeralIdGenerator( null, null );
 
     private final int sizePerJump;
+    private final long firstId;
 
-    public JumpingIdGeneratorFactory( int sizePerJump )
+    public JumpingIdGeneratorFactory( int sizePerJump, long firstId )
     {
         this.sizePerJump = sizePerJump;
+        this.firstId = firstId;
     }
 
     @Override
@@ -63,7 +65,7 @@ public class JumpingIdGeneratorFactory implements IdGeneratorFactory
             IdGenerator generator = generators.get( idType );
             if ( generator == null )
             {
-                generator = new JumpingIdGenerator();
+                generator = new JumpingIdGenerator( firstId );
                 generators.put( idType, generator );
             }
             return generator;
@@ -81,6 +83,11 @@ public class JumpingIdGeneratorFactory implements IdGeneratorFactory
         private final AtomicLong nextId = new AtomicLong();
         private int leftToNextJump = sizePerJump/2;
         private long highBits = 0;
+
+        public JumpingIdGenerator( long firstId )
+        {
+            nextId.set( firstId );
+        }
 
         @Override
         public long nextId()

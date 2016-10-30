@@ -67,17 +67,17 @@ public class RelationshipGroupGetterTest
         {
             RecordStore<RelationshipGroupRecord> store = spy( stores.getRelationshipGroupStore() );
 
-            RelationshipGroupRecord group_2 = group( 0, 2 );
-            RelationshipGroupRecord group_4 = group( 1, 4 );
-            RelationshipGroupRecord group_10 = group( 2, 10 );
-            RelationshipGroupRecord group_23 = group( 3, 23 );
+            RelationshipGroupRecord group_2 = group( store.nextId(), 2 );
+            RelationshipGroupRecord group_4 = group( store.nextId(), 4 );
+            RelationshipGroupRecord group_10 = group( store.nextId(), 10 );
+            RelationshipGroupRecord group_23 = group( store.nextId(), 23 );
             link( group_2, group_4, group_10, group_23 );
             store.updateRecord( group_2 );
             store.updateRecord( group_4 );
             store.updateRecord( group_10 );
             store.updateRecord( group_23 );
             RelationshipGroupGetter groupGetter = new RelationshipGroupGetter( store );
-            NodeRecord node = new NodeRecord( 0, true, group_2.getId(), -1 );
+            NodeRecord node = new NodeRecord( stores.getNodeStore().nextId(), true, group_2.getId(), -1 );
 
             // WHEN trying to find relationship group 7
             RecordAccess<Long, RelationshipGroupRecord, Integer> access =

@@ -57,8 +57,8 @@ public class SchemaAcceptanceTest
     public ImpermanentDatabaseRule dbRule = new ImpermanentDatabaseRule();
 
     private GraphDatabaseService db;
-    private Label label = Labels.MY_LABEL;
-    private String propertyKey = "my_property_key";
+    private final Label label = Labels.MY_LABEL;
+    private final String propertyKey = "my_property_key";
 
     private enum Labels implements Label
     {
@@ -392,10 +392,15 @@ public class SchemaAcceptanceTest
     public void addingUniquenessConstraintWhenDuplicateDataExistsGivesNiceError() throws Exception
     {
         // GIVEN
+        long firstNodeId, secondNodeId;
         try ( Transaction transaction = db.beginTx() )
         {
-            db.createNode( label ).setProperty( propertyKey, "value1" );
-            db.createNode( label ).setProperty( propertyKey, "value1" );
+            Node firstNode = db.createNode( label );
+            Node secondNode = db.createNode( label );
+            firstNode.setProperty( propertyKey, "value1" );
+            secondNode.setProperty( propertyKey, "value1" );
+            firstNodeId = firstNode.getId();
+            secondNodeId = secondNode.getId();
             transaction.success();
         }
 
@@ -411,8 +416,8 @@ public class SchemaAcceptanceTest
                     format( "Unable to create CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT my_label.my_property_key " +
                             "IS UNIQUE:%nMultiple nodes with label `MY_LABEL` have property `my_property_key` = " +
                             "'value1':%n" +
-                            "  node(0)%n" +
-                            "  node(1)" ), e.getMessage() );
+                            "  node(" + firstNodeId + ")%n" +
+                            "  node(" + secondNodeId + ")" ), e.getMessage() );
         }
     }
 

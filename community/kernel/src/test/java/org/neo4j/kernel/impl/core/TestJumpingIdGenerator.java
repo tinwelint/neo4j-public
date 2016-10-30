@@ -39,7 +39,7 @@ public class TestJumpingIdGenerator
     public void testIt() throws Exception
     {
         int sizePerJump = 1000;
-        IdGeneratorFactory factory = new JumpingIdGeneratorFactory( sizePerJump );
+        IdGeneratorFactory factory = new JumpingIdGeneratorFactory( sizePerJump, 1 );
         IdGenerator generator = factory.get( IdType.NODE );
         for ( int i = 0; i < sizePerJump/2; i++ )
         {
@@ -74,7 +74,7 @@ public class TestJumpingIdGenerator
         JumpingFileSystemAbstraction offsettedFileSystem = new JumpingFileSystemAbstraction( 10 );
         offsettedFileSystem.deleteFile( fileName );
         offsettedFileSystem.mkdirs( fileName.getParentFile() );
-        IdGenerator idGenerator = new JumpingIdGeneratorFactory( 10 ).get( IdType.NODE );
+        IdGenerator idGenerator = new JumpingIdGeneratorFactory( 10, 1 ).get( IdType.NODE );
         JumpingFileChannel channel = (JumpingFileChannel) offsettedFileSystem.open( fileName, "rw" );
 
         for ( int i = 0; i < 16; i++ )
@@ -84,7 +84,7 @@ public class TestJumpingIdGenerator
 
         channel.close();
         channel = (JumpingFileChannel) offsettedFileSystem.open( fileName, "rw" );
-        idGenerator = new JumpingIdGeneratorFactory( 10 ).get( IdType.NODE );
+        idGenerator = new JumpingIdGeneratorFactory( 10, 1 ).get( IdType.NODE );
 
         for ( int i = 0; i < 16; i++ )
         {
