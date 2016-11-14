@@ -41,7 +41,8 @@ public final class IdValidator
      * </ul>
      *
      * @param id the id to check.
-     * @param maxId the max allowed id.
+     * @param minId the minimum allowed id (inclusive).
+     * @param maxId the max allowed id (inclusive).
      */
     public static void assertIdWithinCapacity( long id, long minId, long maxId )
     {

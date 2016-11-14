@@ -1004,7 +1004,6 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
     @Override
     public RECORD getRecord( long id, RECORD record, RecordLoad mode )
     {
-        assertIdWithinCapacity( id, recordFormat.getMinId(), recordFormat.getMaxId() );
         // Mark the record with this id regardless of whether or not we load the contents of it.
         // This is done in this method since there are multiple call sites and they all want the id
         // on that record, so it's to ensure it isn't forgotten.

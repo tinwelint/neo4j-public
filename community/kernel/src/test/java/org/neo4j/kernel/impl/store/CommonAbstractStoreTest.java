@@ -47,7 +47,6 @@ import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.id.validation.IdCapacityExceededException;
 import org.neo4j.kernel.impl.store.id.validation.NegativeIdException;
-import org.neo4j.kernel.impl.store.id.validation.ReservedIdException;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
@@ -244,23 +243,6 @@ public class CommonAbstractStoreTest
         catch ( Exception e )
         {
             assertThat( e, instanceOf( IdCapacityExceededException.class ) );
-        }
-    }
-
-    @Test
-    public void throwsWhenRecordWithReservedIdIsUpdated()
-    {
-        TheStore store = newStore();
-        TheRecord record = newRecord( 0 );
-
-        try
-        {
-            store.updateRecord( record );
-            fail( "Should have failed" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e, instanceOf( ReservedIdException.class ) );
         }
     }
 
