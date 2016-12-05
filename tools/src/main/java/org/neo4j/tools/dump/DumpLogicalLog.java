@@ -29,8 +29,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import org.neo4j.collection.primitive.Primitive;
-import org.neo4j.collection.primitive.PrimitiveLongSet;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -56,7 +54,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.tools.dump.InconsistencyReportReader.Inconsistencies;
 
 import static java.util.TimeZone.getTimeZone;
 
@@ -186,40 +183,13 @@ public class DumpLogicalLog
     public static class ConsistencyCheckOutputCriteria implements Predicate<LogEntry[]>, Function<LogEntry,String>
     {
         private final TimeZone timeZone;
-        private final PrimitiveLongSet relationshipIds = Primitive.longSet();
-        private final PrimitiveLongSet nodeIds = Primitive.longSet();
-        private final PrimitiveLongSet propertyIds = Primitive.longSet();
-        private final PrimitiveLongSet relationshipGroupIds = Primitive.longSet();
+        private final IdTrackingInconsistencies inconsistencies;
 
         public ConsistencyCheckOutputCriteria( String ccFile, TimeZone timeZone ) throws IOException
         {
             this.timeZone = timeZone;
-            new InconsistencyReportReader( new Inconsistencies()
-            {
-                @Override
-                public void relationshipGroup( long id )
-                {
-                    relationshipGroupIds.add( id );
-                }
-
-                @Override
-                public void relationship( long id )
-                {
-                    relationshipIds.add( id );
-                }
-
-                @Override
-                public void property( long id )
-                {
-                    propertyIds.add( id );
-                }
-
-                @Override
-                public void node( long id )
-                {
-                    nodeIds.add( id );
-                }
-            } ).read( new File( ccFile ) );
+            this.inconsistencies = new IdTrackingInconsistencies();
+            new InconsistencyReportReader( inconsistencies ).read( new File( ccFile ) );
         }
 
         @Override
@@ -251,19 +221,19 @@ public class DumpLogicalLog
         {
             if ( command instanceof NodeCommand )
             {
-                return nodeIds.contains( ((NodeCommand) command).getKey() );
+                return inconsistencies.nodeIds.contains( ((NodeCommand) command).getKey() );
             }
             if ( command instanceof RelationshipCommand )
             {
-                return relationshipIds.contains( ((RelationshipCommand) command).getKey() );
+                return inconsistencies.relationshipIds.contains( ((RelationshipCommand) command).getKey() );
             }
             if ( command instanceof PropertyCommand )
             {
-                return propertyIds.contains( ((PropertyCommand) command).getKey() );
+                return inconsistencies.propertyIds.contains( ((PropertyCommand) command).getKey() );
             }
             if ( command instanceof RelationshipGroupCommand )
             {
-                return relationshipGroupIds.contains( ((RelationshipGroupCommand) command).getKey() );
+                return inconsistencies.relationshipGroupIds.contains( ((RelationshipGroupCommand) command).getKey() );
             }
             return false;
         }

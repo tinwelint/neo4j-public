@@ -20,17 +20,44 @@
 package org.neo4j.tools.dump;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.util.function.Function;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.PageCacheRule;
+import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertThat;
+import static org.neo4j.kernel.impl.storemigration.StoreFile.NODE_STORE;
+import static org.neo4j.kernel.impl.storemigration.StoreFile.RELATIONSHIP_STORE;
 
 public class DumpStoreTest
 {
+    @Rule
+    public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
+
     @Test
     public void dumpStoreShouldPrintBufferWithContent() throws Exception
     {
@@ -71,5 +98,61 @@ public class DumpStoreTest
 
         // Then
         Assert.assertEquals( String.format( ": all zeros @ 0x8 - 0xc%n" ), outStream.toString() );
+    }
+
+    @Test
+    public void shouldDumpIdsFoundInCCReport() throws Exception
+    {
+        // GIVEN
+        File storeDir = new File( "/dir" );
+        fs.get().mkdirs( storeDir );
+        GraphDatabaseService db =
+                new TestGraphDatabaseFactory().setFileSystem( fs.get() ).newImpermanentDatabase( storeDir );
+        long[] nodeIds = new long[5];
+        long[] relationshipIds = new long[5];
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < nodeIds.length; i++ )
+            {
+                Node node = db.createNode();
+                nodeIds[i] = node.getId();
+            }
+            for ( int i = 0; i < relationshipIds.length; i++ )
+            {
+                Relationship relationship = db.getNodeById( nodeIds[i%nodeIds.length] ).createRelationshipTo(
+                        db.getNodeById( nodeIds[(i+1)%nodeIds.length] ), MyRelTypes.TEST );
+                relationshipIds[i] = relationship.getId();
+            }
+            tx.success();
+        }
+        db.shutdown();
+
+        PageCache pageCache = pageCacheRule.getPageCache( fs.get() );
+        Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( file.getParentFile(),
+                Config.defaults(), new DefaultIdGeneratorFactory( fs.get() ), pageCache, fs.get(),
+                NullLogProvider.getInstance() );
+
+        // WHEN
+        IdTrackingInconsistencies inconsistencies = new IdTrackingInconsistencies();
+        inconsistencies.nodeIds.add( nodeIds[0] );
+        inconsistencies.nodeIds.add( nodeIds[2] );
+        inconsistencies.relationshipIds.add( relationshipIds[0] );
+        inconsistencies.relationshipIds.add( relationshipIds[2] );
+        ByteArrayOutputStream capturedOutput = new ByteArrayOutputStream();
+        PrintStream capture = new PrintStream( capturedOutput );
+        DumpStore.dumpFile( capture, createStoreFactory, new File( storeDir,
+                NODE_STORE.storeFileName() ).getAbsolutePath(), inconsistencies );
+        DumpStore.dumpFile( capture, createStoreFactory, new File( storeDir,
+                RELATIONSHIP_STORE.storeFileName() ).getAbsolutePath(), inconsistencies );
+
+        // THEN
+        capture.flush();
+        String output = capturedOutput.toString();
+        assertThat( output, containsString( "Node[" + nodeIds[0] + "," ) );
+        assertThat( output, not( containsString( "Node[" + nodeIds[1] + "," ) ) );
+        assertThat( output, containsString( "Node[" + nodeIds[2] + "," ) );
+        assertThat( output, containsString( "Relationship[" + relationshipIds[0] + "," ) );
+        assertThat( output, not( containsString( "Relationship[" + relationshipIds[1] + "," ) ) );
+        assertThat( output, containsString( "Relationship[" + relationshipIds[2] + "," ) );
     }
 }

@@ -20,10 +20,14 @@
 package org.neo4j.tools.dump;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.function.Function;
-
+import org.neo4j.collection.primitive.PrimitiveLongCollections;
+import org.neo4j.collection.primitive.PrimitiveLongSet;
+import org.neo4j.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
@@ -46,7 +50,6 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.Token;
-
 import static org.neo4j.kernel.impl.pagecache.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
@@ -57,12 +60,13 @@ import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
  */
 public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordStore<RECORD>>
 {
+    private static final String CC_FILTER = "ccfilter";
 
     public static void main( String... args ) throws Exception
     {
         if ( args == null || args.length == 0 )
         {
-            System.err.println( "SYNTAX: [file[:id[,id]*]]+" );
+            System.err.println( "SYNTAX: [--" + CC_FILTER + " cc-report] [file[:id[,id]*]]+" );
             return;
         }
         final DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
@@ -71,18 +75,33 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         {
             Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( file.getParentFile(),
                     Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider() );
+            Args arguments = Args.parse( args );
+            IdTrackingInconsistencies ccReportFilter = ccIdFilter( arguments );
 
-            for ( String arg : args )
+            for ( String arg : arguments.orphans() )
             {
-                dumpFile( createStoreFactory, arg );
+                dumpFile( System.out, createStoreFactory, arg, ccReportFilter );
             }
         }
     }
 
-    private static void dumpFile( Function<File, StoreFactory> createStoreFactory, String arg ) throws Exception
+    private static IdTrackingInconsistencies ccIdFilter( Args arguments ) throws IOException
+    {
+        String ccReportFile = arguments.get( CC_FILTER );
+        if ( ccReportFile != null )
+        {
+            IdTrackingInconsistencies inconsistencies = new IdTrackingInconsistencies();
+            new InconsistencyReportReader( inconsistencies ).read( new File( ccReportFile ) );
+            return inconsistencies;
+        }
+        return null;
+    }
+
+    static void dumpFile( PrintStream out, Function<File, StoreFactory> createStoreFactory, String arg,
+            IdTrackingInconsistencies ccReportIds ) throws Exception
     {
         File file = new File( arg );
-        long[] ids = null; // null means all possible ids
+        long[] ids = null; // null means no further id restriction (other than what may be set by ccReportIds)
 
         if( file.isFile() )
         {
@@ -115,16 +134,19 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
             switch ( storeType )
             {
             case NODE:
-                dumpNodeStore( neoStores, ids );
+                dumpNodeStore( out, neoStores,
+                        ids( ids, ccReportIds != null ? ccReportIds.nodeIds : null ) );
                 break;
             case RELATIONSHIP:
-                dumpRelationshipStore( neoStores, ids );
+                dumpRelationshipStore( out, neoStores,
+                        ids( ids, ccReportIds != null ? ccReportIds.relationshipIds : null ) );
                 break;
             case PROPERTY:
-                dumpPropertyStore( neoStores, ids );
+                dumpPropertyStore( out, neoStores,
+                        ids( ids, ccReportIds != null ? ccReportIds.propertyIds : null ) );
                 break;
             case SCHEMA:
-                dumpSchemaStore( neoStores, ids );
+                dumpSchemaStore( out, neoStores, ids );
                 break;
             case PROPERTY_KEY_TOKEN:
                 dumpPropertyKeys( neoStores, ids );
@@ -136,7 +158,8 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
                 dumpRelationshipTypes( neoStores, ids );
                 break;
             case RELATIONSHIP_GROUP:
-                dumpRelationshipGroups( neoStores, ids );
+                dumpRelationshipGroups( out, neoStores,
+                        ids( ids, ccReportIds != null ? ccReportIds.relationshipGroupIds : null ) );
                 break;
             default:
                 throw new IllegalArgumentException( "Unsupported store type: " + storeType );
@@ -144,17 +167,27 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         }
     }
 
-
+    private static long[] ids( long[] ids, PrimitiveLongSet ccReportIds )
+    {
+        // The CC report ids takes precedence.
+        if ( ccReportIds != null )
+        {
+            long[] sortedCCReportIds = PrimitiveLongCollections.asArray( ccReportIds.iterator() );
+            Arrays.sort( sortedCCReportIds );
+            return sortedCCReportIds;
+        }
+        return ids;
+    }
 
     private static LogProvider logProvider()
     {
         return Boolean.getBoolean( "logger" ) ? FormattedLogProvider.toOutputStream( System.out ) : NullLogProvider.getInstance();
     }
 
-    private static <R extends AbstractBaseRecord, S extends RecordStore<R>> void dump(
+    private static <R extends AbstractBaseRecord, S extends RecordStore<R>> void dump( PrintStream out,
             long[] ids, S store ) throws Exception
     {
-        new DumpStore<R,S>( System.out ).dump( store, ids );
+        new DumpStore<R,S>( out ).dump( store, ids );
     }
 
     private static void dumpPropertyKeys( NeoStores neoStores, long[] ids ) throws Exception
@@ -197,27 +230,27 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         }
     }
 
-    private static void dumpRelationshipGroups( NeoStores neoStores, long[] ids ) throws Exception
+    private static void dumpRelationshipGroups( PrintStream out, NeoStores neoStores, long[] ids ) throws Exception
     {
-        dump( ids, neoStores.getRelationshipGroupStore() );
+        dump( out, ids, neoStores.getRelationshipGroupStore() );
     }
 
-    private static void dumpRelationshipStore( NeoStores neoStores, long[] ids ) throws Exception
+    private static void dumpRelationshipStore( PrintStream out, NeoStores neoStores, long[] ids ) throws Exception
     {
-        dump( ids, neoStores.getRelationshipStore() );
+        dump( out, ids, neoStores.getRelationshipStore() );
     }
 
-    private static void dumpPropertyStore( NeoStores neoStores, long[] ids ) throws Exception
+    private static void dumpPropertyStore( PrintStream out, NeoStores neoStores, long[] ids ) throws Exception
     {
-        dump( ids, neoStores.getPropertyStore() );
+        dump( out, ids, neoStores.getPropertyStore() );
     }
 
-    private static void dumpSchemaStore( NeoStores neoStores, long ids[] ) throws Exception
+    private static void dumpSchemaStore( PrintStream out, NeoStores neoStores, long ids[] ) throws Exception
     {
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
             final SchemaStorage storage = new SchemaStorage( store );
-            new DumpStore<DynamicRecord,SchemaStore>( System.out )
+            new DumpStore<DynamicRecord,SchemaStore>( out )
             {
                 @Override
                 protected Object transform( DynamicRecord record ) throws Exception
@@ -230,9 +263,9 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         }
     }
 
-    private static void dumpNodeStore( NeoStores neoStores, long[] ids ) throws Exception
+    private static void dumpNodeStore( PrintStream out, NeoStores neoStores, long[] ids ) throws Exception
     {
-        new DumpStore<NodeRecord,NodeStore>( System.out )
+        new DumpStore<NodeRecord,NodeStore>( out )
         {
             @Override
             protected Object transform( NodeRecord record ) throws Exception
