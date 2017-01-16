@@ -264,4 +264,9 @@ public class NativeLabelScanStore implements LabelScanStore
     {
         index.close();
     }
+
+    public GBPTree<LabelScanKey,LabelScanValue> getTree()
+    {
+        return index;
+    }
 }

@@ -607,9 +607,9 @@ public class PrimitiveIntCollections
         return set;
     }
 
-    public static int count( PrimitiveIntIterator iterator )
+    public static long count( PrimitiveIntIterator iterator )
     {
-        int count = 0;
+        long count = 0;
         for ( ; iterator.hasNext(); iterator.next(), count++ )
         {   // Just loop through this
         }

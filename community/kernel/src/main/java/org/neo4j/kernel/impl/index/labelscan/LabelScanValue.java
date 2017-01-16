@@ -22,7 +22,7 @@ package org.neo4j.kernel.impl.index.labelscan;
 /**
  * A small bit set of maximum 64 bits. Used in {@link LabelScanLayout}.
  */
-class LabelScanValue
+public class LabelScanValue
 {
     static final int RANGE_SIZE = Long.SIZE;
     static final int RANGE_SIZE_BYTES = Long.BYTES;

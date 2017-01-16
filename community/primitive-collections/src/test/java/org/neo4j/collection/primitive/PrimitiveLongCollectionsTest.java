@@ -558,7 +558,7 @@ public class PrimitiveLongCollectionsTest
         PrimitiveLongIterator items = PrimitiveLongCollections.iterator( 1, 2, 3 );
 
         // WHEN
-        int count = PrimitiveLongCollections.count( items );
+        long count = PrimitiveLongCollections.count( items );
 
         // THEN
         assertEquals( 3, count );

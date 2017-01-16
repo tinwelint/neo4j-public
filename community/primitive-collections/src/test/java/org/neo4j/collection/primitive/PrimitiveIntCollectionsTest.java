@@ -509,7 +509,7 @@ public class PrimitiveIntCollectionsTest
         PrimitiveIntIterator items = PrimitiveIntCollections.iterator( 1, 2, 3 );
 
         // WHEN
-        int count = PrimitiveIntCollections.count( items );
+        long count = PrimitiveIntCollections.count( items );
 
         // THEN
         assertEquals( 3, count );

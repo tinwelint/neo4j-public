@@ -35,7 +35,7 @@ import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
 import static org.neo4j.unsafe.impl.internal.dragons.FeatureToggles.flag;
 
-abstract class MuninnPageCursor extends PageCursor
+public abstract class MuninnPageCursor extends PageCursor
 {
     private static final boolean tracePinnedCachePageId =
             flag( MuninnPageCursor.class, "tracePinnedCachePageId", false );
@@ -165,6 +165,15 @@ abstract class MuninnPageCursor extends PageCursor
         }
         linkedCursor = (MuninnPageCursor) pf.io( pageId, pf_flags );
         return linkedCursor;
+    }
+
+    public void assertOpen()
+    {
+        if ( pagedFile == null )
+        {
+            // This cursor has been closed
+            throw new IllegalStateException( "Cannot open linked cursor on closed page cursor" );
+        }
     }
 
     /**
