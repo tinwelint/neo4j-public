@@ -1,18 +1,28 @@
 package yo;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
+import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
+import org.neo4j.kernel.api.impl.labelscan.LabelScanIndex;
+import org.neo4j.kernel.api.impl.labelscan.LuceneLabelScanStore;
+import org.neo4j.kernel.api.impl.labelscan.WritableDatabaseLabelScanIndex;
+import org.neo4j.kernel.api.impl.labelscan.storestrategy.BitmapDocumentFormat;
+import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.labelscan.LabelScanWriter;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.index.labelscan.NativeLabelScanStore;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.schema.LabelScanReader;
 
 import static java.lang.String.format;
@@ -28,10 +38,12 @@ public class InsertIntoNativeLSSAtScale
 {
     public static void main( String[] args ) throws IOException
     {
-        File storeDir = new File( args[0] );
+        int arg = 0;
+        String name = args[arg++];
+        File storeDir = new File( args[arg++] );
         storeDir.mkdirs();
-        long nodeCount = Long.parseLong( separatableNumber( args[1] ) );
-        int labelCountPerNode = Integer.parseInt( args[2] );
+        long nodeCount = Long.parseLong( separatableNumber( args[arg++] ) );
+        int labelCountPerNode = Integer.parseInt( args[arg++] );
         long[] labelsToAdd = new long[labelCountPerNode];
         for ( int i = 0; i < labelCountPerNode; i++ )
         {
@@ -40,14 +52,11 @@ public class InsertIntoNativeLSSAtScale
 
         long startTime;
         long endTime;
-        try ( PageCache pageCache = pageCache() )
+        try ( Store theStore = createStore( storeDir, name ) )
         {
-            LifeSupport life = new LifeSupport();
-            NativeLabelScanStore store = life.add( new NativeLabelScanStore( pageCache, storeDir, EMPTY ) );
-            life.start();
-
             // WRITE
             startTime = currentTimeMillis();
+            LabelScanStore store = theStore.store();
             try ( LabelScanWriter writer = store.newWriter() )
             {
                 int groupSize = 100_000_000;
@@ -85,7 +94,6 @@ public class InsertIntoNativeLSSAtScale
             }
 
             store.force( IOLimiter.unlimited() );
-            life.shutdown();
         }
 
         long terminateTime = currentTimeMillis();
@@ -122,5 +130,74 @@ public class InsertIntoNativeLSSAtScale
     static String separatableNumber( String string )
     {
         return string.replaceAll( "_", "" );
+    }
+
+    static interface Store extends Closeable
+    {
+        LabelScanStore store();
+    }
+
+    private static Store createNativeStore( File storeDir )
+    {
+        PageCache pageCache = pageCache();
+        LifeSupport life = new LifeSupport();
+        LabelScanStore store = life.add( new NativeLabelScanStore( pageCache, storeDir, EMPTY ) );
+        life.start();
+
+        return new Store()
+        {
+            @Override
+            public void close() throws IOException
+            {
+                life.shutdown();
+                pageCache.close();
+            }
+
+            @Override
+            public LabelScanStore store()
+            {
+                return store;
+            }
+        };
+    }
+
+    private static Store createLuceneStore( File storeDir )
+    {
+        LifeSupport life = new LifeSupport();
+        DirectoryFactory directoryFactory = DirectoryFactory.PERSISTENT;
+        FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+        PartitionedIndexStorage storage = new PartitionedIndexStorage( directoryFactory, fs, storeDir, "lucene", false );
+        LabelScanIndex index = new WritableDatabaseLabelScanIndex( BitmapDocumentFormat._64, storage );
+        LabelScanStore store = life.add( new LuceneLabelScanStore( index, EMPTY, NullLogProvider.getInstance(),
+                LabelScanStore.Monitor.EMPTY ) );
+        life.start();
+
+        return new Store()
+        {
+            @Override
+            public void close() throws IOException
+            {
+                life.shutdown();
+            }
+
+            @Override
+            public LabelScanStore store()
+            {
+                return store;
+            }
+        };
+    }
+
+    static Store createStore( File storeDir, String name )
+    {
+        if ( name.equals( "lucene" ) )
+        {
+            return createLuceneStore( storeDir );
+        }
+        else if ( name.equals( "native" ) )
+        {
+            return createNativeStore( storeDir );
+        }
+        throw new IllegalArgumentException( name );
     }
 }

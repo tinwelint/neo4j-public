@@ -1,5 +1,7 @@
 package yo;
 
+import yo.InsertIntoNativeLSSAtScale.Store;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,35 +14,30 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Hit;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.index.labelscan.LabelScanKey;
 import org.neo4j.kernel.impl.index.labelscan.LabelScanValue;
 import org.neo4j.kernel.impl.index.labelscan.NativeLabelScanStore;
-import org.neo4j.kernel.lifecycle.LifeSupport;
-
-import static yo.InsertIntoNativeLSSAtScale.pageCache;
+import static yo.InsertIntoNativeLSSAtScale.createStore;
 import static yo.InsertIntoNativeLSSAtScale.separatableNumber;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-import static org.neo4j.kernel.impl.api.scan.FullStoreChangeStream.EMPTY;
-
 public class RandomRangeReads
 {
     public static void main( String[] args ) throws Exception
     {
-        File storeDir = new File( args[0] );
-        int rangeSize = Integer.parseInt( separatableNumber( args[1] ) );
-        int seconds = Integer.parseInt( separatableNumber( args[2] ) );
+        int arg = 0;
+        String name = args[arg++];
+        File storeDir = new File( args[arg++] );
+        int rangeSize = Integer.parseInt( separatableNumber( args[arg++] ) );
+        int seconds = Integer.parseInt( separatableNumber( args[arg++] ) );
 
-        try ( PageCache pageCache = pageCache() )
+        try ( Store theStore = createStore( storeDir, name ) )
         {
-            System.out.print( "Starting native LSS..." );
-            LifeSupport life = new LifeSupport();
-            NativeLabelScanStore lss = life.add( new NativeLabelScanStore( pageCache, storeDir, EMPTY ) );
-            life.start();
+            System.out.print( "Starting LSS..." );
+            NativeLabelScanStore lss = (NativeLabelScanStore) theStore.store();
             System.out.println( "  STARTED" );
             GBPTree<LabelScanKey,LabelScanValue> tree = lss.getTree();
             long highId;
@@ -51,7 +48,7 @@ public class RandomRangeReads
                 seeker.next();
                 highId = seeker.get().key().idRange - rangeSize * 2;
             }
-            System.out.println( "  GOTTEN " + highId );
+            System.out.println( "  GOT " + highId );
 
             int threads = Runtime.getRuntime().availableProcessors();
             ExecutorService executorService = newFixedThreadPool( threads );
@@ -97,8 +94,6 @@ public class RandomRangeReads
 
             System.out.println( "Shutting down" );
             executorService.shutdown();
-
-            life.shutdown();
 
             // Printing time
             System.out.println( "queries:" + totalQueries + ", hits:" + totalCount +
