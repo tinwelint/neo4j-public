@@ -137,7 +137,7 @@ public class InsertIntoNativeLSSAtScale
         LabelScanStore store();
     }
 
-    private static Store createNativeStore( File storeDir )
+    static Store createNativeStore( File storeDir )
     {
         PageCache pageCache = pageCache();
         LifeSupport life = new LifeSupport();

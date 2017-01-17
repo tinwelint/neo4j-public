@@ -17,7 +17,6 @@ import org.neo4j.index.internal.gbptree.Hit;
 import org.neo4j.kernel.impl.index.labelscan.LabelScanKey;
 import org.neo4j.kernel.impl.index.labelscan.LabelScanValue;
 import org.neo4j.kernel.impl.index.labelscan.NativeLabelScanStore;
-import static yo.InsertIntoNativeLSSAtScale.createStore;
 import static yo.InsertIntoNativeLSSAtScale.separatableNumber;
 
 import static java.lang.System.currentTimeMillis;
@@ -29,12 +28,12 @@ public class RandomRangeReads
     public static void main( String[] args ) throws Exception
     {
         int arg = 0;
-        String name = args[arg++];
+//        String name = args[arg++];
         File storeDir = new File( args[arg++] );
         int rangeSize = Integer.parseInt( separatableNumber( args[arg++] ) );
         int seconds = Integer.parseInt( separatableNumber( args[arg++] ) );
 
-        try ( Store theStore = createStore( storeDir, name ) )
+        try ( Store theStore = InsertIntoNativeLSSAtScale.createNativeStore( storeDir ) )
         {
             System.out.print( "Starting LSS..." );
             NativeLabelScanStore lss = (NativeLabelScanStore) theStore.store();
@@ -85,7 +84,7 @@ public class RandomRangeReads
                 } ) );
             }
 
-            System.out.print( "Running load..." );
+            System.out.print( "Running load (" + threads + ")..." );
             for ( Future<?> future : futures )
             {
                 future.get( seconds * 2, SECONDS );
@@ -96,9 +95,13 @@ public class RandomRangeReads
             executorService.shutdown();
 
             // Printing time
-            System.out.println( "queries:" + totalQueries + ", hits:" + totalCount +
+            System.out.println(
+                    "queries:" + totalQueries +
+                    ", hits:" + totalCount +
                     ", queries/s:" + totalQueries.get() / (double) seconds +
-                    ", hits/s:" + totalCount.get() / (double) seconds );
+                    ", hits/s:" + totalCount.get() / (double) seconds +
+                    ", queries/thread:" + totalQueries.get() / (double) threads +
+                    ", queries/s&thread:" + totalQueries.get() / ((double) threads * seconds) );
         }
     }
 }
