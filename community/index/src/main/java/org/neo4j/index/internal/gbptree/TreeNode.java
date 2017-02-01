@@ -120,7 +120,8 @@ class TreeNode<KEY,VALUE>
         return cursor.getByte( BYTE_POS_NODE_TYPE );
     }
 
-    private void initialize( PageCursor cursor, byte type, long stableGeneration, long unstableGeneration )
+    private void initialize( PageCursor cursor, byte type, long stableGeneration, long unstableGeneration,
+            KEY fromInclusive, KEY toExclusive )
     {
         cursor.putByte( BYTE_POS_NODE_TYPE, NODE_TYPE_TREE_NODE );
         cursor.putByte( BYTE_POS_TYPE, type );
@@ -133,12 +134,24 @@ class TreeNode<KEY,VALUE>
 
     void initializeLeaf( PageCursor cursor, long stableGeneration, long unstableGeneration )
     {
-        initialize( cursor, LEAF_FLAG, stableGeneration, unstableGeneration );
+        initializeLeaf( cursor, stableGeneration, unstableGeneration, null, null );
+    }
+
+    void initializeLeaf( PageCursor cursor, long stableGeneration, long unstableGeneration,
+            KEY fromInclusive, KEY toExclusive )
+    {
+        initialize( cursor, LEAF_FLAG, stableGeneration, unstableGeneration, fromInclusive, toExclusive );
     }
 
     void initializeInternal( PageCursor cursor, long stableGeneration, long unstableGeneration )
     {
-        initialize( cursor, INTERNAL_FLAG, stableGeneration, unstableGeneration );
+        initializeInternal( cursor, stableGeneration, unstableGeneration, null, null );
+    }
+
+    void initializeInternal( PageCursor cursor, long stableGeneration, long unstableGeneration,
+            KEY fromInclusive, KEY toExclusive )
+    {
+        initialize( cursor, INTERNAL_FLAG, stableGeneration, unstableGeneration, fromInclusive, toExclusive );
     }
 
     // HEADER METHODS
