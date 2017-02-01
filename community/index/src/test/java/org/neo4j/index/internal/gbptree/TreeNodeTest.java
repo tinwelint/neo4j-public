@@ -36,6 +36,7 @@ import static org.junit.Assert.fail;
 
 import static org.neo4j.index.internal.gbptree.GenSafePointerPair.pointer;
 import static org.neo4j.index.internal.gbptree.GenSafePointerPair.resultIsFromSlotA;
+import static org.neo4j.index.internal.gbptree.Layout.NO_KEY_COMPRESSION;
 import static org.neo4j.index.internal.gbptree.TreeNode.NO_NODE_FLAG;
 
 public class TreeNodeTest
@@ -507,7 +508,7 @@ public class TreeNodeTest
         // WHEN
         try
         {
-            new TreeNode<>( TreeNode.HEADER_LENGTH + layout.keySize() + layout.valueSize(), layout );
+            new TreeNode<>( TreeNode.HEADER_LENGTH + layout.keySize( NO_KEY_COMPRESSION ) + layout.valueSize(), layout );
             fail( "Should have failed" );
         }
         catch ( MetadataMismatchException e )

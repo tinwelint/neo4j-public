@@ -78,7 +78,8 @@ class TreeNode<KEY,VALUE>
     static final int BYTE_POS_RIGHTSIBLING = BYTE_POS_KEYCOUNT + Integer.BYTES;
     static final int BYTE_POS_LEFTSIBLING = BYTE_POS_RIGHTSIBLING + SIZE_PAGE_REFERENCE;
     static final int BYTE_POS_NEWGEN = BYTE_POS_LEFTSIBLING + SIZE_PAGE_REFERENCE;
-    static final int HEADER_LENGTH = BYTE_POS_NEWGEN + SIZE_PAGE_REFERENCE;
+    static final int BYTE_POS_COMPRESSION_LEVEL = BYTE_POS_NEWGEN + SIZE_PAGE_REFERENCE;
+    static final int HEADER_LENGTH = BYTE_POS_COMPRESSION_LEVEL + 1;
 
     private static final byte LEAF_FLAG = 1;
     static final byte INTERNAL_FLAG = 0;
@@ -89,18 +90,18 @@ class TreeNode<KEY,VALUE>
     private final int leafMaxKeyCount;
     private final Layout<KEY,VALUE> layout;
 
-    private final int keySize;
+    private final int uncompressedKeySize;
     private final int valueSize;
 
     TreeNode( int pageSize, Layout<KEY,VALUE> layout )
     {
         this.pageSize = pageSize;
         this.layout = layout;
-        this.keySize = layout.keySize();
         this.valueSize = layout.valueSize();
+        this.uncompressedKeySize = layout.keySize( Layout.NO_KEY_COMPRESSION );
         this.internalMaxKeyCount = Math.floorDiv( pageSize - (HEADER_LENGTH + SIZE_PAGE_REFERENCE),
-                keySize + SIZE_PAGE_REFERENCE);
-        this.leafMaxKeyCount = Math.floorDiv( pageSize - HEADER_LENGTH, keySize + valueSize );
+                uncompressedKeySize + SIZE_PAGE_REFERENCE);
+        this.leafMaxKeyCount = Math.floorDiv( pageSize - HEADER_LENGTH, uncompressedKeySize + valueSize );
 
         if ( internalMaxKeyCount < 2 )
         {
@@ -218,8 +219,10 @@ class TreeNode<KEY,VALUE>
         {
             throw new IllegalArgumentException( "Expected read result, but got " + readResult );
         }
+        byte compressionLevel = compressionLevel( cursor );
         int offset = GenSafePointerPair.genOffset( readResult );
-        int gsppOffset = GenSafePointerPair.isLogicalPos( readResult ) ? childOffset( offset ) : offset;
+        int gsppOffset = GenSafePointerPair.isLogicalPos( readResult )
+                ? childOffset( offset, compressionLevel ) : offset;
         int gspOffset = GenSafePointerPair.resultIsFromSlotA( readResult ) ?
                 gsppOffset : gsppOffset + GenSafePointer.SIZE;
         cursor.setOffset( gspOffset );
@@ -230,21 +233,29 @@ class TreeNode<KEY,VALUE>
 
     KEY keyAt( PageCursor cursor, KEY into, int pos )
     {
-        cursor.setOffset( keyOffset( pos ) );
-        layout.readKey( cursor, into );
+        byte compressionLevel = compressionLevel( cursor );
+        cursor.setOffset( keyOffset( pos, compressionLevel ) );
+        layout.readKey( cursor, into, compressionLevel );
         return into;
+    }
+
+    byte compressionLevel( PageCursor cursor )
+    {
+        return cursor.getByte( BYTE_POS_COMPRESSION_LEVEL );
     }
 
     void insertKeyAt( PageCursor cursor, KEY key, int pos, int keyCount )
     {
+        byte compressionLevel = compressionLevel( cursor );
         insertKeySlotsAt( cursor, pos, 1, keyCount );
-        cursor.setOffset( keyOffset( pos ) );
-        layout.writeKey( cursor, key );
+        cursor.setOffset( keyOffset( pos, compressionLevel ) );
+        layout.writeKey( cursor, key, compressionLevel );
     }
 
     void removeKeyAt( PageCursor cursor, int pos, int keyCount )
     {
-        removeSlotAt( cursor, pos, keyCount, keyOffset( 0 ), keySize );
+        byte compressionLevel = compressionLevel( cursor );
+        removeSlotAt( cursor, pos, keyCount, keyOffset( 0, compressionLevel ), keySize( compressionLevel ) );
     }
 
     private void removeSlotAt( PageCursor cursor, int pos, int itemCount, int baseOffset, int itemSize )
@@ -258,13 +269,15 @@ class TreeNode<KEY,VALUE>
 
     void setKeyAt( PageCursor cursor, KEY key, int pos )
     {
-        cursor.setOffset( keyOffset( pos ) );
-        layout.writeKey( cursor, key );
+        byte compressionLevel = compressionLevel( cursor );
+        cursor.setOffset( keyOffset( pos, compressionLevel ) );
+        layout.writeKey( cursor, key, compressionLevel );
     }
 
     VALUE valueAt( PageCursor cursor, VALUE value, int pos )
     {
-        cursor.setOffset( valueOffset( pos ) );
+        byte compressionLevel = compressionLevel( cursor );
+        cursor.setOffset( valueOffset( pos, compressionLevel ) );
         layout.readValue( cursor, value );
         return value;
     }
@@ -277,18 +290,21 @@ class TreeNode<KEY,VALUE>
 
     void removeValueAt( PageCursor cursor, int pos, int keyCount )
     {
-        removeSlotAt( cursor, pos, keyCount, valueOffset( 0 ), valueSize );
+        byte compressionLevel = compressionLevel( cursor );
+        removeSlotAt( cursor, pos, keyCount, valueOffset( 0, compressionLevel ), valueSize );
     }
 
     void setValueAt( PageCursor cursor, VALUE value, int pos )
     {
-        cursor.setOffset( valueOffset( pos ) );
+        byte compressionLevel = compressionLevel( cursor );
+        cursor.setOffset( valueOffset( pos, compressionLevel ) );
         layout.writeValue( cursor, value );
     }
 
     long childAt( PageCursor cursor, int pos, long stableGeneration, long unstableGeneration )
     {
-        cursor.setOffset( childOffset( pos ) );
+        byte compressionLevel = compressionLevel( cursor );
+        cursor.setOffset( childOffset( pos, compressionLevel ) );
         return read( cursor, stableGeneration, unstableGeneration, pos );
     }
 
@@ -301,12 +317,14 @@ class TreeNode<KEY,VALUE>
 
     void removeChildAt( PageCursor cursor, int pos, int keyCount )
     {
-        removeSlotAt( cursor, pos, keyCount + 1, childOffset( 0 ), childSize() );
+        byte compressionLevel = compressionLevel( cursor );
+        removeSlotAt( cursor, pos, keyCount + 1, childOffset( 0, compressionLevel ), childSize() );
     }
 
     void setChildAt( PageCursor cursor, long child, int pos, long stableGeneration, long unstableGeneration )
     {
-        cursor.setOffset( childOffset( pos ) );
+        byte compressionLevel = compressionLevel( cursor );
+        cursor.setOffset( childOffset( pos, compressionLevel ) );
         writeChild( cursor, child, stableGeneration, unstableGeneration );
     }
 
@@ -332,17 +350,21 @@ class TreeNode<KEY,VALUE>
 
     void insertKeySlotsAt( PageCursor cursor, int pos, int numberOfSlots, int keyCount )
     {
-        insertSlotsAt( cursor, pos, numberOfSlots, keyCount, keyOffset( 0 ), keySize );
+        byte compressionLevel = compressionLevel( cursor );
+        insertSlotsAt( cursor, pos, numberOfSlots, keyCount, keyOffset( 0, compressionLevel ),
+                keySize( compressionLevel ) );
     }
 
     void insertValueSlotsAt( PageCursor cursor, int pos, int numberOfSlots, int keyCount )
     {
-        insertSlotsAt( cursor, pos, numberOfSlots, keyCount, valueOffset( 0 ), valueSize );
+        byte compressionLevel = compressionLevel( cursor );
+        insertSlotsAt( cursor, pos, numberOfSlots, keyCount, valueOffset( 0, compressionLevel ), valueSize );
     }
 
     void insertChildSlotsAt( PageCursor cursor, int pos, int numberOfSlots, int keyCount )
     {
-        insertSlotsAt( cursor, pos, numberOfSlots, keyCount + 1, childOffset( 0 ), childSize() );
+        byte compressionLevel = compressionLevel( cursor );
+        insertSlotsAt( cursor, pos, numberOfSlots, keyCount + 1, childOffset( 0, compressionLevel ), childSize() );
     }
 
     int internalMaxKeyCount()
@@ -357,19 +379,19 @@ class TreeNode<KEY,VALUE>
 
     // HELPERS
 
-    int keyOffset( int pos )
+    int keyOffset( int pos, byte compressionLevel )
     {
-        return HEADER_LENGTH + pos * keySize;
+        return HEADER_LENGTH + pos * keySize( compressionLevel );
     }
 
-    int valueOffset( int pos )
+    int valueOffset( int pos, byte compressionLevel )
     {
-        return HEADER_LENGTH + leafMaxKeyCount * keySize + pos * valueSize;
+        return HEADER_LENGTH + leafMaxKeyCount * keySize( compressionLevel ) + pos * valueSize;
     }
 
-    int childOffset( int pos )
+    int childOffset( int pos, byte compressionLevel )
     {
-        return HEADER_LENGTH + internalMaxKeyCount * keySize + pos * SIZE_PAGE_REFERENCE;
+        return HEADER_LENGTH + internalMaxKeyCount * keySize( compressionLevel ) + pos * SIZE_PAGE_REFERENCE;
     }
 
     static boolean isNode( long node )
@@ -377,9 +399,9 @@ class TreeNode<KEY,VALUE>
         return GenSafePointerPair.pointer( node ) != NO_NODE_FLAG;
     }
 
-    int keySize()
+    int keySize( byte compressionLevel )
     {
-        return keySize;
+        return layout.keySize( compressionLevel );
     }
 
     int valueSize()
@@ -407,6 +429,6 @@ class TreeNode<KEY,VALUE>
     public String toString()
     {
         return "TreeNode[pageSize:" + pageSize + ", internalMax:" + internalMaxKeyCount +
-                ", leafMax:" + leafMaxKeyCount + ", keySize:" + keySize + ", valueSize:" + valueSize + "]";
+                ", leafMax:" + leafMaxKeyCount + ", keySize:" + uncompressedKeySize + ", valueSize:" + valueSize + "]";
     }
 }

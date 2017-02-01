@@ -480,6 +480,7 @@ class InternalTreeLogic<KEY,VALUE>
             bTreeNode.setLeftSibling( rightCursor, current, stableGeneration, unstableGeneration );
             int rightKeyCount = keyCountAfterInsert - middlePos - 1; // -1 because don't keep prim key in internal
 
+            byte compressionLevel = bTreeNode.compressionLevel( cursor );
             if ( pos < middlePos )
             {
                 //                         v-------v       copy
@@ -490,10 +491,11 @@ class InternalTreeLogic<KEY,VALUE>
                 // middle key              ^
 
                 // children
-                cursor.copyTo( bTreeNode.keyOffset( middlePos ), rightCursor, bTreeNode.keyOffset( 0 ),
-                        rightKeyCount * bTreeNode.keySize() );
-                cursor.copyTo( bTreeNode.childOffset( middlePos ), rightCursor, bTreeNode.childOffset( 0 ),
-                        (rightKeyCount + 1) * bTreeNode.childSize() );
+                cursor.copyTo( bTreeNode.keyOffset( middlePos, compressionLevel ), rightCursor,
+                        bTreeNode.keyOffset( 0, compressionLevel ),
+                        rightKeyCount * bTreeNode.keySize( compressionLevel ) );
+                cursor.copyTo( bTreeNode.childOffset( middlePos, compressionLevel ), rightCursor,
+                        bTreeNode.childOffset( 0, compressionLevel ), (rightKeyCount + 1) * bTreeNode.childSize() );
             }
             else
             {
@@ -520,8 +522,9 @@ class InternalTreeLogic<KEY,VALUE>
                 // ... first copy
                 if ( countBeforePos > 0 )
                 {
-                    cursor.copyTo( bTreeNode.keyOffset( middlePos + 1 ), rightCursor, bTreeNode.keyOffset( 0 ),
-                            countBeforePos * bTreeNode.keySize() );
+                    cursor.copyTo( bTreeNode.keyOffset( middlePos + 1, compressionLevel ), rightCursor,
+                            bTreeNode.keyOffset( 0, compressionLevel ),
+                            countBeforePos * bTreeNode.keySize( compressionLevel ) );
                 }
                 // ... insert
                 if ( countBeforePos >= 0 )
@@ -532,8 +535,9 @@ class InternalTreeLogic<KEY,VALUE>
                 int countAfterPos = keyCount - pos;
                 if ( countAfterPos > 0 )
                 {
-                    cursor.copyTo( bTreeNode.keyOffset( pos ), rightCursor,
-                            bTreeNode.keyOffset( countBeforePos + 1 ), countAfterPos * bTreeNode.keySize() );
+                    cursor.copyTo( bTreeNode.keyOffset( pos, compressionLevel ), rightCursor,
+                            bTreeNode.keyOffset( countBeforePos + 1, compressionLevel ),
+                            countAfterPos * bTreeNode.keySize( compressionLevel ) );
                 }
 
                 // Children
@@ -542,8 +546,8 @@ class InternalTreeLogic<KEY,VALUE>
                 if ( countBeforePos > 0 )
                 {
                     // first copy
-                    cursor.copyTo( bTreeNode.childOffset( middlePos + 1 ), rightCursor, bTreeNode.childOffset( 0 ),
-                            countBeforePos * bTreeNode.childSize() );
+                    cursor.copyTo( bTreeNode.childOffset( middlePos + 1, compressionLevel ), rightCursor,
+                            bTreeNode.childOffset( 0, compressionLevel ), countBeforePos * bTreeNode.childSize() );
                 }
                 // ... insert
                 bTreeNode.insertChildAt( rightCursor, newRightChild, countBeforePos, countBeforePos,
@@ -551,8 +555,9 @@ class InternalTreeLogic<KEY,VALUE>
                 // ... second copy
                 if ( countAfterPos > 0 )
                 {
-                    cursor.copyTo( bTreeNode.childOffset( pos + 1 ), rightCursor,
-                            bTreeNode.childOffset( countBeforePos + 1 ), countAfterPos * bTreeNode.childSize() );
+                    cursor.copyTo( bTreeNode.childOffset( pos + 1, compressionLevel ), rightCursor,
+                            bTreeNode.childOffset( countBeforePos + 1, compressionLevel ),
+                            countAfterPos * bTreeNode.childSize() );
                 }
             }
             bTreeNode.setKeyCount( rightCursor, rightKeyCount );
@@ -798,10 +803,11 @@ class InternalTreeLogic<KEY,VALUE>
 
     private void copyKeysAndValues( PageCursor fromCursor, int fromPos, PageCursor toCursor, int toPos, int count )
     {
-        fromCursor.copyTo( bTreeNode.keyOffset( fromPos ), toCursor, bTreeNode.keyOffset( toPos ),
-                count * bTreeNode.keySize() );
-        fromCursor.copyTo( bTreeNode.valueOffset( fromPos ), toCursor, bTreeNode.valueOffset( toPos ),
-                count * bTreeNode.valueSize() );
+        byte compressionLevel = bTreeNode.compressionLevel( fromCursor );
+        fromCursor.copyTo( bTreeNode.keyOffset( fromPos, compressionLevel ), toCursor,
+                bTreeNode.keyOffset( toPos, compressionLevel ), count * bTreeNode.keySize( compressionLevel ) );
+        fromCursor.copyTo( bTreeNode.valueOffset( fromPos, compressionLevel ), toCursor,
+                bTreeNode.valueOffset( toPos, compressionLevel ), count * bTreeNode.valueSize() );
     }
 
     /**

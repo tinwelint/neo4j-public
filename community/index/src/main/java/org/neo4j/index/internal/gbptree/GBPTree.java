@@ -131,7 +131,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
      * If any of the above changes the on-page format then this version should be bumped, so that opening
      * an index on wrong format version fails and user will need to rebuild.
      */
-    static final int FORMAT_VERSION = 1;
+    static final int FORMAT_VERSION = 2;
 
     /**
      * For monitoring {@link GBPTree}.
@@ -147,7 +147,11 @@ public class GBPTree<KEY,VALUE> implements Closeable
         }
 
         /**
+<<<<<<< 8f2d5cc9dcd093b37a5e804a65e8f7d486b07de2
          * Called when the tree was started on no existing store file and so will be created.
+=======
+         * Called when there were no store file and so it had to be created.
+>>>>>>> Simply introducing compression level in header and Layout
          */
         default void noStoreFile()
         {   // no-op by default

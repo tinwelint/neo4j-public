@@ -402,8 +402,9 @@ class ConsistencyChecker<KEY>
 
     private long childAt( PageCursor cursor, int pos )
     {
+        byte compressionLevel = node.compressionLevel( cursor );
         assertNoCrashOrBrokenPointerInGSPP(
-                cursor, stableGeneration, unstableGeneration, "Child", node.childOffset( pos ), node );
+                cursor, stableGeneration, unstableGeneration, "Child", node.childOffset( pos, compressionLevel ), node );
         return node.childAt( cursor, pos, stableGeneration, unstableGeneration );
     }
 

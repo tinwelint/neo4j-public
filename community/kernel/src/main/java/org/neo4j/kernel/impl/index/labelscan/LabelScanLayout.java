@@ -65,6 +65,12 @@ class LabelScanLayout implements Layout<LabelScanKey,LabelScanValue>
     }
 
     @Override
+    public byte keyCompressionLevel( LabelScanKey fromInclusive, LabelScanKey toExclusive )
+    {
+        return NO_KEY_COMPRESSION;
+    }
+
+    @Override
     public LabelScanKey copyKey( LabelScanKey key, LabelScanKey into )
     {
         into.labelId = key.labelId;
@@ -79,7 +85,7 @@ class LabelScanLayout implements Layout<LabelScanKey,LabelScanValue>
     }
 
     @Override
-    public int keySize()
+    public int keySize( byte compressionLevel )
     {
         return KEY_SIZE;
     }
@@ -91,7 +97,7 @@ class LabelScanLayout implements Layout<LabelScanKey,LabelScanValue>
     }
 
     @Override
-    public void writeKey( PageCursor cursor, LabelScanKey key )
+    public void writeKey( PageCursor cursor, LabelScanKey key, byte compressionLevel )
     {
         cursor.putInt( key.labelId );
         put6ByteLong( cursor, key.idRange );
@@ -110,7 +116,7 @@ class LabelScanLayout implements Layout<LabelScanKey,LabelScanValue>
     }
 
     @Override
-    public void readKey( PageCursor cursor, LabelScanKey into )
+    public void readKey( PageCursor cursor, LabelScanKey into, byte compressionLevel )
     {
         into.labelId = cursor.getInt();
         into.idRange = get6ByteLong( cursor );

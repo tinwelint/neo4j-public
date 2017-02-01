@@ -65,7 +65,13 @@ class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     }
 
     @Override
-    public int keySize()
+    public byte keyCompressionLevel( MutableLong fromInclusive, MutableLong toExclusive )
+    {
+        return NO_KEY_COMPRESSION;
+    }
+
+    @Override
+    public int keySize( byte compressionLevel )
     {
         return Long.BYTES;
     }
@@ -77,7 +83,7 @@ class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     }
 
     @Override
-    public void writeKey( PageCursor cursor, MutableLong key )
+    public void writeKey( PageCursor cursor, MutableLong key, byte compressionLevel )
     {
         cursor.putLong( key.longValue() );
     }
@@ -89,7 +95,7 @@ class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     }
 
     @Override
-    public void readKey( PageCursor cursor, MutableLong into )
+    public void readKey( PageCursor cursor, MutableLong into, byte compressionLevel )
     {
         into.setValue( cursor.getLong() );
     }

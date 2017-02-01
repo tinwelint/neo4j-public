@@ -39,6 +39,11 @@ import static java.lang.String.format;
 public interface Layout<KEY, VALUE> extends Comparator<KEY>
 {
     /**
+     * No key compression.
+     */
+    byte NO_KEY_COMPRESSION = 0;
+
+    /**
      * @return new key instance.
      */
     KEY newKey();
@@ -58,9 +63,10 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
     VALUE newValue();
 
     /**
+     * @param compressionLevel compression level to get key size for.
      * @return size, in bytes, of a key.
      */
-    int keySize();
+    int keySize( byte compressionLevel );
 
     /**
      * @return size, in bytes, of a value.
@@ -68,12 +74,24 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
     int valueSize();
 
     /**
+     * Decide compression level for keys, given the specific key range. {@link #NO_KEY_COMPRESSION} is reserved to mean
+     * no compression on keys in this range. Compression level is passed into
+     * {@link #readKey(PageCursor, Object, byte)} and {@link #writeKey(PageCursor, Object, byte)}.
+     *
+     * @param fromInclusive start of key range (inclusive).
+     * @param toExclusive end of key range (exclusive).
+     * @return compression level of the given key range.
+     */
+    byte keyCompressionLevel( KEY fromInclusive, KEY toExclusive );
+
+    /**
      * Writes contents of {@code key} into {@code cursor} at its current offset.
      *
      * @param cursor {@link PageCursor} to write into, at current offset.
      * @param key key containing data to write.
+     * @param compressionLevel compression level for the key.
      */
-    void writeKey( PageCursor cursor, KEY key );
+    void writeKey( PageCursor cursor, KEY key, byte compressionLevel );
 
     /**
      * Writes contents of {@code value} into {@code cursor} at its current offset.
@@ -88,8 +106,9 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
      *
      * @param cursor {@link PageCursor} to read from, at current offset.
      * @param into key instances to read into.
+     * @param compressionLevel compression level for the key.
      */
-    void readKey( PageCursor cursor, KEY into );
+    void readKey( PageCursor cursor, KEY into, byte compressionLevel );
 
     /**
      * Reads value contents at {@code cursor} at its current offset into {@code value}.
@@ -177,7 +196,7 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
         {
             return format( "%s[version:%d.%d, identifier:%d, keySize:%d, valueSize:%d]",
                     getClass().getSimpleName(), majorVersion(), minorVersion(), identifier(),
-                    keySize(), valueSize() );
+                    keySize( NO_KEY_COMPRESSION ), valueSize() );
         }
     }
 }

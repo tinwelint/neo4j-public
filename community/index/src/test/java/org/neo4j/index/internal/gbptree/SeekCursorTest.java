@@ -792,7 +792,7 @@ public class SeekCursorTest
 
             // Seeker pauses and writer insert new key which causes a split
             expected.add( (long) maxKeyCount );
-            insert( (long) maxKeyCount );
+            insert( maxKeyCount );
 
             seekCursor.forceRetry();
 
@@ -882,7 +882,7 @@ public class SeekCursorTest
 
             // Seeker pauses and writer insert new key which causes a split
             expected.add( (long) maxKeyCount );
-            insert( (long) maxKeyCount );
+            insert( maxKeyCount );
             seekCursor.forceRetry();
 
             while ( cursor.next() )
@@ -1815,7 +1815,7 @@ public class SeekCursorTest
         i++;
 
         // and corrupt new gen pointer
-        corruptGSPP( cursor, node.childOffset( 1 ) );
+        corruptGSPP( cursor, node.childOffset( 1, node.compressionLevel( cursor ) ) );
 
         // when
         // starting a seek on the old root with generation that is not up to date, simulating a concurrent checkpoint
