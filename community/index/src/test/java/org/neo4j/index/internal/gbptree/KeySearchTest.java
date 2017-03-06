@@ -450,7 +450,7 @@ public class KeySearchTest
     {
         // GIVEN a leaf node with random, although sorted (as of course it must be to binary-search), data
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
-        int internalMaxKeyCount = node.internalMaxKeyCount();
+        int internalMaxKeyCount = node.internalMaxKeyCount( cursor );
         int half = internalMaxKeyCount / 2;
         int keyCount = random.nextInt( half ) + half;
         long[] keys = new long[keyCount];

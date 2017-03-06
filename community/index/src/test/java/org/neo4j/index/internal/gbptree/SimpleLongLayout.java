@@ -25,11 +25,11 @@ import org.neo4j.io.pagecache.PageCursor;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
+public class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
 {
     private String customNameAsMetaData;
 
-    SimpleLongLayout( String customNameAsMetaData )
+    public SimpleLongLayout( String customNameAsMetaData )
     {
         this.customNameAsMetaData = customNameAsMetaData;
     }
@@ -62,12 +62,6 @@ class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     public MutableLong newValue()
     {
         return new MutableLong();
-    }
-
-    @Override
-    public byte keyCompressionLevel( MutableLong fromInclusive, MutableLong toExclusive )
-    {
-        return NO_KEY_COMPRESSION;
     }
 
     @Override

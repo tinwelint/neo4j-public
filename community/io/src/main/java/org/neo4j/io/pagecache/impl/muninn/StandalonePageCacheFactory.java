@@ -57,7 +57,7 @@ public final class StandalonePageCacheFactory
         factory.setFileSystemAbstraction( fileSystem );
 
         int cachePageSize = pageSize != null ? pageSize : factory.getCachePageSizeHint();
-        long pageCacheMemory = ByteUnit.mebiBytes( 8 );
+        long pageCacheMemory = ByteUnit.mebiBytes( 800 );
         long pageCount = pageCacheMemory / cachePageSize;
         return new MuninnPageCache( factory, (int) pageCount, cachePageSize, tracer, cursorTracerSupplier );
     }

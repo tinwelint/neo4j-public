@@ -86,8 +86,8 @@ class TreeNode<KEY,VALUE>
     static final long NO_NODE_FLAG = 0;
 
     private final int pageSize;
-    private final int internalMaxKeyCount;
-    private final int leafMaxKeyCount;
+    private final int[] internalMaxKeyCount = new int[10];
+    private final int[] leafMaxKeyCount = new int[10];
     private final Layout<KEY,VALUE> layout;
 
     private final int uncompressedKeySize;
@@ -99,16 +99,21 @@ class TreeNode<KEY,VALUE>
         this.layout = layout;
         this.valueSize = layout.valueSize();
         this.uncompressedKeySize = layout.keySize( Layout.NO_KEY_COMPRESSION );
-        this.internalMaxKeyCount = Math.floorDiv( pageSize - (HEADER_LENGTH + SIZE_PAGE_REFERENCE),
-                uncompressedKeySize + SIZE_PAGE_REFERENCE);
-        this.leafMaxKeyCount = Math.floorDiv( pageSize - HEADER_LENGTH, uncompressedKeySize + valueSize );
+        for ( byte compressionLevel = Layout.NO_KEY_COMPRESSION; compressionLevel <= layout
+                .maxKeyCompressionLevel(); compressionLevel++ )
+        {
+            int keySize = layout.keySize( compressionLevel );
+            internalMaxKeyCount[compressionLevel] = Math.floorDiv( pageSize - (HEADER_LENGTH + SIZE_PAGE_REFERENCE),
+                    keySize + SIZE_PAGE_REFERENCE);
+            leafMaxKeyCount[compressionLevel] = Math.floorDiv( pageSize - HEADER_LENGTH, keySize + valueSize );
+        }
 
-        if ( internalMaxKeyCount < 2 )
+        if ( internalMaxKeyCount[0] < 2 )
         {
             throw new MetadataMismatchException( "For layout " + layout + " a page size of " + pageSize +
                     " would only fit " + internalMaxKeyCount + " internal keys, minimum is 2" );
         }
-        if ( leafMaxKeyCount < 2 )
+        if ( leafMaxKeyCount[0] < 2 )
         {
             throw new MetadataMismatchException( "A page size of " + pageSize + " would only fit " +
                     leafMaxKeyCount + " leaf keys, minimum is 2" );
@@ -130,6 +135,12 @@ class TreeNode<KEY,VALUE>
         setRightSibling( cursor, NO_NODE_FLAG, stableGeneration, unstableGeneration );
         setLeftSibling( cursor, NO_NODE_FLAG, stableGeneration, unstableGeneration );
         setNewGen( cursor, NO_NODE_FLAG, stableGeneration, unstableGeneration );
+        setCompressionLevel( cursor, layout.keyCompressionLevel( fromInclusive, toExclusive ) );
+    }
+
+    private void setCompressionLevel( PageCursor cursor, byte keyCompressionLevel )
+    {
+        cursor.putByte( BYTE_POS_COMPRESSION_LEVEL, keyCompressionLevel );
     }
 
     void initializeLeaf( PageCursor cursor, long stableGeneration, long unstableGeneration )
@@ -382,12 +393,36 @@ class TreeNode<KEY,VALUE>
 
     int internalMaxKeyCount()
     {
-        return internalMaxKeyCount;
+        return internalMaxKeyCount[Layout.NO_KEY_COMPRESSION];
+    }
+
+    int internalMaxKeyCount( PageCursor cursor )
+    {
+        byte compressionLevel = compressionLevel( cursor );
+        return internalMaxKeyCount( compressionLevel );
+    }
+
+    int internalMaxKeyCount( byte compressionLevel )
+    {
+        return compressionLevel < 0 || compressionLevel >= internalMaxKeyCount.length
+                ? internalMaxKeyCount() : internalMaxKeyCount[compressionLevel];
     }
 
     int leafMaxKeyCount()
     {
-        return leafMaxKeyCount;
+        return leafMaxKeyCount[Layout.NO_KEY_COMPRESSION];
+    }
+
+    int leafMaxKeyCount( PageCursor cursor )
+    {
+        byte compressionLevel = compressionLevel( cursor );
+        return leafMaxKeyCount( compressionLevel );
+    }
+
+    int leafMaxKeyCount( byte compressionLevel )
+    {
+        return compressionLevel < 0 || compressionLevel >= leafMaxKeyCount.length
+                ? leafMaxKeyCount() : leafMaxKeyCount[compressionLevel];
     }
 
     // HELPERS
@@ -399,12 +434,13 @@ class TreeNode<KEY,VALUE>
 
     int valueOffset( int pos, byte compressionLevel )
     {
-        return HEADER_LENGTH + leafMaxKeyCount * keySize( compressionLevel ) + pos * valueSize;
+        return HEADER_LENGTH + leafMaxKeyCount( compressionLevel ) * keySize( compressionLevel ) + pos * valueSize;
     }
 
     int childOffset( int pos, byte compressionLevel )
     {
-        return HEADER_LENGTH + internalMaxKeyCount * keySize( compressionLevel ) + pos * SIZE_PAGE_REFERENCE;
+        return HEADER_LENGTH + internalMaxKeyCount( compressionLevel ) * keySize( compressionLevel ) +
+                pos * SIZE_PAGE_REFERENCE;
     }
 
     static boolean isNode( long node )

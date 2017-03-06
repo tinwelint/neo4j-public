@@ -262,7 +262,7 @@ class ConsistencyChecker<KEY>
             newGenGen = node.pointerGen( cursor, newGen );
 
             keyCount = node.keyCount( cursor );
-            if ( keyCount > node.internalMaxKeyCount() && keyCount > node.leafMaxKeyCount() )
+            if ( keyCount > node.internalMaxKeyCount( cursor ) && keyCount > node.leafMaxKeyCount( cursor ) )
             {
                 cursor.setCursorException( "Unexpected keyCount:" + keyCount );
                 continue;

@@ -36,7 +36,7 @@ import org.neo4j.io.pagecache.PageCursor;
  * </li>
  * </ul>
  */
-class LabelScanLayout implements Layout<LabelScanKey,LabelScanValue>
+class LabelScanLayout extends Layout.Adapter<LabelScanKey,LabelScanValue>
 {
     /**
      * Name part of the {@link #identifier()} value.
@@ -62,12 +62,6 @@ class LabelScanLayout implements Layout<LabelScanKey,LabelScanValue>
     public LabelScanKey newKey()
     {
         return new LabelScanKey();
-    }
-
-    @Override
-    public byte keyCompressionLevel( LabelScanKey fromInclusive, LabelScanKey toExclusive )
-    {
-        return NO_KEY_COMPRESSION;
     }
 
     @Override

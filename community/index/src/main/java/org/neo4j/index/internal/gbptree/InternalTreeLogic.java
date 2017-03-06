@@ -409,7 +409,7 @@ class InternalTreeLogic<KEY,VALUE>
     {
         createUnstableVersionIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
                 stableGeneration, unstableGeneration );
-        if ( keyCount < bTreeNode.internalMaxKeyCount() )
+        if ( keyCount < bTreeNode.internalMaxKeyCount( cursor ) )
         {
             // No overflow
             int pos = positionOf( search( cursor, primKey, readKey, keyCount ) );
@@ -626,7 +626,7 @@ class InternalTreeLogic<KEY,VALUE>
         createUnstableVersionIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
                 stableGeneration, unstableGeneration );
 
-        if ( keyCount < bTreeNode.leafMaxKeyCount() )
+        if ( keyCount < bTreeNode.leafMaxKeyCount( cursor ) )
         {
             // No overflow, insert key and value
             bTreeNode.insertKeyAt( cursor, key, pos, keyCount );
@@ -1143,7 +1143,7 @@ class InternalTreeLogic<KEY,VALUE>
                 stableGeneration, unstableGeneration );
         keyCount = simplyRemoveFromLeaf( cursor, into, keyCount, pos );
 
-        if ( keyCount < (bTreeNode.leafMaxKeyCount() + 1) / 2 )
+        if ( keyCount < (bTreeNode.leafMaxKeyCount( cursor ) + 1) / 2 )
         {
             // Underflow
             underflowInLeaf( cursor, structurePropagation, keyCount, stableGeneration, unstableGeneration );
@@ -1168,7 +1168,7 @@ class InternalTreeLogic<KEY,VALUE>
                 leftSiblingCursor.next();
                 int leftSiblingKeyCount = bTreeNode.keyCount( leftSiblingCursor );
 
-                if ( keyCount + leftSiblingKeyCount >= bTreeNode.leafMaxKeyCount() )
+                if ( keyCount + leftSiblingKeyCount >= bTreeNode.leafMaxKeyCount( cursor ) )
                 {
                     createUnstableVersionIfNeeded( leftSiblingCursor, structurePropagation,
                             StructurePropagation.UPDATE_LEFT_CHILD, stableGeneration, unstableGeneration );
@@ -1191,7 +1191,7 @@ class InternalTreeLogic<KEY,VALUE>
                 rightSiblingCursor.next();
                 int rightSiblingKeyCount = bTreeNode.keyCount( rightSiblingCursor );
 
-                if ( keyCount + rightSiblingKeyCount <= bTreeNode.leafMaxKeyCount() )
+                if ( keyCount + rightSiblingKeyCount <= bTreeNode.leafMaxKeyCount( cursor ) )
                 {
                     createUnstableVersionIfNeeded( rightSiblingCursor, structurePropagation, UPDATE_RIGHT_CHILD,
                             stableGeneration, unstableGeneration );

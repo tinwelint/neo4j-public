@@ -435,7 +435,7 @@ public class TreeNodeTest
 
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
-        int maxKeyCount = node.leafMaxKeyCount();
+        int maxKeyCount = node.leafMaxKeyCount( cursor );
         // add +1 to these to simplify some array logic in the test itself
         long[] expectedKeys = new long[maxKeyCount + 1];
         long[] expectedValues = new long[maxKeyCount + 1];

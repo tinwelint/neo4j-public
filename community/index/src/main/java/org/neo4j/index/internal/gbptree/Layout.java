@@ -85,6 +85,11 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
     byte keyCompressionLevel( KEY fromInclusive, KEY toExclusive );
 
     /**
+     * @return max compression level.
+     */
+    byte maxKeyCompressionLevel();
+
+    /**
      * Writes contents of {@code key} into {@code cursor} at its current offset.
      *
      * @param cursor {@link PageCursor} to write into, at current offset.
@@ -197,6 +202,18 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
             return format( "%s[version:%d.%d, identifier:%d, keySize:%d, valueSize:%d]",
                     getClass().getSimpleName(), majorVersion(), minorVersion(), identifier(),
                     keySize( NO_KEY_COMPRESSION ), valueSize() );
+        }
+
+        @Override
+        public byte keyCompressionLevel( KEY fromInclusive, KEY toExclusive )
+        {
+            return NO_KEY_COMPRESSION;
+        }
+
+        @Override
+        public byte maxKeyCompressionLevel()
+        {
+            return NO_KEY_COMPRESSION;
         }
     }
 }
