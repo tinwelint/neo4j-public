@@ -65,9 +65,41 @@ public class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     }
 
     @Override
+    public byte keyCompressionLevel( MutableLong fromInclusive, MutableLong toExclusive )
+    {
+        long delta = toExclusive.longValue() - fromInclusive.longValue();
+        if ( delta < 0xFF )
+        {
+            return 3;
+        }
+        if ( delta < 0xFFFF )
+        {
+            return 2;
+        }
+        if ( delta < 0xFFFFFFFF )
+        {
+            return 1;
+        }
+        return NO_KEY_COMPRESSION;
+    }
+
+    @Override
+    public byte maxKeyCompressionLevel()
+    {
+        return 3;
+    }
+
+    @Override
     public int keySize( byte compressionLevel )
     {
-        return Long.BYTES;
+        switch ( compressionLevel )
+        {
+        case NO_KEY_COMPRESSION: return Long.BYTES;
+        case 1: return Integer.BYTES;
+        case 2: return Short.BYTES;
+        case 3: return Byte.BYTES;
+        default: throw new IllegalArgumentException( String.valueOf( compressionLevel ) );
+        }
     }
 
     @Override
@@ -79,7 +111,22 @@ public class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     @Override
     public void writeKey( PageCursor cursor, MutableLong key, byte compressionLevel )
     {
-        cursor.putLong( key.longValue() );
+        switch ( compressionLevel )
+        {
+        case NO_KEY_COMPRESSION:
+            cursor.putLong( key.longValue() );
+            break;
+        case 1:
+            cursor.putInt( (int) key.longValue() );
+            break;
+        case 2:
+            cursor.putShort( (short) key.longValue() );
+            break;
+        case 3:
+            cursor.putByte( (byte) key.longValue() );
+            break;
+        default: throw new IllegalArgumentException( String.valueOf( compressionLevel ) );
+        }
     }
 
     @Override
@@ -91,7 +138,22 @@ public class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     @Override
     public void readKey( PageCursor cursor, MutableLong into, byte compressionLevel )
     {
-        into.setValue( cursor.getLong() );
+        switch ( compressionLevel )
+        {
+        case NO_KEY_COMPRESSION:
+            into.setValue( cursor.getLong() );
+            break;
+        case 1:
+            into.setValue( cursor.getInt() & 0xFFFFFFFFL );
+            break;
+        case 2:
+            into.setValue( cursor.getShort() & 0xFFFF );
+            break;
+        case 3:
+            into.setValue( cursor.getByte() & 0xFF );
+            break;
+        default: throw new IllegalArgumentException( String.valueOf( compressionLevel ) );
+        }
     }
 
     @Override
@@ -115,7 +177,7 @@ public class SimpleLongLayout extends Layout.Adapter<MutableLong,MutableLong>
     @Override
     public int minorVersion()
     {
-        return 0;
+        return 1;
     }
 
     @Override

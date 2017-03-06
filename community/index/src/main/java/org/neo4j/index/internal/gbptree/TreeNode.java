@@ -135,7 +135,11 @@ class TreeNode<KEY,VALUE>
         setRightSibling( cursor, NO_NODE_FLAG, stableGeneration, unstableGeneration );
         setLeftSibling( cursor, NO_NODE_FLAG, stableGeneration, unstableGeneration );
         setNewGen( cursor, NO_NODE_FLAG, stableGeneration, unstableGeneration );
-        setCompressionLevel( cursor, layout.keyCompressionLevel( fromInclusive, toExclusive ) );
+
+        byte compressionLevel = fromInclusive == null || toExclusive == null
+                ? Layout.NO_KEY_COMPRESSION
+                : layout.keyCompressionLevel( fromInclusive, toExclusive );
+        setCompressionLevel( cursor, compressionLevel );
     }
 
     private void setCompressionLevel( PageCursor cursor, byte keyCompressionLevel )
