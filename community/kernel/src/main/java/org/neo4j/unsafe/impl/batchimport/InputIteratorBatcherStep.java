@@ -32,7 +32,7 @@ public class InputIteratorBatcherStep<T> extends IteratorBatcherStep<T>
 {
     private final InputIterator<T> data;
 
-    InputIteratorBatcherStep( StageControl control, Configuration config, InputIterator<T> data, Class<T> itemClass,
+    public InputIteratorBatcherStep( StageControl control, Configuration config, InputIterator<T> data, Class<T> itemClass,
             Predicate<T> filter )
     {
         super( control, config, data, itemClass, filter );
