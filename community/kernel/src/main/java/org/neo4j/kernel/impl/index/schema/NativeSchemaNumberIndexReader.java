@@ -29,6 +29,7 @@ import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Hit;
 import org.neo4j.index.internal.gbptree.Layout;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.schema.IndexQuery;
@@ -48,7 +49,7 @@ class NativeSchemaNumberIndexReader<KEY extends SchemaNumberKey, VALUE extends S
     private final Layout<KEY,VALUE> layout;
     private final KEY treeKeyFrom;
     private final KEY treeKeyTo;
-    private Set<RawCursor<Hit<KEY,VALUE>,IOException>> openSeekers;
+    private final Set<Seeker<KEY,VALUE>> openSeekers;
 
     NativeSchemaNumberIndexReader( GBPTree<KEY,VALUE> tree, Layout<KEY,VALUE> layout )
     {
@@ -86,7 +87,8 @@ class NativeSchemaNumberIndexReader<KEY extends SchemaNumberKey, VALUE extends S
     {
         treeKeyFrom.from( nodeId, propertyValues );
         treeKeyTo.from( nodeId, propertyValues );
-        try ( RawCursor<Hit<KEY,VALUE>,IOException> seeker = tree.seek( treeKeyFrom, treeKeyTo ) )
+        try ( RawCursor<Hit<KEY,VALUE>,IOException> seeker =
+                tree.seek( tree.allocateSeeker(), treeKeyTo, treeKeyFrom ) )
         {
             long count = 0;
             while ( seeker.next() )
@@ -150,7 +152,7 @@ class NativeSchemaNumberIndexReader<KEY extends SchemaNumberKey, VALUE extends S
     {
         try
         {
-            RawCursor<Hit<KEY,VALUE>,IOException> seeker = tree.seek( treeKeyFrom, treeKeyTo );
+            Seeker<KEY,VALUE> seeker = tree.seek( tree.allocateSeeker(), treeKeyFrom, treeKeyTo );
             openSeekers.add( seeker );
             return new NumberHitIterator<>( seeker, openSeekers );
         }

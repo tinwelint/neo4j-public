@@ -46,7 +46,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
@@ -507,14 +506,14 @@ public class GBPTreeConcurrencyIT
         @Override
         public void run()
         {
-            try
+            try ( Seeker<MutableLong,MutableLong> cursor = index.allocateSeeker() )
             {
                 readerReadySignal.countDown(); // Ready, set...
                 readerStartSignal.await(); // GO!
 
                 while ( !endSignal.get() && !failHalt.get() )
                 {
-                    doRead();
+                    doRead( cursor );
                 }
             }
             catch ( Throwable e )
@@ -524,58 +523,55 @@ public class GBPTreeConcurrencyIT
             }
         }
 
-        private void doRead() throws IOException
+        private void doRead( Seeker<MutableLong,MutableLong> seeker ) throws IOException
         {
             ReaderInstruction readerInstruction = testCoordinator.get();
             Iterator<Long> expectToSee = readerInstruction.expectToSee().iterator();
             long start = readerInstruction.start();
             long end = readerInstruction.end();
             boolean forward = start <= end;
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                          index.seek( new MutableLong( start ), new MutableLong( end ) ) )
+            index.seek( seeker, new MutableLong( start ), new MutableLong( end ) );
+            if ( expectToSee.hasNext() )
             {
-                if ( expectToSee.hasNext() )
+                long nextToSee = expectToSee.next();
+                while ( seeker.next() )
                 {
-                    long nextToSee = expectToSee.next();
-                    while ( cursor.next() )
+                    // Actual
+                    long lastSeenKey = seeker.get().key().longValue();
+                    long lastSeenValue = seeker.get().value().longValue();
+
+                    if ( lastSeenKey != lastSeenValue )
                     {
-                        // Actual
-                        long lastSeenKey = cursor.get().key().longValue();
-                        long lastSeenValue = cursor.get().value().longValue();
+                        fail( String.format( "Read mismatching key value pair, key=%d, value=%d%n",
+                                lastSeenKey, lastSeenValue ) );
+                    }
 
-                        if ( lastSeenKey != lastSeenValue )
+                    while ( (forward && lastSeenKey > nextToSee) ||
+                            (!forward && lastSeenKey < nextToSee) )
+                    {
+                        if ( testCoordinator.isReallyExpected( nextToSee ) )
                         {
-                            fail( String.format( "Read mismatching key value pair, key=%d, value=%d%n",
-                                    lastSeenKey, lastSeenValue ) );
+                            fail( String.format( "Expected to see %d but went straight to %d. ",
+                                    nextToSee, lastSeenKey ) );
                         }
-
-                        while ( (forward && lastSeenKey > nextToSee) ||
-                                (!forward && lastSeenKey < nextToSee) )
+                        if ( expectToSee.hasNext() )
                         {
-                            if ( testCoordinator.isReallyExpected( nextToSee ) )
-                            {
-                                fail( String.format( "Expected to see %d but went straight to %d. ",
-                                        nextToSee, lastSeenKey ) );
-                            }
-                            if ( expectToSee.hasNext() )
-                            {
-                                nextToSee = expectToSee.next();
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            nextToSee = expectToSee.next();
                         }
-                        if ( nextToSee == lastSeenKey )
+                        else
                         {
-                            if ( expectToSee.hasNext() )
-                            {
-                                nextToSee = expectToSee.next();
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            break;
+                        }
+                    }
+                    if ( nextToSee == lastSeenKey )
+                    {
+                        if ( expectToSee.hasNext() )
+                        {
+                            nextToSee = expectToSee.next();
+                        }
+                        else
+                        {
+                            break;
                         }
                     }
                 }

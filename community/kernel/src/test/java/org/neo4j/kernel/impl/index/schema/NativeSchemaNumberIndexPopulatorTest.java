@@ -160,7 +160,6 @@ public abstract class NativeSchemaNumberIndexPopulatorTest<KEY extends SchemaNum
     {
         // given
         populator.create();
-        @SuppressWarnings( "unchecked" )
         IndexEntryUpdate<IndexDescriptor>[] updates = layoutUtil.someUpdates();
 
         // when
@@ -177,7 +176,6 @@ public abstract class NativeSchemaNumberIndexPopulatorTest<KEY extends SchemaNum
         // given
         populator.create();
         IndexUpdater updater = populator.newPopulatingUpdater( null_property_accessor );
-        @SuppressWarnings( "unchecked" )
         IndexEntryUpdate<IndexDescriptor>[] updates = layoutUtil.someUpdates();
 
         // when
@@ -220,7 +218,6 @@ public abstract class NativeSchemaNumberIndexPopulatorTest<KEY extends SchemaNum
         // given
         populator.create();
         IndexUpdater updater = populator.newPopulatingUpdater( null_property_accessor );
-        @SuppressWarnings( "unchecked" )
         IndexEntryUpdate<IndexDescriptor>[] updates = layoutUtil.someUpdates();
 
         // when

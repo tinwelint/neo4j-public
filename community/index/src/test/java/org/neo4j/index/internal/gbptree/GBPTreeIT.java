@@ -33,7 +33,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
@@ -133,7 +132,7 @@ public class GBPTreeIT
                     to = first;
                 }
                 Map<MutableLong,MutableLong> expectedHits = expectedHits( data, from, to, keyComparator );
-                try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> result = index.seek( from, to ) )
+                try ( Seeker<MutableLong,MutableLong> result = index.seek( index.allocateSeeker(), from, to ) )
                 {
                     while ( result.next() )
                     {

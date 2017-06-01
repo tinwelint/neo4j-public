@@ -35,7 +35,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
@@ -100,8 +99,8 @@ public class FormatCompatibilityTest
             try
             {
                 tree.consistencyCheck();
-                try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                        tree.seek( new MutableLong( 0 ), new MutableLong( KEY_COUNT ) ) )
+                try ( Seeker<MutableLong,MutableLong> cursor =
+                        tree.seek( tree.allocateSeeker(), new MutableLong( 0 ), new MutableLong( KEY_COUNT ) ) )
                 {
                     for ( long expectedKey = 0; cursor.next(); expectedKey++ )
                     {

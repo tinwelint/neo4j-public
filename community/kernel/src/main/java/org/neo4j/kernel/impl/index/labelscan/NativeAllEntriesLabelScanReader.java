@@ -25,10 +25,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.IntFunction;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.kernel.api.labelscan.AllEntriesLabelScanReader;
 import org.neo4j.kernel.api.labelscan.NodeLabelRange;
 
@@ -49,11 +48,11 @@ import static org.neo4j.kernel.impl.index.labelscan.LabelScanValue.RANGE_SIZE;
  */
 class NativeAllEntriesLabelScanReader implements AllEntriesLabelScanReader
 {
-    private final IntFunction<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> seekProvider;
-    private final List<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> cursors = new ArrayList<>();
+    private final IntFunction<Seeker<LabelScanKey,LabelScanValue>> seekProvider;
+    private final List<Seeker<LabelScanKey,LabelScanValue>> cursors = new ArrayList<>();
     private final int highestLabelId;
 
-    NativeAllEntriesLabelScanReader( IntFunction<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> seekProvider,
+    NativeAllEntriesLabelScanReader( IntFunction<Seeker<LabelScanKey,LabelScanValue>> seekProvider,
             int highestLabelId )
     {
         this.seekProvider = seekProvider;
@@ -81,7 +80,7 @@ class NativeAllEntriesLabelScanReader implements AllEntriesLabelScanReader
             closeCursors();
             for ( int labelId = 0; labelId <= highestLabelId; labelId++ )
             {
-                RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor = seekProvider.apply( labelId );
+                Seeker<LabelScanKey,LabelScanValue> cursor = seekProvider.apply( labelId );
 
                 // Bootstrap the cursor, which also provides a great opportunity to exclude if empty
                 if ( cursor.next() )
@@ -100,7 +99,7 @@ class NativeAllEntriesLabelScanReader implements AllEntriesLabelScanReader
 
     private void closeCursors() throws IOException
     {
-        for ( RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor : cursors )
+        for ( Seeker<LabelScanKey,LabelScanValue> cursor : cursors )
         {
             cursor.close();
         }
@@ -142,7 +141,7 @@ class NativeAllEntriesLabelScanReader implements AllEntriesLabelScanReader
             try
             {
                 // One "rangeSize" range at a time
-                for ( RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor : cursors )
+                for ( Seeker<LabelScanKey,LabelScanValue> cursor : cursors )
                 {
                     long idRange = cursor.get().key().idRange;
                     if ( idRange < currentRange )

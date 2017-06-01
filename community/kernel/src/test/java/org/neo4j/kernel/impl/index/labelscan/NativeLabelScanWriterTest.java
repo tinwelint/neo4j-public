@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.index.internal.gbptree.ValueMerger;
 import org.neo4j.index.internal.gbptree.ValueMergers;
 import org.neo4j.index.internal.gbptree.Writer;
@@ -180,7 +180,7 @@ public class NativeLabelScanWriterTest
         }
 
         @SuppressWarnings( "unchecked" )
-        RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> nodesFor( int labelId )
+        Seeker<LabelScanKey,LabelScanValue> nodesFor( int labelId )
         {
             Map<LabelScanKey,LabelScanValue> forLabel = data.get( labelId );
             if ( forLabel == null )
@@ -190,7 +190,7 @@ public class NativeLabelScanWriterTest
 
             Map.Entry<LabelScanKey,LabelScanValue>[] entries =
                     forLabel.entrySet().toArray( new Map.Entry[forLabel.size()] );
-            return new RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>()
+            return new Seeker<LabelScanKey,LabelScanValue>()
             {
                 private int arrayIndex = -1;
 

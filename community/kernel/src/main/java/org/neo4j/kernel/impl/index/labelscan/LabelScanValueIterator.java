@@ -27,6 +27,7 @@ import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 
 /**
  * {@link PrimitiveLongIterator} which iterate over multiple {@link LabelScanValue} and for each
@@ -40,7 +41,7 @@ class LabelScanValueIterator extends PrimitiveLongCollections.PrimitiveLongBaseI
     /**
      * {@link RawCursor} to lazily read new {@link LabelScanValue} from.
      */
-    private final RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor;
+    private final Seeker<LabelScanKey,LabelScanValue> cursor;
 
     /**
      * Current base nodeId, i.e. the {@link LabelScanKey#idRange} of the current {@link LabelScanKey}.
@@ -65,15 +66,15 @@ class LabelScanValueIterator extends PrimitiveLongCollections.PrimitiveLongBaseI
     /**
      * Remove provided cursor from this collection when iterator is exhausted.
      */
-    private final Collection<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> toRemoveFromWhenExhausted;
+    private final Collection<Seeker<LabelScanKey,LabelScanValue>> toRemoveFromWhenExhausted;
 
     /**
      * Indicate provided cursor has been closed.
      */
     private boolean closed;
 
-    LabelScanValueIterator( RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor,
-            Collection<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> toRemoveFromWhenExhausted )
+    LabelScanValueIterator( Seeker<LabelScanKey,LabelScanValue> cursor,
+            Collection<Seeker<LabelScanKey,LabelScanValue>> toRemoveFromWhenExhausted )
     {
         this.cursor = cursor;
         this.toRemoveFromWhenExhausted = toRemoveFromWhenExhausted;

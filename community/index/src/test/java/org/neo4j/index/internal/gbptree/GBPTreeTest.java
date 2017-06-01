@@ -52,7 +52,6 @@ import java.util.function.Consumer;
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.index.internal.gbptree.GBPTree.Monitor;
 import org.neo4j.io.pagecache.DelegatingPageCache;
@@ -346,7 +345,8 @@ public class GBPTreeTest
         {
             MutableLong fromInclusive = new MutableLong( 0L );
             MutableLong toExclusive = new MutableLong( 200L );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = index.seek( fromInclusive, toExclusive ) )
+            try ( Seeker<MutableLong,MutableLong> seek =
+                    index.seek( index.allocateSeeker(), fromInclusive, toExclusive ) )
             {
                 int i = 0;
                 while ( seek.next() )
@@ -392,8 +392,8 @@ public class GBPTreeTest
         {
 
             // WHEN
-            RawCursor<Hit<MutableLong,MutableLong>,IOException> result =
-                    index.seek( new MutableLong( 0 ), new MutableLong( 10 ) );
+            Seeker<MutableLong,MutableLong> result =
+                    index.seek( index.allocateSeeker(), new MutableLong( 0 ), new MutableLong( 10 ) );
 
             // THEN
             assertFalse( result.next() );
@@ -1046,8 +1046,8 @@ public class GBPTreeTest
                 }
             }
 
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                          index.seek( new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) ) )
+            try ( Seeker<MutableLong,MutableLong> cursor = index.seek( index.allocateSeeker(),
+                    new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) ) )
             {
                 for ( int i = 0; i < count; i++ )
                 {
@@ -1075,12 +1075,48 @@ public class GBPTreeTest
 
             for ( int i = 0; i < count; i++ )
             {
-                try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                              index.seek( new MutableLong( i ), new MutableLong( i ) ) )
+                try ( Seeker<MutableLong,MutableLong> cursor =
+                              index.seek( index.allocateSeeker(), new MutableLong( i ), new MutableLong( i ) ) )
                 {
                     assertTrue( cursor.next() );
                     assertEquals( i, cursor.get().key().longValue() );
                     assertFalse( cursor.next() );
+                }
+            }
+        }
+    }
+
+    @Test
+    public void shouldReuseAllocatedSeekerMultipleTimes() throws Exception
+    {
+        // given
+        try ( GBPTree<MutableLong,MutableLong> index = index().build() )
+        {
+            int count = 1000;
+            MutableLong value = new MutableLong();
+            try ( Writer<MutableLong,MutableLong> writer = index.writer() )
+            {
+                for ( int i = 0; i < count; i++ )
+                {
+                    value.setValue( i );
+                    writer.put( value, value );
+                }
+            }
+
+            // when
+            try ( Seeker<MutableLong,MutableLong> seeker = index.allocateSeeker() )
+            {
+                MutableLong otherValue = new MutableLong();
+                for ( int i = 0; i < count; i++ )
+                {
+                    value.setValue( i );
+                    otherValue.setValue( i + 1 );
+                    index.seek( seeker, value, otherValue );
+
+                    // then
+                    assertTrue( seeker.next() );
+                    assertEquals( i, seeker.key().longValue() );
+                    assertFalse( seeker.next() );
                 }
             }
         }
@@ -1114,8 +1150,8 @@ public class GBPTreeTest
             }
 
             // THEN
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                          index.seek( new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) ) )
+            try ( Seeker<MutableLong,MutableLong> cursor =
+                    index.seek( index.allocateSeeker(), new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) ) )
             {
                 long prev = -1;
                 while ( cursor.next() )
@@ -1192,7 +1228,7 @@ public class GBPTreeTest
         {
             MutableLong from = new MutableLong( Long.MIN_VALUE );
             MutableLong to = new MutableLong( Long.MAX_VALUE );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = index.seek( from, to ) )
+            try ( Seeker<MutableLong,MutableLong> seek = index.seek( index.allocateSeeker(), from, to ) )
             {
                 assertFalse( seek.next() );
             }
@@ -1218,7 +1254,7 @@ public class GBPTreeTest
         {
             MutableLong from = new MutableLong( Long.MIN_VALUE );
             MutableLong to = new MutableLong( Long.MAX_VALUE );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> seek = index.seek( from, to ) )
+            try ( Seeker<MutableLong,MutableLong> seek = index.seek( index.allocateSeeker(), from, to ) )
             {
                 assertTrue( seek.next() );
                 assertEquals( key, seek.get().key().longValue() );
@@ -1480,8 +1516,8 @@ public class GBPTreeTest
                 }
             }
 
-            RawCursor<Hit<MutableLong,MutableLong>,IOException> seek =
-                    tree.seek( new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) );
+            Seeker<MutableLong,MutableLong> seek =
+                    tree.seek( tree.allocateSeeker(), new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) );
             assertTrue( seek.next() );
             assertTrue( seek.next() );
             seek.close();

@@ -26,7 +26,7 @@ import java.util.Collection;
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.cursor.RawCursor;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 
 /**
  * Wraps number key/value results in a {@link PrimitiveLongIterator}.
@@ -39,12 +39,11 @@ import org.neo4j.index.internal.gbptree.Hit;
 public class NumberHitIterator<KEY extends SchemaNumberKey, VALUE extends SchemaNumberValue>
         extends PrimitiveLongCollections.PrimitiveLongBaseIterator
 {
-    private final RawCursor<Hit<KEY,VALUE>,IOException> seeker;
-    private final Collection<RawCursor<Hit<KEY,VALUE>,IOException>> toRemoveFromWhenExhausted;
+    private final Seeker<KEY,VALUE> seeker;
+    private final Collection<Seeker<KEY,VALUE>> toRemoveFromWhenExhausted;
     private boolean closed;
 
-    NumberHitIterator( RawCursor<Hit<KEY,VALUE>,IOException> seeker,
-            Collection<RawCursor<Hit<KEY,VALUE>,IOException>> toRemoveFromWhenExhausted )
+    NumberHitIterator( Seeker<KEY,VALUE> seeker, Collection<Seeker<KEY,VALUE>> toRemoveFromWhenExhausted )
     {
         this.seeker = seeker;
         this.toRemoveFromWhenExhausted = toRemoveFromWhenExhausted;

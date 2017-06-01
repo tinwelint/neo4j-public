@@ -35,7 +35,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.RandomRule;
@@ -104,8 +103,8 @@ public class GBPTreeRecoveryIT
             index.consistencyCheck();
 
             // ... containing all the stuff load says
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                          index.seek( new MutableLong( Long.MIN_VALUE ), new MutableLong( Long.MAX_VALUE ) ) )
+            try ( Seeker<MutableLong,MutableLong> cursor = index.seek( index.allocateSeeker(),
+                    new MutableLong( Long.MIN_VALUE ), new MutableLong( Long.MAX_VALUE ) ) )
             {
                 assertTrue( cursor.next() );
                 Hit<MutableLong,MutableLong> hit = cursor.get();
@@ -225,8 +224,8 @@ public class GBPTreeRecoveryIT
             // we should end up with a consistent index containing all the stuff load says
             index.consistencyCheck();
             long[/*key,value,key,value...*/] aggregate = expectedSortedAggregatedDataFromGeneratedLoad( load );
-            try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
-                    index.seek( new MutableLong( Long.MIN_VALUE ), new MutableLong( Long.MAX_VALUE ) ) )
+            try ( Seeker<MutableLong,MutableLong> cursor = index.seek( index.allocateSeeker(),
+                    new MutableLong( Long.MIN_VALUE ), new MutableLong( Long.MAX_VALUE ) ) )
             {
                 for ( int i = 0; i < aggregate.length; )
                 {

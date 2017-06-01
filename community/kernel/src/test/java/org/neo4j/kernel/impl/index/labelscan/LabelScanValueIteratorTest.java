@@ -21,13 +21,11 @@ package org.neo4j.kernel.impl.index.labelscan;
 
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
-import org.neo4j.cursor.RawCursor;
-import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -41,9 +39,9 @@ public class LabelScanValueIteratorTest
     public void shouldCloseExhaustedCursors() throws Exception
     {
         // GIVEN
-        RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor = mock( RawCursor.class );
+        Seeker<LabelScanKey,LabelScanValue> cursor = mock( Seeker.class );
         when( cursor.next() ).thenReturn( false );
-        Collection<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> toRemoveFrom = new HashSet<>();
+        Collection<Seeker<LabelScanKey,LabelScanValue>> toRemoveFrom = new HashSet<>();
         LabelScanValueIterator iterator = new LabelScanValueIterator( cursor, toRemoveFrom );
         verify( cursor, times( 0 ) ).close();
 

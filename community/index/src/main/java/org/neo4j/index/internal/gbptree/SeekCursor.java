@@ -23,14 +23,13 @@ import java.io.IOException;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.Integer.max;
 import static org.neo4j.index.internal.gbptree.PageCursorUtil.checkOutOfBounds;
 
 /**
- * {@link RawCursor} over tree leaves, making keys/values accessible to user. Given a starting leaf
+ * {@link Seeker} over tree leaves, making keys/values accessible to user. Given a starting leaf
  * and key range this cursor traverses each leaf and its right siblings as long as visited keys are within
  * key range. Each visited key within the key range can be accessible using {@link #get()}.
  * The key/value instances provided by {@link Hit} instance are mutable and overwritten with new values
@@ -138,7 +137,7 @@ import static org.neo4j.index.internal.gbptree.PageCursorUtil.checkOutOfBounds;
  * suddenly another key when he goes there he knows that he could have missed some keys and he needs to go back until
  * he find the place where he left off, K4.
  */
-class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hit<KEY,VALUE>
+class SeekCursor<KEY,VALUE> implements Seeker<KEY,VALUE>, Hit<KEY,VALUE>
 {
     /**
      * Cursor for reading from tree nodes and also will be moved around when following pointers.
@@ -159,18 +158,18 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
      * Provided when constructing the {@link SeekCursor}, marks the start (inclusive) of the key range to seek.
      * Comparison with {@link #toExclusive} decide if seeking forwards or backwards.
      */
-    private final KEY fromInclusive;
+    private KEY fromInclusive;
 
     /**
      * Provided when constructing the {@link SeekCursor}, marks the end (exclusive) of the key range to seek.
      * Comparison with {@link #fromInclusive} decide if seeking forwards or backwards.
      */
-    private final KEY toExclusive;
+    private KEY toExclusive;
 
     /**
      * True if seeker is performing an exact match lookup, {@link #toExclusive} will then be treated as inclusive.
      */
-    private final boolean exactMatch;
+    private boolean exactMatch;
 
     /**
      * {@link Layout} instance used to perform some functions around keys, like copying and comparing.
@@ -210,7 +209,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
      * {@link #next()} returning {@code true}, otherwise {@code false}. If {@code false} then value in
      * {@link #prevKey} can be used and trusted.
      */
-    private boolean first = true;
+    private boolean first;
 
     /**
      * Current stable generation from this seek cursor's POV. Can be refreshed using {@link #generationSupplier}.
@@ -265,20 +264,20 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
      * <p>
      * {@code true} if {@code layout.compare(fromInclusive, toExclusive) <= 0}, otherwise false.
      */
-    private final boolean seekForward;
+    private boolean seekForward;
 
     /**
      * Add to {@link #pos} to move this {@code SeekCursor} forward in the seek direction.
      */
-    private final int stride;
+    private int stride;
 
     /**
      * Set within should retry loop.
      * <p>
      * Is node a {@link TreeNode#NODE_TYPE_TREE_NODE} or something else?
      */
-
     private byte nodeType;
+
     /**
      * Set within should retry loop.
      * <p>
@@ -362,31 +361,40 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
      */
     private boolean closed;
 
-    SeekCursor( PageCursor cursor, TreeNode<KEY,VALUE> bTreeNode, KEY fromInclusive, KEY toExclusive,
-            Layout<KEY,VALUE> layout, long stableGeneration, long unstableGeneration, LongSupplier generationSupplier,
-            Supplier<Root> rootCatchup, long lastFollowedPointerGeneration ) throws IOException
+    SeekCursor( PageCursor cursor, TreeNode<KEY,VALUE> bTreeNode,
+            Layout<KEY,VALUE> layout, LongSupplier generationSupplier,
+            Supplier<Root> rootCatchup )
     {
         this.cursor = cursor;
-        this.fromInclusive = fromInclusive;
-        this.toExclusive = toExclusive;
         this.layout = layout;
-        this.exactMatch = layout.compare( fromInclusive, toExclusive ) == 0;
-        this.stableGeneration = stableGeneration;
-        this.unstableGeneration = unstableGeneration;
         this.generationSupplier = generationSupplier;
         this.bTreeNode = bTreeNode;
         this.rootCatchup = rootCatchup;
-        this.lastFollowedPointerGeneration = lastFollowedPointerGeneration;
         this.mutableKey = layout.newKey();
         this.mutableValue = layout.newValue();
         this.prevKey = layout.newKey();
         this.maxKeyCount = max( bTreeNode.internalMaxKeyCount(), bTreeNode.leafMaxKeyCount() );
-        this.seekForward = layout.compare( fromInclusive, toExclusive ) <= 0;
-        this.stride = seekForward ? 1 : -1;
         this.expectedFirstAfterGoToNext = layout.newKey();
         this.firstKeyInNode = layout.newKey();
+    }
+
+    SeekCursor<KEY,VALUE> initialize( KEY fromInclusive, KEY toExclusive, long stableGeneration,
+            long unstableGeneration ) throws IOException
+    {
+        this.fromInclusive = fromInclusive;
+        this.toExclusive = toExclusive;
+        this.exactMatch = layout.compare( fromInclusive, toExclusive ) == 0;
+        this.seekForward = layout.compare( fromInclusive, toExclusive ) <= 0;
+        this.stride = seekForward ? 1 : -1;
+        this.stableGeneration = stableGeneration;
+        this.unstableGeneration = unstableGeneration;
+        this.lastFollowedPointerGeneration = rootCatchup.get().goTo( cursor );
+        this.concurrentWriteHappened = false;
+        this.pos = 0;
+        this.first = true;
 
         traverseDownToFirstLeaf();
+        return this;
     }
 
     /**

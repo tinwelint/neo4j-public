@@ -20,6 +20,7 @@
 package org.neo4j.index.internal.gbptree;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.Before;
 import org.junit.Test;
@@ -1237,8 +1238,8 @@ public class SeekCursorTest
 
         // WHEN
         try ( SeekCursor<MutableLong,MutableLong> cursor = new SeekCursor<>( this.cursor,
-                node, from, to, layout, stableGeneration, unstableGeneration, () -> 0L, failingRootCatchup,
-                unstableGeneration ) )
+                node, layout, () -> 0L, failingRootCatchup )
+                .initialize( from, to, stableGeneration, unstableGeneration ) )
         {
             // reading a couple of keys
             assertTrue( cursor.next() );
@@ -1885,22 +1886,30 @@ public class SeekCursorTest
         // given
         long id = cursor.getCurrentPageId();
         long generation = TreeNode.generation( cursor );
-        MutableBoolean triggered = new MutableBoolean( false );
+        MutableInt triggered = new MutableInt( 0 );
         Supplier<Root> rootCatchup = () ->
         {
-            triggered.setTrue();
-            return new Root( id, generation );
+            triggered.increment();
+            if ( triggered.intValue() == 1 )
+            {
+                return new Root( id, generation );
+            }
+            else
+            {
+                return new Root( id, generation - 1 );
+            }
         };
 
         // when
-        try ( SeekCursor<MutableLong,MutableLong> seek = new SeekCursor<>( cursor, node, from, to, layout,
-                stableGeneration, unstableGeneration, generationSupplier, rootCatchup, generation - 1 ) )
+        try ( SeekCursor<MutableLong,MutableLong> seek =
+                new SeekCursor<>( cursor, node, layout, generationSupplier, rootCatchup )
+                .initialize( from, to, stableGeneration, unstableGeneration ) )
         {
             // do nothing
         }
 
         // then
-        assertTrue( triggered.getValue() );
+        assertEquals( 2, triggered.intValue() );
     }
 
     @Test
@@ -1949,8 +1958,9 @@ public class SeekCursorTest
         // when
         from.setValue( 1L );
         to.setValue( 2L );
-        try ( SeekCursor<MutableLong,MutableLong> seek = new SeekCursor<>( cursor, node, from, to, layout,
-                stableGeneration, unstableGeneration, generationSupplier, rootCatchup, unstableGeneration ) )
+        try ( SeekCursor<MutableLong,MutableLong> seek =
+                new SeekCursor<>( cursor, node, layout, generationSupplier, rootCatchup  )
+                .initialize( from, to, stableGeneration, unstableGeneration ) )
         {
             // do nothing
         }
@@ -2004,8 +2014,9 @@ public class SeekCursorTest
         // when
         from.setValue( 1L );
         to.setValue( 20L );
-        try ( SeekCursor<MutableLong,MutableLong> seek = new SeekCursor<>( cursor, node, from, to, layout,
-                stableGeneration - 1, unstableGeneration - 1, generationSupplier, rootCatchup, unstableGeneration ) )
+        try ( SeekCursor<MutableLong,MutableLong> seek =
+                new SeekCursor<>( cursor, node, layout, generationSupplier, rootCatchup )
+                .initialize( from, to, stableGeneration - 1, unstableGeneration - 1 ) )
         {
             while ( seek.next() )
             {
@@ -2206,8 +2217,8 @@ public class SeekCursorTest
     {
         from.setValue( fromInclusive );
         to.setValue( toExclusive );
-        return new SeekCursor<>( pageCursor, node, from, to, layout, stableGeneration, unstableGeneration, generationSupplier,
-                failingRootCatchup, unstableGeneration );
+        return new SeekCursor<>( pageCursor, node, layout, generationSupplier, failingRootCatchup )
+                .initialize( from, to, stableGeneration, unstableGeneration );
     }
 
     /**

@@ -34,7 +34,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.pagecache.CursorException;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -713,7 +712,22 @@ public class GBPTree<KEY,VALUE> implements Closeable
     }
 
     /**
-     * Seeks hits in this tree, given a key range. Hits are iterated over using the returned {@link RawCursor}.
+     * Allocates a new {@link Seeker} for use in {@link #seek(Seeker, Object, Object)}. A {@link Seeker}
+     * can be reused in multiple calls to {@link #seek(Seeker, Object, Object)} and so will reduce garbage
+     * and acquisitions of {@link PageCursor}.
+     *
+     * @return a new {@link Seeker} for use in {@link #seek(Seeker, Object, Object)} calls.
+     * @throws IOException on {@link PageCursor} error.
+     */
+    public Seeker<KEY,VALUE> allocateSeeker() throws IOException
+    {
+        PageCursor cursor = pagedFile.io( 0L /*ignored*/, PagedFile.PF_SHARED_READ_LOCK );
+        return new SeekCursor<>( cursor, bTreeNode, layout, generationSupplier, rootCatchup );
+    }
+
+    /**
+     * Seeks hits in this tree, given a key range. The provided {@link Seeker} is initialized at the
+     * {@code fromInclusive} key and will iterate over {@link Hit hits}.
      * There's no guarantee that neither the {@link Hit} nor key/value instances are immutable and so
      * if caller wants to cache the results it's safest to copy the instances, or rather their contents,
      * into its own result cache.
@@ -727,23 +741,21 @@ public class GBPTree<KEY,VALUE> implements Closeable
      * A {@code fromInclusive} that is bigger than the {@code toExclusive} results in results in descending order.
      * </li>
      *
+     * @param seeker previously {@link #allocateSeeker() allocated} {@link Seeker} which will be initialized
+     * to drive the seek. This instance will also be returned for convenience.
      * @param fromInclusive lower bound of the range to seek (inclusive).
      * @param toExclusive higher bound of the range to seek (exclusive).
-     * @return a {@link RawCursor} used to iterate over the hits within the specified key range.
+     * @return the provided {@link Seeker} used to iterate over the hits within the specified key range.
      * @throws IOException on error reading from index.
      */
-    public RawCursor<Hit<KEY,VALUE>,IOException> seek( KEY fromInclusive, KEY toExclusive ) throws IOException
+    public Seeker<KEY,VALUE> seek( Seeker<KEY,VALUE> seeker, KEY fromInclusive, KEY toExclusive ) throws IOException
     {
         long generation = this.generation;
         long stableGeneration = stableGeneration( generation );
         long unstableGeneration = unstableGeneration( generation );
 
-        PageCursor cursor = pagedFile.io( 0L /*ignored*/, PagedFile.PF_SHARED_READ_LOCK );
-        long rootGeneration = root.goTo( cursor );
-
-        // Returns cursor which is now initiated with left-most leaf node for the specified range
-        return new SeekCursor<>( cursor, bTreeNode, fromInclusive, toExclusive, layout,
-                stableGeneration, unstableGeneration, generationSupplier, rootCatchup, rootGeneration );
+        ((SeekCursor<KEY,VALUE>) seeker).initialize( fromInclusive, toExclusive, stableGeneration, unstableGeneration );
+        return seeker;
     }
 
     /**

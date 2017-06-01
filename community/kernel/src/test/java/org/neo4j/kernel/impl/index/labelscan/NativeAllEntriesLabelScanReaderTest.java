@@ -33,9 +33,9 @@ import java.util.function.IntFunction;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.index.internal.gbptree.Hit;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.kernel.api.labelscan.AllEntriesLabelScanReader;
 import org.neo4j.kernel.api.labelscan.NodeLabelRange;
 import org.neo4j.test.rule.RandomRule;
@@ -186,7 +186,7 @@ public class NativeAllEntriesLabelScanReaderTest
         return highest;
     }
 
-    private static IntFunction<RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>> store( Labels... labels )
+    private static IntFunction<Seeker<LabelScanKey,LabelScanValue>> store( Labels... labels )
     {
         PrimitiveIntObjectMap<Labels> labelsMap = Primitive.intObjectMap( labels.length );
         for ( Labels item : labels )
@@ -197,7 +197,7 @@ public class NativeAllEntriesLabelScanReaderTest
         return labelId ->
         {
             Labels item = labelsMap.get( labelId );
-            return item != null ? item.cursor() : EMPTY_CURSOR;
+            return item != null ? item.cursor() : EMPTY_SEEKER;
         };
     }
 
@@ -241,9 +241,9 @@ public class NativeAllEntriesLabelScanReaderTest
             this.entries = entries;
         }
 
-        RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> cursor()
+        Seeker<LabelScanKey,LabelScanValue> cursor()
         {
-            return new RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>()
+            return new Seeker<LabelScanKey,LabelScanValue>()
             {
                 int cursor = -1;
 
@@ -274,8 +274,8 @@ public class NativeAllEntriesLabelScanReaderTest
         }
     }
 
-    private static final RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException> EMPTY_CURSOR =
-            new RawCursor<Hit<LabelScanKey,LabelScanValue>,IOException>()
+    private static final Seeker<LabelScanKey,LabelScanValue> EMPTY_SEEKER =
+            new Seeker<LabelScanKey,LabelScanValue>()
     {
         @Override
         public Hit<LabelScanKey,LabelScanValue> get()

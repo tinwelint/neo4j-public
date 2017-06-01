@@ -36,6 +36,7 @@ import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Hit;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
@@ -125,13 +126,13 @@ public abstract class SchemaNumberIndexTestUtil<KEY extends SchemaNumberKey,VALU
                 NO_HEADER_READER, NO_HEADER_WRITER, RecoveryCleanupWorkCollector.IMMEDIATE );
     }
 
-    private RawCursor<Hit<KEY,VALUE>, IOException> scan( GBPTree<KEY,VALUE> tree ) throws IOException
+    private Seeker<KEY,VALUE> scan( GBPTree<KEY,VALUE> tree ) throws IOException
     {
         KEY lowest = layout.newKey();
         lowest.initAsLowest();
         KEY highest = layout.newKey();
         highest.initAsHighest();
-        return tree.seek( lowest, highest );
+        return tree.seek( tree.allocateSeeker(), lowest, highest );
     }
 
     private void assertSameHits( Hit<KEY, VALUE>[] expectedHits, Hit<KEY, VALUE>[] actualHits,

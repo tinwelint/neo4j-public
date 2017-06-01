@@ -23,18 +23,17 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Iterator;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.Hit;
 import org.neo4j.index.internal.gbptree.Layout;
+import org.neo4j.index.internal.gbptree.Seeker;
 
 class NumberAllEntriesReader<KEY extends SchemaNumberKey,VALUE extends SchemaNumberValue> implements BoundedIterable<Long>
 {
     private final GBPTree<KEY,VALUE> tree;
     private final Layout<KEY,VALUE> layout;
-    private RawCursor<Hit<KEY,VALUE>,IOException> seeker;
+    private Seeker<KEY,VALUE> seeker;
 
     NumberAllEntriesReader( GBPTree<KEY,VALUE> tree, Layout<KEY,VALUE> layout )
     {
@@ -52,7 +51,7 @@ class NumberAllEntriesReader<KEY extends SchemaNumberKey,VALUE extends SchemaNum
         try
         {
             closeSeeker();
-            seeker = tree.seek( from, to );
+            seeker = tree.seek( tree.allocateSeeker(), from, to );
             return new PrefetchingIterator<Long>()
             {
                 @Override
