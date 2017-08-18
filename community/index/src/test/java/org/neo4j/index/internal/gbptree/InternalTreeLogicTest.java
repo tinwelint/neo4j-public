@@ -1310,7 +1310,7 @@ public class InternalTreeLogicTest
         generationManager.recovery();
         // start up on stable root
         goTo( cursor, originalNodeId );
-        treeLogic.initialize( cursor );
+        treeLogic.initialize( cursor, cursor, cursor.getCurrentPageId() );
         // replay transaction TX1 will create a new successor
         insert( 1L, 10L );
         assertEquals( 2, numberOfRootSuccessors );
@@ -1477,17 +1477,17 @@ public class InternalTreeLogicTest
         return mainContent.keyCount( readCursor );
     }
 
-    private void initialize()
+    private void initialize() throws IOException
     {
         node.initializeLeaf( cursor, stableGeneration, unstableGeneration );
         updateRoot();
     }
 
-    private void updateRoot()
+    private void updateRoot() throws IOException
     {
         rootId = cursor.getCurrentPageId();
         rootGeneration = unstableGeneration;
-        treeLogic.initialize( cursor );
+        treeLogic.initialize( cursor, cursor, cursor.getCurrentPageId() );
     }
 
     private void assertSuccessorPointerNotCrashOrBroken()
@@ -1615,7 +1615,7 @@ public class InternalTreeLogicTest
         structurePropagation.hasMidChildUpdate = false;
         insertKey.setValue( key );
         insertValue.setValue( value );
-        treeLogic.insert( cursor, structurePropagation, insertKey, insertValue, valueMerger, stableGeneration,
+        treeLogic.insert( cursor, cursor, structurePropagation, insertKey, insertValue, valueMerger, stableGeneration,
                 unstableGeneration );
         handleAfterChange();
     }
@@ -1638,7 +1638,7 @@ public class InternalTreeLogicTest
     private MutableLong remove( long key, MutableLong into ) throws IOException
     {
         insertKey.setValue( key );
-        MutableLong result = treeLogic.remove( cursor, structurePropagation, insertKey, into, stableGeneration,
+        MutableLong result = treeLogic.remove( cursor, cursor, structurePropagation, insertKey, into, stableGeneration,
                 unstableGeneration );
         handleAfterChange();
         return result;

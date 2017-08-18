@@ -98,10 +98,10 @@ public class SeekCursorTest
         updateRoot();
     }
 
-    private void updateRoot()
+    private void updateRoot() throws IOException
     {
         rootId = cursor.getCurrentPageId();
-        treeLogic.initialize( cursor );
+        treeLogic.initialize( cursor, cursor, rootId );
     }
 
     /* NO CONCURRENT INSERT */
@@ -2176,7 +2176,7 @@ public class SeekCursorTest
     {
         insertKey.setValue( key );
         insertValue.setValue( value );
-        treeLogic.insert( cursor, structurePropagation, insertKey, insertValue, overwrite(), stableGeneration,
+        treeLogic.insert( cursor, cursor, structurePropagation, insertKey, insertValue, overwrite(), stableGeneration,
                 unstableGeneration );
         handleAfterChange();
     }
@@ -2184,7 +2184,7 @@ public class SeekCursorTest
     private void remove( long key ) throws IOException
     {
         insertKey.setValue( key );
-        treeLogic.remove( cursor, structurePropagation, insertKey, insertValue, stableGeneration, unstableGeneration );
+        treeLogic.remove( cursor, cursor, structurePropagation, insertKey, insertValue, stableGeneration, unstableGeneration );
         handleAfterChange();
     }
 

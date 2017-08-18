@@ -35,6 +35,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.test.rule.PageCacheAndDependenciesRule;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -81,7 +82,7 @@ public class ConsistencyCheckerTest
         root = idProvider.acquireNewId( stableGeneration, unstableGeneration );
         node.goTo( cursor, "root", root );
         node.initializeLeaf( cursor, stableGeneration, unstableGeneration );
-        logic.initialize( cursor );
+        logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
     }
 
     @After
@@ -131,7 +132,7 @@ public class ConsistencyCheckerTest
             for ( int i = 0; i < 100; i++, k++ )
             {
                 key.setValue( k );
-                logic.insert( cursor, propagation, key, key, ValueMergers.overwrite(),
+                logic.insert( cursor, cursor, propagation, key, key, ValueMergers.overwrite(),
                         stableGeneration, unstableGeneration );
                 if ( propagation.hasRightKeyInsert )
                 {
@@ -144,11 +145,11 @@ public class ConsistencyCheckerTest
                     mainSection.setChildAt( cursor, propagation.midChild, 0, stableGeneration, unstableGeneration );
                     mainSection.setChildAt( cursor, propagation.rightChild, 1,
                             stableGeneration, unstableGeneration );
-                    logic.initialize( cursor );
+                    logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
                 }
                 if ( propagation.hasMidChildUpdate )
                 {
-                    logic.initialize( cursor );
+                    logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
                 }
                 propagation.clear();
             }
@@ -246,7 +247,7 @@ public class ConsistencyCheckerTest
         //
 
         insertUntilRootSplit();
-        logic.initialize( cursor );
+        logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
         long siblingA = node.main().childAt( cursor, 0, stableGeneration, unstableGeneration );
         long siblingB = node.main().childAt( cursor, 1, stableGeneration, unstableGeneration );
         long siblingC = idProvider.acquireNewId( stableGeneration, unstableGeneration );
@@ -278,7 +279,7 @@ public class ConsistencyCheckerTest
         //
 
         insertUntilRootSplit();
-        logic.initialize( cursor );
+        logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
         long siblingA = node.main().childAt( cursor, 0, stableGeneration, unstableGeneration );
         long siblingB = node.main().childAt( cursor, 1, stableGeneration, unstableGeneration );
         node.goTo( cursor, "sibling B", siblingB );
@@ -312,7 +313,7 @@ public class ConsistencyCheckerTest
         //
 
         insertUntilRootSplit();
-        logic.initialize( cursor );
+        logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
         long siblingA = node.main().childAt( cursor, 0, stableGeneration, unstableGeneration );
         long siblingB = node.main().childAt( cursor, 1, stableGeneration, unstableGeneration );
         long siblingC = idProvider.acquireNewId( stableGeneration, unstableGeneration );
@@ -344,7 +345,7 @@ public class ConsistencyCheckerTest
         //
 
         insertUntilRootSplit();
-        logic.initialize( cursor );
+        logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
         long siblingA = node.main().childAt( cursor, 0, stableGeneration, unstableGeneration );
         long siblingB = node.main().childAt( cursor, 1, stableGeneration, unstableGeneration );
         node.goTo( cursor, "sibling A", siblingA );
@@ -391,7 +392,7 @@ public class ConsistencyCheckerTest
     public void shouldDetectSuccessorInActiveInternalNode() throws Exception
     {
         insertUntilRootSplit();
-        logic.initialize( cursor );
+        logic.initialize( cursor, cursor, cursor.getCurrentPageId() );
         long successor = idProvider.acquireNewId( stableGeneration, unstableGeneration );
         node.setSuccessor( cursor, successor, stableGeneration, unstableGeneration );
 
@@ -414,7 +415,7 @@ public class ConsistencyCheckerTest
     {
         for ( long key = 0; !propagation.hasRightKeyInsert; key++ )
         {
-            logic.insert( cursor, propagation, new MutableLong( key ), new MutableLong( key ),
+            logic.insert( cursor, cursor, propagation, new MutableLong( key ), new MutableLong( key ),
                     overwrite(), stableGeneration, unstableGeneration );
         }
         root = logic.initializeNewRootAfterSplit( cursor, propagation, stableGeneration, unstableGeneration );
