@@ -24,6 +24,12 @@ import java.util.Comparator;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+/**
+ * Controls the physical layout of tree nodes and their contents.
+ *
+ * @param <KEY> types of keys.
+ * @param <VALUE> types of values.
+ */
 abstract class TreeNode<KEY,VALUE>
 {
     // Shared between all node types: TreeNode and FreelistNode
@@ -45,6 +51,22 @@ abstract class TreeNode<KEY,VALUE>
     {
         return GenerationSafePointerPair.pointer( node ) != NO_NODE_FLAG;
     }
+
+    // META INFORMATION
+
+    /**
+     * Specifies the format identifier of the physical layout of tree nodes.
+     * A format identifier must be unique among all possible existing format identifiers.
+     * It's used to differentiate between different types of formats.
+     * On top of this a specific format identifier may be {@link #formatVersion()}.
+     */
+    abstract byte formatIdentifier();
+
+    /**
+     * Specifies the version of this particular {@link #formatIdentifier() format}. It must be unique
+     * among all other versions of this {@link #formatIdentifier() format}.
+     */
+    abstract byte formatVersion();
 
     // HEADER AND POINTERS
 
