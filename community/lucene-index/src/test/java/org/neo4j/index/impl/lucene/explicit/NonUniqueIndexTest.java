@@ -59,17 +59,20 @@ import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.test.rule.PageCacheAndDependenciesRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
+
+import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MINUTES;
+
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.test.rule.PageCacheRule.config;
 
 public class NonUniqueIndexTest
 {
     @Rule
     public PageCacheAndDependenciesRule resources =
-            new PageCacheAndDependenciesRule( DefaultFileSystemRule::new, NonUniqueIndexTest.class );
+            new PageCacheAndDependenciesRule( config(), DefaultFileSystemRule::new, NonUniqueIndexTest.class );
 
     @Test
     public void concurrentIndexPopulationAndInsertsShouldNotProduceDuplicates() throws Exception
