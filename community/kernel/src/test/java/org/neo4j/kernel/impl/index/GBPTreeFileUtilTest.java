@@ -39,11 +39,13 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import static org.neo4j.test.rule.PageCacheRule.config;
+
 @RunWith( Parameterized.class )
 public class GBPTreeFileUtilTest extends AbstractGBPTreeFileUtilTest
 {
     @ClassRule
-    public static PageCacheAndDependenciesRule pageCacheAndDependenciesRule = new PageCacheAndDependenciesRule(
+    public static PageCacheAndDependenciesRule pageCacheAndDependenciesRule = new PageCacheAndDependenciesRule( config(),
             DefaultFileSystemRule::new, GBPTreeFileUtilTest.class
     );
 

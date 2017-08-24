@@ -34,6 +34,8 @@ import org.neo4j.test.rule.PageCacheAndDependenciesRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.runner.ParameterizedSuiteRunner;
 
+import static org.neo4j.test.rule.PageCacheRule.config;
+
 @RunWith( ParameterizedSuiteRunner.class )
 @Suite.SuiteClasses( {
         SimpleIndexPopulatorCompatibility.General.class,
@@ -74,7 +76,7 @@ public abstract class IndexProviderCompatibilityTestSuite
         {
             this.testSuite = testSuite;
             this.descriptor = descriptor;
-            pageCacheAndDependenciesRule = new PageCacheAndDependenciesRule( DefaultFileSystemRule::new, testSuite.getClass() );
+            pageCacheAndDependenciesRule = new PageCacheAndDependenciesRule( config(), DefaultFileSystemRule::new, testSuite.getClass() );
         }
 
         protected void withPopulator( IndexPopulator populator, ThrowingConsumer<IndexPopulator,Exception> runWithPopulator ) throws Exception
