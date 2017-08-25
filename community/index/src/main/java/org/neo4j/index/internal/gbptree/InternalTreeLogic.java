@@ -734,7 +734,7 @@ class InternalTreeLogic<KEY,VALUE>
         return null;
     }
 
-    private int consolidateDeltas( PageCursor cursor, int keyCount, int deltaKeyCount )
+    int consolidateDeltas( PageCursor cursor, int keyCount, int deltaKeyCount )
     {
         if ( deltaKeyCount == 0 )
         {
