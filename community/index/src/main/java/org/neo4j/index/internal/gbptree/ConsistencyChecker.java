@@ -527,7 +527,7 @@ class ConsistencyChecker<KEY>
 
         if ( sectionType != Type.MAIN )
         {
-            throw new TreeInconsistencyException( "Highest key %s not in main section", prev );
+            cursor.setCursorException( format( "Highest key %s not in main section", prev ) );
         }
     }
 
