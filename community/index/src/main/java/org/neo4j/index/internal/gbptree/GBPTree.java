@@ -1040,12 +1040,20 @@ public class GBPTree<KEY,VALUE> implements Closeable
         }
     }
 
-    void printTree() throws IOException
+    // ===================
+    // = Utility methods =
+    // ===================
+
+    /**
+     * Prints the contents of the tree to System.out.
+     *
+     * @throws IOException on I/O error.
+     */
+    public void printTree() throws IOException
     {
         printTree( true, true, true );
     }
 
-    // Utility method
     /**
      * Prints the contents of the tree to System.out.
      *
@@ -1060,7 +1068,16 @@ public class GBPTree<KEY,VALUE> implements Closeable
                 new TreePrinter<>( bTreeNode, layout, stableGeneration( generation ), unstableGeneration( generation ) );
         if ( writer.writerTaken.get() && writer.writeCursor.getCurrentPageId() != -1 )
         {
-            printer.printTree( writer.writeCursor, System.out, printValues, printPosition, printState );
+            long prev = writer.writeCursor.getCurrentPageId();
+            try
+            {
+                bTreeNode.goTo( writer.writeCursor, "Root", root.id() );
+                printer.printTree( writer.writeCursor, System.out, printValues, printPosition, printState );
+            }
+            finally
+            {
+                bTreeNode.goTo( writer.writeCursor, "prev", prev );
+            }
         }
         else
         {

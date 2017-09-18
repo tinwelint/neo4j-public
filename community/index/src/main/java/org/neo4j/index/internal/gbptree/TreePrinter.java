@@ -104,14 +104,20 @@ class TreePrinter<KEY,VALUE>
             boolean printHeader ) throws IOException
     {
         boolean isLeaf;
-        int keyCount;
+        int mainKeyCount;
+        int deltaKeyCount;
         do
         {
             isLeaf = node.isLeaf( cursor );
-            keyCount = mainSection.keyCount( cursor );
-            if ( keyCount < 0 || (keyCount > mainSection.internalMaxKeyCount() && keyCount > mainSection.leafMaxKeyCount()) )
+            mainKeyCount = mainSection.keyCount( cursor );
+            deltaKeyCount = deltaSection.keyCount( cursor );
+            if ( mainKeyCount < 0 || (mainKeyCount > mainSection.internalMaxKeyCount() && mainKeyCount > mainSection.leafMaxKeyCount()) )
             {
-                cursor.setCursorException( "Unexpected keyCount " + keyCount );
+                cursor.setCursorException( "Unexpected main keyCount " + mainKeyCount );
+            }
+            if ( deltaKeyCount < 0 || (deltaKeyCount > deltaSection.internalMaxKeyCount() && deltaKeyCount > deltaSection.leafMaxKeyCount()) )
+            {
+                cursor.setCursorException( "Unexpected delta keyCount " + deltaKeyCount );
             }
         } while ( cursor.shouldRetry() );
 
@@ -125,28 +131,31 @@ class TreePrinter<KEY,VALUE>
 
             } while ( cursor.shouldRetry() );
             String treeNodeType = isLeaf ? "leaf" : "internal";
-            out.print( format( "{%d,%s,generation=%d,keyCount=%d}",
-                    cursor.getCurrentPageId(), treeNodeType, generation, keyCount ) );
+            out.print( format( "  {%d,%s,generation=%d,keyCount=%d}",
+                    cursor.getCurrentPageId(), treeNodeType, generation, mainKeyCount ) );
         }
         else
         {
-            out.print( "{" + cursor.getCurrentPageId() + "} " );
+            out.print( "  {" + cursor.getCurrentPageId() + "} " );
         }
-        printKeysAndValues( cursor, out, printValues, printPosition, isLeaf, mainSection );
-        out.print( " DELTA " );
-        printKeysAndValues( cursor, out, printValues, printPosition, isLeaf, deltaSection );
+        printKeysAndValues( cursor, out, printValues, printPosition, isLeaf, mainSection, mainKeyCount );
+        if ( deltaKeyCount > 0 )
+        {
+            out.print( " DELTA " );
+            printKeysAndValues( cursor, out, printValues, printPosition, isLeaf, deltaSection, deltaKeyCount );
+        }
         if ( !isLeaf )
         {
             long child;
             do
             {
-                child = pointer( mainSection.childAt( cursor, keyCount, stableGeneration, unstableGeneration ) );
+                child = pointer( mainSection.childAt( cursor, mainKeyCount, stableGeneration, unstableGeneration ) );
             }
             while ( cursor.shouldRetry() );
 
             if ( printPosition )
             {
-                out.print( "#" + keyCount + " " );
+                out.print( "#" + mainKeyCount + " " );
             }
             out.print( "/" + child + "\\" );
         }
@@ -154,9 +163,8 @@ class TreePrinter<KEY,VALUE>
     }
 
     private void printKeysAndValues( PageCursor cursor, PrintStream out, boolean printValues, boolean printPosition,
-            boolean isLeaf, Section<KEY,VALUE> section ) throws IOException
+            boolean isLeaf, Section<KEY,VALUE> section, int keyCount ) throws IOException
     {
-        int keyCount = section.keyCount( cursor );
         for ( int i = 0; i < keyCount; i++ )
         {
             long child = -1;
