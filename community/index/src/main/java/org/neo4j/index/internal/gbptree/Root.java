@@ -23,6 +23,11 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+import static java.lang.String.format;
+
+import static org.neo4j.index.internal.gbptree.Generation.stableGeneration;
+import static org.neo4j.index.internal.gbptree.Generation.unstableGeneration;
+
 /**
  * Keeps id and generation of root of the tree. Can move {@link PageCursor} to root id and return its generation,
  * both read atomically.
@@ -67,5 +72,12 @@ class Root
     long generation()
     {
         return rootGeneration;
+    }
+
+    @Override
+    public String toString()
+    {
+        return format( "Root[id:%d, stable:%d, unstable:%d]", rootId,
+                stableGeneration( rootGeneration ), unstableGeneration( rootGeneration ) );
     }
 }

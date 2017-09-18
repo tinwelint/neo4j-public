@@ -110,6 +110,8 @@ class InternalTreeLogic<KEY,VALUE>
     @SuppressWarnings( "unchecked" )
     private Level<KEY>[] levels = new Level[0]; // grows on demand
     private int currentLevel = -1;
+    private boolean treeDepthDiscovered;
+    private int treeDepth;
 
     /**
      * Keeps information about one level in a path down the tree where the {@link PageCursor} is currently at.
@@ -219,6 +221,19 @@ class InternalTreeLogic<KEY,VALUE>
             level.isInternal = bTreeNode.isInternal( cursor );
         }
         while ( cursor.shouldRetry() );
+
+        // This depth discovering could instead be something which could be kept and updated in the tree state
+        // Now instead the depth is forgotten on initialize and discovered and remembered on first leaf update
+        if ( level.isInternal )
+        {
+            treeDepthDiscovered = false;
+        }
+        else
+        {
+            treeDepthDiscovered = true;
+            treeDepth = 0;
+            bTreeNode.goTo( writeCursor, "initialize at root", rootId );
+        }
     }
 
     private boolean popLevel( PageCursor cursor ) throws IOException
@@ -271,13 +286,13 @@ class InternalTreeLogic<KEY,VALUE>
      * The closer keys are together from one change to the next, the fewer page pins and searches needs
      * to be performed to get there.
      *
-     * When this method returns both {@code readCursor} and {@code writeCursor} will be at the correct leaf
-     * and only {@code writeCursor} should be used since {@code readCursor} would not work (would spin forever in
-     * {@link PageCursor#shouldRetry() retry-loop}.
+     * When this method returns both {@code writeCursor} will be at the correct leaf and {@code readCursor} one level above it,
+     * if not the root node is a leaf in which case the {@code readCursor} will also be on the leaf.
+     * From here on only the {@code writeCursor} should be used for doing further operations.
      *
-     * @param readCursor {@link PageCursor} to move to the correct location.
+     * @param readCursor {@link PageCursor} to find the correct leaf to place the {@code writeCursor} on.
      * @param writeCursor {@link PageCursor} to read from if read cursor would like to read from the page that the write cursor is on.
-     * @param key KEY to make change for.
+     * @param key key to find correct leaf for.
      * @param stableGeneration stable generation.
      * @param unstableGeneration unstable generation.
      * @throws IOException on {@link PageCursor} error.
@@ -306,7 +321,7 @@ class InternalTreeLogic<KEY,VALUE>
         int keyCount = 0;
         int searchResult;
         PageCursor cursor;
-        do
+        do // loop while we're still on an internal node
         {
             Level<KEY> level = levels[currentLevel];
             ensureStackCapacity( currentLevel + 1 );
@@ -314,7 +329,7 @@ class InternalTreeLogic<KEY,VALUE>
 
             cursor = level.treeNodeId == writeCursor.getCurrentPageId() ? writeCursor : readCursor;
             long successor;
-            do
+            do // shouldRetry loop for reading information about this internal node
             {
                 isInternal = bTreeNode.isInternal( cursor );
                 isLeaf = bTreeNode.isLeaf( cursor );
@@ -372,11 +387,20 @@ class InternalTreeLogic<KEY,VALUE>
             {
                 currentLevel++;
                 PointerChecking.checkPointer( nextLevel.treeNodeId, false );
-                // don't move the selected cursor, only move the read cursor in this method
-                bTreeNode.goTo( readCursor, "child", nextLevel.treeNodeId );
+                // find opportunity for moving write cursor when arriving at the leaf, otherwise move read cursor
+                PageCursor cursorToMove = treeDepthDiscovered && treeDepth == currentLevel ? writeCursor : readCursor;
+                bTreeNode.goTo( cursorToMove, "child", nextLevel.treeNodeId );
                 // re-assign the tree node id here since the read id from childAt also contains meta information
                 // which is fine really, but things are easier to debug if it's only the id
-                nextLevel.treeNodeId = readCursor.getCurrentPageId();
+                nextLevel.treeNodeId = cursorToMove.getCurrentPageId();
+            }
+            else if ( !treeDepthDiscovered )
+            {
+                // We reached a leaf with the read cursor, this should only happen if this is a first write after #initialize
+                // which means this is a point where we can decide the max tree depth. The looping will end after doing this.
+                treeDepth = currentLevel;
+                treeDepthDiscovered = true;
+                bTreeNode.goTo( writeCursor, "writer follow reader", readCursor.getCurrentPageId() );
             }
         }
         while ( isInternal );
@@ -418,10 +442,8 @@ class InternalTreeLogic<KEY,VALUE>
     void insert( PageCursor readCursor, PageCursor writeCursor, StructurePropagation<KEY> structurePropagation, KEY key, VALUE value,
             ValueMerger<KEY,VALUE> valueMerger, long stableGeneration, long unstableGeneration ) throws IOException
     {
-        placeReadCursorAtWriteCursor( readCursor, writeCursor );
-        assert cursorIsAtExpectedLocation( readCursor );
+        assert cursorIsAtExpectedLocation( writeCursor );
         moveToCorrectLeaf( readCursor, writeCursor, key, stableGeneration, unstableGeneration );
-        placeWriteCursorAtReadCursor( readCursor, writeCursor );
 
         insertInLeaf( writeCursor, structurePropagation, key, value, valueMerger, stableGeneration, unstableGeneration );
 
@@ -465,10 +487,14 @@ class InternalTreeLogic<KEY,VALUE>
     {
         assert currentLevel >= 0 : "Uninitialized tree logic, currentLevel:" + currentLevel;
         long currentPageId = cursor.getCurrentPageId();
-        long expectedPageId = levels[currentLevel].treeNodeId;
-        assert currentPageId == expectedPageId : "Expected cursor to be at page:" +
-                expectedPageId + " at level:" + currentLevel + ", but was at page:" +
-                currentPageId;
+
+        if ( treeDepthDiscovered )
+        {
+            long expectedPageId = levels[currentLevel].treeNodeId;
+            assert currentPageId == expectedPageId : "Expected cursor to be at page:" +
+                    expectedPageId + " at level:" + currentLevel + ", but was at page:" +
+                    currentPageId;
+        }
         return true;
     }
 
@@ -1060,10 +1086,8 @@ class InternalTreeLogic<KEY,VALUE>
     VALUE remove( PageCursor readCursor, PageCursor writeCursor, StructurePropagation<KEY> structurePropagation, KEY key, VALUE into,
             long stableGeneration, long unstableGeneration ) throws IOException
     {
-        placeReadCursorAtWriteCursor( readCursor, writeCursor );
-        assert cursorIsAtExpectedLocation( readCursor );
+        assert cursorIsAtExpectedLocation( writeCursor );
         moveToCorrectLeaf( readCursor, writeCursor, key, stableGeneration, unstableGeneration );
-        placeWriteCursorAtReadCursor( readCursor, writeCursor );
 
         if ( !removeFromLeaf( writeCursor, structurePropagation, key, into, stableGeneration, unstableGeneration ) )
         {
@@ -1168,20 +1192,6 @@ class InternalTreeLogic<KEY,VALUE>
         }
 
         return into;
-    }
-
-    private void placeWriteCursorAtReadCursor( PageCursor readCursor, PageCursor writeCursor ) throws IOException
-    {
-        PageCursorUtil.goTo( writeCursor, "Follow reader", readCursor.getCurrentPageId() );
-    }
-
-    private void placeReadCursorAtWriteCursor( PageCursor readCursor, PageCursor writeCursor ) throws IOException
-    {
-        long writePageId = writeCursor.getCurrentPageId();
-        if ( writePageId != -1 )
-        {
-            PageCursorUtil.goTo( readCursor, "Follow writer", writePageId );
-        }
     }
 
     private void tryShrinkTree( PageCursor cursor, StructurePropagation<KEY> structurePropagation,
