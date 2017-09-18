@@ -29,6 +29,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import static org.neo4j.index.internal.gbptree.KeySearch.isHit;
 import static org.neo4j.index.internal.gbptree.KeySearch.positionOf;
 import static org.neo4j.index.internal.gbptree.PageCursorUtil.checkOutOfBounds;
+import static org.neo4j.index.internal.gbptree.PointerChecking.assertNoSuccessor;
 import static org.neo4j.index.internal.gbptree.StructurePropagation.KeyReplaceStrategy.BUBBLE;
 import static org.neo4j.index.internal.gbptree.StructurePropagation.KeyReplaceStrategy.REPLACE;
 import static org.neo4j.index.internal.gbptree.StructurePropagation.UPDATE_MID_CHILD;
@@ -312,6 +313,7 @@ class InternalTreeLogic<KEY,VALUE>
             Level<KEY> nextLevel = levels[currentLevel + 1];
 
             cursor = level.treeNodeId == writeCursor.getCurrentPageId() ? writeCursor : readCursor;
+            long successor;
             do
             {
                 isInternal = bTreeNode.isInternal( cursor );
@@ -358,9 +360,13 @@ class InternalTreeLogic<KEY,VALUE>
 
                     nextLevel.treeNodeId = mainSection.childAt( cursor, nextLevel.childPos, stableGeneration, unstableGeneration );
                 }
+
+                successor = bTreeNode.successor( cursor, stableGeneration, unstableGeneration );
             }
             while ( cursor.shouldRetry() );
             checkOutOfBounds( cursor );
+
+            assert assertNoSuccessor( successor );
 
             if ( isInternal )
             {

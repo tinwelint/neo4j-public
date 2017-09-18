@@ -52,6 +52,7 @@ import static org.neo4j.index.internal.gbptree.GenerationSafePointer.MIN_GENERAT
 import static org.neo4j.index.internal.gbptree.Header.CARRY_OVER_PREVIOUS_HEADER;
 import static org.neo4j.index.internal.gbptree.Header.replace;
 import static org.neo4j.index.internal.gbptree.PageCursorUtil.checkOutOfBounds;
+import static org.neo4j.index.internal.gbptree.PointerChecking.assertNoSuccessor;
 
 /**
  * A generation-aware B+tree (GB+Tree) implementation directly atop a {@link PageCache} with no caching in between.
@@ -1167,6 +1168,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
                 writeCursor = pagedFile.io( 0 /*ignore*/, PagedFile.PF_SHARED_WRITE_LOCK );
                 stableGeneration = stableGeneration( generation );
                 unstableGeneration = unstableGeneration( generation );
+                assert assertNoSuccessor( bTreeNode, readCursor, stableGeneration, unstableGeneration );
                 treeLogic.initialize( readCursor, writeCursor, readCursor.getCurrentPageId() );
                 success = true;
             }

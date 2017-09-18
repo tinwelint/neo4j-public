@@ -19,6 +19,8 @@
  */
 package org.neo4j.index.internal.gbptree;
 
+import java.io.IOException;
+
 import org.neo4j.io.pagecache.PageCursor;
 
 /**
@@ -63,10 +65,29 @@ class PointerChecking
      * @param cursor PageCursor resting on a tree node.
      * @param stableGeneration Current stable generation of tree.
      * @param unstableGeneration Current unstable generation of tree.
+     * @return {@code true} to be able to be called by an {@code assert} statement.
+     * @throws IOException on {@link PageCursor} I/O error.
      */
     static boolean assertNoSuccessor( TreeNode<?,?> treeNode, PageCursor cursor, long stableGeneration, long unstableGeneration )
+            throws IOException
     {
-        long successor = treeNode.successor( cursor, stableGeneration, unstableGeneration );
+        long successor;
+        do
+        {
+            successor = treeNode.successor( cursor, stableGeneration, unstableGeneration );
+        }
+        while ( cursor.shouldRetry() );
+        return assertNoSuccessor( successor );
+    }
+
+    /**
+     * Assert that successor, read from {@link TreeNode#successor(PageCursor, long, long)}, does not have a valid (not crashed) successor.
+     *
+     * @param successor successor of a tree node.
+     * @return {@code true} to be able to be called by an {@code assert} statement.
+     */
+    static boolean assertNoSuccessor( long successor )
+    {
         if ( TreeNode.isNode( successor ) )
         {
             throw new TreeInconsistencyException( WRITER_TRAVERSE_OLD_STATE_MESSAGE );
