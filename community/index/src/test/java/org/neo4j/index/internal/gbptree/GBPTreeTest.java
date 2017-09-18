@@ -1102,7 +1102,6 @@ public class GBPTreeTest
                 }
             }
 
-            index.printTree( false, false, false );
             try ( RawCursor<Hit<MutableLong,MutableLong>,IOException> cursor =
                           index.seek( new MutableLong( 0 ), new MutableLong( Long.MAX_VALUE ) ) )
             {
@@ -1126,7 +1125,6 @@ public class GBPTreeTest
             {
                 for ( int i = 0; i < count; i++ )
                 {
-                    System.out.println( "put " + i );
                     writer.put( new MutableLong( i ), new MutableLong( i ) );
                 }
             }
