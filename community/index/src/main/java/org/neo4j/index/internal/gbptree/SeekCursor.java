@@ -29,6 +29,7 @@ import org.neo4j.index.internal.gbptree.TreeNode.Section;
 import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.Integer.max;
+
 import static org.neo4j.index.internal.gbptree.PageCursorUtil.checkOutOfBounds;
 
 /**
