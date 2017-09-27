@@ -25,7 +25,7 @@ import java.util.Comparator;
 import org.neo4j.io.pagecache.PageCursor;
 
 /**
- * Controls the physical layout of tree nodes and their contents.
+ * Reads and writes the physical layout of tree nodes and their contents.
  *
  * @param <KEY> types of keys.
  * @param <VALUE> types of values.
@@ -188,6 +188,10 @@ abstract class TreeNode<KEY,VALUE>
         abstract int internalMaxKeyCount();
 
         abstract int leafMaxKeyCount();
+
+        abstract int removalKeyCount( PageCursor cursor );
+
+        abstract void setRemovalKeyCount( PageCursor cursor, int keyCount );
     }
 
     abstract Section<KEY,VALUE> main();

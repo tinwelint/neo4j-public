@@ -641,9 +641,12 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
                 throw new TreeInconsistencyException( "Read inconsistent tree node %d%n" +
                         "  nodeType:%d%n  currentNodeGeneration:%d%n  successor:%d%n  successorGeneration:%d%n" +
                         "  keyCount:%d%n  maxKeyCount:%d%n  searchResult:%d%n  pos:%d%n" +
+                        "  deltaKeyCount:%d%n  maxDeltaKeyCount:%d%n  deltaSearchResult:%d%n  deltaPos:%d%n" +
                         "  sibling:%d%n  siblingGeneration:%d",
                         cursor.getCurrentPageId(), nodeType, currentNodeGeneration, successor, successorGeneration,
-                        keyCount, maxKeyCount, searchResult, pos, pointerId, pointerGeneration );
+                        keyCount, maxKeyCount, searchResult, pos,
+                        deltaKeyCount, maxDeltaKeyCount, deltaSearchResult, deltaPos,
+                        pointerId, pointerGeneration );
             }
 
             if ( !verifyFirstKeyInNodeIsExpectedAfterGoTo() )
@@ -681,7 +684,18 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
                 }
                 else
                 {
-                    section = layout.compare( mutableKey, mutableDeltaKey ) < 0 == seekForward ? mainSection : deltaSection;
+                    int comparison = layout.compare( mutableKey, mutableDeltaKey );
+                    if ( comparison == 0 )
+                    {
+                        // special case here: this is a removal, i.e. main and delta sections have this key and
+                        // key in delta is marked as removal. We should just skip this key
+                        pos += stride;
+                        deltaPos += stride;
+
+                        // continue to the next keys in both main and delta
+                        continue;
+                    }
+                    section = comparison < 0 == seekForward ? mainSection : deltaSection;
                 }
 
                 if ( section == mainSection )

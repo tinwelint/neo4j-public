@@ -119,7 +119,7 @@ public class GBPTreeConcurrencyIT
     public void consistencyCheckAndClose() throws IOException
     {
         threadPool.shutdownNow();
-        index.consistencyCheck();
+        index.consistencyCheck( true );
         index.close();
     }
 

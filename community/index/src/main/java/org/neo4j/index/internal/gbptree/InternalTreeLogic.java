@@ -90,6 +90,9 @@ class InternalTreeLogic<KEY,VALUE>
     // TODO: javadoc
     private final int leafMaxKeyCount;
     private final int leafMaxDeltaKeyCount;
+    // for consolidation
+    private final KEY[] keys;
+    private final VALUE[] values;
     private final KEY[] deltaKeys;
     private final VALUE[] deltaValues;
 
@@ -167,8 +170,15 @@ class InternalTreeLogic<KEY,VALUE>
         this.readValue = layout.newValue();
         this.leafMaxKeyCount = mainSection.leafMaxKeyCount();
         this.leafMaxDeltaKeyCount = deltaSection.leafMaxKeyCount();
+        this.keys = (KEY[]) new Object[leafMaxKeyCount];
+        this.values = (VALUE[]) new Object[leafMaxKeyCount];
         this.deltaKeys = (KEY[]) new Object[leafMaxDeltaKeyCount];
         this.deltaValues = (VALUE[]) new Object[leafMaxDeltaKeyCount];
+        for ( int i = 0; i < leafMaxKeyCount; i++ )
+        {
+            keys[i] = layout.newKey();
+            values[i] = layout.newValue();
+        }
         for ( int i = 0; i < leafMaxDeltaKeyCount; i++ )
         {
             deltaKeys[i] = layout.newKey();
@@ -625,70 +635,92 @@ class InternalTreeLogic<KEY,VALUE>
             KEY key, VALUE value, ValueMerger<KEY,VALUE> valueMerger,
             long stableGeneration, long unstableGeneration ) throws IOException
     {
-        int deltaKeyCount = deltaSection.keyCount( cursor );
-        int deltaSearch = search( cursor, key, readKey, deltaSection, deltaKeyCount );
-        int deltaPos = positionOf( deltaSearch );
-        if ( isHit( deltaSearch ) )
-        {
-            // this key already exists in the delta section so overwrite its value there
-            overwriteKeyValue( cursor, structurePropagation, key, value, valueMerger,
-                    stableGeneration, unstableGeneration, deltaPos, deltaSection );
-            assert mainHighest( cursor );
-            return; // No split has occurred
-        }
-
         int keyCount = mainSection.keyCount( cursor );
         int search = search( cursor, key, readKey, mainSection, keyCount );
         int pos = positionOf( search );
-        if ( isHit( search ) )
-        {
-            // this key already exists in the main section so overwrite its value there
-            overwriteKeyValue( cursor, structurePropagation, key, value, valueMerger, stableGeneration,
-                    unstableGeneration, pos, mainSection );
-            assert mainHighest( cursor );
-            return; // No split has occurred
-        }
+        boolean isHit = isHit( search );
 
-        createSuccessorIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
-                stableGeneration, unstableGeneration );
+        int deltaKeyCount = deltaSection.keyCount( cursor );
+        int deltaSearch = search( cursor, key, readKey, deltaSection, deltaKeyCount );
+        int deltaPos = positionOf( deltaSearch );
+        boolean isDeltaHit = isHit( deltaSearch );
 
-        Section<KEY,VALUE> section = selectSection( keyCount, pos, deltaKeyCount );
-        if ( section != null )
+        if ( isDeltaHit )
         {
-            int sectionPos;
-            int sectionKeyCount;
-            if ( section == deltaSection )
+            if ( isHit )
             {
-                assert deltaKeyCount <= leafMaxDeltaKeyCount :
-                    "deltaKeyCount:" + deltaKeyCount + " max:" + leafMaxDeltaKeyCount;
-                if ( deltaKeyCount == leafMaxDeltaKeyCount )
-                {
-                    keyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
-                    deltaKeyCount = 0;
-                    deltaPos = 0;
-                }
-                sectionPos = deltaPos;
-                sectionKeyCount = deltaKeyCount;
+                // this key exists in both main and delta, which means it's a removal --> remove from delta
+                createSuccessorIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
+                        stableGeneration, unstableGeneration );
+                deltaKeyCount = simplyRemoveKeyAndValue( cursor, readValue, deltaKeyCount, deltaPos, deltaSection );
+                mainSection.setValueAt( cursor, value, pos );
+                decrementRemovalKeyCount( cursor, deltaSection );
             }
             else
             {
-                sectionPos = pos;
-                sectionKeyCount = keyCount;
+                // this key exists in delta only, which means it's an insertion --> overwrite its value
+                overwriteValue( cursor, structurePropagation, key, value, valueMerger,
+                        stableGeneration, unstableGeneration, deltaPos, deltaSection );
             }
+        }
+        else if ( isHit )
+        {
+            // this key already exists in the main section so overwrite its value there
+            overwriteValue( cursor, structurePropagation, key, value, valueMerger, stableGeneration,
+                    unstableGeneration, pos, mainSection );
+        }
+        else
+        {
+            createSuccessorIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
+                    stableGeneration, unstableGeneration );
 
-            // No overflow, insert key and value
-            section.insertKeyAt( cursor, key, sectionPos, sectionKeyCount );
-            section.insertValueAt( cursor, value, sectionPos, sectionKeyCount );
-            section.setKeyCount( cursor, sectionKeyCount + 1 );
+            Section<KEY,VALUE> section = selectSection( keyCount, pos, deltaKeyCount );
+            if ( section != null )
+            {
+                int sectionPos;
+                int sectionKeyCount;
+                if ( section == deltaSection )
+                {
+                    assert deltaKeyCount <= leafMaxDeltaKeyCount :
+                        "deltaKeyCount:" + deltaKeyCount + " max:" + leafMaxDeltaKeyCount;
+                    if ( deltaKeyCount == leafMaxDeltaKeyCount )
+                    {
+                        keyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
+                        deltaKeyCount = 0;
+                        deltaPos = 0;
+                    }
+                    sectionPos = deltaPos;
+                    sectionKeyCount = deltaKeyCount;
+                }
+                else
+                {
+                    sectionPos = pos;
+                    sectionKeyCount = keyCount;
+                }
 
-            assert mainHighest( cursor );
-            return; // No split has occurred
+                // No overflow, insert key and value
+                simplyInsertKeyAndValue( cursor, key, value, section, sectionPos, sectionKeyCount );
+            }
+            else
+            {
+                int totalKeyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
+                keyCount = totalKeyCount;
+                deltaKeyCount = 0;
+                splitLeaf( cursor, structurePropagation, key, value, totalKeyCount, stableGeneration, unstableGeneration );
+            }
         }
 
         // Overflow, split leaf
-        int totalKeyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
-        splitLeaf( cursor, structurePropagation, key, value, totalKeyCount, stableGeneration, unstableGeneration );
         assert mainHighest( cursor );
+    }
+
+    private int simplyInsertKeyAndValue( PageCursor cursor, KEY key, VALUE value, Section<KEY,VALUE> section, int pos, int keyCount )
+    {
+        section.insertKeyAt( cursor, key, pos, keyCount );
+        section.insertValueAt( cursor, value, pos, keyCount );
+        int newKeyCount = keyCount + 1;
+        section.setKeyCount( cursor, newKeyCount );
+        return newKeyCount;
     }
 
     private boolean mainHighest( PageCursor cursor )
@@ -741,7 +773,16 @@ class InternalTreeLogic<KEY,VALUE>
             return keyCount;
         }
 
+        int removals = deltaSection.removalKeyCount( cursor );
         // read in delta section into memory
+        for ( int i = 0; i < keyCount; i++ )
+        {
+            mainSection.keyAt( cursor, keys[i], i );
+        }
+        for ( int i = 0; i < keyCount; i++ )
+        {
+            mainSection.valueAt( cursor, values[i], i );
+        }
         for ( int i = 0; i < deltaKeyCount; i++ )
         {
             deltaSection.keyAt( cursor, deltaKeys[i], i );
@@ -751,21 +792,24 @@ class InternalTreeLogic<KEY,VALUE>
             deltaSection.valueAt( cursor, deltaValues[i], i );
         }
 
-        // merge delta section into main
-        int totalKeyCount = keyCount + deltaKeyCount;
+        // merge delta section into main, going from high to low key
+        // every removal counts twice because the key to be removed exists in both main and delta sections
+        int totalKeyCount = keyCount + deltaKeyCount - removals * 2;
         for ( int main = keyCount - 1, delta = deltaKeyCount - 1, target = totalKeyCount - 1;
                 target >= 0 && delta >= 0; target-- )
         {
             int compare;
             if ( main < 0 )
             {
+                // main has run out, only deltas remain
                 compare = 1;
             }
             else
             {
-                mainSection.keyAt( cursor, readKey, main );
-                compare = layout.compare( deltaKeys[delta], readKey );
+                // compare main and delta
+                compare = layout.compare( deltaKeys[delta], keys[main] );
             }
+
             if ( compare > 0 )
             {
                 // pick from delta
@@ -773,22 +817,30 @@ class InternalTreeLogic<KEY,VALUE>
                 mainSection.setValueAt( cursor, deltaValues[delta], target );
                 delta--;
             }
-            else
+            else if ( compare < 0 )
             {
                 // pick from main
-                mainSection.setKeyAt( cursor, readKey, target );
-                cursor.copyTo( bTreeNode.valueOffset( main ), cursor, bTreeNode.valueOffset( target ), bTreeNode.valueSize() );
+                mainSection.setKeyAt( cursor, keys[main], target );
+                mainSection.setValueAt( cursor, values[main], target );
                 main--;
+            }
+            else
+            {
+                // both are the same, this means that this is a removal
+                main--;
+                delta--;
+                target++;
             }
         }
 
         // set key counts
         mainSection.setKeyCount( cursor, totalKeyCount );
         deltaSection.setKeyCount( cursor, 0 );
+        deltaSection.setRemovalKeyCount( cursor, 0 );
         return totalKeyCount;
     }
 
-    private void overwriteKeyValue( PageCursor cursor, StructurePropagation<KEY> structurePropagation, KEY key,
+    private void overwriteValue( PageCursor cursor, StructurePropagation<KEY> structurePropagation, KEY key,
             VALUE value, ValueMerger<KEY,VALUE> valueMerger, long stableGeneration, long unstableGeneration, int pos,
             Section<KEY,VALUE> section )
             throws IOException
@@ -1296,74 +1348,94 @@ class InternalTreeLogic<KEY,VALUE>
     private boolean removeFromLeaf( PageCursor cursor, StructurePropagation<KEY> structurePropagation,
             KEY key, VALUE into, long stableGeneration, long unstableGeneration ) throws IOException
     {
+        // if exists in delta
+        //    if not exists in main -- (a) key is inserted in delta, so simply remove from delta
+        //    else -- (b) key has already been removed
+        // else if exists in main
+        //    if selects delta section -- (c) insert in delta as removal
+        //    else -- (d) remove from main
+        // else -- (e) return (does not exist)
+
         int keyCount = mainSection.keyCount( cursor );
-        int deltaKeyCount = deltaSection.keyCount( cursor );
         int search = search( cursor, key, readKey, mainSection, keyCount );
         int pos = positionOf( search );
-        boolean hit = isHit( search );
-        if ( hit )
+        boolean isHit = isHit( search );
+
+        int deltaKeyCount = deltaSection.keyCount( cursor );
+        int deltaSearch = search( cursor, key, readKey, deltaSection, deltaKeyCount );
+        int deltaPos = positionOf( deltaSearch );
+        boolean isDeltaHit = isHit( deltaSearch );
+
+        boolean removed = false;
+
+        if ( isDeltaHit )
         {
-            // we found it in main section, remove it
+            if ( !isHit )
+            {
+                // (a)
+                createSuccessorIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
+                        stableGeneration, unstableGeneration );
+                simplyRemoveKeyAndValue( cursor, into, deltaKeyCount, deltaPos, deltaSection );
+                removed = true;
+            }
+            // (b)
+        }
+        else if ( isHit )
+        {
+            // it doesn't exist in the delta section and we found it in main section, so insert it into delta section
             createSuccessorIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
                     stableGeneration, unstableGeneration );
-            boolean lastOne = pos == keyCount - 1;
-            keyCount = simplyRemoveFromLeaf( cursor, into, keyCount, pos, mainSection );
-
-            if ( lastOne && deltaKeyCount > 0 )
+            Section<KEY,VALUE> section = selectSection( keyCount, pos, deltaKeyCount );
+            if ( section == deltaSection )
             {
-                // we removed the highest key from main section,
-                // check if delta key is the highest now and if so move it to this pos right now
-                KEY deltaKey = deltaKeys[0];
-                deltaSection.keyAt( cursor, deltaKey, deltaKeyCount - 1 );
-                boolean moveIt = keyCount > 0
-                        // there's at least one key in main section, we have to compare
-                        ? layout.compare( deltaKey, mainSection.keyAt( cursor, readKey, pos - 1 ) ) > 0
-                        // the key in the delta section is definitely the highest now
-                        : true;
-                if ( moveIt )
+                // (c)
+                mainSection.valueAt( cursor, into, pos );
+                if ( deltaKeyCount == leafMaxDeltaKeyCount )
                 {
-                    // write highest from delta into main
-                    mainSection.setKeyAt( cursor, deltaKey, pos );
-                    mainSection.setValueAt( cursor, deltaSection.valueAt( cursor, readValue, deltaKeyCount - 1 ), pos );
-                    keyCount++;
-                    mainSection.setKeyCount( cursor, keyCount );
+                    keyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
+                    deltaKeyCount = 0;
+                    deltaPos = 0;
+                }
+                simplyInsertKeyAndValue( cursor, key, into, section, deltaPos, deltaKeyCount );
+                incrementRemovalKeyCount( cursor, deltaSection );
+                removed = true;
+            }
+            else
+            {
+                // (d)
+                boolean lastOne = pos == keyCount - 1;
+                keyCount = simplyRemoveKeyAndValue( cursor, into, keyCount, pos, mainSection );
+                removed = true;
+                if ( lastOne && deltaKeyCount > 0 )
+                {
+                    // we removed the highest key from main section and there are things in the delta section
+                    // since we never want to have the highest key in the delta section (seek cursor complexity issues)
+                    // let's just consolidate to get everything into main
+                    keyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
+                    deltaKeyCount = 0;
+                }
 
-                    // remove highest in delta
-                    deltaSection.removeKeyAt( cursor, deltaKeyCount - 1, deltaKeyCount );
-                    deltaSection.removeValueAt( cursor, deltaKeyCount - 1, deltaKeyCount );
-                    deltaKeyCount--;
-                    deltaSection.setKeyCount( cursor, deltaKeyCount );
+                assert mainHighest( cursor );
+                if ( keyCount + deltaKeyCount < (leafMaxKeyCount + 1) / 2 )
+                {
+                    // Underflow
+                    int totalKeyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
+                    underflowInLeaf( cursor, structurePropagation, totalKeyCount, stableGeneration, unstableGeneration );
                 }
             }
         }
-        else if ( deltaKeyCount > 0 )
-        {
-            // check delta section
-            int deltaSearch = search( cursor, key, readKey, deltaSection, deltaKeyCount );
-            int deltaPos = positionOf( deltaSearch );
-            hit = isHit( deltaSearch );
-            if ( hit )
-            {
-                createSuccessorIfNeeded( cursor, structurePropagation, UPDATE_MID_CHILD,
-                        stableGeneration, unstableGeneration );
-                simplyRemoveFromLeaf( cursor, into, deltaKeyCount, deltaPos, deltaSection );
-                assert mainHighest( cursor );
-                return true;
-            }
-        }
+        assert mainHighest( cursor );
+        return removed;
+    }
 
-        assert mainHighest( cursor );
-        if ( hit )
-        {
-            if ( keyCount + deltaKeyCount < (leafMaxKeyCount + 1) / 2 )
-            {
-                // Underflow
-                int totalKeyCount = consolidateDeltas( cursor, keyCount, deltaKeyCount );
-                underflowInLeaf( cursor, structurePropagation, totalKeyCount, stableGeneration, unstableGeneration );
-            }
-        }
-        assert mainHighest( cursor );
-        return hit;
+    private void incrementRemovalKeyCount( PageCursor cursor, Section<KEY,VALUE> section )
+    {
+        section.setRemovalKeyCount( cursor, section.removalKeyCount( cursor ) + 1 );
+    }
+
+    private void decrementRemovalKeyCount( PageCursor cursor, Section<KEY,VALUE> section )
+    {
+        section.setRemovalKeyCount( cursor, section.removalKeyCount( cursor ) - 1 );
     }
 
     // TODO: javadoc
@@ -1415,7 +1487,7 @@ class InternalTreeLogic<KEY,VALUE>
                     createSuccessorIfNeeded( rightSiblingCursor, structurePropagation, UPDATE_RIGHT_CHILD,
                             stableGeneration, unstableGeneration );
                     mergeToRightSiblingLeaf( cursor, rightSiblingCursor, structurePropagation, keyCount,
-                            rightSiblingKeyCount, stableGeneration, unstableGeneration);
+                            rightSiblingKeyCount, stableGeneration, unstableGeneration );
                 }
             }
         }
@@ -1448,6 +1520,7 @@ class InternalTreeLogic<KEY,VALUE>
             StructurePropagation<KEY> structurePropagation, int keyCount, int rightSiblingKeyCount,
             long stableGeneration, long unstableGeneration ) throws IOException
     {
+        mainSection.keyAt( rightSiblingCursor, structurePropagation.rightKey, 0 );
         merge( cursor, keyCount, rightSiblingCursor, rightSiblingKeyCount, stableGeneration, unstableGeneration );
 
         // Propagate change
@@ -1457,7 +1530,6 @@ class InternalTreeLogic<KEY,VALUE>
         structurePropagation.midChild = rightSiblingCursor.getCurrentPageId();
         structurePropagation.hasRightKeyReplace = true;
         structurePropagation.keyReplaceStrategy = BUBBLE;
-        mainSection.keyAt( rightSiblingCursor, structurePropagation.rightKey, rightSiblingKeyCount - 1 );
     }
 
     // TODO: javadoc
@@ -1532,7 +1604,7 @@ class InternalTreeLogic<KEY,VALUE>
      * @param pos Position to remove from
      * @return keyCount after remove
      */
-    private int simplyRemoveFromLeaf( PageCursor cursor, VALUE into, int keyCount, int pos, Section<KEY,VALUE> section )
+    private int simplyRemoveKeyAndValue( PageCursor cursor, VALUE into, int keyCount, int pos, Section<KEY,VALUE> section )
     {
         // Remove key/value
         section.removeKeyAt( cursor, pos, keyCount );

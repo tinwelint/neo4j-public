@@ -25,6 +25,7 @@ import java.util.Comparator;
 import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.String.format;
+
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.NO_LOGICAL_POS;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.read;
 
@@ -501,6 +502,18 @@ class TreeNodeSimple<KEY,VALUE> extends TreeNode<KEY,VALUE>
         {
             return leafMaxKeyCount;
         }
+
+        @Override
+        int removalKeyCount( PageCursor cursor )
+        {
+            return 0;
+        }
+
+        @Override
+        void setRemovalKeyCount( PageCursor cursor, int keyCount )
+        {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private class DeltaSection extends Section<KEY,VALUE>
@@ -623,6 +636,18 @@ class TreeNodeSimple<KEY,VALUE> extends TreeNode<KEY,VALUE>
         int leafMaxKeyCount()
         {
             return 0;
+        }
+
+        @Override
+        int removalKeyCount( PageCursor cursor )
+        {
+            return 0;
+        }
+
+        @Override
+        void setRemovalKeyCount( PageCursor cursor, int keyCount )
+        {
+            throw new UnsupportedOperationException( unsupportedOperationMessage() );
         }
     }
 }

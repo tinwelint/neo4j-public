@@ -53,7 +53,7 @@ public class GBPTreeIT
 {
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final TestDirectory directory = TestDirectory.testDirectory( getClass(), fs.get() );
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
+    private final PageCacheRule pageCacheRule = new PageCacheRule( PageCacheRule.config().withInconsistentReads( false ));
     private final RandomRule random = new RandomRule();
 
     @Rule
@@ -101,7 +101,7 @@ public class GBPTreeIT
         Comparator<MutableLong> keyComparator = layout;
         Map<MutableLong,MutableLong> data = new TreeMap<>( keyComparator );
         int count = 100;
-        int totalNumberOfRounds = 100;
+        int totalNumberOfRounds = 10;
         for ( int i = 0; i < count; i++ )
         {
             data.put( randomKey( random.random() ), randomKey( random.random() ) );

@@ -26,42 +26,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.Integer.min;
+
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.NO_LOGICAL_POS;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.read;
 
 /**
- * Methods to manipulate single tree node such as set and get header fields,
- * insert and fetch keys, values and children.
- * <p>
- * DESIGN
- * <p>
- * Using Separate design the internal nodes should look like
- * <pre>
- * # = empty space
+ * Works much like {@link TreeNodeSimple}, but with the addition of a delta section in the end of each leaf node.
+ * The delta section isn't fixed sized, but instead is written from the end and backwards such that each leaf node
+ * can still contain as many entries, it's just that some entries exist in the delta section instead.
  *
- * [                                   HEADER   82B                           ]|[   KEYS   ]|[     CHILDREN      ]
- * [NODETYPE][TYPE][GENERATION][KEYCOUNT][RIGHTSIBLING][LEFTSIBLING][SUCCESSOR]|[[KEY]...##]|[[CHILD][CHILD]...##]
- *  0         1     2           6         10            34           58          82
- * </pre>
- * Calc offset for key i (starting from 0)
- * HEADER_LENGTH + i * SIZE_KEY
- * <p>
- * Calc offset for child i
- * HEADER_LENGTH + SIZE_KEY * MAX_KEY_COUNT_INTERNAL + i * SIZE_CHILD
- * <p>
- * Using Separate design the leaf nodes should look like
+ * The main idea behind the delta section is to improve the bad/worst-case scenario of inserting an entry far to the "left"
+ * where all the entries to its "right" will have to move one step. This is costly to do for every insert. Having a delta
+ * section allows to queue up multiple such inserts and instead do a joint merge into the main section on full delta section
+ * or before structural changes. This heavily reduces the cost of inserting in a leaf, regardless of where the insert happens.
  *
- * <pre>
- * [                                   HEADER   82B                           ]|[    KEYS  ]|[   VALUES   ]
- * [NODETYPE][TYPE][GENERATION][KEYCOUNT][RIGHTSIBLING][LEFTSIBLING][SUCCESSOR]|[[KEY]...##]|[[VALUE]...##]
- *  0         1     2           6         10            34           58          82
- * </pre>
- *
- * Calc offset for key i (starting from 0)
- * HEADER_LENGTH + i * SIZE_KEY
- * <p>
- * Calc offset for value i
- * HEADER_LENGTH + SIZE_KEY * MAX_KEY_COUNT_LEAF + i * SIZE_VALUE
+ * Currently removals are still done directly on the entries, i.e. the cost is still there for removals.
  *
  * @param <KEY> type of key
  * @param <VALUE> type of value
@@ -74,14 +53,15 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
     private static final int BYTE_POS_TYPE = OFFSET.getAndAdd( Byte.BYTES );
     private static final int BYTE_POS_GENERATION = OFFSET.getAndAdd( Integer.BYTES );
     private static final int BYTE_POS_KEYCOUNT = OFFSET.getAndAdd( Short.BYTES );
-    private static final int BYTE_POS_DELTA_KEY_COUNT = OFFSET.getAndAdd( Short.BYTES );
+    private static final int BYTE_POS_DELTA_KEY_COUNT = OFFSET.getAndAdd( Byte.BYTES );
+    private static final int BYTE_POS_DELTA_REMOVAL_KEY_COUNT = OFFSET.getAndAdd( Byte.BYTES );
     private static final int BYTE_POS_RIGHTSIBLING = OFFSET.getAndAdd( SIZE_PAGE_REFERENCE );
     private static final int BYTE_POS_LEFTSIBLING = OFFSET.getAndAdd( SIZE_PAGE_REFERENCE );
     private static final int BYTE_POS_SUCCESSOR = OFFSET.getAndAdd( SIZE_PAGE_REFERENCE );
 
     static final int HEADER_LENGTH = OFFSET.get();
 
-    private static final int DELTA_SECTION_SIZE = 32;
+    static final int DELTA_SECTION_SIZE = Integer.SIZE;
     static final byte FORMAT_IDENTIFIER = 3;
     static final byte FORMAT_VERSION = 0;
 
@@ -409,7 +389,7 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
         {
             if ( (count & ~0xFFFF) != 0 )
             {
-                throw new IllegalArgumentException( "Count must be short " + count );
+                throw new IllegalArgumentException( "Count must be non-negative short, but was " + count );
             }
             cursor.putShort( BYTE_POS_KEYCOUNT, (short) count );
         }
@@ -524,6 +504,18 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
         {
             return leafMaxKeyCount;
         }
+
+        @Override
+        int removalKeyCount( PageCursor cursor )
+        {
+            return 0;
+        }
+
+        @Override
+        void setRemovalKeyCount( PageCursor cursor, int keyCount )
+        {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private class DeltaSection extends Section<KEY,VALUE>
@@ -550,7 +542,7 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
         {
             if ( (count & ~0xFF) != 0 )
             {
-                throw new IllegalArgumentException( "Key count must fit in byte" );
+                throw new IllegalArgumentException( "Key count must be non-negative byte, but was " + count );
             }
             cursor.putByte( BYTE_POS_DELTA_KEY_COUNT, (byte) count );
         }
@@ -653,6 +645,22 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
         public int leafMaxKeyCount()
         {
             return deltaLeafMaxKeyCount;
+        }
+
+        @Override
+        int removalKeyCount( PageCursor cursor )
+        {
+            return cursor.getByte( BYTE_POS_DELTA_REMOVAL_KEY_COUNT ) & 0xFF;
+        }
+
+        @Override
+        void setRemovalKeyCount( PageCursor cursor, int count )
+        {
+            if ( (count & ~0xFF) != 0 )
+            {
+                throw new IllegalArgumentException( "Key count must fit in byte" );
+            }
+            cursor.putByte( BYTE_POS_DELTA_REMOVAL_KEY_COUNT, (byte) count );
         }
 
         // Delta keys start from the end and go backwards

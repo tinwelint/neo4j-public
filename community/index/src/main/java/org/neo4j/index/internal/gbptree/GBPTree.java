@@ -1058,12 +1058,17 @@ public class GBPTree<KEY,VALUE> implements Closeable
         try ( PageCursor cursor = openRootCursor( PagedFile.PF_SHARED_READ_LOCK ) )
         {
             new TreePrinter<>( bTreeNode, layout, stableGeneration( generation ), unstableGeneration( generation ) )
-                .printTree( cursor, System.out, printValues, printPosition, printState );
+                .printTree( cursor, writer.writerTaken.get() ? writer.cursor : cursor, System.out, printValues, printPosition, printState );
         }
     }
 
     // Utility method
     boolean consistencyCheck() throws IOException
+    {
+        return consistencyCheck( false );
+    }
+
+    boolean consistencyCheck( boolean printOnError ) throws IOException
     {
         try ( PageCursor cursor = pagedFile.io( 0L /*ignored*/, PagedFile.PF_SHARED_READ_LOCK ) )
         {
@@ -1081,6 +1086,14 @@ public class GBPTree<KEY,VALUE> implements Closeable
             boolean checkSpace = consistencyChecker.checkSpace( cursor, freeList.lastId(), freelistIds.iterator() );
 
             return check & checkSpace;
+        }
+        catch ( Exception e )
+        {
+            if ( printOnError )
+            {
+                printTree();
+            }
+            throw e;
         }
     }
 

@@ -475,7 +475,30 @@ class ConsistencyChecker<KEY>
             int keyCount;
             if ( mainPos < mainKeyCount && deltaPos < deltaKeyCount )
             {
-                section = layout.compare( readKey, readDeltaKey ) < 0 ? mainSection : deltaSection;
+                int comparison = layout.compare( readKey, readDeltaKey );
+                if ( comparison < 0 )
+                {
+                    section = mainSection;
+                }
+                else if ( comparison > 0 )
+                {
+                    section = deltaSection;
+                }
+                else
+                {
+                    // a removal
+                    mainPos++;
+                    deltaPos++;
+                    if ( mainPos < mainKeyCount )
+                    {
+                        mainSection.keyAt( cursor, readKey, mainPos );
+                    }
+                    if ( deltaPos < deltaKeyCount )
+                    {
+                        deltaSection.keyAt( cursor, readDeltaKey, deltaPos );
+                    }
+                    continue;
+                }
             }
             else
             {
@@ -498,12 +521,13 @@ class ConsistencyChecker<KEY>
 
             if ( !range.inRange( key ) )
             {
-                cursor.setCursorException( "Expected range for this node is " + range + " but found " +
+                cursor.setCursorException( "Expected range for this node " + cursor.getCurrentPageId() + " is " + range + " but found " +
                         key + " in position " + pos + ", with key count " + keyCount + " in section " + section.type() );
             }
             if ( !first )
             {
-                if ( comparator.compare( prev, key ) >= 0 )
+                int comparison = comparator.compare( prev, key );
+                if ( comparison >= 0 )
                 {
                     cursor.setCursorException( "Non-unique key " + key + " in position " + pos + " in section " + section.type() );
                 }
