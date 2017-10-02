@@ -1448,6 +1448,9 @@ class InternalTreeLogic<KEY,VALUE>
             StructurePropagation<KEY> structurePropagation, int keyCount, int rightSiblingKeyCount,
             long stableGeneration, long unstableGeneration ) throws IOException
     {
+        // Read the right-most key from the right sibling to use when comparing whether or not
+        // a common parent covers the keys in right sibling too
+        mainSection.keyAt( rightSiblingCursor, structurePropagation.rightKey, rightSiblingKeyCount - 1 );
         merge( cursor, keyCount, rightSiblingCursor, rightSiblingKeyCount, stableGeneration, unstableGeneration );
 
         // Propagate change
@@ -1457,7 +1460,6 @@ class InternalTreeLogic<KEY,VALUE>
         structurePropagation.midChild = rightSiblingCursor.getCurrentPageId();
         structurePropagation.hasRightKeyReplace = true;
         structurePropagation.keyReplaceStrategy = BUBBLE;
-        mainSection.keyAt( rightSiblingCursor, structurePropagation.rightKey, rightSiblingKeyCount - 1 );
     }
 
     // TODO: javadoc
@@ -1465,7 +1467,9 @@ class InternalTreeLogic<KEY,VALUE>
             StructurePropagation<KEY> structurePropagation, int keyCount, int leftSiblingKeyCount,
             long stableGeneration, long unstableGeneration ) throws IOException
     {
-        // Move stuff and update key count
+        // Read the left-most key from the left sibling to use when comparing whether or not
+        // a common parent covers the keys in left sibling too
+        mainSection.keyAt( leftSiblingCursor, structurePropagation.leftKey, 0 );
         merge( leftSiblingCursor, leftSiblingKeyCount, cursor, keyCount, stableGeneration, unstableGeneration );
 
         // Propagate change
@@ -1475,7 +1479,6 @@ class InternalTreeLogic<KEY,VALUE>
         structurePropagation.leftChild = cursor.getCurrentPageId();
         structurePropagation.hasLeftKeyReplace = true;
         structurePropagation.keyReplaceStrategy = BUBBLE;
-        mainSection.keyAt( cursor, structurePropagation.leftKey, 0 );
     }
 
     // TODO: javadoc
