@@ -38,7 +38,6 @@ public abstract class TreeNodeFactory extends Service implements Comparable<Tree
         this.priority = priority;
     }
 
-    @SuppressWarnings( "unchecked" )
     abstract <KEY,VALUE> TreeNode<KEY,VALUE> instantiate( int pageSize, Layout<KEY,VALUE> layout );
 
     byte formatIdentifier()

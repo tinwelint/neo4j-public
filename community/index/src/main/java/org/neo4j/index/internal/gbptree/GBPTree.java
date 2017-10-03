@@ -118,7 +118,6 @@ import static org.neo4j.index.internal.gbptree.PointerChecking.assertNoSuccessor
  * be managed externally, keeping multiple resources in sync w/ regards to checkpoints. This is especially important
  * since a it is impossible to recognize crashed pointers after a checkpoint.
  * <p>
- * TODO Complete this section about format version
  * Format version of a GBPTree is made up from several moving parts each of which has its own format version.
  * <ul>
  * <li>{@link TreeNode} describe how individual tree nodes are stored on disk with header, keys, children and values.

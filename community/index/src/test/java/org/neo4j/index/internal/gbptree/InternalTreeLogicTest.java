@@ -1365,12 +1365,6 @@ public class InternalTreeLogicTest
         }
     }
 
-    // TODO: shouldMoveHighestFromDeltaToMainIfBeingHighestAfterRemoveFromMain
-    // TODO: shouldInsertInDeltaSectionIfCheaper
-    // TODO: shouldRemoveFromDeltaSectionIfFoundThere
-    // TODO: shouldConsolidateDeltaIntoMainIfFull
-    // TODO: shouldConsolidateDeltaIntoMainBeforeStructuralOperation
-
     private void giveSuccessor( PageCursor cursor, long nodeId ) throws IOException
     {
         goTo( cursor, nodeId );

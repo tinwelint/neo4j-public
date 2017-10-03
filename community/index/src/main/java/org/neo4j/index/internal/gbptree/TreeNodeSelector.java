@@ -62,14 +62,4 @@ class TreeNodeSelector
         }
         throw new IllegalArgumentException( "Couldn't find format with identifier:" + formatIdentifier + " and version:" + formatVersion );
     }
-
-    // TODO: method for migration too?
 }
-
-// TODO: SCENARIOS
-// TODO: 1. Create new tree from scratch, in community
-// TODO: 2. Create new tree from scratch, in enterprise
-// TODO: 3. Open existing tree created in enterprise, in enterprise
-// TODO: 4. Open existing tree created in enterprise, in community
-// TODO: 5. Open existing tree created in community, in enterprise
-// TODO: 6. Open existing tree created in community, in community

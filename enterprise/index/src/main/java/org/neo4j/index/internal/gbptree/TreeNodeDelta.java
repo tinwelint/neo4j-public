@@ -672,7 +672,6 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
         private void deltaInsertSlotsAt( PageCursor cursor, int pos, int itemCount, int baseOffset,
                 int itemSize )
         {
-            // TODO optimize
             int itemsToMove = itemCount - pos;
             for ( int i = 0; i < itemsToMove; i++ )
             {
@@ -685,7 +684,6 @@ class TreeNodeDelta<KEY,VALUE> extends TreeNode<KEY,VALUE>
         // POS          3 2 1 0
         private void deltaRemoveSlotAt( PageCursor cursor, int pos, int itemCount, int baseOffset, int itemSize )
         {
-            // TODO optimize
             int itemsToMove = itemCount - pos - 1;
             for ( int i = 0; i < itemsToMove; i++ )
             {

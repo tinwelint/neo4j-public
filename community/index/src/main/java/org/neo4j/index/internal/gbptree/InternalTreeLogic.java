@@ -79,18 +79,53 @@ import static org.neo4j.index.internal.gbptree.StructurePropagation.KeyReplaceSt
  */
 class InternalTreeLogic<KEY,VALUE>
 {
+    /**
+     * Provides ids to use when creating new tree nodes. Also manages released ids
+     */
     private final IdProvider idProvider;
+    /**
+     * {@link TreeNode} used by this tree
+     */
     private final TreeNode<KEY,VALUE> bTreeNode;
+    /**
+     * Direct access to main section of the {@link TreeNode}
+     */
     private final Section<KEY,VALUE> mainSection;
+    /**
+     * Direct access to delta section of the {@link TreeNode}
+     */
     private final Section<KEY,VALUE> deltaSection;
+    /**
+     * User-provided {@link Layout} managing physical layout of keys and values
+     */
     private final Layout<KEY,VALUE> layout;
+    /**
+     * Used to temporarily hold a key during a single operation, its value never kept between operations
+     */
     private final KEY newKeyPlaceHolder;
+    /**
+     * Used for reading keys, e.g. passed into KeySearch
+     */
     private final KEY readKey;
+    /**
+     * Used for reading values during insert and removal
+     */
     private final VALUE readValue;
-    // TODO: javadoc
+    /**
+     * Main section {@link Section#leafMaxKeyCount()}
+     */
     private final int leafMaxKeyCount;
+    /**
+     * Delta section {@link Section#leafMaxKeyCount()}
+     */
     private final int leafMaxDeltaKeyCount;
+    /**
+     * Temporary keys to hold delta keys when consolidating
+     */
     private final KEY[] deltaKeys;
+    /**
+     * Temporary values to hold delta values when consolidating
+     */
     private final VALUE[] deltaValues;
 
     /**
@@ -1366,7 +1401,6 @@ class InternalTreeLogic<KEY,VALUE>
         return hit;
     }
 
-    // TODO: javadoc
     private void underflowInLeaf( PageCursor cursor, StructurePropagation<KEY> structurePropagation, int keyCount,
             long stableGeneration, long unstableGeneration ) throws IOException
     {
@@ -1443,7 +1477,6 @@ class InternalTreeLogic<KEY,VALUE>
         bTreeNode.goTo( cursor, "back to origin after repointing siblings", currentId );
     }
 
-    // TODO: javadoc
     private void mergeToRightSiblingLeaf( PageCursor cursor, PageCursor rightSiblingCursor,
             StructurePropagation<KEY> structurePropagation, int keyCount, int rightSiblingKeyCount,
             long stableGeneration, long unstableGeneration ) throws IOException
@@ -1462,7 +1495,6 @@ class InternalTreeLogic<KEY,VALUE>
         structurePropagation.keyReplaceStrategy = BUBBLE;
     }
 
-    // TODO: javadoc
     private void mergeFromLeftSiblingLeaf( PageCursor cursor, PageCursor leftSiblingCursor,
             StructurePropagation<KEY> structurePropagation, int keyCount, int leftSiblingKeyCount,
             long stableGeneration, long unstableGeneration ) throws IOException
@@ -1481,7 +1513,6 @@ class InternalTreeLogic<KEY,VALUE>
         structurePropagation.keyReplaceStrategy = BUBBLE;
     }
 
-    // TODO: javadoc
     private void merge( PageCursor leftSiblingCursor, int leftSiblingKeyCount, PageCursor rightSiblingCursor,
             int rightSiblingKeyCount, long stableGeneration, long unstableGeneration ) throws IOException
     {
@@ -1502,7 +1533,6 @@ class InternalTreeLogic<KEY,VALUE>
         idProvider.releaseId( stableGeneration, unstableGeneration, leftSiblingCursor.getCurrentPageId() );
     }
 
-    // TODO: javadoc
     private void rebalanceLeaf( PageCursor cursor, PageCursor leftSiblingCursor,
             StructurePropagation<KEY> structurePropagation, int keyCount, int leftSiblingKeyCount )
     {
