@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
@@ -71,12 +73,16 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.nio.charset.Charset.defaultCharset;
+import static java.util.Arrays.asList;
+
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.helpers.Exceptions.launderedException;
 import static org.neo4j.helpers.Format.bytes;
 import static org.neo4j.helpers.Strings.TAB;
+import static org.neo4j.helpers.TextUtil.tokenizeStringWithQuotes;
 import static org.neo4j.io.ByteUnit.mebiBytes;
+import static org.neo4j.io.fs.FileUtils.readTextFile;
 import static org.neo4j.kernel.configuration.Settings.parseLongWithUnit;
 import static org.neo4j.kernel.impl.util.Converters.withDefault;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.BAD_FILE_NAME;
@@ -115,6 +121,12 @@ public class ImportTool
 
     enum Options
     {
+        FILE( "f", null,
+                "<file name>",
+                "File containing all arguments, used as an alternative to supplying all arguments on the command line directly."
+                        + "Each argument can be on a separate line or multiple arguments per line separated by space."
+                        + "Arguments containing spaces needs to be quoted."
+                        + "Supplying other arguments in addition to this file argument is not supported." ),
         STORE_DIR( "into", null,
                 "<store-dir>",
                 "Database directory to import into. " + "Must not contain existing database." ),
@@ -263,9 +275,7 @@ public class ImportTool
             this( key, defaultValue, usage, description, supported, false );
         }
 
-        Options( String key, Object defaultValue, String usage, String description, boolean supported, boolean
-                keyAndUsageGoTogether
-                )
+        Options( String key, Object defaultValue, String usage, String description, boolean supported, boolean keyAndUsageGoTogether )
         {
             this.key = key;
             this.defaultValue = defaultValue;
@@ -405,6 +415,8 @@ public class ImportTool
         boolean success = false;
         try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
         {
+            args = useArgumentsFromFileArgumentIfPresent( args );
+
             storeDir = args.interpretOption( Options.STORE_DIR.key(), Converters.mandatory(),
                     Converters.toFile(), Validators.DIRECTORY_IS_WRITABLE, Validators.CONTAINS_NO_EXISTING_DATABASE );
             Config config = Config.defaults( GraphDatabaseSettings.neo4j_home, storeDir.getAbsolutePath() );
@@ -477,6 +489,26 @@ public class ImportTool
                 badOutput.close();
             }
         }
+    }
+
+    private static Args useArgumentsFromFileArgumentIfPresent( Args args ) throws IOException
+    {
+        String fileArgument = args.get( Options.FILE.key(), null );
+        if ( fileArgument != null )
+        {
+            // Are there any other arguments supplied, in addition to this -f argument?
+            if ( args.asMap().size() > 1 )
+            {
+                throw new IllegalArgumentException(
+                        "Supplying arguments in addition to " + Options.FILE.argument() + " isn't supported." );
+            }
+
+            // Read the arguments from the -f file and use those instead
+            List<String> arguments = new ArrayList<>();
+            readTextFile( new File( fileArgument ), line -> arguments.addAll( asList( tokenizeStringWithQuotes( line, true, true ) ) ) );
+            args = Args.parse( arguments.toArray( new String[arguments.size()] ) );
+        }
+        return args;
     }
 
     private static Long parseMaxMemory( String maxMemoryString )
