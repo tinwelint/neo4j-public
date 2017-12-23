@@ -41,7 +41,7 @@ public interface SimplePropertyStoreAbstraction extends Closeable
      *
      * @return number of property data bytes visited.
      */
-    boolean getAlthoughNotReally( long id, int key );
+    Value get( long id, int key );
 
     /**
      * @return number of properties visited.

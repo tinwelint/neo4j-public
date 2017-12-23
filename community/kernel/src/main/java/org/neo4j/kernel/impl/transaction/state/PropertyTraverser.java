@@ -48,6 +48,13 @@ public class PropertyTraverser
     public long findPropertyRecordContaining( PrimitiveRecord primitive, int propertyKey,
             RecordAccess<PropertyRecord, PrimitiveRecord> propertyRecords, boolean strict )
     {
+        PropertyRecord record = findActualPropertyRecordContaining( primitive, propertyKey, propertyRecords, strict );
+        return record != null ? record.getId() : Record.NO_NEXT_PROPERTY.intValue();
+    }
+
+    public PropertyRecord findActualPropertyRecordContaining( PrimitiveRecord primitive, int propertyKey,
+            RecordAccess<PropertyRecord, PrimitiveRecord> propertyRecords, boolean strict )
+    {
         long propertyRecordId = primitive.getNextProp();
         while ( !Record.NO_NEXT_PROPERTY.is( propertyRecordId ) )
         {
@@ -55,7 +62,7 @@ public class PropertyTraverser
                     propertyRecords.getOrLoad( propertyRecordId, primitive ).forReadingLinkage();
             if ( propertyRecord.getPropertyBlock( propertyKey ) != null )
             {
-                return propertyRecordId;
+                return propertyRecord;
             }
             propertyRecordId = propertyRecord.getNextProp();
         }
@@ -66,7 +73,7 @@ public class PropertyTraverser
                     " contained property with key " + propertyKey );
         }
 
-        return Record.NO_NEXT_PROPERTY.intValue();
+        return null;
     }
 
     public void getPropertyChain( long nextProp,

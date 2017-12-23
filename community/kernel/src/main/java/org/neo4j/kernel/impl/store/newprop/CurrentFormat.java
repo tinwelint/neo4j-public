@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.unsafe.batchinsert.internal.DirectRecordAccess;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
 import static org.neo4j.kernel.impl.store.record.Record.NULL_REFERENCE;
 import static org.neo4j.kernel.impl.transaction.state.Loaders.propertyLoader;
@@ -88,11 +89,17 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
     }
 
     @Override
-    public boolean getAlthoughNotReally( long id, int key )
+    public Value get( long id, int key )
     {
         NodeRecord node = new NodeRecord( 0 ).initialize( true, id, false, -1, 0 );
-        long foundRecordId = propertyTraverser.findPropertyRecordContaining( node, key, recordAccess, false );
-        return !NULL_REFERENCE.is( foundRecordId );
+        PropertyRecord foundRecord = propertyTraverser.findActualPropertyRecordContaining( node, key, recordAccess, false );
+        if ( foundRecord == null )
+        {
+            return Values.NO_VALUE;
+        }
+
+        PropertyBlock propertyBlock = foundRecord.getPropertyBlock( key );
+        return propertyBlock.getType().value( propertyBlock, propertyStore );
     }
 
     @Override

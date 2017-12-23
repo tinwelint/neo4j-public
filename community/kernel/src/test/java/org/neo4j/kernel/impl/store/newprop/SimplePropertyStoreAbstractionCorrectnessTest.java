@@ -18,6 +18,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.values.storable.IntValue;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -97,13 +99,14 @@ public class SimplePropertyStoreAbstractionCorrectnessTest
     {
         // GIVEN
         int key = 0;
+        IntValue value = intValue( 10 );
 
         // WHEN
-        long id = store.set( -1, key, intValue( 10 ) );
+        long id = store.set( -1, key, value );
 
         // THEN
         assertTrue( store.has( id, key ) );
-        assertTrue( store.getAlthoughNotReally( id, key ) );
+        assertEquals( value, store.get( id, key ) );
     }
 
     @Test
@@ -111,17 +114,19 @@ public class SimplePropertyStoreAbstractionCorrectnessTest
     {
         // GIVEN
         int key1 = 0, key2 = 1;
+        IntValue value1 = intValue( 10 );
+        IntValue value2 = intValue( 1_000_000_000 );
 
         // WHEN
-        long id = store.set( -1, key1, intValue( 10 ) );
-        id = store.set( id, key2, intValue( 1_000_000_000 ) );
+        long id = store.set( -1, key1, value1 );
+        id = store.set( id, key2, value2 );
 
          // THEN
         assertTrue( store.has( id, key1 ) );
-        assertTrue( store.getAlthoughNotReally( id, key1 ) );
+        assertEquals( value1, store.get( id, key1 ) );
 
         assertTrue( store.has( id, key2 ) );
-        assertTrue( store.getAlthoughNotReally( id, key2 ) );
+        assertEquals( value2, store.get( id, key2 ) );
     }
 
     @Test

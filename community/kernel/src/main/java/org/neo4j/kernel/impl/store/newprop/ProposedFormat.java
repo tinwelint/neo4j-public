@@ -10,10 +10,17 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.IntegralValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
 import static java.lang.Integer.bitCount;
 import static java.lang.Integer.highestOneBit;
 import static java.lang.Integer.max;
+
+import static org.neo4j.values.storable.Values.booleanValue;
+import static org.neo4j.values.storable.Values.byteValue;
+import static org.neo4j.values.storable.Values.intValue;
+import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.shortValue;
 
 public class ProposedFormat implements SimplePropertyStoreAbstraction
 {
@@ -92,9 +99,24 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     }
 
     @Override
-    public boolean getAlthoughNotReally( long id, int key )
+    public Value get( long id, int key )
     {
-        return false;
+        Visitor visitor = new Visitor()
+        {
+            @Override
+            public long accept( PageCursor cursor )
+            {
+                booleanState = seek( cursor, key );
+                if ( booleanState )
+                {   // found
+                    placeCursorAtValueStart( cursor );
+                    readValue = type.getValue( cursor );
+                }
+                return -1;
+            }
+        };
+        store.accessForReading( id, visitor );
+        return visitor.readValue != null ? visitor.readValue : Values.NO_VALUE;
     }
 
     @Override
@@ -114,6 +136,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         protected int pivotOffset, numberOfHeaderEntries, numberOfHeaderEntriesRoom, relativeValueOffset, valueLength;
         protected Type type;
         protected boolean booleanState;
+        protected Value readValue;
 
         boolean seek( PageCursor cursor, int key )
         {
@@ -167,12 +190,24 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             public void putValue( PageCursor cursor, Value value )
             { // No need, the type is the value
             }
+
+            @Override
+            public Value getValue( PageCursor cursor )
+            {
+                return booleanValue( true );
+            }
         },
         FALSE( 0 )
         {
             @Override
             public void putValue( PageCursor cursor, Value value )
             { // No need, the type is the value
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor )
+            {
+                return booleanValue( false );
             }
         },
         INT8( 1 )
@@ -182,6 +217,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             {
                 cursor.putByte( (byte) ((IntegralValue)value).longValue() );
             }
+
+            @Override
+            public Value getValue( PageCursor cursor )
+            {
+                return byteValue( cursor.getByte() );
+            }
         },
         INT16( 2 )
         {
@@ -189,6 +230,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             public void putValue( PageCursor cursor, Value value )
             {
                 cursor.putShort( (short) ((IntegralValue)value).longValue() );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor )
+            {
+                return shortValue( cursor.getShort() );
             }
         },
         INT32( 4 )
@@ -198,6 +245,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             {
                 cursor.putInt( (int) ((IntegralValue)value).longValue() );
             }
+
+            @Override
+            public Value getValue( PageCursor cursor )
+            {
+                return intValue( cursor.getInt() );
+            }
         },
         INT64( 8 )
         {
@@ -205,6 +258,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             public void putValue( PageCursor cursor, Value value )
             {
                 cursor.putLong( ((IntegralValue)value).longValue() );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor )
+            {
+                return longValue( cursor.getLong() );
             }
         };
         // ...TODO more types here
@@ -219,6 +278,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         }
 
         public abstract void putValue( PageCursor cursor, Value value );
+
+        public abstract Value getValue( PageCursor cursor );
 
         public int numberOfHeaderEntries()
         {
