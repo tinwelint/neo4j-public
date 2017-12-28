@@ -22,6 +22,8 @@ package org.neo4j.storageengine.api;
 import java.util.Collection;
 import java.util.stream.Stream;
 
+import org.neo4j.internal.kernel.api.CursorFactory;
+import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -38,8 +40,15 @@ public interface StorageEngine
     /**
      * @return an interface for accessing data previously
      * {@link #apply(CommandsToApply, TransactionApplicationMode) applied} to this storage.
+     * @deprecated in favor of {@link #cursors()} which is used in a new kernel API, see {@link Kernel}.
      */
+    @Deprecated
     StoreReadLayer storeReadLayer();
+
+    /**
+     * @return a factory for cursors able to access data.
+     */
+    CursorFactory cursors();
 
     /**
      * @return a new {@link CommandCreationContext} meant to be kept for multiple calls to
