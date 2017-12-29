@@ -56,7 +56,7 @@ public class Labels implements LabelSet
         return new Labels( tokens );
     }
 
-    static Labels from( PrimitiveIntSet set )
+    public static Labels from( PrimitiveIntSet set )
     {
         long[] labelArray = new long[set.size()];
         int index = 0;

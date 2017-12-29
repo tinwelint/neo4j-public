@@ -803,4 +803,10 @@ public final class Iterators
             throw new NoSuchElementException();
         }
     }
+
+    @SuppressWarnings( "unchecked" )
+    public static <T, C> Iterator<T> cast( Iterator<C> iterator )
+    {
+        return (Iterator) iterator;
+    }
 }
