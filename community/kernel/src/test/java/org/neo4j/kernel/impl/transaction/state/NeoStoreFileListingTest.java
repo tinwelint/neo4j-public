@@ -39,10 +39,10 @@ import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.NeoStoreDataSource;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.store.StoreType;
+import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -125,7 +125,6 @@ public class NeoStoreFileListingTest
     public void shouldCloseIndexAndLabelScanSnapshots() throws Exception
     {
         // Given
-        LabelScanStore labelScanStore = mock( LabelScanStore.class );
         IndexingService indexingService = mock( IndexingService.class );
         ExplicitIndexProviderLookup explicitIndexes = mock( ExplicitIndexProviderLookup.class );
         when( explicitIndexes.all() ).thenReturn( Collections.emptyList() );
@@ -133,10 +132,10 @@ public class NeoStoreFileListingTest
         LogFiles logFiles = mock( LogFiles.class );
         filesInStoreDirAre( storeDir, STANDARD_STORE_DIR_FILES, STANDARD_STORE_DIR_DIRECTORIES );
         StorageEngine storageEngine = mock( StorageEngine.class );
-        NeoStoreFileListing fileListing = new NeoStoreFileListing( storeDir, logFiles, labelScanStore,
+        NeoStoreFileListing fileListing = new NeoStoreFileListing( storeDir, logFiles,
                 indexingService, explicitIndexes, storageEngine );
 
-        ResourceIterator<File> scanSnapshot = scanStoreFilesAre( labelScanStore,
+        ResourceIterator<StoreFileMetadata> scanSnapshot = storageFilesAre( storageEngine,
                 new String[]{"blah/scan.store", "scan.more"} );
         ResourceIterator<File> indexSnapshot = indexFilesAre( indexingService, new String[]{"schema/index/my.index"} );
 
@@ -246,13 +245,22 @@ public class NeoStoreFileListingTest
         when( storeDir.listFiles() ).thenReturn( files.toArray( new File[files.size()] ) );
     }
 
-    private ResourceIterator<File> scanStoreFilesAre( LabelScanStore labelScanStore, String[] fileNames )
+    private ResourceIterator<StoreFileMetadata> storageFilesAre( StorageEngine storageEngine, String[] fileNames )
+            throws IOException
     {
-        ArrayList<File> files = new ArrayList<>();
+        List<File> files = new ArrayList<>();
         mockFiles( fileNames, files, false );
-        ResourceIterator<File> snapshot = spy( asResourceIterator( files.iterator() ) );
-        when( labelScanStore.snapshotStoreFiles() ).thenReturn( snapshot );
+        List<StoreFileMetadata> metaFiles = toMetaFiles( files );
+        ResourceIterator<StoreFileMetadata> snapshot = spy( asResourceIterator( metaFiles.iterator() ) );
+        when( storageEngine.listStorageFiles() ).thenReturn( snapshot );
         return snapshot;
+    }
+
+    private List<StoreFileMetadata> toMetaFiles( List<File> files )
+    {
+        List<StoreFileMetadata> result = new ArrayList<>();
+        files.forEach( file -> result.add( new StoreFileMetadata( file, RecordFormat.NO_RECORD_SIZE ) ) );
+        return result;
     }
 
     private ResourceIterator<File> indexFilesAre( IndexingService indexingService, String[] fileNames )
@@ -275,7 +283,7 @@ public class NeoStoreFileListingTest
         }
     }
 
-    private void mockFiles( String[] filenames, ArrayList<File> files, boolean isDirectories )
+    private void mockFiles( String[] filenames, List<File> files, boolean isDirectories )
     {
         for ( String filename : filenames )
         {

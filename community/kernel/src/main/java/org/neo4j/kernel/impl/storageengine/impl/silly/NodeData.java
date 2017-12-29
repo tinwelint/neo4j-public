@@ -66,6 +66,14 @@ class NodeData implements NodeItem
         }
     }
 
+    public long[] labelArray()
+    {
+        synchronized ( labels )
+        {
+            return Labels.labelArrayFrom( labels );
+        }
+    }
+
     @Override
     public PrimitiveIntSet labels()
     {
