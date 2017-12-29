@@ -26,16 +26,21 @@ import java.util.regex.Pattern;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.api.AssertOpen;
+import org.neo4j.kernel.impl.api.store.PropertyUtil;
+import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
 import org.neo4j.kernel.impl.store.GeometryType;
 import org.neo4j.kernel.impl.store.LongerShortString;
+import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.ShortArray;
 import org.neo4j.kernel.impl.store.TemporalType;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.util.Bits;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.PropertyContainerState;
+import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.ArrayValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.ByteValue;
@@ -54,7 +59,8 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
 {
     private static final int MAX_BYTES_IN_SHORT_STRING_OR_SHORT_ARRAY = 32;
     private static final int INITIAL_POSITION = -1;
-    private Read read;
+
+    private CursorsClient cursors;
     private long next;
     private int block;
     ByteBuffer buffer;
@@ -65,7 +71,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
     private Iterator<StorageProperty> txStateChangedProperties;
     private StorageProperty txStateValue;
     private AssertOpen assertOpen;
-    private final DefaultCursors pool;
+    private PropertyStore propertyStore;
 
     public DefaultPropertyCursor( DefaultCursors pool )
     {
@@ -73,42 +79,42 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         this.pool = pool;
     }
 
-    void initNode( long nodeReference, long reference, Read read, AssertOpen assertOpen )
+    void initNode( long nodeReference, long reference, CursorsClient cursors, AssertOpen assertOpen )
     {
         assert nodeReference != NO_ID;
 
-        init( reference, read, assertOpen );
+        init( reference, cursors, assertOpen );
 
         // Transaction state
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            this.propertiesState = read.txState().getNodeState( nodeReference );
+            this.propertiesState = cursors.txState().getNodeState( nodeReference );
             this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties();
         }
     }
 
-    void initRelationship( long relationshipReference, long reference, Read read, AssertOpen assertOpen )
+    void initRelationship( long relationshipReference, long reference, CursorsClient cursors, AssertOpen assertOpen )
     {
         assert relationshipReference != NO_ID;
 
-        init( reference, read, assertOpen );
+        init( reference, cursors, assertOpen );
 
         // Transaction state
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            this.propertiesState = read.txState().getRelationshipState( relationshipReference );
+            this.propertiesState = cursors.txState().getRelationshipState( relationshipReference );
             this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties();
         }
     }
 
-    void initGraph( long reference, Read read, AssertOpen assertOpen )
+    void initGraph( long reference, CursorsClient cursors, AssertOpen assertOpen )
     {
-        init( reference, read, assertOpen );
+        init( reference, cursors, assertOpen );
 
         // Transaction state
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            this.propertiesState = read.txState().getGraphState( );
+            this.propertiesState = cursors.txState().getGraphState( );
             if ( this.propertiesState != null )
             {
                 this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties();
@@ -116,26 +122,9 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    private void init( long reference, Read read, AssertOpen assertOpen )
+    private void init( long reference, CursorsClient cursors, AssertOpen assertOpen )
     {
-        if ( getId() != NO_ID )
-        {
-            clear();
-        }
-
-        this.assertOpen = assertOpen;
-        //Set to high value to force a read
-        this.block = Integer.MAX_VALUE;
-        this.read = read;
-        if ( reference != NO_ID )
-        {
-            if ( page == null )
-            {
-                page = read.propertyPage( reference );
-            }
-        }
-
-        // Store state
+        this.propertyStore = cursors.propertyStore();
         this.next = reference;
     }
 
@@ -152,7 +141,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
 
     private boolean allowed( int propertyKey )
     {
-        return read.ktx.securityContext().mode().allowsPropertyReads( propertyKey );
+        return cursors.ktx.securityContext().mode().allowsPropertyReads( propertyKey );
     }
 
     private boolean innerNext()
@@ -210,9 +199,9 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
                 return false;
             }
 
-            read.property( this, next, page );
+            propertyStore.getRecordByCursor( next, this, RecordLoad.FORCE, page );
             next = getNextProp();
-            block = INITIAL_POSITION;
+            block = -1;
         }
     }
 
@@ -234,7 +223,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
             propertiesState = null;
             txStateChangedProperties = null;
             txStateValue = null;
-            read = null;
+            cursors = null;
             clear();
 
             pool.accept( this );
@@ -357,9 +346,11 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         long reference = PropertyBlock.fetchLong( currentBlock() );
         if ( arrayPage == null )
         {
-            arrayPage = read.arrayPage( reference );
+            arrayPage = propertyStore.openArrayPageCursor( reference );
         }
-        return read.array( this, reference, arrayPage );
+        buffer = cursors.propertyStore().loadArray( reference, buffer, arrayPage );
+        buffer.flip();
+        return PropertyUtil.readArrayFromBuffer( buffer );
     }
 
     private TextValue readLongString()
@@ -367,9 +358,11 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         long reference = PropertyBlock.fetchLong( currentBlock() );
         if ( stringPage == null )
         {
-            stringPage = read.stringPage( reference );
+            stringPage = propertyStore.openStringPageCursor( reference );
         }
-        return read.string( this, reference, stringPage );
+        buffer = propertyStore.loadArray( reference, buffer, arrayPage );
+        buffer.flip();
+        return Values.stringValue( UTF8.decode( buffer.array(), 0, buffer.limit() ) );
     }
 
     private Value readShortArray()
@@ -541,7 +534,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
     @Override
     public boolean isClosed()
     {
-        return read == null;
+        return cursors == null;
     }
 
     @Override

@@ -48,7 +48,6 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.storageengine.api.StorageStatement;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.ArrayValue;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
@@ -143,7 +142,7 @@ import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
  *            seconds in next long block
  * </pre>
  */
-public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHeader> implements StorageStatement.Properties
+public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHeader>
 {
     public static final String TYPE_DESCRIPTOR = "PropertyStore";
 
@@ -345,25 +344,21 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
         }
     }
 
-    @Override
     public PageCursor openStringPageCursor( long reference )
     {
         return stringStore.openPageCursorForReading( reference );
     }
 
-    @Override
     public PageCursor openArrayPageCursor( long reference )
     {
         return arrayStore.openPageCursorForReading( reference );
     }
 
-    @Override
     public ByteBuffer loadString( long reference, ByteBuffer buffer, PageCursor page )
     {
         return readDynamic( stringStore, reference, buffer, page );
     }
 
-    @Override
     public ByteBuffer loadArray( long reference, ByteBuffer buffer, PageCursor page )
     {
         return readDynamic( arrayStore, reference, buffer, page );

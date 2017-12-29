@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -56,7 +55,7 @@ public interface StorageEngine
     /**
      * @return a factory for cursors able to access data.
      */
-    CursorFactory cursors();
+    CursorBootstrap cursors();
 
     /**
      * @return a new {@link CommandCreationContext} meant to be kept for multiple calls to

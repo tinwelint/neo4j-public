@@ -49,7 +49,6 @@ import org.neo4j.kernel.impl.index.ExplicitIndexStore;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.StatementLocks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
-import org.neo4j.kernel.impl.newapi.DefaultCursors;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.store.TransactionId;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
@@ -98,7 +97,6 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
     private final VersionContextSupplier versionContextSupplier;
     private final ReentrantReadWriteLock newTransactionsLock = new ReentrantReadWriteLock();
     private final MonotonicCounter userTransactionIdCounter = MonotonicCounter.newAtomicMonotonicCounter();
-    private final Supplier<DefaultCursors> cursorsSupplier;
     private final AutoIndexing autoIndexing;
     private final ExplicitIndexStore explicitIndexStore;
     private final IndexingService indexingService;
@@ -143,7 +141,6 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
             StorageEngine storageEngine, Procedures procedures, TransactionIdStore transactionIdStore,
             SystemNanoClock clock,
             AtomicReference<CpuClock> cpuClockRef, AtomicReference<HeapAllocation> heapAllocationRef, AccessCapability accessCapability,
-            Supplier<DefaultCursors> cursorsSupplier,
             AutoIndexing autoIndexing,
             ExplicitIndexStore explicitIndexStore,
             VersionContextSupplier versionContextSupplier,
@@ -177,7 +174,6 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
         this.versionContextSupplier = versionContextSupplier;
         this.clock = clock;
         doBlockNewTransactions();
-        this.cursorsSupplier = cursorsSupplier;
         this.collectionsFactorySupplier = collectionsFactorySupplier;
         this.constraintSemantics = constraintSemantics;
         this.schemaState = schemaState;
@@ -372,7 +368,7 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
                             transactionCommitProcess, transactionMonitor, explicitIndexTxStateSupplier, localTxPool,
                             clock, cpuClockRef, heapAllocationRef, tracers.transactionTracer, tracers.lockTracer,
                             tracers.pageCursorTracerSupplier, storageEngine, accessCapability,
-                            cursorsSupplier.get(), autoIndexing,
+                            autoIndexing,
                             explicitIndexStore, versionContextSupplier, collectionsFactorySupplier, constraintSemantics,
                             schemaState, indexingService );
             this.transactions.add( tx );

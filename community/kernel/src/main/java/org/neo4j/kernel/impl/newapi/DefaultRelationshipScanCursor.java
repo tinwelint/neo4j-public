@@ -26,6 +26,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.api.txstate.TransactionState;
 
 import static java.util.Collections.emptySet;
+import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
 
 class DefaultRelationshipScanCursor extends RelationshipCursor implements RelationshipScanCursor
 {
@@ -42,7 +43,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         this.pool = pool;
     }
 
-    void scan( int type, Read read )
+    void scan( int type, CursorsClient cursors )
     {
         if ( getId() != NO_ID )
         {
@@ -50,16 +51,16 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         }
         if ( pageCursor == null )
         {
-            pageCursor = read.relationshipPage( 0 );
+            pageCursor = cursors.relationshipPage( 0 );
         }
         next = 0;
         this.type = type;
-        highMark = read.relationshipHighMark();
-        init( read );
+        highMark = cursors.relationshipHighMark();
+        init( cursors );
         this.addedRelationships = emptySet();
     }
 
-    void single( long reference, Read read )
+    void single( long reference, CursorsClient cursors )
     {
         if ( getId() != NO_ID )
         {
@@ -67,12 +68,12 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         }
         if ( pageCursor == null )
         {
-            pageCursor = read.relationshipPage( reference );
+            pageCursor = cursors.relationshipPage( reference );
         }
         next = reference;
         type = -1;
         highMark = NO_ID;
-        init( read );
+        init( cursors );
         this.addedRelationships = emptySet();
     }
 
@@ -87,7 +88,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
 
         // Check tx state
         boolean hasChanges = hasChanges();
-        TransactionState txs = hasChanges ? read.txState() : null;
+        TransactionState txs = hasChanges ? cursors.txState() : null;
 
         do
         {
@@ -103,7 +104,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
             }
             else
             {
-                read.relationship( this, next++, pageCursor );
+                cursors.relationship( this, next++, pageCursor );
             }
 
             if ( next > highMark )
@@ -115,7 +116,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
                 }
                 else
                 {
-                    highMark = read.relationshipHighMark();
+                    highMark = cursors.relationshipHighMark();
                     if ( next > highMark )
                     {
                         next = NO_ID;
@@ -144,7 +145,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
     {
         if ( !isClosed() )
         {
-            read = null;
+            cursors = null;
             reset();
 
             pool.accept( this );
@@ -159,7 +160,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
     @Override
     public boolean isClosed()
     {
-        return read == null;
+        return cursors == null;
     }
 
     @Override
@@ -185,7 +186,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
     {
         if ( !isSingle() )
         {
-            addedRelationships = read.txState().addedAndRemovedRelationships().getAddedSnapshot();
+            addedRelationships = cursors.txState().addedAndRemovedRelationships().getAddedSnapshot();
         }
     }
 

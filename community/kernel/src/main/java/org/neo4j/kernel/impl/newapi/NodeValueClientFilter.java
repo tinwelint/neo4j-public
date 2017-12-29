@@ -69,8 +69,8 @@ class NodeValueClientFilter implements NodeValueClient, IndexProgressor
 {
     private static final Comparator<IndexQuery> ASCENDING_BY_KEY = Comparator.comparingInt( IndexQuery::propertyKeyId );
     private final NodeValueClient target;
-    private final DefaultNodeCursor node;
-    private final DefaultPropertyCursor property;
+    private final org.neo4j.internal.kernel.api.NodeCursor node;
+    private final org.neo4j.internal.kernel.api.PropertyCursor property;
     private final IndexQuery[] filters;
     private final Read read;
     private int[] keys;
@@ -78,7 +78,8 @@ class NodeValueClientFilter implements NodeValueClient, IndexProgressor
 
     NodeValueClientFilter(
             NodeValueClient target,
-            DefaultNodeCursor node, DefaultPropertyCursor property, Read read, IndexQuery... filters )
+            org.neo4j.internal.kernel.api.NodeCursor node, org.neo4j.internal.kernel.api.PropertyCursor property, Read read,
+            IndexQuery... filters )
     {
         this.target = target;
         this.node = node;
@@ -105,14 +106,14 @@ class NodeValueClientFilter implements NodeValueClient, IndexProgressor
         }
         else
         {
-            node.single( reference, read );
+            read.singleNode( reference, node );
             if ( node.next() )
             {
                 node.properties( property );
             }
             else
             {
-                property.clear();
+                property.close();
                 return false;
             }
             return filterByCursors( reference, values );

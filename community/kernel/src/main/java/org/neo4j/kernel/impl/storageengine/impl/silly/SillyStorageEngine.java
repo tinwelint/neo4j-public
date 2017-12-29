@@ -23,11 +23,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 import org.neo4j.collection.primitive.PrimitiveIntCollections;
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
@@ -36,12 +37,14 @@ import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
+import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.IndexCapability;
+import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
@@ -52,22 +55,21 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
+import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
+import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
+import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.api.AssertOpen;
-import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
-import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
-import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider.Descriptor;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
-import org.neo4j.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.configuration.Config;
@@ -125,7 +127,6 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Collections.emptyIterator;
 import static java.util.Collections.singleton;
-
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.count;
 import static org.neo4j.helpers.collection.Iterables.map;
 import static org.neo4j.helpers.collection.Iterables.resourceIterable;
@@ -484,7 +485,7 @@ public class SillyStorageEngine implements
     @Override
     public StorageStatement newStatement()
     {
-        return null;
+        return new SillyStorageStatement( data, indexService );
     }
 
     @Override
@@ -587,8 +588,7 @@ public class SillyStorageEngine implements
         return schemaCache.constraints();
     }
 
-    @Override
-    public PrimitiveLongResourceIterator nodesGetForLabel( StorageStatement statement, int labelId )
+    static PrimitiveLongResourceIterator nodeIds( SillyData data, Predicate<NodeData> filter )
     {
         return new PrimitiveLongCollections.PrimitiveLongBaseIterator()
         {
@@ -600,7 +600,7 @@ public class SillyStorageEngine implements
                 while ( iterator.hasNext() )
                 {
                     Entry<Long,NodeData> node = iterator.next();
-                    if ( node.getValue().labelSet().contains( labelId ) )
+                    if ( filter.test( node.getValue() ) )
                     {
                         return next( node.getKey() );
                     }
@@ -608,6 +608,12 @@ public class SillyStorageEngine implements
                 return false;
             }
         };
+    }
+
+    @Override
+    public PrimitiveLongResourceIterator nodesGetForLabel( StorageStatement statement, int labelId )
+    {
+        return nodeIds( data, node -> node.hasLabel( labelId ) );
     }
 
     @Override
@@ -748,16 +754,7 @@ public class SillyStorageEngine implements
     @Override
     public PrimitiveLongIterator nodesGetAll()
     {
-        return new PrimitiveLongCollections.PrimitiveLongBaseIterator()
-        {
-            private final Iterator<Long> iterator = data.nodes.keySet().iterator();
-
-            @Override
-            protected boolean fetchNext()
-            {
-                return iterator.hasNext() ? next( iterator.next() ) : false;
-            }
-        };
+        return nodeIds( data, Predicates.alwaysTrue() );
     }
 
     @Override

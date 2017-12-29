@@ -159,7 +159,6 @@ public class StubNodeCursor implements NodeCursor
     @Override
     public void close()
     {
-
     }
 
     @Override

@@ -30,6 +30,7 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
@@ -39,7 +40,7 @@ import static java.util.Collections.emptySet;
 
 class DefaultNodeCursor extends NodeRecord implements NodeCursor
 {
-    private Read read;
+    private CursorsClient cursors;
     private RecordCursor<DynamicRecord> labelCursor;
     private PageCursor pageCursor;
     private long next;
@@ -55,7 +56,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.pool = pool;
     }
 
-    void scan( Read read )
+    void scan( CursorsClient cursors )
     {
         if ( getId() != NO_ID )
         {
@@ -63,16 +64,15 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         }
         if ( pageCursor == null )
         {
-            pageCursor = read.nodePage( 0 );
+            pageCursor = cursors.nodePage( 0 );
         }
         this.next = 0;
-        this.highMark = read.nodeHighMark();
-        this.read = read;
+        this.highMark = cursors.nodeHighMark();
         this.hasChanges = HasChanges.MAYBE;
         this.addedNodes = emptySet();
     }
 
-    void single( long reference, Read read )
+    void single( long reference, CursorsClient cursors )
     {
         if ( getId() != NO_ID )
         {
@@ -80,12 +80,11 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         }
         if ( pageCursor == null )
         {
-            pageCursor = read.nodePage( reference );
+            pageCursor = cursors.nodePage( reference );
         }
         this.next = reference;
         //This marks the cursor as a "single cursor"
         this.highMark = NO_ID;
-        this.read = read;
         this.hasChanges = HasChanges.MAYBE;
         this.addedNodes = emptySet();
     }
@@ -101,7 +100,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     {
         if ( hasChanges() )
         {
-            TransactionState txState = read.txState();
+            TransactionState txState = cursors.txState();
             if ( txState.nodeIsAddedInThisTx( getId() ) )
             {
                 //Node just added, no reason to go down to store and check
@@ -137,19 +136,19 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     @Override
     public void relationships( RelationshipGroupCursor cursor )
     {
-        read.relationshipGroups( getId(), relationshipGroupReference(), cursor );
+        cursors.relationshipGroups( getId(), relationshipGroupReference(), cursor );
     }
 
     @Override
     public void allRelationships( RelationshipTraversalCursor cursor )
     {
-        read.relationships( getId(), allRelationshipsReference(), cursor );
+        cursors.relationships( getId(), allRelationshipsReference(), cursor );
     }
 
     @Override
     public void properties( PropertyCursor cursor )
     {
-        read.nodeProperties( getId(), propertiesReference(), cursor );
+        cursors.nodeProperties( getId(), propertiesReference(), cursor );
     }
 
     @Override
@@ -181,8 +180,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
 
         // Check tx state
         boolean hasChanges = hasChanges();
-        TransactionState txs = hasChanges ? read.txState() : null;
-
+        TransactionState txs = hasChanges ? cursors.txState() : null;
         do
         {
             if ( hasChanges && containsNode( txs ) )
@@ -197,7 +195,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
             }
             else
             {
-                read.node( this, next++, pageCursor );
+                cursors.node( this, next++, pageCursor );
             }
 
             if ( next > highMark )
@@ -212,7 +210,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
                 {
                     //we are a "scan cursor"
                     //Check if there is a new high mark
-                    highMark = read.nodeHighMark();
+                    highMark = cursors.nodeHighMark();
                     if ( next > highMark )
                     {
                         next = NO_ID;
@@ -241,7 +239,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     {
         if ( !isClosed() )
         {
-            read = null;
+            cursors = null;
             hasChanges = HasChanges.MAYBE;
             addedNodes = emptySet();
             reset();
@@ -253,7 +251,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     @Override
     public boolean isClosed()
     {
-        return read == null;
+        return cursors == null;
     }
 
     /**
@@ -265,12 +263,12 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         switch ( hasChanges )
         {
         case MAYBE:
-            boolean changes = read.hasTxStateWithChanges();
+            boolean changes = cursors.hasTxStateWithChanges();
             if ( changes )
             {
                 if ( !isSingle() )
                 {
-                    addedNodes = read.txState().addedAndRemovedNodes().getAddedSnapshot();
+                    addedNodes = cursors.txState().addedAndRemovedNodes().getAddedSnapshot();
                 }
                 hasChanges = HasChanges.YES;
             }
@@ -299,7 +297,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     {
         if ( labelCursor == null )
         {
-            labelCursor = read.labelCursor();
+            labelCursor = cursors.labelCursor();
         }
         return labelCursor;
     }
