@@ -23,11 +23,12 @@ import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipDataAccessor;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
+import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 abstract class RelationshipCursor extends RelationshipRecord implements RelationshipDataAccessor, RelationshipVisitor<RuntimeException>
 {
-    Read read;
+    CursorsClient cursors;
     private boolean hasChanges;
     private boolean checkHasChanges;
 
@@ -36,9 +37,9 @@ abstract class RelationshipCursor extends RelationshipRecord implements Relation
         super( NO_ID );
     }
 
-    protected void init( Read read )
+    protected void init( CursorsClient cursors )
     {
-        this.read = read;
+        this.cursors = cursors;
         this.checkHasChanges = true;
     }
 
@@ -63,19 +64,19 @@ abstract class RelationshipCursor extends RelationshipRecord implements Relation
     @Override
     public void source( NodeCursor cursor )
     {
-        read.singleNode( sourceNodeReference(), cursor );
+        cursors.singleNode( sourceNodeReference(), cursor );
     }
 
     @Override
     public void target( NodeCursor cursor )
     {
-        read.singleNode( targetNodeReference(), cursor );
+        cursors.singleNode( targetNodeReference(), cursor );
     }
 
     @Override
     public void properties( PropertyCursor cursor )
     {
-        read.relationshipProperties( relationshipReference(), propertiesReference(), cursor );
+        cursors.relationshipProperties( relationshipReference(), propertiesReference(), cursor );
     }
 
     @Override
@@ -106,7 +107,7 @@ abstract class RelationshipCursor extends RelationshipRecord implements Relation
     {
         if ( checkHasChanges )
         {
-            hasChanges = read.hasTxStateWithChanges();
+            hasChanges = cursors.hasTxStateWithChanges();
             if ( hasChanges )
             {
                 collectAddedTxStateSnapshot();
@@ -120,7 +121,7 @@ abstract class RelationshipCursor extends RelationshipRecord implements Relation
     // Load transaction state using RelationshipVisitor
     protected void loadFromTxState( long reference )
     {
-        read.txState().relationshipVisit( reference, this );
+        cursors.txState().relationshipVisit( reference, this );
     }
 
     // used to visit transaction state

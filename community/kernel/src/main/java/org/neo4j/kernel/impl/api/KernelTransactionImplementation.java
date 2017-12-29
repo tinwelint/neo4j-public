@@ -81,7 +81,6 @@ import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocks;
 import org.neo4j.kernel.impl.newapi.AllStoreHolder;
-import org.neo4j.kernel.impl.newapi.DefaultCursors;
 import org.neo4j.kernel.impl.newapi.IndexTxStateUpdater;
 import org.neo4j.kernel.impl.newapi.KernelToken;
 import org.neo4j.kernel.impl.newapi.Operations;
@@ -96,6 +95,7 @@ import org.neo4j.kernel.impl.util.collection.CollectionsFactory;
 import org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
+import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
@@ -192,7 +192,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             TransactionMonitor transactionMonitor, Supplier<ExplicitIndexTransactionState> explicitIndexTxStateSupplier,
             Pool<KernelTransactionImplementation> pool, Clock clock, AtomicReference<CpuClock> cpuClockRef, AtomicReference<HeapAllocation> heapAllocationRef,
             TransactionTracer transactionTracer, LockTracer lockTracer, PageCursorTracerSupplier cursorTracerSupplier,
-            StorageEngine storageEngine, AccessCapability accessCapability, DefaultCursors cursors, AutoIndexing autoIndexing,
+            StorageEngine storageEngine, AccessCapability accessCapability, AutoIndexing autoIndexing,
             ExplicitIndexStore explicitIndexStore, VersionContextSupplier versionContextSupplier,
             CollectionsFactorySupplier collectionsFactorySupplier, ConstraintSemantics constraintSemantics,
             SchemaState schemaState, IndexingService indexingService )
@@ -218,6 +218,9 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.accessCapability = accessCapability;
         this.statistics = new Statistics( this, cpuClockRef, heapAllocationRef );
         this.userMetaData = new HashMap<>();
+
+        CursorBootstrap cursors = storageEngine.cursors();
+
         AllStoreHolder allStoreHolder =
                 new AllStoreHolder( storageEngine, storageStatement, this, cursors, explicitIndexStore,
                         procedures, schemaState );

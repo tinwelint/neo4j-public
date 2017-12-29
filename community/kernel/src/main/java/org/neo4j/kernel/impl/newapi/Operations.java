@@ -37,7 +37,9 @@ import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.Locks;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.internal.kernel.api.Procedures;
+import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.Token;
@@ -118,11 +120,11 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
     private final KernelToken token;
     private final StorageStatement statement;
     private final AutoIndexing autoIndexing;
-    private DefaultNodeCursor nodeCursor;
+    private org.neo4j.internal.kernel.api.NodeCursor nodeCursor;
     private final IndexTxStateUpdater updater;
-    private DefaultPropertyCursor propertyCursor;
-    private DefaultRelationshipScanCursor relationshipCursor;
-    private final DefaultCursors cursors;
+    private PropertyCursor propertyCursor;
+    private RelationshipScanCursor relationshipCursor;
+    private final CursorFactory cursors;
     private final ConstraintIndexCreator constraintIndexCreator;
     private final ConstraintSemantics constraintSemantics;
 
@@ -132,7 +134,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
             StorageStatement statement,
             KernelTransactionImplementation ktx,
             KernelToken token,
-            DefaultCursors cursors,
+            CursorFactory cursors,
             AutoIndexing autoIndexing,
             ConstraintIndexCreator constraintIndexCreator,
             ConstraintSemantics constraintSemantics )
@@ -215,6 +217,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
     {
         ktx.assertOpen();
         return relationshipDelete( relationship, true );
+
     }
 
     @Override
@@ -320,7 +323,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
             }
             else
             {
-                txState.relationshipDoDelete( relationship, relationshipCursor.getType(),
+                txState.relationshipDoDelete( relationship, relationshipCursor.type(),
                         relationshipCursor.sourceNodeReference(), relationshipCursor.targetNodeReference() );
             }
             return true;
@@ -399,7 +402,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
             IndexQuery.ExactPredicate[] propertyValues, long modifiedNode
     ) throws UniquePropertyValueValidationException, UnableToValidateConstraintException
     {
-        try ( DefaultNodeValueIndexCursor valueCursor = cursors.allocateNodeValueIndexCursor() )
+        try ( org.neo4j.internal.kernel.api.NodeValueIndexCursor valueCursor = cursors.allocateNodeValueIndexCursor() )
         {
             SchemaIndexDescriptor schemaIndexDescriptor = constraint.ownedIndexDescriptor();
             assertIndexOnline( schemaIndexDescriptor );

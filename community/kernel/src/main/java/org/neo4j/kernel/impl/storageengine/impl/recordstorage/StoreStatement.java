@@ -284,34 +284,4 @@ public class StoreStatement implements StorageStatement
     {
         return commandCreationContext.nextId( StoreType.RELATIONSHIP );
     }
-
-    @Override
-    public Nodes nodes()
-    {
-        return nodeStore;
-    }
-
-    @Override
-    public Relationships relationships()
-    {
-        return relationshipStore;
-    }
-
-    @Override
-    public Groups groups()
-    {
-        return relationshipGroupStore;
-    }
-
-    @Override
-    public Properties properties()
-    {
-        return propertyStore;
-    }
-
-    @Override
-    public long getGraphPropertyReference()
-    {
-        return neoStores.getMetaDataStore().getGraphNextProp();
-    }
 }
