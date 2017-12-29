@@ -471,7 +471,7 @@ public class PrimitiveLongCollections
     /**
      * Base iterator for simpler implementations of {@link PrimitiveLongIterator}s.
      */
-    public abstract static class PrimitiveLongBaseIterator implements PrimitiveLongIterator
+    public abstract static class PrimitiveLongBaseIterator implements PrimitiveLongResourceIterator
     {
         private boolean hasNextDecided;
         private boolean hasNext;
@@ -523,6 +523,11 @@ public class PrimitiveLongCollections
             next = nextItem;
             hasNext = true;
             return true;
+        }
+
+        @Override
+        public void close()
+        {   // Default implementation is a no-op
         }
     }
 

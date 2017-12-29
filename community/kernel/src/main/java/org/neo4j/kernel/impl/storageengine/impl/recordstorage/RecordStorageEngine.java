@@ -114,7 +114,6 @@ import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.storageengine.api.StoreReadLayer;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
-import org.neo4j.storageengine.api.schema.SchemaRule;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.util.FeatureToggles;
@@ -438,14 +437,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     @Override
     public void loadSchemaCache()
     {
-        List<SchemaRule> schemaRules = Iterators.asList( neoStores.getSchemaStore().loadAllSchemaRules() );
-        schemaCache.load( schemaRules );
-    }
-
-    @Override
-    public void clearBufferedIds()
-    {
-        idController.clear();
+        schemaCache.load( Iterators.asList( neoStores.getSchemaStore().loadAllSchemaRules() ) );
     }
 
     @Override

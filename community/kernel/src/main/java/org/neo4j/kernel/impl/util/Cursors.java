@@ -80,7 +80,7 @@ public class Cursors
         return new RawCursor<T,EX>()
         {
             private int idx;
-            private CursorValue<T> current = new CursorValue<>();
+            private final CursorValue<T> current = new CursorValue<>();
 
             @Override
             public T get()
@@ -116,8 +116,8 @@ public class Cursors
     {
         return new RawCursor<T,EX>()
         {
-            private CursorValue<T> current = new CursorValue<>();
-            private Iterator<T> itr = iterable.iterator();
+            private final CursorValue<T> current = new CursorValue<>();
+            private final Iterator<T> itr = iterable.iterator();
 
             @Override
             public T get()
@@ -142,6 +142,46 @@ public class Cursors
 
             @Override
             public void close() throws EX
+            {
+                current.invalidate();
+            }
+        };
+    }
+
+    public static <T> Cursor<T> cursorOf( Iterable<T> iterable )
+    {
+        return cursorOf( iterable.iterator() );
+    }
+
+    public static <T> Cursor<T> cursorOf( Iterator<T> iterator )
+    {
+        return new Cursor<T>()
+        {
+            private final CursorValue<T> current = new CursorValue<>();
+
+            @Override
+            public T get()
+            {
+                return current.get();
+            }
+
+            @Override
+            public boolean next()
+            {
+                if ( iterator.hasNext() )
+                {
+                    current.set( iterator.next() );
+                    return true;
+                }
+                else
+                {
+                    current.invalidate();
+                    return false;
+                }
+            }
+
+            @Override
+            public void close()
             {
                 current.invalidate();
             }

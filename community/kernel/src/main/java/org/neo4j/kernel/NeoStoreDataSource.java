@@ -895,7 +895,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
     private void clearTransactions()
     {
         // We don't want to have buffered ids carry over to the new role
-        storageEngine.clearBufferedIds();
+        idController.clear();
 
         // Get rid of all pooled transactions, as they will otherwise reference
         // components that have been swapped out during the mode switch.
