@@ -1,11 +1,30 @@
+/*
+ * Copyright (c) 2002-2017 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 
@@ -18,6 +37,7 @@ import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.IndexCapability;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -98,21 +118,23 @@ import org.neo4j.storageengine.api.lock.ResourceLocker;
 import org.neo4j.storageengine.api.schema.PopulationProgress;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
+import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 
 import static java.util.Collections.emptyIterator;
 import static java.util.Collections.singleton;
 
+import static org.neo4j.collection.primitive.PrimitiveLongCollections.count;
 import static org.neo4j.helpers.collection.Iterables.map;
+import static org.neo4j.register.Registers.newDoubleLongRegister;
 
 /**
  * Purely in-memory storage just to see where other code makes assumptions about the current record storage engine
  * or one or more of its internals.
  */
-public class SillyStorageEngine implements StorageEngine, StoreReadLayer, CursorFactory, CommandCreationContext, CommandReaderFactory
+public class SillyStorageEngine implements
+        StorageEngine, StoreReadLayer, CursorFactory, CommandCreationContext, CommandReaderFactory, Visitor<StorageCommand,IOException>
 {
-    private final ConcurrentMap<Long,NodeData> nodes = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Long,RelationshipData> relationships = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Long,SchemaRule> indexRules = new ConcurrentHashMap<>();
+    private final SillyData data;
     private final SchemaCache schemaCache;
     private final SchemaIndexProviderMap schemaIndexProviderMap;
     private final IndexingService indexService;
@@ -150,6 +172,7 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
         schemaIndexProviderMap = indexProviderMap;
         indexService = IndexingServiceFactory.createIndexingService( config, scheduler, schemaIndexProviderMap,
                 indexStoreView, tokenNameLookup, Collections.emptyList(), logProvider, indexingServiceMonitor, schemaState );
+        this.data = new SillyData( labelTokens, propertyKeyTokenHolder, relationshipTypeTokens );
     }
 
     @Override
@@ -175,11 +198,157 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
             ResourceLocker locks, long lastTransactionIdWhenStarted )
             throws TransactionFailureException, CreateConstraintFailureException, ConstraintValidationException
     {
+        state.accept( new TxStateVisitor()
+        {
+            @Override
+            public void visitRemovedIndex( IndexDescriptor element )
+            {
+                target.add( new SillyStorageCommand.DropIndex( element ) );
+            }
+
+            @Override
+            public void visitRemovedConstraint( ConstraintDescriptor element )
+            {
+                target.add( new SillyStorageCommand.DropConstraint( element ) );
+            }
+
+            @Override
+            public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
+                    Iterator<Integer> removed ) throws ConstraintValidationException
+            {
+                while ( added.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.SetRelationshipProperty( id, added.next() ) );
+                }
+                while ( changed.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.SetRelationshipProperty( id, changed.next() ) );
+                }
+                while ( removed.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.RemoveRelationshipProperty( id, removed.next() ) );
+                }
+            }
+
+            @Override
+            public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
+                    Iterator<Integer> removed ) throws ConstraintValidationException
+            {
+                while ( added.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.SetNodeProperty( id, added.next() ) );
+                }
+                while ( changed.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.SetNodeProperty( id, changed.next() ) );
+                }
+                while ( removed.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.RemoveNodeProperty( id, removed.next() ) );
+                }
+            }
+
+            @Override
+            public void visitNodeLabelChanges( long id, Set<Integer> added, Set<Integer> removed ) throws ConstraintValidationException
+            {
+                target.add( new SillyStorageCommand.ChangeLabels( id, added, removed ) );
+            }
+
+            @Override
+            public void visitGraphPropertyChanges( Iterator<StorageProperty> added, Iterator<StorageProperty> changed, Iterator<Integer> removed )
+            {
+                while ( added.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.SetGraphProperty( added.next() ) );
+                }
+                while ( changed.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.SetGraphProperty( changed.next() ) );
+                }
+                while ( removed.hasNext() )
+                {
+                    target.add( new SillyStorageCommand.RemoveGraphProperty( removed.next() ) );
+                }
+            }
+
+            @Override
+            public void visitDeletedRelationship( long id )
+            {
+                RelationshipData rel = data.relationships.get( id );
+                target.add( new SillyStorageCommand.DeleteRelationship( id, rel.type(), rel.startNode(), rel.endNode() ) );
+            }
+
+            @Override
+            public void visitDeletedNode( long id )
+            {
+                target.add( new SillyStorageCommand.DeleteNode( id ) );
+            }
+
+            @Override
+            public void visitCreatedRelationshipTypeToken( String name, int id )
+            {
+                target.add( new SillyStorageCommand.CreateRelationshipTypeToken( name, id ) );
+            }
+
+            @Override
+            public void visitCreatedRelationship( long id, int type, long startNode, long endNode ) throws ConstraintValidationException
+            {
+                target.add( new SillyStorageCommand.CreateRelationship( id, type, startNode, endNode ) );
+            }
+
+            @Override
+            public void visitCreatedPropertyKeyToken( String name, int id )
+            {
+                target.add( new SillyStorageCommand.CreatePropertyKeyToken( name, id ) );
+            }
+
+            @Override
+            public void visitCreatedNode( long id )
+            {
+                target.add( new SillyStorageCommand.CreateNode( id ) );
+            }
+
+            @Override
+            public void visitCreatedLabelToken( String name, int id )
+            {
+                target.add( new SillyStorageCommand.CreateLabelToken( name, id ) );
+            }
+
+            @Override
+            public void visitAddedIndex( IndexDescriptor element )
+            {
+                target.add( new SillyStorageCommand.CreateIndex( data.nextSchemaId.getAndIncrement(), element ) );
+            }
+
+            @Override
+            public void visitAddedConstraint( ConstraintDescriptor element ) throws CreateConstraintFailureException
+            {
+                target.add( new SillyStorageCommand.CreateConstraint( data.nextSchemaId.getAndIncrement(), element ) );
+            }
+
+            @Override
+            public void close()
+            {
+            }
+        } );
     }
 
     @Override
     public void apply( CommandsToApply batch, TransactionApplicationMode mode ) throws Exception
     {
+        CommandsToApply current = batch;
+        while ( current != null )
+        {
+            current.accept( this );
+            current = current.next();
+        }
+    }
+
+    @Override
+    public boolean visit( StorageCommand element ) throws IOException
+    {
+        ((SillyStorageCommand)element).applyTo( data );
+        return false; // meaning "continue" to apply
     }
 
     @Override
@@ -217,7 +386,7 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     @Override
     public void loadSchemaCache()
     {
-        schemaCache.load( indexRules.values() );
+//        schemaCache.load( data.indexRules.values() );
     }
 
     /////////////////////////////////////////////////////// CursorFactory ///////////////////////////////////////////////////
@@ -225,7 +394,7 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     @Override
     public NodeCursor allocateNodeCursor()
     {
-        return new SillyNodeCursor( nodes );
+        return new SillyNodeCursor( data.nodes );
     }
 
     @Override
@@ -389,7 +558,7 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     {
         return new PrimitiveLongCollections.PrimitiveLongBaseIterator()
         {
-            private final Iterator<Entry<Long,NodeData>> iterator = nodes.entrySet().iterator();
+            private final Iterator<Entry<Long,NodeData>> iterator = data.nodes.entrySet().iterator();
 
             @Override
             protected boolean fetchNext()
@@ -547,7 +716,7 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     {
         return new PrimitiveLongCollections.PrimitiveLongBaseIterator()
         {
-            private final Iterator<Long> iterator = nodes.keySet().iterator();
+            private final Iterator<Long> iterator = data.nodes.keySet().iterator();
 
             @Override
             protected boolean fetchNext()
@@ -560,7 +729,7 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     @Override
     public RelationshipIterator relationshipsGetAll()
     {
-        return new AllRelationshipsIterator( relationships );
+        return new AllRelationshipsIterator( data.relationships );
     }
 
     @Override
@@ -617,13 +786,29 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     @Override
     public long countsForNode( int labelId )
     {
-        return 0;
+        return count( nodesGetForLabel( null, labelId ) );
     }
 
     @Override
     public long countsForRelationship( int startLabelId, int typeId, int endLabelId )
     {
-        return 0;
+        long count = 0;
+        PrimitiveLongResourceIterator startNodes = nodesGetForLabel( null, startLabelId );
+        while ( startNodes.hasNext() )
+        {
+            NodeData node = data.nodes.get( startNodes.next() );
+            Iterator<RelationshipData> rels = node.relationships( Direction.BOTH, type -> type == typeId );
+            while ( rels.hasNext() )
+            {
+                RelationshipData rel = rels.next();
+                NodeData otherNode = data.nodes.get( rel.otherNode( node.id() ) );
+                if ( otherNode.hasLabel( endLabelId ) )
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     @Override
@@ -641,13 +826,13 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     @Override
     public long nodesGetCount()
     {
-        return 0;
+        return data.nodes.size();
     }
 
     @Override
     public long relationshipsGetCount()
     {
-        return 0;
+        return data.relationships.size();
     }
 
     @Override
@@ -672,50 +857,57 @@ public class SillyStorageEngine implements StorageEngine, StoreReadLayer, Cursor
     public DoubleLongRegister indexUpdatesAndSize( LabelSchemaDescriptor descriptor, DoubleLongRegister target )
             throws IndexNotFoundKernelException
     {
-        return null;
+        return newDoubleLongRegister();
     }
 
     @Override
     public DoubleLongRegister indexSample( LabelSchemaDescriptor descriptor, DoubleLongRegister target ) throws IndexNotFoundKernelException
     {
-        return null;
+        return newDoubleLongRegister();
     }
 
     @Override
     public boolean nodeExists( long id )
     {
-        return false;
+        return data.nodes.containsKey( id );
     }
 
     @Override
     public PrimitiveIntSet relationshipTypes( StorageStatement statement, NodeItem node )
     {
-        return null;
+        return ((NodeData)node).types();
     }
 
     @Override
     public void degrees( StorageStatement statement, NodeItem nodeItem, DegreeVisitor visitor )
     {
+        ((NodeData)nodeItem).visitDegrees( visitor );
     }
 
     @Override
-    public int degreeRelationshipsInGroup( StorageStatement storeStatement, long id, long groupId, Direction direction, Integer relType )
+    public int degreeRelationshipsInGroup( StorageStatement storeStatement, long nodeId, long groupId, Direction direction,
+            Integer relType )
     {
-        return 0;
+        NodeData node = data.nodes.get( nodeId );
+        TotalCountingDegreeVisitor visitor = new TotalCountingDegreeVisitor();
+        node.visitDegrees( visitor );
+        return visitor.getTotalCount();
     }
 
     @Override
     public <T> T getOrCreateSchemaDependantState( Class<T> type, Function<StoreReadLayer,T> factory )
     {
-        return null;
+        return schemaCache.getOrCreateDependantState( type, factory, this );
     }
 
-    ///////////
+    /////////////////////////////////////////// CommandCreationContext ////////////////////////////////////////////////
 
     @Override
     public void close()
     {
     }
+
+    /////////////////////////////////////////// CommandReaderFactory ////////////////////////////////////////////////
 
     @Override
     public CommandReader byVersion( byte version )

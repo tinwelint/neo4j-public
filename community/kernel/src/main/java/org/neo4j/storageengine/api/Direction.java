@@ -24,7 +24,30 @@ package org.neo4j.storageengine.api;
  */
 public enum Direction
 {
-    OUTGOING,
-    INCOMING,
+    OUTGOING
+    {
+        @Override
+        public boolean matches( Direction direction )
+        {
+            return direction == this || direction.matches( this );
+        }
+    },
+    INCOMING
+    {
+        @Override
+        public boolean matches( Direction direction )
+        {
+            return direction == this || direction.matches( this );
+        }
+    },
     BOTH
+    {
+        @Override
+        public boolean matches( Direction direction )
+        {
+            return true;
+        }
+    };
+
+    public abstract boolean matches( Direction direction );
 }
