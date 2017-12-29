@@ -19,29 +19,20 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
-import org.neo4j.storageengine.api.PropertyItem;
-import org.neo4j.values.storable.Value;
+import org.neo4j.kernel.impl.api.DegreeVisitor;
 
-class PropertyData implements PropertyItem
+class TotalCountingDegreeVisitor implements DegreeVisitor
 {
-    private final Value value;
-    private final int key;
-
-    PropertyData( int key, Value value )
-    {
-        this.key = key;
-        this.value = value;
-    }
+    private int totalCount;
 
     @Override
-    public Value value()
+    public void visitDegree( int type, long outgoing, long incoming )
     {
-        return value;
+        totalCount += outgoing + incoming;
     }
 
-    @Override
-    public int propertyKeyId()
+    int getTotalCount()
     {
-        return key;
+        return totalCount;
     }
 }
