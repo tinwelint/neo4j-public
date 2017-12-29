@@ -20,13 +20,14 @@
 package org.neo4j.kernel.impl.storageengine.impl.recordstorage;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
-
 import org.neo4j.concurrent.WorkSync;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
@@ -82,6 +83,7 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
@@ -118,6 +120,9 @@ import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.util.FeatureToggles;
 
+import static java.util.stream.Collectors.toCollection;
+
+import static org.neo4j.helpers.collection.Iterators.resourceIterator;
 import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.RECOVERY;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
@@ -395,6 +400,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         return mode == RECOVERY || mode == REVERSE_RECOVERY ? NO_LOCK_SERVICE : lockService;
     }
 
+    @Override
     public void satisfyDependencies( DependencySatisfier satisfier )
     {
         satisfier.satisfyDependency( explicitIndexApplierLookup );
@@ -494,7 +500,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public Collection<StoreFileMetadata> listStorageFiles()
+    public ResourceIterator<StoreFileMetadata> listStorageFiles() throws IOException
     {
         List<StoreFileMetadata> files = new ArrayList<>();
         for ( StoreType type : StoreType.values() )
@@ -511,7 +517,12 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
                 files.add( metadata );
             }
         }
-        return files;
+
+        ResourceIterator<File> snapshot = labelScanStore.snapshotStoreFiles();
+        snapshot.stream().map( file -> new StoreFileMetadata( file, RecordFormat.NO_RECORD_SIZE ) ).collect( toCollection( () -> files ) );
+        // Intentionally don't close the snapshot here, return it for closing by the consumer of
+        // the targetFiles list.
+        return resourceIterator( files.iterator(), snapshot );
     }
 
     private void addCountStoreFiles( List<StoreFileMetadata> files )
@@ -523,6 +534,12 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
                     RecordFormat.NO_RECORD_SIZE );
             files.add( countStoreFileMetadata );
         }
+    }
+
+    @Override
+    public StoreId getStoreId()
+    {
+        return neoStores.getMetaDataStore().getStoreId();
     }
 
     /**

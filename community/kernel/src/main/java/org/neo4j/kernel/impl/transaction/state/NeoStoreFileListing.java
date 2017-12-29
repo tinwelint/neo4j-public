@@ -33,7 +33,6 @@ import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.IOUtils;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
@@ -59,13 +58,13 @@ public class NeoStoreFileListing
     private final Collection<StoreFileProvider> additionalProviders;
 
     public NeoStoreFileListing( File storeDir, LogFiles logFiles,
-            LabelScanStore labelScanStore, IndexingService indexingService,
+            IndexingService indexingService,
             ExplicitIndexProviderLookup explicitIndexProviders, StorageEngine storageEngine )
     {
         this.storeDir = storeDir;
         this.logFiles = logFiles;
         this.storageEngine = storageEngine;
-        this.neoStoreFileIndexListing = new NeoStoreFileIndexListing( labelScanStore, indexingService, explicitIndexProviders );
+        this.neoStoreFileIndexListing = new NeoStoreFileIndexListing( indexingService, explicitIndexProviders );
         this.additionalProviders = new CopyOnWriteArraySet<>();
     }
 
@@ -186,12 +185,6 @@ public class NeoStoreFileListing
             return this;
         }
 
-        public StoreFileListingBuilder excludeLabelScanStoreFiles()
-        {
-            excludeLabelScanStoreFiles = true;
-            return this;
-        }
-
         public StoreFileListingBuilder excludeSchemaIndexStoreFiles()
         {
             excludeSchemaIndexStoreFiles = true;
@@ -228,12 +221,6 @@ public class NeoStoreFileListing
             return this;
         }
 
-        public StoreFileListingBuilder includeLabelScanStoreFiles()
-        {
-            excludeLabelScanStoreFiles = false;
-            return this;
-        }
-
         public StoreFileListingBuilder includeSchemaIndexStoreFiles()
         {
             excludeSchemaIndexStoreFiles = false;
@@ -264,11 +251,7 @@ public class NeoStoreFileListing
                 }
                 if ( !excludeNeoStoreFiles )
                 {
-                    gatherNeoStoreFiles( files );
-                }
-                if ( !excludeLabelScanStoreFiles )
-                {
-                    resources.add( neoStoreFileIndexListing.gatherLabelScanStoreFiles( files ) );
+                    resources.add( gatherNeoStoreFiles( files ) );
                 }
                 if ( !excludeSchemaIndexStoreFiles )
                 {
@@ -310,8 +293,10 @@ public class NeoStoreFileListing
         return snapshot.stream().map( toNotAStoreTypeFile ).collect( Collectors.toList() );
     }
 
-    private void gatherNeoStoreFiles( final Collection<StoreFileMetadata> targetFiles )
+    private Resource gatherNeoStoreFiles( final Collection<StoreFileMetadata> targetFiles ) throws IOException
     {
-        targetFiles.addAll( storageEngine.listStorageFiles() );
+        ResourceIterator<StoreFileMetadata> files = storageEngine.listStorageFiles();
+        files.forEachRemaining( targetFiles::add );
+        return files;
     }
 }

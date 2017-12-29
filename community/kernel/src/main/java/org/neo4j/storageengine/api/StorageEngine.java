@@ -19,15 +19,23 @@
  */
 package org.neo4j.storageengine.api;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.stream.Stream;
 
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
+import org.neo4j.kernel.api.index.PropertyAccessor;
+import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
+import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
@@ -136,8 +144,23 @@ public interface StorageEngine
     /**
      * @return a {@link Collection} of {@link StoreFileMetadata} containing metadata about all store files managed by
      * this {@link StorageEngine}.
+     * @throws IOException on I/O error.
      */
-    Collection<StoreFileMetadata> listStorageFiles();
+    ResourceIterator<StoreFileMetadata> listStorageFiles() throws IOException;
+
+    /**
+     * Must satisfy a list of dependencies. Ideally these should not have to be leaked to the outside, but that's how it is right now.
+     * <ul>
+     * <li>{@link TransactionIdStore}</li>
+     * <li>{@link LogVersionRepository}</li>
+     * <li>{@link PropertyAccessor}</li>
+     * <li>{@link IndexingService}</li>
+     * </ul>
+     * @param satisfier {@link DependencySatisfier} to satisfy dependencies onto.
+     */
+    void satisfyDependencies( DependencySatisfier satisfier );
+
+    StoreId getStoreId();
 
     // ====================================================================
     // All these methods below are temporary while in the process of

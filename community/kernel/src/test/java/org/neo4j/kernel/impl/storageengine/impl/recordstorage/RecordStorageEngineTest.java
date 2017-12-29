@@ -27,7 +27,6 @@ import org.mockito.ArgumentCaptor;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -35,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -79,7 +79,7 @@ public class RecordStorageEngineTest
     private final RecordStorageEngineRule storageEngineRule = new RecordStorageEngineRule();
     private final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
     private final PageCacheRule pageCacheRule = new PageCacheRule();
-    private DatabaseHealth databaseHealth = mock( DatabaseHealth.class );
+    private final DatabaseHealth databaseHealth = mock( DatabaseHealth.class );
 
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( fsRule )
@@ -188,7 +188,7 @@ public class RecordStorageEngineTest
     {
         RecordStorageEngine engine = buildRecordStorageEngine();
 
-        final Collection<StoreFileMetadata> files = engine.listStorageFiles();
+        final ResourceIterator<StoreFileMetadata> files = engine.listStorageFiles();
         Set<StoreType> expectedStoreTypes = Arrays.stream( StoreType.values() ).collect( Collectors.toSet() );
 
         Set<StoreType> actualStoreTypes = files.stream()
@@ -241,7 +241,7 @@ public class RecordStorageEngineTest
 
     private static class FailingBatchTransactionApplierFacade extends BatchTransactionApplierFacade
     {
-        private Exception failure;
+        private final Exception failure;
 
         FailingBatchTransactionApplierFacade( Exception failure, BatchTransactionApplier... appliers )
         {

@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
@@ -35,6 +36,7 @@ import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Visitor;
@@ -73,7 +75,6 @@ import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.SchemaState;
-import org.neo4j.kernel.impl.api.index.IndexStoreView;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.IndexingServiceFactory;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
@@ -86,11 +87,12 @@ import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
-import org.neo4j.kernel.impl.locking.LockService;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.record.IndexRule;
+import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
+import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.util.Cursors;
+import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.impl.util.IdOrderingQueue;
 import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
@@ -120,11 +122,13 @@ import org.neo4j.storageengine.api.schema.SchemaRule;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 
+import static java.lang.System.currentTimeMillis;
 import static java.util.Collections.emptyIterator;
 import static java.util.Collections.singleton;
 
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.count;
 import static org.neo4j.helpers.collection.Iterables.map;
+import static org.neo4j.helpers.collection.Iterables.resourceIterable;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 
 /**
@@ -141,6 +145,11 @@ public class SillyStorageEngine implements
     private final PropertyKeyTokenHolder propertyKeyTokenHolder;
     private final LabelTokenHolder labelTokens;
     private final RelationshipTypeTokenHolder relationshipTypeTokens;
+    private final DatabaseHealth databaseHealth;
+    private final SimpleTransactionIdStore txIdStore;
+    private final SimpleLogVersionRepository logVersionRepo;
+    private final SillyIndexStoreView indexStoreView;
+    private final StoreId storeId;
 
     public SillyStorageEngine(
             Config config,
@@ -152,27 +161,28 @@ public class SillyStorageEngine implements
             ConstraintSemantics constraintSemantics,
             JobScheduler scheduler,
             TokenNameLookup tokenNameLookup,
-            LockService lockService,
             SchemaIndexProviderMap indexProviderMap,
             IndexingService.Monitor indexingServiceMonitor,
             DatabaseHealth databaseHealth,
             ExplicitIndexProviderLookup explicitIndexProviderLookup,
             IndexConfigStore indexConfigStore,
             IdOrderingQueue explicitIndexTransactionOrdering,
-            IdGeneratorFactory idGeneratorFactory,
-            IdController idController,
             Monitors monitors,
             OperationalMode operationalMode )
     {
         this.propertyKeyTokenHolder = propertyKeyTokenHolder;
         this.labelTokens = labelTokens;
         this.relationshipTypeTokens = relationshipTypeTokens;
-        schemaCache = new SchemaCache( constraintSemantics, Collections.emptyList() );
-        IndexStoreView indexStoreView = new SillyIndexStoreView();
-        schemaIndexProviderMap = indexProviderMap;
-        indexService = IndexingServiceFactory.createIndexingService( config, scheduler, schemaIndexProviderMap,
-                indexStoreView, tokenNameLookup, Collections.emptyList(), logProvider, indexingServiceMonitor, schemaState );
+        this.databaseHealth = databaseHealth;
         this.data = new SillyData( labelTokens, propertyKeyTokenHolder, relationshipTypeTokens );
+        this.indexStoreView = new SillyIndexStoreView( data );
+        this.schemaCache = new SchemaCache( constraintSemantics, Collections.emptyList() );
+        this.schemaIndexProviderMap = indexProviderMap;
+        this.indexService = IndexingServiceFactory.createIndexingService( config, scheduler, schemaIndexProviderMap,
+                indexStoreView, tokenNameLookup, Collections.emptyList(), logProvider, indexingServiceMonitor, schemaState );
+        this.txIdStore = new SimpleTransactionIdStore();
+        this.logVersionRepo = new SimpleLogVersionRepository();
+        this.storeId = new StoreId( currentTimeMillis(), ThreadLocalRandom.current().nextLong(), 0, 0, 0 );
     }
 
     @Override
@@ -336,11 +346,20 @@ public class SillyStorageEngine implements
     @Override
     public void apply( CommandsToApply batch, TransactionApplicationMode mode ) throws Exception
     {
-        CommandsToApply current = batch;
-        while ( current != null )
+        try
         {
-            current.accept( this );
-            current = current.next();
+            CommandsToApply current = batch;
+            while ( current != null )
+            {
+                databaseHealth.assertHealthy( Exception.class );
+                current.accept( this );
+                current = current.next();
+            }
+        }
+        catch ( Throwable t )
+        {
+            databaseHealth.panic( t );
+            throw t;
         }
     }
 
@@ -349,6 +368,12 @@ public class SillyStorageEngine implements
     {
         ((SillyStorageCommand)element).applyTo( data );
         return false; // meaning "continue" to apply
+    }
+
+    @Override
+    public StoreId getStoreId()
+    {
+        return storeId;
     }
 
     @Override
@@ -378,9 +403,18 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public Collection<StoreFileMetadata> listStorageFiles()
+    public ResourceIterator<StoreFileMetadata> listStorageFiles()
     {
-        return Collections.emptyList();
+        return resourceIterable( Collections.<StoreFileMetadata>emptyList() ).iterator();
+    }
+
+    @Override
+    public void satisfyDependencies( DependencySatisfier satisfier )
+    {
+        satisfier.satisfyDependency( txIdStore );
+        satisfier.satisfyDependency( logVersionRepo );
+        satisfier.satisfyDependency( indexStoreView );
+        satisfier.satisfyDependency( indexService );
     }
 
     @Override

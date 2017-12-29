@@ -56,7 +56,7 @@ public class Labels implements LabelSet
         return new Labels( tokens );
     }
 
-    public static Labels from( PrimitiveIntSet set )
+    public static long[] labelArrayFrom( PrimitiveIntSet set )
     {
         long[] labelArray = new long[set.size()];
         int index = 0;
@@ -65,7 +65,12 @@ public class Labels implements LabelSet
         {
             labelArray[index++] = iterator.next();
         }
-        return new Labels( labelArray );
+        return labelArray;
+    }
+
+    public static Labels from( PrimitiveIntSet set )
+    {
+        return new Labels( labelArrayFrom( set ) );
     }
 
     @Override

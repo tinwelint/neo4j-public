@@ -44,7 +44,6 @@ import org.neo4j.kernel.api.InwardKernel;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.index.IndexProvider;
 import org.neo4j.kernel.api.index.PropertyAccessor;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.dependency.AllByPrioritySelectionStrategy;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
@@ -83,7 +82,7 @@ import org.neo4j.kernel.impl.newapi.DefaultCursors;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
-import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.format.RecordFormatPropertyConfigurator;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -464,7 +463,6 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
                     dependencies.resolveDependency( IndexingService.class ),
                     storageEngine.storeReadLayer(),
                     databaseSchemaState,
-                    dependencies.resolveDependency( LabelScanStore.class ),
                     storageEngine,
                     indexConfigStore,
                     transactionIdStore,
@@ -585,7 +583,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
         // makes available one or more internal things to the outside world, there are leaks to plug.
         storageEngine.satisfyDependencies( dependencies );
 
-        return life.add( storageEngine );
+        return storageEngine;
     }
 
     private NeoStoreTransactionLogModule buildTransactionLogs( LogFiles logFiles, Config config,
@@ -650,9 +648,8 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
         life.add( recovery );
     }
 
-    private NeoStoreKernelModule buildKernel( LogFiles logFiles, TransactionAppender appender,
-            IndexingService indexingService,
-            StoreReadLayer storeLayer, DatabaseSchemaState databaseSchemaState, LabelScanStore labelScanStore,
+    private NeoStoreKernelModule buildKernel( LogFiles logFiles, TransactionAppender appender, IndexingService indexingService,
+            StoreReadLayer storeLayer, DatabaseSchemaState databaseSchemaState,
             StorageEngine storageEngine, IndexConfigStore indexConfigStore, TransactionIdStore transactionIdStore,
             AvailabilityGuard availabilityGuard, SystemNanoClock clock, PropertyAccessor propertyAccessor )
     {
@@ -697,7 +694,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
         kernel.registerTransactionHook( transactionEventHandlers );
         life.add( kernel );
 
-        final NeoStoreFileListing fileListing = new NeoStoreFileListing( storeDir, logFiles, labelScanStore,
+        final NeoStoreFileListing fileListing = new NeoStoreFileListing( storeDir, logFiles,
                 indexingService, explicitIndexProviderLookup, storageEngine );
         dependencies.satisfyDependency( fileListing );
 
@@ -808,7 +805,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
 
     public StoreId getStoreId()
     {
-        return getDependencyResolver().resolveDependency( MetaDataStore.class ).getStoreId();
+        return storageEngine.getStoreId();
     }
 
     public File getStoreDir()

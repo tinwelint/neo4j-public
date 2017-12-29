@@ -30,7 +30,6 @@ import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
@@ -42,15 +41,13 @@ import static org.neo4j.helpers.collection.Iterators.resourceIterator;
 
 public class NeoStoreFileIndexListing
 {
-    private final LabelScanStore labelScanStore;
     private final IndexingService indexingService;
     private final ExplicitIndexProviderLookup explicitIndexProviders;
 
     private static final Function<File,StoreFileMetadata> toStoreFileMetatadata = file -> new StoreFileMetadata( file, RecordFormat.NO_RECORD_SIZE );
 
-    NeoStoreFileIndexListing( LabelScanStore labelScanStore, IndexingService indexingService, ExplicitIndexProviderLookup explicitIndexProviders )
+    NeoStoreFileIndexListing( IndexingService indexingService, ExplicitIndexProviderLookup explicitIndexProviders )
     {
-        this.labelScanStore = labelScanStore;
         this.indexingService = indexingService;
         this.explicitIndexProviders = explicitIndexProviders;
     }
@@ -63,15 +60,6 @@ public class NeoStoreFileIndexListing
     Resource gatherSchemaIndexFiles( Collection<StoreFileMetadata> targetFiles ) throws IOException
     {
         ResourceIterator<File> snapshot = indexingService.snapshotIndexFiles();
-        getSnapshotFilesMetadata( snapshot, targetFiles );
-        // Intentionally don't close the snapshot here, return it for closing by the consumer of
-        // the targetFiles list.
-        return snapshot;
-    }
-
-    Resource gatherLabelScanStoreFiles( Collection<StoreFileMetadata> targetFiles )
-    {
-        ResourceIterator<File> snapshot = labelScanStore.snapshotStoreFiles();
         getSnapshotFilesMetadata( snapshot, targetFiles );
         // Intentionally don't close the snapshot here, return it for closing by the consumer of
         // the targetFiles list.
