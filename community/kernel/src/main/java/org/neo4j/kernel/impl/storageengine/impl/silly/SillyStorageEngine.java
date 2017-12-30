@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,7 +43,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.IndexCapability;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -72,6 +72,9 @@ import org.neo4j.kernel.api.index.SchemaIndexProvider.Descriptor;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
+import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
@@ -90,6 +93,9 @@ import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.store.StoreType;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.IndexRule;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
@@ -106,6 +112,7 @@ import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandReader;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.NodeItem;
 import org.neo4j.storageengine.api.PropertyItem;
@@ -130,6 +137,7 @@ import static java.util.Collections.singleton;
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.count;
 import static org.neo4j.helpers.collection.Iterables.map;
 import static org.neo4j.helpers.collection.Iterables.resourceIterable;
+import static org.neo4j.kernel.impl.storemigration.StoreFileType.ID;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 
 /**
@@ -137,7 +145,7 @@ import static org.neo4j.register.Registers.newDoubleLongRegister;
  * or one or more of its internals.
  */
 public class SillyStorageEngine implements
-        StorageEngine, StoreReadLayer, CursorFactory, CommandCreationContext, CommandReaderFactory, Visitor<StorageCommand,IOException>
+        StorageEngine, StoreReadLayer, CursorBootstrap, CommandCreationContext, CommandReaderFactory, Visitor<StorageCommand,IOException>
 {
     private final SillyData data;
     private final SchemaCache schemaCache;
@@ -153,6 +161,7 @@ public class SillyStorageEngine implements
     private final StoreId storeId;
 
     public SillyStorageEngine(
+            File storeDir,
             Config config,
             LogProvider logProvider,
             PropertyKeyTokenHolder propertyKeyTokenHolder,
@@ -168,6 +177,7 @@ public class SillyStorageEngine implements
             ExplicitIndexProviderLookup explicitIndexProviderLookup,
             IndexConfigStore indexConfigStore,
             IdOrderingQueue explicitIndexTransactionOrdering,
+            IdGeneratorFactory idGeneratorFactory,
             Monitors monitors,
             OperationalMode operationalMode )
     {
@@ -184,6 +194,21 @@ public class SillyStorageEngine implements
         this.txIdStore = new SimpleTransactionIdStore();
         this.logVersionRepo = new SimpleLogVersionRepository();
         this.storeId = new StoreId( currentTimeMillis(), ThreadLocalRandom.current().nextLong(), 0, 0, 0 );
+
+        // TODO an annoying thing where an external token creator uses an externally instantiated IdGeneratorFactory,
+        // to generate ids for new tokens. So we need to ensure that those id generators are open, which means
+        // also creating their backing files in the file system which is decided upon externally.
+        createTokenIdGenerator( storeDir, idGeneratorFactory, StoreType.LABEL_TOKEN, IdType.LABEL_TOKEN );
+        createTokenIdGenerator( storeDir, idGeneratorFactory, StoreType.PROPERTY_KEY_TOKEN, IdType.PROPERTY_KEY_TOKEN );
+        createTokenIdGenerator( storeDir, idGeneratorFactory, StoreType.RELATIONSHIP_TYPE_TOKEN, IdType.RELATIONSHIP_TYPE_TOKEN );
+    }
+
+    private static void createTokenIdGenerator( File storeDir, IdGeneratorFactory idGeneratorFactory, StoreType storeType, IdType idType )
+    {
+        File file = new File( storeDir, storeType.getStoreFile().fileName( ID ) );
+        long highId = 1 << 32;
+        idGeneratorFactory.create( file, highId, true );
+        idGeneratorFactory.open( file, idType, () -> 0, highId );
     }
 
     @Override
@@ -193,7 +218,7 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public CursorFactory cursors()
+    public CursorBootstrap cursors()
     {
         return this;
     }
@@ -424,7 +449,7 @@ public class SillyStorageEngine implements
 //        schemaCache.load( data.indexRules.values() );
     }
 
-    /////////////////////////////////////////////////////// CursorFactory ///////////////////////////////////////////////////
+    /////////////////////////////////////////////////////// CursorBootstrap ///////////////////////////////////////////////////
 
     @Override
     public NodeCursor allocateNodeCursor()
@@ -435,7 +460,7 @@ public class SillyStorageEngine implements
     @Override
     public RelationshipScanCursor allocateRelationshipScanCursor()
     {
-        return new SillyRelationshipScanCursor();
+        return new SillyRelationshipScanCursor( data.relationships );
     }
 
     @Override
@@ -478,6 +503,123 @@ public class SillyStorageEngine implements
     public RelationshipExplicitIndexCursor allocateRelationshipExplicitIndexCursor()
     {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
+    {
+        return new SillyCursorClient( txStateHolder, assertOpen );
+    }
+
+    class SillyCursorClient implements Client
+    {
+        private final TxStateHolder txStateHolder;
+        private final AssertOpen assertOpen;
+
+        SillyCursorClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
+        {
+            this.txStateHolder = txStateHolder;
+            this.assertOpen = assertOpen;
+        }
+
+        @Override
+        public void assertOpen()
+        {
+            assertOpen.assertOpen();
+        }
+
+        @Override
+        public TransactionState txState()
+        {
+            return txStateHolder.txState();
+        }
+
+        @Override
+        public boolean hasTxStateWithChanges()
+        {
+            return txStateHolder.hasTxStateWithChanges();
+        }
+
+        @Override
+        public ExplicitIndexTransactionState explicitIndexTxState()
+        {
+            return txStateHolder.explicitIndexTxState();
+        }
+
+        @Override
+        public void singleRelationship( long reference, RelationshipScanCursor cursor )
+        {
+            ((SillyRelationshipScanCursor)cursor).single( this, reference );
+        }
+
+        @Override
+        public void singleNode( long reference, NodeCursor cursor )
+        {
+            ((SillyNodeCursor)cursor).single( this, reference );
+        }
+
+        @Override
+        public void relationships( long nodeReference, long reference, RelationshipTraversalCursor cursor )
+        {
+            NodeData node = data.nodes.get( nodeReference );
+            ((SillyRelationshipTraversalCursor)cursor).init( node.relationships() );
+        }
+
+        @Override
+        public void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor )
+        {
+            RelationshipData relationship = data.relationships.get( relationshipReference );
+            ((SillyPropertyCursor)cursor).init( relationship.properties() );
+        }
+
+        @Override
+        public void relationshipLabelScan( int label, RelationshipScanCursor cursor )
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long relationshipHighMark()
+        {
+            return data.nextRelationshipId.get();
+        }
+
+        @Override
+        public void relationshipGroups( long relationshipReference, long reference, RelationshipGroupCursor group )
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void nodeProperties( long nodeReference, long reference, PropertyCursor cursor )
+        {
+            NodeData node = data.nodes.get( nodeReference );
+            ((SillyPropertyCursor)cursor).init( node.properties() );
+        }
+
+        @Override
+        public long nodeHighMark()
+        {
+            return data.nextNodeId.get();
+        }
+
+        @Override
+        public void graphProperties( long reference, PropertyCursor cursor )
+        {
+            ((SillyPropertyCursor)cursor).init( data.graphProperties );
+        }
+
+        @Override
+        public void allRelationshipsScan( RelationshipScanCursor cursor )
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void allNodesScan( NodeCursor cursor )
+        {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /////////////////////////////////////////////////////// StoreReadLayer ///////////////////////////////////////////////////

@@ -70,6 +70,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.highMark = cursors.nodeHighMark();
         this.hasChanges = HasChanges.MAYBE;
         this.addedNodes = emptySet();
+        this.cursors = cursors;
     }
 
     void single( long reference, CursorsClient cursors )
@@ -87,6 +88,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.highMark = NO_ID;
         this.hasChanges = HasChanges.MAYBE;
         this.addedNodes = emptySet();
+        this.cursors = cursors;
     }
 
     @Override
@@ -148,7 +150,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     @Override
     public void properties( PropertyCursor cursor )
     {
-        cursors.nodeProperties( getId(), propertiesReference(), cursor );
+        cursors.nodeProperties( nodeReference(), propertiesReference(), cursor );
     }
 
     @Override

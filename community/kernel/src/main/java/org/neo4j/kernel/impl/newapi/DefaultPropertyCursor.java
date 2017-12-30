@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.impl.api.store.PropertyUtil;
 import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
 import org.neo4j.kernel.impl.store.GeometryType;
@@ -70,7 +69,6 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
     private PropertyContainerState propertiesState;
     private Iterator<StorageProperty> txStateChangedProperties;
     private StorageProperty txStateValue;
-    private AssertOpen assertOpen;
     private PropertyStore propertyStore;
 
     public DefaultPropertyCursor( DefaultCursors pool )
@@ -285,7 +283,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
 
         Value value = readValue();
 
-        assertOpen.assertOpen();
+        cursors.assertOpen();
         return value;
     }
 
@@ -360,7 +358,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         {
             stringPage = propertyStore.openStringPageCursor( reference );
         }
-        buffer = propertyStore.loadArray( reference, buffer, arrayPage );
+        buffer = propertyStore.loadArray( reference, buffer, stringPage );
         buffer.flip();
         return Values.stringValue( UTF8.decode( buffer.array(), 0, buffer.limit() ) );
     }

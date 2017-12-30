@@ -31,7 +31,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
@@ -109,6 +108,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
@@ -161,6 +161,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final IdController idController;
     private final int denseNodeThreshold;
     private final int recordIdBatchSize;
+    private final Cursors cursors;
 
     public RecordStorageEngine(
             File storeDir,
@@ -243,6 +244,8 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
             denseNodeThreshold = config.get( GraphDatabaseSettings.dense_node_threshold );
             recordIdBatchSize = config.get( GraphDatabaseSettings.record_id_batch_size );
+
+            cursors = new Cursors( neoStores );
         }
         catch ( Throwable failure )
         {
@@ -267,9 +270,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public CursorFactory cursors()
+    public CursorBootstrap cursors()
     {
-        return new Cursors();
+        return cursors;
     }
 
     @Override
