@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.util.Iterator;
 import java.util.function.IntPredicate;
 import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
@@ -77,7 +78,20 @@ class SillyStorageStatement implements StorageStatement, LabelScanReader
     @Override
     public Cursor<NodeItem> acquireSingleNodeCursor( long nodeId )
     {
-        return Cursors.cursorOf( Iterators.cast( data.nodes.values().iterator() ) );
+        return Cursors.cursorOf( Iterators.cast( orEmpty( data.nodes.values().iterator(), NodeData.EMPTY ) ) );
+    }
+
+    /**
+     * There's a very weird behaviour between tx cursors and store cursors where sometimes it's expected that
+     * a cursors can respond to a {@link Cursor#get()} which will return an instance with empty values on its following
+     * call to {@link Cursor#next()}. It's a weird design, but let's adhere to it by doing this little trick.
+     *
+     * @param iterator {@link Cursor} to call {@link Cursor#next()} on.
+     * @return the cursor.
+     */
+    private static <T> Iterator<T> orEmpty( Iterator<T> iterator, T empty )
+    {
+        return iterator.hasNext() ? iterator : iterator( empty );
     }
 
     @Override

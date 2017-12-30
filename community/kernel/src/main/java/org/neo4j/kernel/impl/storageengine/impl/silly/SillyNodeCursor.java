@@ -26,6 +26,10 @@ import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine.SillyCursorClient;
+import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.api.txstate.NodeState;
+import static org.neo4j.helpers.collection.Iterators.loop;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 
 class SillyNodeCursor implements NodeCursor
@@ -33,6 +37,7 @@ class SillyNodeCursor implements NodeCursor
     private final ConcurrentMap<Long,NodeData> nodes;
     private long next = NO_ID;
     private NodeData current;
+    private SillyCursorClient cursors;
 
     SillyNodeCursor( ConcurrentMap<Long,NodeData> nodes )
     {
@@ -48,6 +53,40 @@ class SillyNodeCursor implements NodeCursor
         }
 
         current = nodes.get( next );
+        // Do a silly and horrible eager merge with tx state for simplicity
+        if ( cursors.hasTxStateWithChanges() )
+        {
+            NodeState nodeState = cursors.txState().getNodeState( next );
+            if ( !nodeState.labelDiffSets().isEmpty() || nodeState.hasPropertyChanges() )
+            {
+                current = current != null ? current.copy() : new NodeData( next );
+                if ( !nodeState.labelDiffSets().isEmpty() )
+                {
+                    for ( int labelId : nodeState.labelDiffSets().getRemoved() )
+                    {
+                        current.labels().remove( labelId );
+                    }
+                    for ( int labelId : nodeState.labelDiffSets().getAdded() )
+                    {
+                        current.labels().add( labelId );
+                    }
+                }
+
+                if ( nodeState.hasPropertyChanges() )
+                {
+                    for ( int key : loop( nodeState.removedProperties() ) )
+                    {
+                        current.properties().remove( key );
+                    }
+                    for ( StorageProperty property : loop( nodeState.addedProperties() ) )
+                    {
+                        current.properties().put( property.propertyKeyId(), new PropertyData( property.propertyKeyId(), property.value() ) );
+                    }
+                }
+
+                // relationship tx changes aren't plugged in yet
+            }
+        }
         return current != null;
     }
 
@@ -68,8 +107,9 @@ class SillyNodeCursor implements NodeCursor
         return false;
     }
 
-    void single( long nodeId )
+    void single( SillyCursorClient cursors, long nodeId )
     {
+        this.cursors = cursors;
         next = nodeId;
     }
 

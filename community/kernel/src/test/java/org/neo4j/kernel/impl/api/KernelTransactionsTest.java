@@ -32,7 +32,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.function.Supplier;
 
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.security.AuthorizationExpiredException;
@@ -57,8 +56,9 @@ import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocksFactory;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
-import org.neo4j.kernel.impl.newapi.DefaultCursors;
+import org.neo4j.kernel.impl.newapi.Cursors;
 import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.TransactionId;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.TransactionMonitor;
@@ -588,6 +588,7 @@ public class KernelTransactionsTest
 
         StatementOperationParts statementOperations = mock( StatementOperationParts.class );
         KernelTransactions transactions;
+        when( storageEngine.cursors() ).thenReturn( new Cursors( mock( NeoStores.class ) ) );
         if ( testKernelTransactions )
         {
             transactions = createTestTransactions( storageEngine, commitProcess, transactionIdStore, tracers,
@@ -612,7 +613,7 @@ public class KernelTransactionsTest
                 mock( TransactionMonitor.class ), availabilityGuard, tracers, storageEngine, new Procedures(), transactionIdStore, clock,
                 new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
                 new CanWrite(),
-                DefaultCursors::new, AutoIndexing.UNSUPPORTED,
+                AutoIndexing.UNSUPPORTED,
                 mock( ExplicitIndexStore.class ), EmptyVersionContextSupplier.EMPTY, ON_HEAP,
                 mock( ConstraintSemantics.class ), mock( SchemaState.class ),
                 mock( IndexingService.class) );
@@ -627,8 +628,7 @@ public class KernelTransactionsTest
                 null, DEFAULT,
                 commitProcess, null, null, new TransactionHooks(), mock( TransactionMonitor.class ),
                 availabilityGuard, tracers, storageEngine, new Procedures(), transactionIdStore, clock,
-                new CanWrite(), DefaultCursors::new,
-                        AutoIndexing.UNSUPPORTED, EmptyVersionContextSupplier.EMPTY );
+                new CanWrite(), AutoIndexing.UNSUPPORTED, EmptyVersionContextSupplier.EMPTY );
     }
 
     private static TransactionCommitProcess newRememberingCommitProcess( final TransactionRepresentation[] slot )
@@ -677,13 +677,13 @@ public class KernelTransactionsTest
                 ExplicitIndexProviderLookup explicitIndexProviderLookup, TransactionHooks hooks,
                 TransactionMonitor transactionMonitor, AvailabilityGuard availabilityGuard, Tracers tracers,
                 StorageEngine storageEngine, Procedures procedures, TransactionIdStore transactionIdStore, SystemNanoClock clock,
-                AccessCapability accessCapability, Supplier<DefaultCursors> cursors,
+                AccessCapability accessCapability,
                 AutoIndexing autoIndexing, VersionContextSupplier versionContextSupplier  )
         {
             super( statementLocksFactory, constraintIndexCreator, statementOperations, schemaWriteGuard, txHeaderFactory, transactionCommitProcess,
                     indexConfigStore, explicitIndexProviderLookup, hooks, transactionMonitor, availabilityGuard, tracers, storageEngine, procedures,
                     transactionIdStore, clock, new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
-                    accessCapability, cursors, autoIndexing, mock( ExplicitIndexStore.class ), versionContextSupplier,
+                    accessCapability, autoIndexing, mock( ExplicitIndexStore.class ), versionContextSupplier,
                     ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class ),
                     mock( IndexingService.class ) );
         }

@@ -41,6 +41,8 @@ import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK;
 
 class NodeData implements NodeItem
 {
+    public static final NodeData EMPTY = new NodeData( -1 );
+
     private final long id;
     private final PrimitiveIntSet labels = Primitive.intSet();
     private final ConcurrentMap<Integer,PropertyData> properties = new ConcurrentHashMap<>();
@@ -181,5 +183,19 @@ class NodeData implements NodeItem
     private static long safeSizeOf( ConcurrentMap<Long,RelationshipData> concurrentMap )
     {
         return concurrentMap != null ? concurrentMap.size() : 0;
+    }
+
+    public NodeData copy()
+    {
+        NodeData copy = new NodeData( id );
+        copy.properties.putAll( properties );
+        relationships.forEach( ( type, dirs ) ->
+        {
+            ConcurrentHashMap<Direction,ConcurrentMap<Long,RelationshipData>> dirsCopy = new ConcurrentHashMap<>();
+            copy.relationships.put( type, dirsCopy );
+            dirs.forEach( ( dir, rels ) -> dirsCopy.put( dir, new ConcurrentHashMap<>( rels ) ) );
+        } );
+        copy.labels.addAll( labels.iterator() );
+        return copy;
     }
 }

@@ -27,10 +27,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.IndexQuery;
-
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
+import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.IndexProgressor.NodeValueClient;
 import org.neo4j.values.storable.Value;
@@ -38,6 +39,7 @@ import org.neo4j.values.storable.Value;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.newapi.MockStore.block;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
@@ -46,7 +48,7 @@ import static org.neo4j.values.storable.Values.stringValue;
 public class NodeValueClientFilterTest implements IndexProgressor, NodeValueClient
 {
     @Rule
-    public final MockStore store = new MockStore( new DefaultCursors() );
+    public final MockStore store = new MockStore( new Cursors( mockedStore() ) );
     private final List<Event> events = new ArrayList<>();
     private final DefaultCursors cursors = new DefaultCursors();
 
@@ -64,6 +66,13 @@ public class NodeValueClientFilterTest implements IndexProgressor, NodeValueClie
 
         // then
         assertEvents( initialize(), Event.NEXT, new Event.Node( 17, null ), Event.CLOSE );
+    }
+
+    private NeoStores mockedStore()
+    {
+        NeoStores result = mock( NeoStores.class );
+        when( result.getNodeStore() ).thenReturn( mock( NodeStore.class ) );
+        return result;
     }
 
     @Test

@@ -580,7 +580,6 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
         // true it's not entirely true for the time being. As long as we need this call below, which
         // makes available one or more internal things to the outside world, there are leaks to plug.
         storageEngine.satisfyDependencies( dependencies );
-
         return storageEngine;
     }
 

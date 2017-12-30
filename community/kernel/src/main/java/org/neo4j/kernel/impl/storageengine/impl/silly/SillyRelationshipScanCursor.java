@@ -19,55 +19,80 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.util.concurrent.ConcurrentMap;
+
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine.SillyCursorClient;
+
+import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 
 class SillyRelationshipScanCursor implements RelationshipScanCursor
 {
+    private final ConcurrentMap<Long,RelationshipData> relationships;
+    private long next = NO_ID;
+    private RelationshipData current;
+    private SillyCursorClient cursors;
+
+    SillyRelationshipScanCursor( ConcurrentMap<Long,RelationshipData> relationships )
+    {
+        this.relationships = relationships;
+    }
+
+    void single( SillyCursorClient cursors, long reference )
+    {
+        this.cursors = cursors;
+        current = null;
+        next = reference;
+    }
+
     @Override
     public long relationshipReference()
     {
-        return 0;
+        return current.id();
     }
 
     @Override
     public int label()
     {
-        return 0;
+        return current.type();
     }
 
     @Override
     public boolean hasProperties()
     {
-        return false;
+        return !current.properties().isEmpty();
     }
 
     @Override
     public void source( NodeCursor cursor )
     {
+        ((SillyNodeCursor)cursor).single( cursors, sourceNodeReference() );
     }
 
     @Override
     public void target( NodeCursor cursor )
     {
+        ((SillyNodeCursor)cursor).single( cursors, sourceNodeReference() );
     }
 
     @Override
     public void properties( PropertyCursor cursor )
     {
+        ((SillyPropertyCursor)cursor).init( current.properties() );
     }
 
     @Override
     public long sourceNodeReference()
     {
-        return 0;
+        return current.startNode();
     }
 
     @Override
     public long targetNodeReference()
     {
-        return 0;
+        return current.endNode();
     }
 
     @Override
@@ -79,7 +104,13 @@ class SillyRelationshipScanCursor implements RelationshipScanCursor
     @Override
     public boolean next()
     {
-        return false;
+        if ( next == NO_ID )
+        {
+            return false;
+        }
+
+        current = relationships.get( next );
+        return current != null;
     }
 
     @Override

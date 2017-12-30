@@ -61,6 +61,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocks;
 import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
 import org.neo4j.storageengine.api.StoreReadLayer;
@@ -76,6 +77,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.helpers.collection.Iterators.asList;
@@ -87,7 +89,7 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class OperationsLockTest
 {
-    private KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
+    private final KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
     private Operations operations;
     private final Locks.Client locks = mock( Locks.Client.class );
     private final Write write = mock( Write.class );
@@ -113,7 +115,7 @@ public class OperationsLockTest
         when( transaction.txState() ).thenReturn( txState );
         when( transaction.securityContext() ).thenReturn( SecurityContext.AUTH_DISABLED );
 
-        DefaultCursors cursors = mock( DefaultCursors.class );
+        Cursors cursors = spy( new Cursors( mock( NeoStores.class ) ) );
         nodeCursor = mock( DefaultNodeCursor.class );
         propertyCursor = mock( DefaultPropertyCursor.class );
         relationshipCursor = mock( DefaultRelationshipScanCursor.class );
@@ -134,6 +136,8 @@ public class OperationsLockTest
         allStoreHolder = new AllStoreHolder( engine, storageStatement,  transaction, cursors, mock(
                 ExplicitIndexStore.class ), mock( Procedures.class ), mock( SchemaState.class ) );
         constraintIndexCreator = mock( ConstraintIndexCreator.class );
+
+        when( engine.cursors() ).thenReturn( cursors );
         operations = new Operations( allStoreHolder, mock( IndexTxStateUpdater.class ),
                 storageStatement, transaction, new KernelToken( storeReadLayer, transaction ), cursors, autoindexing,
                 constraintIndexCreator, mock( ConstraintSemantics.class ) );
