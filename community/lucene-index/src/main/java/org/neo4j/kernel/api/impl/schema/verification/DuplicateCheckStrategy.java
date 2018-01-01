@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.kernel.api.StatementConstants;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueTuple;
@@ -150,7 +150,7 @@ abstract class DuplicateCheckStrategy
                 {
                     Value[] currentValues = (Value[]) current.value[i];
 
-                    if ( current.nodeId[i] == StatementConstants.NO_SUCH_NODE )
+                    if ( current.nodeId[i] == Constants.NO_SUCH_NODE )
                     {
                         current.value[i] = values;
                         current.nodeId[i] = nodeId;
@@ -184,7 +184,7 @@ abstract class DuplicateCheckStrategy
                 {
                     Value value = (Value) current.value[i];
 
-                    if ( current.nodeId[i] == StatementConstants.NO_SUCH_NODE )
+                    if ( current.nodeId[i] == Constants.NO_SUCH_NODE )
                     {
                         current.value[i] = propertyValue;
                         current.nodeId[i] = nodeId;
@@ -231,7 +231,7 @@ abstract class DuplicateCheckStrategy
             {
                 value = new Object[entrySize];
                 nodeId = new long[entrySize];
-                Arrays.fill( nodeId, StatementConstants.NO_SUCH_NODE );
+                Arrays.fill( nodeId, Constants.NO_SUCH_NODE );
             }
         }
     }

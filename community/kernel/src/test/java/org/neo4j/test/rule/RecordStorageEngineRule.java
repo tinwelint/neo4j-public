@@ -26,6 +26,7 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.index.IndexProvider;
@@ -44,6 +45,7 @@ import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.locking.ReentrantLockService;
+import org.neo4j.kernel.impl.scheduler.CentralJobScheduler;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.BufferedIdController;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
@@ -53,8 +55,8 @@ import org.neo4j.kernel.impl.store.id.IdReuseEligibility;
 import org.neo4j.kernel.impl.store.id.configuration.CommunityIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.transaction.state.DefaultIndexProviderMap;
 import org.neo4j.kernel.impl.util.IdOrderingQueue;
-import org.neo4j.kernel.impl.scheduler.CentralJobScheduler;
 import org.neo4j.kernel.impl.util.SynchronizedArrayIdOrderingQueue;
+import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.internal.KernelEventHandlers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -97,7 +99,7 @@ public class RecordStorageEngineRule extends ExternalResource
     private RecordStorageEngine get( FileSystemAbstraction fs, PageCache pageCache,
                                      IndexProvider indexProvider, DatabaseHealth databaseHealth, File storeDirectory,
                                      Function<BatchTransactionApplierFacade,BatchTransactionApplierFacade> transactionApplierTransformer,
-                                     Monitors monitors )
+                                     Monitors monitors, IOLimiter ioLimiter )
     {
         if ( !fs.fileExists( storeDirectory ) && !fs.mkdir( storeDirectory ) )
         {
@@ -120,7 +122,8 @@ public class RecordStorageEngineRule extends ExternalResource
                 indexProvider, IndexingService.NO_MONITOR, databaseHealth, explicitIndexProviderLookup, indexConfigStore,
                 new SynchronizedArrayIdOrderingQueue( 20 ), idGeneratorFactory,
                 new BufferedIdController( bufferingIdGeneratorFactory, scheduler ), transactionApplierTransformer, monitors,
-                RecoveryCleanupWorkCollector.IMMEDIATE, OperationalMode.single ) );
+                new DiagnosticsManager( NullLog.getInstance() ), ioLimiter, RecoveryCleanupWorkCollector.IMMEDIATE,
+                OperationalMode.single ) );
     }
 
     @Override
@@ -142,6 +145,7 @@ public class RecordStorageEngineRule extends ExternalResource
                 applierFacade -> applierFacade;
         private IndexProvider indexProvider = IndexProvider.EMPTY;
         private Monitors monitors = new Monitors();
+        private IOLimiter ioLimiter = IOLimiter.unlimited();
 
         public Builder( FileSystemAbstraction fs, PageCache pageCache )
         {
@@ -180,12 +184,18 @@ public class RecordStorageEngineRule extends ExternalResource
             return this;
         }
 
+        public Builder ioLimiter( IOLimiter ioLimiter )
+        {
+            this.ioLimiter = ioLimiter;
+            return this;
+        }
+
         // Add more here
 
         public RecordStorageEngine build()
         {
             return get( fs, pageCache, indexProvider, databaseHealth, storeDirectory,
-                    transactionApplierTransformer, monitors );
+                    transactionApplierTransformer, monitors, ioLimiter );
         }
     }
 
@@ -204,13 +214,14 @@ public class RecordStorageEngineRule extends ExternalResource
                 IndexConfigStore indexConfigStore, IdOrderingQueue explicitIndexTransactionOrdering,
                 IdGeneratorFactory idGeneratorFactory, IdController idController,
                 Function<BatchTransactionApplierFacade,BatchTransactionApplierFacade> transactionApplierTransformer, Monitors monitors,
+                DiagnosticsManager diagnosticsManager, IOLimiter ioLimiter,
                 RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, OperationalMode operationalMode )
         {
             super( storeDir, config, pageCache, fs, logProvider, propertyKeyTokenHolder, labelTokens,
                     relationshipTypeTokens, schemaState, constraintSemantics, scheduler, tokenNameLookup,
                     lockService, new DefaultIndexProviderMap( indexProvider ),
                     indexingServiceMonitor, databaseHealth, explicitIndexProviderLookup, indexConfigStore, explicitIndexTransactionOrdering, idGeneratorFactory,
-                    idController, monitors, recoveryCleanupWorkCollector, operationalMode, EmptyVersionContextSupplier.EMPTY );
+                    idController, monitors, diagnosticsManager, ioLimiter, recoveryCleanupWorkCollector, operationalMode, EmptyVersionContextSupplier.EMPTY );
             this.transactionApplierTransformer = transactionApplierTransformer;
         }
 

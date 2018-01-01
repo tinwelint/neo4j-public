@@ -21,13 +21,12 @@ package org.neo4j.kernel.api.exceptions.schema;
 
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.storageengine.api.schema.SchemaRule;
 
 public class DuplicateSchemaRuleException extends SchemaRuleException
 {
     private static final String NOT_FOUND_MESSAGE_TEMPLATE = "Multiple %ss found for %s.";
 
-    public DuplicateSchemaRuleException( SchemaRule.Kind kind, SchemaDescriptor descriptor )
+    public DuplicateSchemaRuleException( String kind, SchemaDescriptor descriptor )
     {
         super( Status.Schema.SchemaRuleDuplicateFound, NOT_FOUND_MESSAGE_TEMPLATE, kind, descriptor );
     }

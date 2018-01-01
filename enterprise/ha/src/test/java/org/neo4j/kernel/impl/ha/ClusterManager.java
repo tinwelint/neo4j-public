@@ -62,7 +62,6 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
@@ -162,7 +161,7 @@ public class ClusterManager
     private final boolean consistencyCheck;
     private final int firstInstanceId;
     private LifeSupport life;
-    private boolean boltEnabled;
+    private final boolean boltEnabled;
 
     private ClusterManager( Builder builder )
     {
@@ -1351,8 +1350,7 @@ public class ClusterManager
             {
                 if ( !exceptSet.contains( db ) )
                 {
-                    IOLimiter limiter = IOLimiter.unlimited();
-                    db.getDependencyResolver().resolveDependency( StorageEngine.class ).flushAndForce( limiter );
+                    db.getDependencyResolver().resolveDependency( StorageEngine.class ).flushAndForce( true );
                 }
             }
         }

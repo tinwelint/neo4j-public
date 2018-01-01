@@ -32,7 +32,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.configuration.Config;
@@ -173,14 +173,14 @@ public class SchemaStoreTest
         return Iterables.first( records ).getId();
     }
 
-    private IndexRule indexRule( long ruleId, IndexProvider.Descriptor descriptor,
+    private IndexRule indexRule( long ruleId, IndexProviderDescriptor descriptor,
             int labelId, int... propertyIds )
     {
         return IndexRule.indexRule( ruleId, SchemaIndexDescriptorFactory.forLabel( labelId, propertyIds ), descriptor );
     }
 
     private IndexRule uniqueIndexRule( long ruleId, long owningConstraint,
-                                       IndexProvider.Descriptor descriptor, int labelId, int... propertyIds )
+                                       IndexProviderDescriptor descriptor, int labelId, int... propertyIds )
     {
         return IndexRule.constraintIndexRule( ruleId,
                 SchemaIndexDescriptorFactory.uniqueForLabel( labelId, propertyIds ), descriptor, owningConstraint );

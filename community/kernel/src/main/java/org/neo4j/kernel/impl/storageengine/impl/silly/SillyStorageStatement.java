@@ -23,14 +23,13 @@ import java.util.Iterator;
 import java.util.function.IntPredicate;
 import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.IndexReaderFactory;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.locking.Lock;
-import org.neo4j.kernel.impl.store.RecordCursors;
 import org.neo4j.kernel.impl.util.Cursors;
 import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.NodeItem;
@@ -190,12 +189,6 @@ class SillyStorageStatement implements StorageStatement, LabelScanReader
     public IndexReader getFreshIndexReader( IndexDescriptor index ) throws IndexNotFoundKernelException
     {
         return indexReaders().newUnCachedReader( index );
-    }
-
-    @Override
-    public RecordCursors recordCursors()
-    {
-        throw new UnsupportedOperationException();
     }
 
     @Override

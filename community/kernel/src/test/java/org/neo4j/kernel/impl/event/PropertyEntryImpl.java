@@ -22,7 +22,7 @@ package org.neo4j.kernel.impl.event;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.helpers.ArrayUtil;
-import org.neo4j.helpers.Strings;
+import org.neo4j.string.Strings;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;

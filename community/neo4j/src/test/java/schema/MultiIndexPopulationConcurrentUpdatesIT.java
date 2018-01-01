@@ -58,7 +58,7 @@ import org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory20;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.labelscan.NodeLabelUpdate;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
@@ -117,7 +117,7 @@ public class MultiIndexPopulationConcurrentUpdatesIT
     private IndexRule[] rules;
 
     @Parameterized.Parameters( name = "{0}" )
-    public static Collection<IndexProvider.Descriptor> parameters()
+    public static Collection<IndexProviderDescriptor> parameters()
     {
         return asList( LuceneIndexProviderFactory.PROVIDER_DESCRIPTOR,
                 NativeLuceneFusionIndexProviderFactory10.DESCRIPTOR,
@@ -126,7 +126,7 @@ public class MultiIndexPopulationConcurrentUpdatesIT
     }
 
     @Parameterized.Parameter( 0 )
-    public IndexProvider.Descriptor indexDescriptor;
+    public IndexProviderDescriptor indexDescriptor;
 
     private IndexingService indexService;
     private int propertyId;

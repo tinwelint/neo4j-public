@@ -23,6 +23,7 @@ import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
@@ -34,7 +35,6 @@ import org.neo4j.kernel.impl.api.store.StorePropertyCursor;
 import org.neo4j.kernel.impl.api.store.StoreSingleNodeCursor;
 import org.neo4j.kernel.impl.api.store.StoreSinglePropertyCursor;
 import org.neo4j.kernel.impl.api.store.StoreSingleRelationshipCursor;
-import org.neo4j.kernel.impl.locking.Lock;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -262,15 +262,14 @@ public class StoreStatement implements StorageStatement
         return indexReaderFactory().newUnCachedReader( descriptor );
     }
 
-    @Override
-    public RecordCursors recordCursors()
-    {
-        return recordCursors;
-    }
-
     RecordStorageCommandCreationContext getCommandCreationContext()
     {
         return commandCreationContext;
+    }
+
+    public RecordCursors recordCursors()
+    {
+        return recordCursors;
     }
 
     @Override

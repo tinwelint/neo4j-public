@@ -56,8 +56,8 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static org.neo4j.helpers.Strings.escape;
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
+import static org.neo4j.string.Strings.escape;
 
 class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
 {

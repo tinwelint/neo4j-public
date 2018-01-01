@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
+
 import org.neo4j.concurrent.WorkSync;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -162,6 +163,8 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final int denseNodeThreshold;
     private final int recordIdBatchSize;
     private final Cursors cursors;
+    private final DiagnosticsManager diagnosticsManager;
+    private final IOLimiter ioLimiter;
 
     public RecordStorageEngine(
             File storeDir,
@@ -186,6 +189,8 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             IdGeneratorFactory idGeneratorFactory,
             IdController idController,
             Monitors monitors,
+            DiagnosticsManager diagnosticsManager,
+            IOLimiter ioLimiter,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
             OperationalMode operationalMode,
             VersionContextSupplier versionContextSupplier )
@@ -200,8 +205,8 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         this.indexConfigStore = indexConfigStore;
         this.constraintSemantics = constraintSemantics;
         this.explicitIndexTransactionOrdering = explicitIndexTransactionOrdering;
-
         this.idController = idController;
+        this.diagnosticsManager = diagnosticsManager;
         StoreFactory factory = new StoreFactory( storeDir, config, idGeneratorFactory, pageCache, fs, logProvider,
                 versionContextSupplier );
         neoStores = factory.openAllNeoStores( true );
@@ -466,8 +471,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public void flushAndForce( IOLimiter limiter )
+    public void flushAndForce( boolean disableIoLimit )
     {
+        IOLimiter limiter = disableIoLimit ? IOLimiter.unlimited() : ioLimiter;
         indexingService.forceAll( limiter );
         labelScanStore.force( limiter );
         for ( IndexImplementation index : explicitIndexProviderLookup.all() )
@@ -478,7 +484,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public void registerDiagnostics( DiagnosticsManager diagnosticsManager )
+    public void registerDiagnostics()
     {
         neoStores.registerDiagnostics( diagnosticsManager );
     }

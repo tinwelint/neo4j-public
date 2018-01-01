@@ -30,7 +30,7 @@ import org.neo4j.kernel.impl.transaction.state.RecordState;
  * Defines transactional state for explicit indexes. Since the implementation of this enlists another transaction
  * management engine under the hood, these methods have been split out from
  * {@link TransactionState the transaction state} in order to be able to keep the implementation of
- * {@link org.neo4j.kernel.impl.api.state.TxState transaction state} simple with no dependencies.
+ * {@link TransactionState transaction state} simple with no dependencies.
  */
 public interface ExplicitIndexTransactionState extends RecordState
 {

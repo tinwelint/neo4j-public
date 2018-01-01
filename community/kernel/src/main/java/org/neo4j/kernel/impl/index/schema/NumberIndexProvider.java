@@ -33,6 +33,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexPopulator;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.values.storable.ValueCategory;
@@ -43,7 +44,7 @@ import org.neo4j.values.storable.ValueCategory;
 public class NumberIndexProvider extends NativeIndexProvider<NumberSchemaKey,NativeSchemaValue>
 {
     public static final String KEY = "native";
-    public static final Descriptor NATIVE_PROVIDER_DESCRIPTOR = new Descriptor( KEY, "1.0" );
+    public static final IndexProviderDescriptor NATIVE_PROVIDER_DESCRIPTOR = new IndexProviderDescriptor( KEY, "1.0" );
     static final IndexCapability CAPABILITY = new NumberIndexCapability();
 
     public NumberIndexProvider( PageCache pageCache, FileSystemAbstraction fs,

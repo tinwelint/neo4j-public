@@ -19,8 +19,7 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import org.neo4j.kernel.api.index.IndexProvider;
-import org.neo4j.kernel.api.index.IndexProvider.Descriptor;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 
 /**
@@ -29,9 +28,9 @@ import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 public class RebuildingIndexDescriptor
 {
     private final SchemaIndexDescriptor schemaIndexDescriptor;
-    private final Descriptor providerDescriptor;
+    private final IndexProviderDescriptor providerDescriptor;
 
-    RebuildingIndexDescriptor( SchemaIndexDescriptor schemaIndexDescriptor, IndexProvider.Descriptor providerDescriptor )
+    RebuildingIndexDescriptor( SchemaIndexDescriptor schemaIndexDescriptor, IndexProviderDescriptor providerDescriptor )
     {
         this.schemaIndexDescriptor = schemaIndexDescriptor;
         this.providerDescriptor = providerDescriptor;
@@ -42,7 +41,7 @@ public class RebuildingIndexDescriptor
         return schemaIndexDescriptor;
     }
 
-    public Descriptor getProviderDescriptor()
+    public IndexProviderDescriptor getProviderDescriptor()
     {
         return providerDescriptor;
     }

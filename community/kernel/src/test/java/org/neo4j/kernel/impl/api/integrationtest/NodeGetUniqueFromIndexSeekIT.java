@@ -30,7 +30,7 @@ import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.kernel.api.security.LoginContext;
-import org.neo4j.kernel.api.StatementConstants;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.values.storable.Value;
@@ -215,7 +215,7 @@ public class NodeGetUniqueFromIndexSeekIT extends KernelIntegrationTest
 
     private boolean isNoSuchNode( long foundId )
     {
-        return StatementConstants.NO_SUCH_NODE == foundId;
+        return Constants.NO_SUCH_NODE == foundId;
     }
 
     private long createNodeWithValue( Value value ) throws KernelException

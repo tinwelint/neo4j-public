@@ -261,17 +261,18 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
     private final SystemNanoClock clock;
     private final StoreCopyCheckPointMutex storeCopyCheckPointMutex;
     private final CollectionsFactorySupplier collectionsFactorySupplier;
+    private final IdController idController;
+    private final OperationalMode operationalMode;
+    private final RecoveryCleanupWorkCollector recoveryCleanupWorkCollector;
+    private final AccessCapability accessCapability;
+    private final DiagnosticsManager diagnosticsManager;
 
     private Dependencies dependencies;
     private LifeSupport life;
     private IndexProviderMap indexProviderMap;
     private File storeDir;
     private boolean readOnly;
-    private final IdController idController;
-    private final OperationalMode operationalMode;
-    private final RecoveryCleanupWorkCollector recoveryCleanupWorkCollector;
     private final VersionContextSupplier versionContextSupplier;
-    private final AccessCapability accessCapability;
 
     private StorageEngine storageEngine;
     private NeoStoreTransactionLogModule transactionLogModule;
@@ -291,6 +292,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
             Tracers tracers, Procedures procedures, IOLimiter ioLimiter, AvailabilityGuard availabilityGuard,
             SystemNanoClock clock, AccessCapability accessCapability, StoreCopyCheckPointMutex storeCopyCheckPointMutex,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, IdController idController,
+            DiagnosticsManager diagnosticsManager,
             OperationalMode operationalMode, VersionContextSupplier versionContextSupplier, CollectionsFactorySupplier collectionsFactorySupplier )
     {
         this.storeDir = storeDir;
@@ -302,6 +304,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
         this.logService = logService;
         this.autoIndexing = autoIndexing;
         this.storeCopyCheckPointMutex = storeCopyCheckPointMutex;
+        this.diagnosticsManager = diagnosticsManager;
         this.logProvider = logService.getInternalLogProvider();
         this.propertyKeyTokenHolder = propertyKeyTokens;
         this.labelTokens = labelTokens;
@@ -573,6 +576,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
                         tokenNameLookup, lockService, indexProviderMap, indexingServiceMonitor, databaseHealth,
                         explicitIndexProviderLookup, indexConfigStore,
                         explicitIndexTransactionOrdering, idGeneratorFactory, idController, monitors,
+                        diagnosticsManager, ioLimiter,
                         recoveryCleanupWorkCollector,
                         operationalMode, versionContextSupplier );
 
@@ -839,7 +843,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
 
     public void registerDiagnosticsWith( DiagnosticsManager manager )
     {
-        storageEngine.registerDiagnostics( manager );
+        storageEngine.registerDiagnostics(); // the storage engine already knows which DiagnosticsManager to use
         manager.registerAll( Diagnostics.class, this );
     }
 

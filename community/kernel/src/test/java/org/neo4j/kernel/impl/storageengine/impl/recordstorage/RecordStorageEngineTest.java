@@ -177,8 +177,8 @@ public class RecordStorageEngineTest
             }
         };
 
-        RecordStorageEngine engine = storageEngineRule.getWith( fs, pageCache ).build();
-        engine.flushAndForce( limiter );
+        RecordStorageEngine engine = storageEngineRule.getWith( fs, pageCache ).ioLimiter( limiter ).build();
+        engine.flushAndForce( false );
 
         assertThat( observedLimiter.get(), sameInstance( limiter ) );
     }

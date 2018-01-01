@@ -24,8 +24,8 @@ import org.junit.Test;
 import java.lang.reflect.Array;
 
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.internal.kernel.api.TokenRead;
-import org.neo4j.kernel.impl.locking.Lock;
 import org.neo4j.storageengine.api.NodeItem;
 import org.neo4j.storageengine.api.PropertyItem;
 import org.neo4j.storageengine.api.StorageStatement;

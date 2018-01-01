@@ -23,8 +23,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
-import org.neo4j.helpers.Strings;
 import org.neo4j.kernel.api.query.QuerySnapshot;
+import org.neo4j.string.Strings;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.utils.PrettyPrinter;
 import org.neo4j.values.virtual.MapValue;

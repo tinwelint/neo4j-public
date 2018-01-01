@@ -27,6 +27,7 @@ import java.io.IOException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
 import org.neo4j.kernel.impl.util.monitoring.ProgressReporter;
@@ -53,7 +54,7 @@ public class SchemaIndexMigratorTest
         when( directoryStructure.rootDirectory() ).thenReturn( indexProviderRootDirectory );
         when( indexProvider.directoryStructure() ).thenReturn( directoryStructure );
         when( indexProvider.getProviderDescriptor() )
-                .thenReturn( new IndexProvider.Descriptor( "key", "version" ) );
+                .thenReturn( new IndexProviderDescriptor( "key", "version" ) );
 
         migrator.migrate( storeDir, migrationDir, progressReporter, StandardV2_3.STORE_VERSION,
                 StandardV3_0.STORE_VERSION );

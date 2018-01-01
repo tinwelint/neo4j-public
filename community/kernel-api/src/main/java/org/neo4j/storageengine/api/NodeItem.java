@@ -20,7 +20,7 @@
 package org.neo4j.storageengine.api;
 
 import org.neo4j.collection.primitive.PrimitiveIntSet;
-import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.graphdb.Lock;
 
 /**
  * Represents a single node from a cursor.

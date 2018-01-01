@@ -23,11 +23,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 
-public interface IndexProviderMap extends Function<IndexProvider.Descriptor,IndexProvider>
+public interface IndexProviderMap extends Function<IndexProviderDescriptor,IndexProvider>
 {
     @Override
-    IndexProvider apply( IndexProvider.Descriptor descriptor ) throws IndexProviderNotFoundException;
+    IndexProvider apply( IndexProviderDescriptor descriptor ) throws IndexProviderNotFoundException;
 
     IndexProvider getDefaultProvider();
 

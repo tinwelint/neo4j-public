@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.api.index.inmemory;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -33,8 +34,8 @@ public class InMemoryIndexProviderFactory extends KernelExtensionFactory<InMemor
     public static final String KEY = "in-memory-index";
     public static final String VERSION = "1.0";
 
-    public static final IndexProvider.Descriptor PROVIDER_DESCRIPTOR =
-            new IndexProvider.Descriptor( KEY, VERSION );
+    public static final IndexProviderDescriptor PROVIDER_DESCRIPTOR =
+            new IndexProviderDescriptor( KEY, VERSION );
 
     private final IndexProvider singleProvider;
 

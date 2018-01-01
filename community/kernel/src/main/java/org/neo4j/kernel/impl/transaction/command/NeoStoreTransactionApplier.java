@@ -32,7 +32,6 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.transaction.command.Command.BaseCommand;
-import org.neo4j.kernel.impl.transaction.command.Command.Version;
 
 /**
  * Visits commands targeted towards the {@link NeoStores} and update corresponding stores.
@@ -44,14 +43,14 @@ import org.neo4j.kernel.impl.transaction.command.Command.Version;
  */
 public class NeoStoreTransactionApplier extends TransactionApplier.Adapter
 {
-    private final Version version;
+    private final StorageCommandVersion version;
     private final LockGroup lockGroup;
     private final long transactionId;
     private final NeoStores neoStores;
     private final CacheAccessBackDoor cacheAccess;
     private final LockService lockService;
 
-    public NeoStoreTransactionApplier( Version version, NeoStores neoStores, CacheAccessBackDoor cacheAccess, LockService lockService,
+    public NeoStoreTransactionApplier( StorageCommandVersion version, NeoStores neoStores, CacheAccessBackDoor cacheAccess, LockService lockService,
             long transactionId, LockGroup lockGroup )
     {
         this.version = version;
@@ -181,12 +180,18 @@ public class NeoStoreTransactionApplier extends TransactionApplier.Adapter
     @Override
     public boolean visitNeoStoreCommand( Command.NeoStoreCommand command )
     {
-        neoStores.getMetaDataStore().setGraphNextProp( version.select( command ).getNextProp() );
+        neoStores.getMetaDataStore().setGraphNextProp( selectRecordVersion( command ).getNextProp() );
         return false;
     }
 
     private <RECORD extends AbstractBaseRecord> void updateStore( RecordStore<RECORD> store, BaseCommand<RECORD> command )
     {
-        store.updateRecord( version.select( command ) );
+        RECORD record = selectRecordVersion( command );
+        store.updateRecord( record );
+    }
+
+    private <RECORD extends AbstractBaseRecord> RECORD selectRecordVersion( BaseCommand<RECORD> command )
+    {
+        return version == StorageCommandVersion.AFTER ? command.getAfter() : command.getBefore();
     }
 }

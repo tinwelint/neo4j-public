@@ -28,7 +28,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.kernel.api.exceptions.schema.MalformedSchemaRuleException;
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
 import org.neo4j.kernel.api.schema.constaints.NodeKeyConstraintDescriptor;
 import org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor;
@@ -466,7 +466,7 @@ public class SchemaRuleSerializationTest extends SchemaRuleTestBase
         // GIVEN
         long ruleId = 24;
         SchemaIndexDescriptor index = forLabel( 512, 4 );
-        IndexProvider.Descriptor indexProvider = new IndexProvider.Descriptor( "index-provider", "25.0" );
+        IndexProviderDescriptor indexProvider = new IndexProviderDescriptor( "index-provider", "25.0" );
         byte[] bytes = decodeBase64( serialized );
 
         // WHEN
@@ -487,7 +487,7 @@ public class SchemaRuleSerializationTest extends SchemaRuleTestBase
         long ruleId = 33;
         long constraintId = 11;
         SchemaIndexDescriptor index = SchemaIndexDescriptorFactory.uniqueForLabel( 61, 988 );
-        IndexProvider.Descriptor indexProvider = new IndexProvider.Descriptor( "index-provider", "25.0" );
+        IndexProviderDescriptor indexProvider = new IndexProviderDescriptor( "index-provider", "25.0" );
         byte[] bytes = decodeBase64( serialized );
 
         // WHEN

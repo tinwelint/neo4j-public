@@ -26,13 +26,13 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.neo4j.kernel.api.index.IndexProvider;
-import org.neo4j.kernel.api.index.IndexProvider.Descriptor;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
 
 public class DefaultIndexProviderMap implements IndexProviderMap
 {
     private final IndexProvider defaultIndexProvider;
-    private final Map<IndexProvider.Descriptor,IndexProvider> indexProviders = new HashMap<>();
+    private final Map<IndexProviderDescriptor,IndexProvider> indexProviders = new HashMap<>();
 
     public DefaultIndexProviderMap( IndexProvider defaultIndexProvider )
     {
@@ -46,7 +46,7 @@ public class DefaultIndexProviderMap implements IndexProviderMap
         indexProviders.put( defaultIndexProvider.getProviderDescriptor(), defaultIndexProvider );
         for ( IndexProvider provider : additionalIndexProviders )
         {
-            Descriptor providerDescriptor = provider.getProviderDescriptor();
+            IndexProviderDescriptor providerDescriptor = provider.getProviderDescriptor();
             Objects.requireNonNull( providerDescriptor );
             IndexProvider existing = indexProviders.putIfAbsent( providerDescriptor, provider );
             if ( existing != null )
@@ -64,7 +64,7 @@ public class DefaultIndexProviderMap implements IndexProviderMap
     }
 
     @Override
-    public IndexProvider apply( IndexProvider.Descriptor descriptor )
+    public IndexProvider apply( IndexProviderDescriptor descriptor )
     {
         IndexProvider provider = indexProviders.get( descriptor );
         if ( provider != null )

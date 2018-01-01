@@ -153,7 +153,6 @@ public class AwaitIndexProcedureTest
     @Test
     public void shouldThrowAnExceptionIfTheIndexDoesNotExist()
             throws SchemaRuleNotFoundException
-
     {
         when( tokenRead.propertyKey( anyString() ) ).thenReturn( 0 );
         when( tokenRead.nodeLabel( anyString() ) ).thenReturn( 0 );
