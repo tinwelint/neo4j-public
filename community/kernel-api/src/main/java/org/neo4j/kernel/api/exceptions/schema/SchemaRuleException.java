@@ -24,7 +24,6 @@ import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaUtil;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.storageengine.api.schema.SchemaRule;
 
 import static java.lang.String.format;
 
@@ -35,16 +34,16 @@ class SchemaRuleException extends SchemaKernelException
 {
     protected final SchemaDescriptor descriptor;
     protected final String messageTemplate;
-    protected final SchemaRule.Kind kind;
+    protected final String kind;
 
     /**
      * @param messageTemplate Template for String.format. Must match two strings representing the schema kind and the
      *                        descriptor
      */
-    protected SchemaRuleException( Status status, String messageTemplate, SchemaRule.Kind kind,
+    protected SchemaRuleException( Status status, String messageTemplate, String kind,
             SchemaDescriptor descriptor )
     {
-        super( status, format( messageTemplate, kind.userString().toLowerCase(),
+        super( status, format( messageTemplate, kind.toLowerCase(),
                 descriptor.userDescription( SchemaUtil.idTokenNameLookup ) ) );
         this.descriptor = descriptor;
         this.messageTemplate = messageTemplate;
@@ -54,6 +53,6 @@ class SchemaRuleException extends SchemaKernelException
     @Override
     public String getUserMessage( TokenNameLookup tokenNameLookup )
     {
-        return format( messageTemplate, kind.userString().toLowerCase(), descriptor.userDescription( tokenNameLookup ) );
+        return format( messageTemplate, kind.toLowerCase(), descriptor.userDescription( tokenNameLookup ) );
     }
 }

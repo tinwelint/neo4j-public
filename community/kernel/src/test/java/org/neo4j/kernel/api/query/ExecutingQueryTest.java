@@ -46,14 +46,16 @@ import org.neo4j.test.FakeHeapAllocation;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
-import static java.util.Collections.emptyList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 import static org.junit.Assert.assertTrue;
+
+import static java.util.Collections.emptyList;
+
+import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 public class ExecutingQueryTest
 {
@@ -64,8 +66,8 @@ public class ExecutingQueryTest
     public final FakeHeapAllocation heapAllocation = new FakeHeapAllocation().add( randomLong( 0x1_0000_0000L ) );
     private final PageCursorCountersStub page = new PageCursorCountersStub();
     private long lockCount;
-    private ExecutingQuery query = createExecutingquery( 1, "hello world", page, clock, cpuClock, heapAllocation );
-    private ExecutingQuery subQuery = createExecutingquery( 2, "goodbye world", page, clock, cpuClock, heapAllocation );
+    private final ExecutingQuery query = createExecutingquery( 1, "hello world", page, clock, cpuClock, heapAllocation );
+    private final ExecutingQuery subQuery = createExecutingquery( 2, "goodbye world", page, clock, cpuClock, heapAllocation );
 
     @Test
     public void shouldReportElapsedTime()

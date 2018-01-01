@@ -22,23 +22,22 @@ package org.neo4j.kernel.impl.transaction.state;
 import java.util.Collection;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.storageengine.api.StorageCommand;
 
 /**
  * Keeper of state that is about to be committed. That state can be {@link #extractCommands(Collection) extracted}
- * into a list of {@link Command commands}.
+ * into a list of {@link StorageCommand commands}.
  */
 public interface RecordState
 {
     /**
-     * @return whether or not there are any changes in here. If {@code true} then {@link Command commands}
+     * @return whether or not there are any changes in here. If {@code true} then {@link StorageCommand commands}
      * can be {@link #extractCommands(Collection) extracted}.
      */
     boolean hasChanges();
 
     /**
-     * Extracts this record state in the form of {@link Command commands} into the supplied {@code target} list.
+     * Extracts this record state in the form of {@link StorageCommand commands} into the supplied {@code target} list.
      * @param target list that commands will be added into.
      * @throws TransactionFailureException if the state is invalid or not applicable.
      */

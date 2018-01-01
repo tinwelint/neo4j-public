@@ -46,6 +46,7 @@ import org.neo4j.internal.kernel.api.Token;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.AutoIndexingKernelException;
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
@@ -55,8 +56,6 @@ import org.neo4j.internal.kernel.api.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
-import org.neo4j.kernel.api.StatementConstants;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
@@ -97,11 +96,10 @@ import org.neo4j.values.storable.Values;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException.Phase.VALIDATION;
-import static org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException.OperationContext
-        .CONSTRAINT_CREATION;
+import static org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException.OperationContext.CONSTRAINT_CREATION;
 import static org.neo4j.internal.kernel.api.schema.SchemaDescriptorPredicates.hasProperty;
-import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
-import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_PROPERTY_KEY;
+import static org.neo4j.kernel.api.Constants.NO_SUCH_NODE;
+import static org.neo4j.kernel.api.Constants.NO_SUCH_PROPERTY_KEY;
 import static org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor.Type.UNIQUE;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.INDEX_ENTRY;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.indexEntryResourceId;
@@ -247,7 +245,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
             {
                 IndexBackedConstraintDescriptor uniqueConstraint = (IndexBackedConstraintDescriptor) constraint;
                 IndexQuery.ExactPredicate[] propertyValues = getAllPropertyValues( uniqueConstraint.schema(),
-                        StatementConstants.NO_SUCH_PROPERTY_KEY, Values.NO_VALUE );
+                        NO_SUCH_PROPERTY_KEY, Values.NO_VALUE );
                 if ( propertyValues != null )
                 {
                     validateNoExistingNodeWithExactValues( uniqueConstraint, propertyValues, node );
@@ -369,7 +367,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
             int k = ArrayUtils.indexOf( schemaPropertyIds, nodePropertyId );
             if ( k >= 0 )
             {
-                if ( nodePropertyId != StatementConstants.NO_SUCH_PROPERTY_KEY )
+                if ( nodePropertyId != NO_SUCH_PROPERTY_KEY )
                 {
                     values[k] = IndexQuery.exact( nodePropertyId, propertyCursor.propertyValue() );
                 }

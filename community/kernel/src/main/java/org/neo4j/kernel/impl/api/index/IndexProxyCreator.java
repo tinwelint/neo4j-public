@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.logging.LogProvider;
@@ -58,7 +59,7 @@ class IndexProxyCreator
 
     IndexProxy createPopulatingIndexProxy( final long ruleId,
             final SchemaIndexDescriptor descriptor,
-            final IndexProvider.Descriptor providerDescriptor,
+            final IndexProviderDescriptor providerDescriptor,
             final boolean flipToTentative,
             final IndexingService.Monitor monitor,
             final IndexPopulationJob populationJob )
@@ -104,7 +105,7 @@ class IndexProxyCreator
     }
 
     IndexProxy createRecoveringIndexProxy( long ruleId, SchemaIndexDescriptor descriptor,
-            IndexProvider.Descriptor providerDescriptor )
+            IndexProviderDescriptor providerDescriptor )
     {
         IndexMeta indexMeta = indexMetaFromProvider( ruleId, providerDescriptor, descriptor );
         IndexProxy proxy = new RecoveringIndexProxy( indexMeta );
@@ -113,7 +114,7 @@ class IndexProxyCreator
 
     IndexProxy createOnlineIndexProxy( long ruleId,
             SchemaIndexDescriptor descriptor,
-            IndexProvider.Descriptor providerDescriptor )
+            IndexProviderDescriptor providerDescriptor )
     {
         try
         {
@@ -136,7 +137,7 @@ class IndexProxyCreator
 
     IndexProxy createFailedIndexProxy( long ruleId,
             SchemaIndexDescriptor descriptor,
-            IndexProvider.Descriptor providerDescriptor,
+            IndexProviderDescriptor providerDescriptor,
             IndexPopulationFailure populationFailure )
     {
         IndexPopulator indexPopulator = populatorFromProvider( providerDescriptor, ruleId, descriptor, samplingConfig );
@@ -155,20 +156,20 @@ class IndexProxyCreator
     }
 
     private String indexUserDescription( final SchemaIndexDescriptor descriptor,
-                                         final IndexProvider.Descriptor providerDescriptor )
+                                         final IndexProviderDescriptor providerDescriptor )
     {
         return format( "%s [provider: %s]",
                 descriptor.schema().userDescription( tokenNameLookup ), providerDescriptor.toString() );
     }
 
-    private IndexPopulator populatorFromProvider( IndexProvider.Descriptor providerDescriptor, long ruleId,
+    private IndexPopulator populatorFromProvider( IndexProviderDescriptor providerDescriptor, long ruleId,
                                                   SchemaIndexDescriptor descriptor, IndexSamplingConfig samplingConfig )
     {
         IndexProvider indexProvider = providerMap.apply( providerDescriptor );
         return indexProvider.getPopulator( ruleId, descriptor, samplingConfig );
     }
 
-    private IndexAccessor onlineAccessorFromProvider( IndexProvider.Descriptor providerDescriptor,
+    private IndexAccessor onlineAccessorFromProvider( IndexProviderDescriptor providerDescriptor,
                                                       long ruleId, SchemaIndexDescriptor descriptor,
                                                       IndexSamplingConfig samplingConfig ) throws IOException
     {
@@ -176,7 +177,7 @@ class IndexProxyCreator
         return indexProvider.getOnlineAccessor( ruleId, descriptor, samplingConfig );
     }
 
-    private IndexMeta indexMetaFromProvider( long ruleId, IndexProvider.Descriptor providerDescriptor, SchemaIndexDescriptor schemaIndexDescriptor )
+    private IndexMeta indexMetaFromProvider( long ruleId, IndexProviderDescriptor providerDescriptor, SchemaIndexDescriptor schemaIndexDescriptor )
     {
         IndexCapability indexCapability = providerMap.apply( providerDescriptor ).getCapability( schemaIndexDescriptor );
         return new IndexMeta( ruleId, schemaIndexDescriptor, providerDescriptor, indexCapability );

@@ -19,9 +19,12 @@
  */
 package org.neo4j.kernel.api.index;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.kernel.api.IndexCapability;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -161,13 +164,13 @@ public abstract class IndexProvider extends LifecycleAdapter implements Comparab
             };
 
     /**
-     * Indicate that {@link Descriptor} has not yet been decided.
+     * Indicate that {@link IndexProviderDescriptor} has not yet been decided.
      * Specifically before transaction that create a new index has committed.
      */
-    public static final Descriptor UNDECIDED = new Descriptor( "Undecided", "0" );
+    public static final IndexProviderDescriptor UNDECIDED = new IndexProviderDescriptor( "Undecided", "0" );
 
     protected final int priority;
-    private final Descriptor providerDescriptor;
+    private final IndexProviderDescriptor providerDescriptor;
     private final IndexDirectoryStructure.Factory directoryStructureFactory;
     private final IndexDirectoryStructure directoryStructure;
 
@@ -176,7 +179,7 @@ public abstract class IndexProvider extends LifecycleAdapter implements Comparab
         this( copySource.providerDescriptor, copySource.priority, copySource.directoryStructureFactory );
     }
 
-    protected IndexProvider( Descriptor descriptor, int priority,
+    protected IndexProvider( IndexProviderDescriptor descriptor, int priority,
                              IndexDirectoryStructure.Factory directoryStructureFactory )
     {
         this.directoryStructureFactory = directoryStructureFactory;
@@ -227,7 +230,7 @@ public abstract class IndexProvider extends LifecycleAdapter implements Comparab
     /**
      * @return a description of this index provider
      */
-    public Descriptor getProviderDescriptor()
+    public IndexProviderDescriptor getProviderDescriptor()
     {
         return providerDescriptor;
     }
@@ -275,61 +278,13 @@ public abstract class IndexProvider extends LifecycleAdapter implements Comparab
 
     public abstract StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache );
 
-    public static class Descriptor
+    /**
+     * Provides a snapshot of meta files about this index provider, not the indexes themselves.
+     *
+     * @return {@link ResourceIterator} over all meta files for this index provider.
+     */
+    public ResourceIterator<File> snapshotMetaFiles()
     {
-        private final String key;
-        private final String version;
-
-        public Descriptor( String key, String version )
-        {
-            if ( key == null )
-            {
-                throw new IllegalArgumentException( "null provider key prohibited" );
-            }
-            if ( key.length() == 0 )
-            {
-                throw new IllegalArgumentException( "empty provider key prohibited" );
-            }
-            if ( version == null )
-            {
-                throw new IllegalArgumentException( "null provider version prohibited" );
-            }
-
-            this.key = key;
-            this.version = version;
-        }
-
-        public String getKey()
-        {
-            return key;
-        }
-
-        public String getVersion()
-        {
-            return version;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return ( 23 + key.hashCode() ) ^ version.hashCode();
-        }
-
-        @Override
-        public boolean equals( Object obj )
-        {
-            if ( obj instanceof Descriptor )
-            {
-                Descriptor otherDescriptor = (Descriptor) obj;
-                return key.equals( otherDescriptor.getKey() ) && version.equals( otherDescriptor.getVersion() );
-            }
-            return false;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "{key=" + key + ", version=" + version + "}";
-        }
+        return Iterators.emptyResourceIterator();
     }
 }

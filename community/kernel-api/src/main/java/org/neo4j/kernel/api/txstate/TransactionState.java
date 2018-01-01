@@ -28,12 +28,12 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueTuple;
 
 /**
- * Kernel transaction state, please see {@link org.neo4j.kernel.impl.api.state.TxState} for implementation details.
+ * Kernel transaction state, please see {@link TransactionState} for implementation details.
  *
  * This interface defines the mutating methods for the transaction state, methods for reading are defined in
  * {@link ReadableTransactionState}. These mutating methods follow the rule that they all contain the word "Do" in the name.
  * This naming convention helps deciding where to set {@link #hasChanges()} in the
- * {@link org.neo4j.kernel.impl.api.state.TxState main implementation class}.
+ * {@link TransactionState main implementation class}.
  */
 public interface TransactionState extends ReadableTransactionState
 {

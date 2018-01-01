@@ -31,6 +31,7 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
@@ -52,7 +53,7 @@ public class ControlledPopulationIndexProvider extends IndexProvider
     final AtomicInteger populatorCallCount = new AtomicInteger();
     final AtomicInteger writerCallCount = new AtomicInteger();
 
-    public static final IndexProvider.Descriptor PROVIDER_DESCRIPTOR = new IndexProvider.Descriptor(
+    public static final IndexProviderDescriptor PROVIDER_DESCRIPTOR = new IndexProviderDescriptor(
             "controlled-population", "1.0" );
 
     public ControlledPopulationIndexProvider()

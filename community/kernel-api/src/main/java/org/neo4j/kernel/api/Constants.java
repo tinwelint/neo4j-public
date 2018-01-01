@@ -17,18 +17,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.api.exceptions.schema;
+package org.neo4j.kernel.api;
 
-import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
-import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.storageengine.api.schema.SchemaRule;
-
-public class SchemaRuleNotFoundException extends SchemaRuleException
+public final class Constants
 {
-    private static final String NOT_FOUND_MESSAGE_TEMPLATE = "No %s was found for %s.";
+    public static final int NO_SUCH_RELATIONSHIP_TYPE = -1;
+    public static final int NO_SUCH_LABEL = -1;
+    public static final int NO_SUCH_PROPERTY_KEY = -1;
+    public static final long NO_SUCH_NODE = -1;
+    public static final long NO_SUCH_RELATIONSHIP = -1;
+    public static final int ANY_LABEL = -1;
+    public static final int ANY_RELATIONSHIP_TYPE = -1;
 
-    public SchemaRuleNotFoundException( SchemaRule.Kind kind, SchemaDescriptor descriptor )
+    private Constants()
     {
-        super( Status.Schema.SchemaRuleAccessFailed, NOT_FOUND_MESSAGE_TEMPLATE, kind, descriptor );
+        throw new UnsupportedOperationException();
     }
 }

@@ -57,6 +57,7 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
@@ -486,8 +487,8 @@ public class SchemaIndexHaIT
         }
     }
 
-    private static final IndexProvider.Descriptor CONTROLLED_PROVIDER_DESCRIPTOR =
-            new IndexProvider.Descriptor( "controlled", "1.0" );
+    private static final IndexProviderDescriptor CONTROLLED_PROVIDER_DESCRIPTOR =
+            new IndexProviderDescriptor( "controlled", "1.0" );
 
     private static class ControlledIndexProvider extends IndexProvider
     {

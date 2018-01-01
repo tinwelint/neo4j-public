@@ -25,7 +25,7 @@ import org.neo4j.collection.primitive.PrimitiveIntCollections;
 import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.helpers.Numbers;
-import org.neo4j.kernel.api.StatementConstants;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.locking.Lock;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
@@ -49,7 +49,7 @@ public class StoreSingleNodeCursor implements Cursor<NodeItem>, NodeItem
     private final LockService lockService;
     private final RecordCursors recordCursors;
 
-    private long nodeId = StatementConstants.NO_SUCH_NODE;
+    private long nodeId = Constants.NO_SUCH_NODE;
     private long[] labels;
 
     public StoreSingleNodeCursor( NodeRecord nodeRecord, Consumer<StoreSingleNodeCursor> instanceCache,
@@ -77,7 +77,7 @@ public class StoreSingleNodeCursor implements Cursor<NodeItem>, NodeItem
     public boolean next()
     {
         labels = null;
-        if ( nodeId != StatementConstants.NO_SUCH_NODE )
+        if ( nodeId != Constants.NO_SUCH_NODE )
         {
             try
             {
@@ -85,7 +85,7 @@ public class StoreSingleNodeCursor implements Cursor<NodeItem>, NodeItem
             }
             finally
             {
-                nodeId = StatementConstants.NO_SUCH_NODE;
+                nodeId = Constants.NO_SUCH_NODE;
             }
         }
 

@@ -27,7 +27,6 @@ import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.transaction.command.Command.Version;
 import org.neo4j.storageengine.api.CommandsToApply;
 
 /**
@@ -38,7 +37,7 @@ import org.neo4j.storageengine.api.CommandsToApply;
  */
 public class NeoStoreBatchTransactionApplier extends BatchTransactionApplier.Adapter
 {
-    private final Version version;
+    private final StorageCommandVersion version;
     private final NeoStores neoStores;
     // Ideally we don't want any cache access in here, but it is how it is. At least we try to minimize use of it
     private final CacheAccessBackDoor cacheAccess;
@@ -46,10 +45,10 @@ public class NeoStoreBatchTransactionApplier extends BatchTransactionApplier.Ada
 
     public NeoStoreBatchTransactionApplier( NeoStores store, CacheAccessBackDoor cacheAccess, LockService lockService )
     {
-        this( Version.AFTER, store, cacheAccess, lockService );
+        this( StorageCommandVersion.AFTER, store, cacheAccess, lockService );
     }
 
-    public NeoStoreBatchTransactionApplier( Version version, NeoStores store, CacheAccessBackDoor cacheAccess, LockService lockService )
+    public NeoStoreBatchTransactionApplier( StorageCommandVersion version, NeoStores store, CacheAccessBackDoor cacheAccess, LockService lockService )
     {
         this.version = version;
         this.neoStores = store;

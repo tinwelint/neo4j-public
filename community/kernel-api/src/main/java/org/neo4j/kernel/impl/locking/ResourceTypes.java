@@ -24,12 +24,12 @@ import java.lang.reflect.Array;
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.hashing.HashFunction;
-import org.neo4j.helpers.Strings;
 import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.kernel.impl.util.concurrent.LockWaitStrategies;
+import org.neo4j.storageengine.api.lock.LockWaitStrategies;
 import org.neo4j.storageengine.api.lock.ResourceType;
 import org.neo4j.storageengine.api.lock.WaitStrategy;
 import org.neo4j.util.FeatureToggles;
+import org.neo4j.string.Strings;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 

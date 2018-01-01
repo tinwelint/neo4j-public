@@ -37,7 +37,7 @@ import org.neo4j.logging.RotatingFileOutputStreamSupplier;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
-import static org.neo4j.helpers.Strings.escape;
+import static org.neo4j.string.Strings.escape;
 
 public class SecurityLog extends LifecycleAdapter implements Log
 {

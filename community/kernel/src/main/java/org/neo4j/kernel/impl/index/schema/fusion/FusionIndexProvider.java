@@ -36,6 +36,7 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.newapi.UnionIndexCapability;
@@ -91,7 +92,7 @@ public class FusionIndexProvider extends IndexProvider
             IndexProvider temporalProvider,
             IndexProvider luceneProvider,
             Selector selector,
-            Descriptor descriptor,
+            IndexProviderDescriptor descriptor,
             int priority,
             IndexDirectoryStructure.Factory directoryStructure,
             FileSystemAbstraction fs,

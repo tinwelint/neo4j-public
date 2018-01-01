@@ -29,6 +29,7 @@ import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.kernel.api.CapableIndexReference;
@@ -40,11 +41,13 @@ import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.kernel.api.AssertOpen;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.DegreeVisitor;
@@ -56,7 +59,7 @@ import org.neo4j.kernel.impl.core.LabelTokenHolder;
 import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
 import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
-import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.StoreStatement;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -227,7 +230,7 @@ public class StorageLayer implements StoreReadLayer
         IndexRule rule = indexRule( index );
         if ( rule == null )
         {
-            throw new SchemaRuleNotFoundException( SchemaRule.Kind.INDEX_RULE, index.schema() );
+            throw new SchemaRuleNotFoundException( SchemaRule.Kind.INDEX_RULE.userString(), index.schema() );
         }
         return rule.getId();
     }
@@ -239,7 +242,7 @@ public class StorageLayer implements StoreReadLayer
     }
 
     @Override
-    public IndexProvider.Descriptor indexGetProviderDescriptor( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public IndexProviderDescriptor indexGetProviderDescriptor( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexService.getIndexProxy( descriptor.schema() ).getProviderDescriptor();
     }
@@ -490,7 +493,7 @@ public class StorageLayer implements StoreReadLayer
     @Override
     public long countsForRelationship( int startLabelId, int typeId, int endLabelId )
     {
-        if ( !(startLabelId == StatementConstants.ANY_LABEL || endLabelId == StatementConstants.ANY_LABEL) )
+        if ( !(startLabelId == Constants.ANY_LABEL || endLabelId == Constants.ANY_LABEL) )
         {
             throw new UnsupportedOperationException( "not implemented" );
         }
@@ -565,7 +568,7 @@ public class StorageLayer implements StoreReadLayer
         if ( node.isDense() )
         {
             RelationshipGroupRecord groupRecord = relationshipGroupStore.newRecord();
-            RecordCursor<RelationshipGroupRecord> cursor = statement.recordCursors().relationshipGroup();
+            RecordCursor<RelationshipGroupRecord> cursor = ((StoreStatement) statement).recordCursors().relationshipGroup();
             for ( long id = node.nextGroupId(); id != NO_NEXT_RELATIONSHIP.intValue(); id = groupRecord.getNext() )
             {
                 if ( cursor.next( id, groupRecord, FORCE ) )
@@ -609,13 +612,13 @@ public class StorageLayer implements StoreReadLayer
     }
 
     @Override
-    public int degreeRelationshipsInGroup( StorageStatement storeStatement, long nodeId, long groupId,
+    public int degreeRelationshipsInGroup( StorageStatement statement, long nodeId, long groupId,
             Direction direction, Integer relType )
     {
         RelationshipRecord relationshipRecord = relationshipStore.newRecord();
         RelationshipGroupRecord relationshipGroupRecord = relationshipGroupStore.newRecord();
         return countRelationshipsInGroup( groupId, direction, relType, nodeId, relationshipRecord,
-                relationshipGroupRecord, storeStatement.recordCursors() );
+                relationshipGroupRecord, ((StoreStatement) statement).recordCursors() );
     }
 
     @Override
@@ -653,9 +656,9 @@ public class StorageLayer implements StoreReadLayer
     private void visitDenseNode( StorageStatement statement, NodeItem nodeItem, DegreeVisitor visitor )
     {
         RelationshipGroupRecord relationshipGroupRecord = relationshipGroupStore.newRecord();
-        RecordCursor<RelationshipGroupRecord> relationshipGroupCursor = statement.recordCursors().relationshipGroup();
+        RecordCursor<RelationshipGroupRecord> relationshipGroupCursor = ((StoreStatement) statement).recordCursors().relationshipGroup();
         RelationshipRecord relationshipRecord = relationshipStore.newRecord();
-        RecordCursor<RelationshipRecord> relationshipCursor = statement.recordCursors().relationship();
+        RecordCursor<RelationshipRecord> relationshipCursor = ((StoreStatement) statement).recordCursors().relationship();
 
         long groupId = nodeItem.nextGroupId();
         while ( groupId != NO_NEXT_RELATIONSHIP.longValue() )

@@ -161,7 +161,7 @@ public class CheckPointerImpl extends LifecycleAdapter implements CheckPointer
              */
             msgLog.info( prefix + " checkpoint started..." );
             long startTime = currentTimeMillis();
-            storageEngine.flushAndForce( ioLimiter );
+            storageEngine.flushAndForce( false );
             /*
              * Check kernel health before going to write the next check point.  In case of a panic this check point
              * will be aborted, which is the safest alternative so that the next recovery will have a chance to

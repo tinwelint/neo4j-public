@@ -33,8 +33,8 @@ import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.index.IndexUpdater;
-import org.neo4j.kernel.api.index.IndexProvider;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.impl.locking.LockService;
@@ -350,7 +350,7 @@ public class BatchingMultipleIndexPopulatorTest
 
         batchingPopulator.addPopulator(
                 populator, descriptor.schema().keyId(),
-                new IndexMeta( 1, descriptor, new IndexProvider.Descriptor( "foo", "1" ), NO_CAPABILITY ),
+                new IndexMeta( 1, descriptor, new IndexProviderDescriptor( "foo", "1" ), NO_CAPABILITY ),
                 flipper, failedIndexProxyFactory, "testIndex" );
 
         return populator;

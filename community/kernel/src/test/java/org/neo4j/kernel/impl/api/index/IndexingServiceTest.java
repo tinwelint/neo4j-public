@@ -63,6 +63,7 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
@@ -453,7 +454,7 @@ public class IndexingServiceTest
     {
         // GIVEN an indexing service that has a schema index provider X
         String otherProviderKey = "something-completely-different";
-        IndexProvider.Descriptor otherDescriptor = new IndexProvider.Descriptor(
+        IndexProviderDescriptor otherDescriptor = new IndexProviderDescriptor(
                 otherProviderKey, "no-version" );
         IndexRule rule = indexRule( 1, 2, 3, otherDescriptor );
         IndexingService indexing = newIndexingServiceWithMockedDependencies(
@@ -1375,21 +1376,21 @@ public class IndexingServiceTest
         }
     }
 
-    private IndexRule indexRule( long ruleId, int labelId, int propertyKeyId, IndexProvider.Descriptor
+    private IndexRule indexRule( long ruleId, int labelId, int propertyKeyId, IndexProviderDescriptor
             providerDescriptor )
     {
         return IndexRule.indexRule( ruleId, SchemaIndexDescriptorFactory.forLabel( labelId, propertyKeyId ),
                 providerDescriptor );
     }
 
-    private IndexRule constraintIndexRule( long ruleId, int labelId, int propertyKeyId, IndexProvider.Descriptor
+    private IndexRule constraintIndexRule( long ruleId, int labelId, int propertyKeyId, IndexProviderDescriptor
             providerDescriptor )
     {
         return IndexRule.indexRule( ruleId, SchemaIndexDescriptorFactory.uniqueForLabel( labelId, propertyKeyId ),
                 providerDescriptor );
     }
 
-    private IndexRule constraintIndexRule( long ruleId, int labelId, int propertyKeyId, IndexProvider.Descriptor
+    private IndexRule constraintIndexRule( long ruleId, int labelId, int propertyKeyId, IndexProviderDescriptor
             providerDescriptor, long constraintId )
     {
         return IndexRule.constraintIndexRule(

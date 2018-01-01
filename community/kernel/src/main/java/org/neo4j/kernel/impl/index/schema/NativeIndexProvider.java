@@ -33,6 +33,7 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure.Factory;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
@@ -51,8 +52,8 @@ abstract class NativeIndexProvider<KEY extends NativeSchemaKey<KEY>,VALUE extend
     protected final RecoveryCleanupWorkCollector recoveryCleanupWorkCollector;
     protected final boolean readOnly;
 
-    protected NativeIndexProvider( Descriptor descriptor, int priority, Factory directoryStructureFactory, PageCache pageCache, FileSystemAbstraction fs,
-            Monitor monitor, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean readOnly )
+    protected NativeIndexProvider( IndexProviderDescriptor descriptor, int priority, Factory directoryStructureFactory, PageCache pageCache,
+            FileSystemAbstraction fs, Monitor monitor, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean readOnly )
     {
         super( descriptor, priority, directoryStructureFactory );
         this.pageCache = pageCache;

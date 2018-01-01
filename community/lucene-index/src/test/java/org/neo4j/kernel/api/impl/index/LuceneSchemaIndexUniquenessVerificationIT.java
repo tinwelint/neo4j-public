@@ -39,7 +39,6 @@ import java.util.stream.IntStream;
 
 import org.neo4j.function.Factory;
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.helpers.Strings;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
@@ -50,6 +49,7 @@ import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.string.Strings;
 import org.neo4j.test.Randoms;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;

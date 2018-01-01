@@ -60,7 +60,6 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
@@ -141,7 +140,6 @@ public class BackupProtocolServiceIT
     private static final Label LABEL = Label.label( "LABEL" );
 
     private final Monitors monitors = new Monitors();
-    private final IOLimiter limiter = IOLimiter.unlimited();
     private FileSystemAbstraction fileSystem;
     private Path storeDir;
     private Path backupDir;
@@ -642,7 +640,7 @@ public class BackupProtocolServiceIT
         createAndIndexNode( db, 3 );
         createAndIndexNode( db, 4 );
 
-        db.getDependencyResolver().resolveDependency( StorageEngine.class ).flushAndForce( limiter );
+        db.getDependencyResolver().resolveDependency( StorageEngine.class ).flushAndForce( true );
         long txId = db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
                 .getLastCommittedTransactionId();
 
@@ -904,7 +902,7 @@ public class BackupProtocolServiceIT
             barrier.awaitUninterruptibly();
 
             createAndIndexNode( db, 1 );
-            resolver.resolveDependency( StorageEngine.class ).flushAndForce( limiter );
+            resolver.resolveDependency( StorageEngine.class ).flushAndForce( true );
 
             barrier.release();
         } );

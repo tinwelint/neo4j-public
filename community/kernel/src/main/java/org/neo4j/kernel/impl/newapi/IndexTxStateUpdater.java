@@ -33,7 +33,7 @@ import org.neo4j.storageengine.api.StoreReadLayer;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueTuple;
 
-import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_PROPERTY_KEY;
+import static org.neo4j.kernel.api.Constants.NO_SUCH_PROPERTY_KEY;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
 /**

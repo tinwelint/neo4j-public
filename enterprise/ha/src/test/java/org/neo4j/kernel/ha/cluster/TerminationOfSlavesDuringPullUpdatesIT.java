@@ -40,12 +40,12 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
-import org.neo4j.helpers.Strings;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.ha.UpdatePuller;
 import org.neo4j.kernel.impl.ha.ClusterManager;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
+import org.neo4j.string.Strings;
 import org.neo4j.test.Race;
 import org.neo4j.test.ha.ClusterRule;
 

@@ -120,14 +120,14 @@ public class SchemaStorage implements SchemaRuleAccess
 
         if ( !rules.hasNext() )
         {
-            throw new SchemaRuleNotFoundException( SchemaRule.Kind.map( descriptor ), descriptor.schema() );
+            throw new SchemaRuleNotFoundException( SchemaRule.Kind.map( descriptor ).userString(), descriptor.schema() );
         }
 
         ConstraintRule rule = rules.next();
 
         if ( rules.hasNext() )
         {
-            throw new DuplicateSchemaRuleException( SchemaRule.Kind.map( descriptor ), descriptor.schema() );
+            throw new DuplicateSchemaRuleException( SchemaRule.Kind.map( descriptor ).userString(), descriptor.schema() );
         }
         return rule;
     }

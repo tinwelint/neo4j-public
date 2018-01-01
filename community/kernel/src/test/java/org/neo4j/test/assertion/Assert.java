@@ -30,7 +30,7 @@ import java.util.function.Function;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.helpers.ArrayUtil;
-import org.neo4j.helpers.Strings;
+import org.neo4j.string.Strings;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.StringContains.containsString;

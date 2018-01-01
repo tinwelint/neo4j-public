@@ -22,9 +22,9 @@ package org.neo4j.cluster.statemachine;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastSerializer;
 import org.neo4j.cluster.protocol.atomicbroadcast.Payload;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatState;
-import org.neo4j.helpers.Strings;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.string.Strings;
 
 import static org.neo4j.cluster.com.message.Message.HEADER_CONVERSATION_ID;
 import static org.neo4j.cluster.com.message.Message.HEADER_FROM;

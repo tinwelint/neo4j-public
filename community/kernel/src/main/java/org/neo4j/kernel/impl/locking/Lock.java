@@ -19,8 +19,9 @@
  */
 package org.neo4j.kernel.impl.locking;
 
-public abstract class Lock implements AutoCloseable
+public abstract class Lock implements org.neo4j.graphdb.Lock, AutoCloseable
 {
+    @Override
     public abstract void release();
 
     @Override

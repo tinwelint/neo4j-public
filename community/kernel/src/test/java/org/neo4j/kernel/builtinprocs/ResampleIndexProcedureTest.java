@@ -133,7 +133,6 @@ public class ResampleIndexProcedureTest
     @Test
     public void shouldThrowAnExceptionIfTheIndexDoesNotExist()
             throws SchemaRuleNotFoundException
-
     {
         when( tokenRead.nodeLabel( anyString() ) ).thenReturn( 0 );
         when( tokenRead.propertyKey( anyString() ) ).thenReturn( 0 );

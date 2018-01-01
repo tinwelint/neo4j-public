@@ -25,17 +25,11 @@ import java.util.stream.Stream;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
-import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
-import org.neo4j.kernel.api.index.PropertyAccessor;
-import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.store.StoreId;
-import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.util.DependencySatisfier;
-import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 
@@ -89,15 +83,14 @@ public interface StorageEngine
      * didn't validate, for example if trying to delete a node that still has relationships.
      * @throws CreateConstraintFailureException if this transaction was set to create a constraint and that failed.
      * @throws ConstraintValidationException if this transaction was set to create a constraint
-     * and some data violates that constraint.
-     */
+     * and some data violates that constraint.     */
     void createCommands(
             Collection<StorageCommand> target,
             ReadableTransactionState state,
             StorageStatement storageStatement,
             ResourceLocker locks,
             long lastTransactionIdWhenStarted )
-            throws TransactionFailureException, CreateConstraintFailureException, ConstraintValidationException;
+            throws TransactionFailureException, ConstraintValidationException, CreateConstraintFailureException;
 
     /**
      * Apply a batch of groups of commands to this storage.
@@ -117,16 +110,13 @@ public interface StorageEngine
     /**
      * Flushes and forces all changes down to underlying storage. This is a blocking call and when it returns
      * all changes applied to this storage engine will be durable.
-     * @param limiter The {@link IOLimiter} used to moderate the rate of IO caused by the flush process.
      */
-    void flushAndForce( IOLimiter limiter );
+    void flushAndForce( boolean disableIoLimit );
 
     /**
-     * Registers diagnostics about the storage onto {@link DiagnosticsManager}.
-     *
-     * @param diagnosticsManager {@link DiagnosticsManager} to register diagnostics at.
+     * Registers diagnostics about the storage.
      */
-    void registerDiagnostics( DiagnosticsManager diagnosticsManager );
+    void registerDiagnostics();
 
     /**
      * Force close all opened resources. This may be called during startup if there's a failure

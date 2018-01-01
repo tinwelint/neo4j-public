@@ -19,7 +19,7 @@
  */
 package org.neo4j.storageengine.api;
 
-import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.graphdb.Lock;
 
 /**
  * Represents a single relationship from a cursor.

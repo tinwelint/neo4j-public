@@ -45,6 +45,7 @@ import org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory20;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
@@ -92,7 +93,7 @@ public class IndexingServiceIntegrationTest
     public KernelExtensionFactory<?> kernelExtensionFactory;
 
     @Parameterized.Parameter( 1 )
-    public IndexProvider.Descriptor indexDescriptor;
+    public IndexProviderDescriptor indexDescriptor;
 
     @Before
     public void setUp()

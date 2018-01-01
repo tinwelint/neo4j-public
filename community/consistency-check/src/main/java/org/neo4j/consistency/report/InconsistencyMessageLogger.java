@@ -20,11 +20,11 @@
 package org.neo4j.consistency.report;
 
 import org.neo4j.consistency.RecordType;
-import org.neo4j.helpers.Strings;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.logging.Log;
+import org.neo4j.string.Strings;
 
-import static org.neo4j.helpers.Strings.TAB;
+import static org.neo4j.string.Strings.TAB;
 
 public class InconsistencyMessageLogger implements InconsistencyLogger
 {

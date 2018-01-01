@@ -22,8 +22,8 @@ package org.neo4j.kernel.impl.api.store;
 import java.util.function.Consumer;
 
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.kernel.api.AssertOpen;
-import org.neo4j.kernel.impl.locking.Lock;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.RecordCursors;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;

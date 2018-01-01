@@ -204,6 +204,7 @@ public class DataSourceModule
                 platformModule.storeCopyCheckPointMutex,
                 platformModule.recoveryCleanupWorkCollector,
                 editionModule.idController,
+                diagnosticsManager,
                 platformModule.databaseInfo.operationalMode,
                 platformModule.versionContextSupplier,
                 collectionsFactorySupplier ) );

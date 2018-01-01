@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.concurrent.WorkSync;
 import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.kernel.api.index.IndexProvider.Descriptor;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.labelscan.LabelScanWriter;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.impl.api.TransactionApplier;
@@ -52,7 +52,7 @@ import static org.neo4j.kernel.impl.store.record.DynamicRecord.dynamicRecord;
 
 public class NeoTransactionIndexApplierTest
 {
-    private static final Descriptor INDEX_DESCRIPTOR = new Descriptor( "in-memory", "1.0" );
+    private static final IndexProviderDescriptor INDEX_DESCRIPTOR = new IndexProviderDescriptor( "in-memory", "1.0" );
 
     private final IndexingService indexingService = mock( IndexingService.class );
     @SuppressWarnings( "unchecked" )
@@ -125,7 +125,7 @@ public class NeoTransactionIndexApplierTest
         verify( indexingService ).createIndexes( indexRule );
     }
 
-    private IndexRule indexRule( long ruleId, int labelId, int propertyId, Descriptor descriptor )
+    private IndexRule indexRule( long ruleId, int labelId, int propertyId, IndexProviderDescriptor descriptor )
     {
         return IndexRule.indexRule( ruleId, SchemaIndexDescriptorFactory.forLabel( labelId, propertyId ), descriptor );
     }

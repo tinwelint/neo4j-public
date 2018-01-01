@@ -65,6 +65,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex
 import org.neo4j.kernel.impl.transaction.log.files.LogFileCreationMonitor;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
+import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.internal.TransactionEventHandlers;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -139,6 +140,7 @@ public class NeoStoreDataSourceRule extends ExternalResource
                 RecoveryCleanupWorkCollector.IMMEDIATE,
                 new BufferedIdController(
                         new BufferingIdGeneratorFactory( idGeneratorFactory, IdReuseEligibility.ALWAYS, idConfigurationProvider ), jobScheduler ),
+                new DiagnosticsManager( logService.getInternalLog( DiagnosticsManager.class ) ),
                 OperationalMode.single, new TransactionVersionContextSupplier(), ON_HEAP );
         return dataSource;
     }

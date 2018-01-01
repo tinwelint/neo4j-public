@@ -69,8 +69,8 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allIterator;
 import static org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingIterator;
 import static org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingIterator;
-import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_LABEL;
-import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP_TYPE;
+import static org.neo4j.kernel.api.Constants.NO_SUCH_LABEL;
+import static org.neo4j.kernel.api.Constants.NO_SUCH_RELATIONSHIP_TYPE;
 import static org.neo4j.kernel.impl.core.TokenHolder.NO_ID;
 
 public class NodeProxy implements Node, RelationshipFactory<Relationship>

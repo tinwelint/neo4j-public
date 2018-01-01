@@ -22,7 +22,7 @@ package org.neo4j.kernel.api.impl.schema;
 import java.io.File;
 
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.index.schema.NumberIndexProvider;
 
@@ -38,7 +38,7 @@ abstract class NativeLuceneFusionIndexProviderFactory<DEPENDENCIES> extends Kern
         super( KEY );
     }
 
-    public static IndexDirectoryStructure.Factory subProviderDirectoryStructure( File storeDir, IndexProvider.Descriptor descriptor )
+    public static IndexDirectoryStructure.Factory subProviderDirectoryStructure( File storeDir, IndexProviderDescriptor descriptor )
     {
         IndexDirectoryStructure parentDirectoryStructure = directoriesByProvider( storeDir ).forProvider( descriptor );
         return directoriesBySubProvider( parentDirectoryStructure );

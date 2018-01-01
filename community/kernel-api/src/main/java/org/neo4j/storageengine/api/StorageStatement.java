@@ -22,11 +22,10 @@ package org.neo4j.storageengine.api;
 import java.util.function.IntPredicate;
 
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
-import org.neo4j.kernel.impl.locking.Lock;
-import org.neo4j.kernel.impl.store.RecordCursors;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.LabelScanReader;
 
@@ -150,13 +149,6 @@ public interface StorageStatement extends AutoCloseable
      * @throws IndexNotFoundKernelException if no such index exists.
      */
     IndexReader getFreshIndexReader( SchemaIndexDescriptor index ) throws IndexNotFoundKernelException;
-
-    /**
-     * Access to low level record cursors
-     *
-     * @return record cursors
-     */
-    RecordCursors recordCursors();
 
     /**
      * Reserves a node id for future use to store a node. The reason for it being exposed here is that

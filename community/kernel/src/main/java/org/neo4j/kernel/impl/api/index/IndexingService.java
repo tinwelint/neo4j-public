@@ -49,7 +49,7 @@ import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelExceptio
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexProvider;
-import org.neo4j.kernel.api.index.IndexProvider.Descriptor;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.SchemaState;
@@ -71,7 +71,6 @@ import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.kernel.api.InternalIndexState.FAILED;
 import static org.neo4j.internal.kernel.api.InternalIndexState.ONLINE;
 import static org.neo4j.internal.kernel.api.InternalIndexState.POPULATING;
-import static org.neo4j.kernel.impl.api.index.IndexPopulationFailure.failure;
 
 /**
  * Manages the indexes that were introduced in 2.0. These indexes depend on the normal neo4j logical log for
@@ -200,7 +199,7 @@ public class IndexingService extends LifecycleAdapter implements IndexingUpdateS
 
                 long indexId = indexRule.getId();
                 SchemaIndexDescriptor descriptor = indexRule.getIndexDescriptor();
-                IndexProvider.Descriptor providerDescriptor = indexRule.getProviderDescriptor();
+                IndexProviderDescriptor providerDescriptor = indexRule.getProviderDescriptor();
                 IndexProvider provider = providerMap.apply( providerDescriptor );
                 InternalIndexState initialState = provider.getInitialState( indexId, descriptor );
                 indexStates.computeIfAbsent( initialState, internalIndexState -> new ArrayList<>() )
@@ -726,7 +725,7 @@ public class IndexingService extends LifecycleAdapter implements IndexingUpdateS
                     continue;
                 }
                 final SchemaIndexDescriptor descriptor = rule.getIndexDescriptor();
-                Descriptor providerDescriptor = rule.getProviderDescriptor();
+                IndexProviderDescriptor providerDescriptor = rule.getProviderDescriptor();
                 boolean flipToTentative = rule.canSupportUniqueConstraint();
                 if ( state == State.RUNNING )
                 {
