@@ -1,6 +1,26 @@
+/*
+ * Copyright (c) 2002-2018 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.store.newprop;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 import org.neo4j.values.storable.Value;
 
@@ -19,19 +39,24 @@ public interface SimplePropertyStoreAbstraction extends Closeable
      *
      * @return the new record id, potentially the same {@code id} that got passed in.
      */
-    long set( long id, int key, Value value );
+    long set( long id, int key, Value value ) throws IOException;
 
     /**
      * @return {@code true} if this removal causes the record to be empty, in which case the id could
      * be freed for later reuse. The freeing and management in general is done externally.
      */
-    boolean remove( long id, int key );
+    boolean remove( long id, int key ) throws IOException;
 
     // Reading
     /**
      * @return whether or not the property exists.
      */
-    boolean has( long id, int key );
+    boolean has( long id, int key ) throws IOException;
+
+    /**
+     * @return the {@link Value}.
+     */
+    Value get( long id, int key ) throws IOException;
 
     /**
      * The idea with this method is to get the data, i.e. read it byte for byte or whatever, but
@@ -41,12 +66,14 @@ public interface SimplePropertyStoreAbstraction extends Closeable
      *
      * @return number of property data bytes visited.
      */
-    Value get( long id, int key );
+    int getWithoutDeserializing( long id, int key ) throws IOException;
 
     /**
      * @return number of properties visited.
      */
-    int all( long id, PropertyVisitor visitor );
+    int all( long id, PropertyVisitor visitor ) throws IOException;
+
+    long storeSize();
 
     interface PropertyVisitor
     {

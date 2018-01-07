@@ -17,10 +17,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * Just a prototype of the new property store format straight onto a PageCache.
- * The idea is to compare another similar implementation of the current format straight onto a PageCache as well,
- * by putting different sorts of load onto both and get ideas about performance characteristics,
- * not necessarily precise numbers.
- */
 package org.neo4j.kernel.impl.store.newprop;
+
+import static org.neo4j.io.ByteUnit.kibiBytes;
+
+class UnitCalculation
+{
+    static final int PAGE_SIZE = (int) kibiBytes( 8 );
+    static final int UNIT_SIZE = 64;
+    static final int EFFECTIVE_PAGE_SIZE = PAGE_SIZE - UNIT_SIZE; // one-unit header
+    static final int UNITS_PER_PAGE = EFFECTIVE_PAGE_SIZE / UNIT_SIZE;
+    static final int EFFECTIVE_UNITS_PER_PAGE = UNITS_PER_PAGE - 1; // one-unit header
+
+    static long pageIdForRecord( long id )
+    {
+        return id * UNIT_SIZE / EFFECTIVE_PAGE_SIZE;
+    }
+
+    static int offsetForId( long id )
+    {
+        return (int) (id * UNIT_SIZE % EFFECTIVE_PAGE_SIZE) + UNIT_SIZE;
+    }
+
+    static int unitInPage( long id )
+    {
+        return (int) (id % UNITS_PER_PAGE);
+    }
+}

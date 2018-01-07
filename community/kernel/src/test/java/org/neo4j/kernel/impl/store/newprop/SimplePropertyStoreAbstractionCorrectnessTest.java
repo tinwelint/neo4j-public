@@ -1,97 +1,41 @@
+/*
+ * Copyright (c) 2002-2018 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.store.newprop;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.Arrays;
 
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.test.rule.PageCacheRule;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.IntValue;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.test.rule.PageCacheRule.config;
 import static org.neo4j.values.storable.Values.intValue;
 
 @RunWith( Parameterized.class )
-public class SimplePropertyStoreAbstractionCorrectnessTest
+public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropertyStoreAbstractionTestBase
 {
-    interface Creator
-    {
-        SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir )
-                throws IOException;
-    }
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<Object[]> data()
-    {
-        List<Object[]> data = new ArrayList<>();
-        data.add( new Object[] {new Creator()
-        {
-            @Override
-            public SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir )
-            {
-                return new CurrentFormat( pageCache, fs, dir );
-            }
-
-            @Override
-            public String toString()
-            {
-                return "Current";
-            }
-        }} );
-        data.add( new Object[] {new Creator()
-        {
-            @Override
-            public SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir )
-                    throws IOException
-            {
-                return new ProposedFormat( pageCache, dir );
-            }
-
-            @Override
-            public String toString()
-            {
-                return "New";
-            }
-        }} );
-        return data;
-    }
-
-    public final @Rule PageCacheRule pageCacheRule = new PageCacheRule( config().withInconsistentReads( false ) );
-    public final @Rule TestDirectory directory = TestDirectory.testDirectory( getClass() );
-    private final FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-    private final Creator creator;
-    private SimplePropertyStoreAbstraction store;
-
     public SimplePropertyStoreAbstractionCorrectnessTest( Creator creator )
     {
-        this.creator = creator;
-    }
-
-    @Before
-    public void before() throws IOException
-    {
-        this.store = creator.create( pageCacheRule.getPageCache( fs ), fs, directory.directory() );
-    }
-
-    @After
-    public void after() throws IOException
-    {
-        this.store.close();
+        super( creator );
     }
 
     @Test
@@ -162,7 +106,35 @@ public class SimplePropertyStoreAbstractionCorrectnessTest
         // THEN
         for ( int i = 0; i < 10; i++ )
         {
-            assertEquals( i != 1, store.has( id, i ) );
+            assertEquals( "" + i, i != 1, store.has( id, i ) );
+        }
+    }
+
+    @Test
+    public void shouldSetPropertiesForMultipleNodes() throws Exception
+    {
+        // given
+        int nodeCount = 20;
+        int keyCount = 10;
+        long[] ids = new long[nodeCount];
+        Arrays.fill( ids, -1 );
+
+        // when
+        for ( int n = 0; n < nodeCount; n++ )
+        {
+            for ( int k = 0; k < keyCount; k++ )
+            {
+                ids[n] = store.set( ids[n], k, intValue( k ) );
+            }
+        }
+
+        // then
+        for ( int n = 0; n < nodeCount; n++ )
+        {
+            for ( int k = 0; k < keyCount; k++ )
+            {
+                assertEquals( intValue( k ), store.get( ids[n], k ) );
+            }
         }
     }
 }
