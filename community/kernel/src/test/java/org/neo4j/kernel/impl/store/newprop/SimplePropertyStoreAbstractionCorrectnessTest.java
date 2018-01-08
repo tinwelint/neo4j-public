@@ -87,6 +87,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         for ( int i = 0; i < 100; i++ )
         {
             assertTrue( store.has( id, i ) );
+            assertEquals( intValue( i ), store.get( id, i ) );
         }
     }
 

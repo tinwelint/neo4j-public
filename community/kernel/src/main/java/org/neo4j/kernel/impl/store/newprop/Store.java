@@ -58,13 +58,15 @@ public class Store implements Closeable
             throw new UnsupportedOperationException( "TODO implement support for records spanning multiple pages" );
         }
 
-        long startId = nextId.getAndAdd( units );
-
         // TODO make thread-safe
-        if ( pageIdForRecord( startId ) != pageIdForRecord( startId + units ) )
+        long startId = nextId.get();
+        if ( pageIdForRecord( startId ) != pageIdForRecord( startId + units - 1 ) )
         {
-            startId = nextId.getAndAdd( units );
+            // Crossing page boundary, go to the next page
+            long idOfNextPage = pageIdForRecord( startId + units - 1 );
+            nextId.set( idOfNextPage * EFFECTIVE_UNITS_PER_PAGE );
         }
+        startId = nextId.getAndAdd( units );
 
         // TODO Let's predict if we'll cross a page boundary and if so start on a new page instead.
         // TODO a bit weird to put stuff in the header here, isn't it? This is before the data has arrived
@@ -89,7 +91,7 @@ public class Store implements Closeable
                 {
                     int units = Header.numberOfUnits( cursor, id );
                     cursor.setOffset( offset );
-                    long nextId = visitor.accept( cursor, units );
+                    long nextId = visitor.accept( cursor, id, units );
                     if ( nextId != -1 )
                     {
                         pageId = pageIdForRecord( nextId );
@@ -133,6 +135,6 @@ public class Store implements Closeable
          * @return -1 if no more pages should be accessed, non-negative if the access should
          * continue in a new place, another id.
          */
-        long accept( PageCursor cursor, int units );
+        long accept( PageCursor cursor, long startId, int units ) throws IOException;
     }
 }

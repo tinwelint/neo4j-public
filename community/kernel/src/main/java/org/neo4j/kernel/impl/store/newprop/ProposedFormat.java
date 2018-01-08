@@ -33,6 +33,8 @@ import org.neo4j.values.storable.Values;
 
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
+import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
+import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
 import static org.neo4j.values.storable.Values.booleanValue;
 import static org.neo4j.values.storable.Values.byteValue;
 import static org.neo4j.values.storable.Values.intValue;
@@ -42,6 +44,7 @@ import static org.neo4j.values.storable.Values.shortValue;
 public class ProposedFormat implements SimplePropertyStoreAbstraction
 {
     static final int HEADER_ENTRY_SIZE = Integer.BYTES;
+    static final int RECORD_HEADER_SIZE = Short.BYTES;
 
     private final Store store;
 
@@ -62,11 +65,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         }
         // Read header and see if property by the given key already exists
         // For now let's store the number of header entries as a 2B entry first
-        store.accessForWriting( id, new Visitor()
+        Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, int units )
+            public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
+                longState = startId;
                 if ( seek( cursor, key ) )
                 {
                     // Change property value
@@ -76,26 +80,32 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 // OK, so we'd like to add this property.
                 // How many bytes do we have available in this record?
                 // Formula is: start of left-most value  -  end of right-most header
-                int freeBytesInRecord = (units * UNIT_SIZE - relativeValueOffset) - numberOfHeaderEntries * HEADER_ENTRY_SIZE;
+                int recordLength = units * UNIT_SIZE;
+                int freeBytesInRecord = recordLength - valueLength - headerLength;
                 Type type = Type.fromValue( value );
                 if ( type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + type.valueLength() > freeBytesInRecord )
-                {
-                    throw new UnsupportedOperationException( "TODO implement grow/relocate" );
+                {   // Grow/relocate record
+                    units = growRecord( cursor, startId, units );
+                    // Perhaps unnecessary to call seek again, the point of it is to leave the cursor in the
+                    // expected place for insert, just as it would have been if we wouldn't have grown the record
+                    // -- code simplicity
+                    seek( cursor, key );
                 }
 
-                int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
                 // Here assume that we're at the correct position to add a new header
-                type.putHeader( cursor, key, relativeValueOffset );
+                int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
+                type.putHeader( cursor, key, valueLength );
                 writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
                 // Back up valueLength bytes so that we start writing the value in the correct place
-                relativeValueOffset += type.valueLength();
+                valueLength += type.valueLength();
                 // Now jump to the correct value offset and write the value
                 placeCursorAtValueStart( cursor, units );
                 type.putValue( cursor, value );
                 return -1; // TODO support records spanning multiple pages
             }
-        } );
-        return id;
+        };
+        store.accessForWriting( id, visitor );
+        return visitor.longState;
     }
 
     @Override
@@ -104,7 +114,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, int units )
+            public long accept( PageCursor cursor, long startId, int units )
             {
                 if ( booleanState = seek( cursor, key ) )
                 {   // It exists
@@ -134,7 +144,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, int units )
+            public long accept( PageCursor cursor, long startId, int units )
             {
                 booleanState = seek( cursor, key );
                 return -1;
@@ -150,7 +160,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, int units )
+            public long accept( PageCursor cursor, long startId, int units )
             {
                 booleanState = seek( cursor, key );
                 if ( booleanState )
@@ -171,19 +181,19 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, int units )
+            public long accept( PageCursor cursor, long startId, int units )
             {
                 booleanState = seek( cursor, key );
                 if ( booleanState )
                 {   // found
                     placeCursorAtValueStart( cursor, units );
-                    intState = type.valueLength();
+                    longState = type.valueLength();
                 }
                 return -1;
             }
         };
         store.accessForReading( id, visitor );
-        return visitor.intState;
+        return (int) visitor.longState;
     }
 
     @Override
@@ -200,18 +210,19 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
     abstract class Visitor implements RecordVisitor
     {
-        protected int pivotOffset, numberOfHeaderEntries, relativeValueOffset, headerEntryIndex;
+        protected int pivotOffset, numberOfHeaderEntries, valueLength, headerEntryIndex, headerLength;
         protected Type type;
         protected boolean booleanState;
-        protected int intState;
+        protected long longState;
         protected Value readValue;
 
         boolean seek( PageCursor cursor, int key )
         {
             pivotOffset = cursor.getOffset();
             numberOfHeaderEntries = cursor.getShort();
-            relativeValueOffset = 0; // relative to size of this whole record, all units (since values start from the end)
+            valueLength = 0; // relative to size of this whole record, all units (since values start from the end)
             headerEntryIndex = 0;
+            headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
             while ( headerEntryIndex < numberOfHeaderEntries )
             {
                 long headerEntry = getUnsignedInt( cursor );
@@ -227,7 +238,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 //                    break;
 //                }
 
-                relativeValueOffset += type.valueLength();
+                valueLength += type.valueLength();
                 if ( thisKey == key )
                 {
                     // valueLength == length of found value
@@ -241,14 +252,42 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             return false;
         }
 
+        int growRecord( PageCursor cursor, long startId, int units ) throws IOException
+        {
+            // TODO Special case: can we grow in-place?
+
+            // Normal case: find new bigger place and move there.
+            int newUnits = units * 2;
+            long newStartId = longState = store.allocate( newUnits );
+            long newPageId = pageIdForRecord( newStartId );
+            int newOffset = offsetForId( newStartId );
+            try ( PageCursor newCursor = cursor.openLinkedCursor( newPageId ) )
+            {
+                newCursor.next();
+                newCursor.setOffset( newOffset );
+                // Copy header
+                int fromBase = pivotOffset;
+                int toBase = newCursor.getOffset();
+                cursor.copyTo( fromBase, newCursor, toBase, headerLength );
+                // Copy values
+                cursor.copyTo(
+                        fromBase + units * UNIT_SIZE - valueLength, newCursor,
+                        toBase + newUnits * UNIT_SIZE - valueLength, valueLength );
+            }
+            Header.mark( cursor, startId, units, false );
+            cursor.next( newPageId );
+            cursor.setOffset( newOffset );
+            return newUnits;
+        }
+
         void placeCursorAtValueStart( PageCursor cursor, int units )
         {
-            cursor.setOffset( pivotOffset + (units * UNIT_SIZE) - relativeValueOffset );
+            cursor.setOffset( pivotOffset + (units * UNIT_SIZE) - valueLength );
         }
 
         void placeCursorAtHeaderEntry( PageCursor cursor, int headerEntryIndex )
         {
-            cursor.setOffset( pivotOffset + Short.BYTES + HEADER_ENTRY_SIZE * headerEntryIndex );
+            cursor.setOffset( pivotOffset + RECORD_HEADER_SIZE + HEADER_ENTRY_SIZE * headerEntryIndex );
         }
 
         void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries )
