@@ -26,8 +26,11 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
 import org.neo4j.kernel.impl.store.record.Record;
+import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.IntegralValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.storable.UTF8StringValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -81,26 +84,26 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 // How many bytes do we have available in this record?
                 // Formula is: start of left-most value  -  end of right-most header
                 int recordLength = units * UNIT_SIZE;
-                int freeBytesInRecord = recordLength - valueLength - headerLength;
+                int freeBytesInRecord = recordLength - sumValueLength - headerLength;
                 Type type = Type.fromValue( value );
-                if ( type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + type.valueLength() > freeBytesInRecord )
+                Object preparedValue = type.prepare( value );
+                if ( type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + type.valueLength( preparedValue ) > freeBytesInRecord )
                 {   // Grow/relocate record
                     units = growRecord( cursor, startId, units );
                     // Perhaps unnecessary to call seek again, the point of it is to leave the cursor in the
                     // expected place for insert, just as it would have been if we wouldn't have grown the record
                     // -- code simplicity
-                    seek( cursor, key );
+                    boolean found = seek( cursor, key );
+                    assert !found;
                 }
 
                 // Here assume that we're at the correct position to add a new header
                 int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
-                type.putHeader( cursor, key, valueLength );
+                type.putHeader( cursor, key, sumValueLength, preparedValue );
+                cursor.setOffset( valueStart( units, sumValueLength + type.valueLength( preparedValue ) ) );
+                type.putValue( cursor, preparedValue );
                 writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
-                // Back up valueLength bytes so that we start writing the value in the correct place
-                valueLength += type.valueLength();
-                // Now jump to the correct value offset and write the value
-                placeCursorAtValueStart( cursor, units );
-                type.putValue( cursor, value );
+
                 return -1; // TODO support records spanning multiple pages
             }
         };
@@ -162,11 +165,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             @Override
             public long accept( PageCursor cursor, long startId, int units )
             {
-                booleanState = seek( cursor, key );
-                if ( booleanState )
+                if ( seek( cursor, key ) )
                 {   // found
-                    placeCursorAtValueStart( cursor, units );
-                    readValue = type.getValue( cursor );
+                    cursor.setOffset( valueStart( units, sumValueLength ) );
+                    readValue = type.getValue( cursor, currentValueLength );
                 }
                 return -1;
             }
@@ -183,11 +185,9 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             @Override
             public long accept( PageCursor cursor, long startId, int units )
             {
-                booleanState = seek( cursor, key );
-                if ( booleanState )
+                if ( seek( cursor, key ) )
                 {   // found
-                    placeCursorAtValueStart( cursor, units );
-                    longState = type.valueLength();
+                    longState = currentValueLength;
                 }
                 return -1;
             }
@@ -210,7 +210,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
     abstract class Visitor implements RecordVisitor
     {
-        protected int pivotOffset, numberOfHeaderEntries, valueLength, headerEntryIndex, headerLength;
+        protected int pivotOffset;
+        protected int numberOfHeaderEntries;
+        protected int sumValueLength;
+        protected int currentValueLength;
+        protected int headerEntryIndex;
+        protected int headerLength;
         protected Type type;
         protected boolean booleanState;
         protected long longState;
@@ -220,7 +225,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         {
             pivotOffset = cursor.getOffset();
             numberOfHeaderEntries = cursor.getShort();
-            valueLength = 0; // relative to size of this whole record, all units (since values start from the end)
+            sumValueLength = 0;
+            currentValueLength = 0;
             headerEntryIndex = 0;
             headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
             while ( headerEntryIndex < numberOfHeaderEntries )
@@ -238,7 +244,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 //                    break;
 //                }
 
-                valueLength += type.valueLength();
+                currentValueLength = type.valueLength( cursor );
+                sumValueLength += currentValueLength;
                 if ( thisKey == key )
                 {
                     // valueLength == length of found value
@@ -271,8 +278,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 cursor.copyTo( fromBase, newCursor, toBase, headerLength );
                 // Copy values
                 cursor.copyTo(
-                        fromBase + units * UNIT_SIZE - valueLength, newCursor,
-                        toBase + newUnits * UNIT_SIZE - valueLength, valueLength );
+                        fromBase + units * UNIT_SIZE - sumValueLength, newCursor,
+                        toBase + newUnits * UNIT_SIZE - sumValueLength, sumValueLength );
             }
             Header.mark( cursor, startId, units, false );
             cursor.next( newPageId );
@@ -280,9 +287,9 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             return newUnits;
         }
 
-        void placeCursorAtValueStart( PageCursor cursor, int units )
+        int valueStart( int units, int valueOffset )
         {
-            cursor.setOffset( pivotOffset + (units * UNIT_SIZE) - valueLength );
+            return pivotOffset + (units * UNIT_SIZE) - valueOffset;
         }
 
         void placeCursorAtHeaderEntry( PageCursor cursor, int headerEntryIndex )
@@ -301,12 +308,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         TRUE( 0 )
         {
             @Override
-            public void putValue( PageCursor cursor, Value value )
+            public void putValue( PageCursor cursor, Object value )
             { // No need, the type is the value
             }
 
             @Override
-            public Value getValue( PageCursor cursor )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
                 return booleanValue( true );
             }
@@ -314,12 +321,12 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         FALSE( 0 )
         {
             @Override
-            public void putValue( PageCursor cursor, Value value )
+            public void putValue( PageCursor cursor, Object value )
             { // No need, the type is the value
             }
 
             @Override
-            public Value getValue( PageCursor cursor )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
                 return booleanValue( false );
             }
@@ -327,13 +334,13 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         INT8( 1 )
         {
             @Override
-            public void putValue( PageCursor cursor, Value value )
+            public void putValue( PageCursor cursor, Object value )
             {
                 cursor.putByte( (byte) ((IntegralValue)value).longValue() );
             }
 
             @Override
-            public Value getValue( PageCursor cursor )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
                 return byteValue( cursor.getByte() );
             }
@@ -341,46 +348,114 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         INT16( 2 )
         {
             @Override
-            public void putValue( PageCursor cursor, Value value )
+            public void putValue( PageCursor cursor, Object value )
             {
                 cursor.putShort( (short) ((IntegralValue)value).longValue() );
             }
 
             @Override
-            public Value getValue( PageCursor cursor )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
                 return shortValue( cursor.getShort() );
             }
         },
+        // INT24?
         INT32( 4 )
         {
             @Override
-            public void putValue( PageCursor cursor, Value value )
+            public void putValue( PageCursor cursor, Object value )
             {
                 cursor.putInt( (int) ((IntegralValue)value).longValue() );
             }
 
             @Override
-            public Value getValue( PageCursor cursor )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
                 return intValue( cursor.getInt() );
             }
         },
+        // INT40?
+        // INT48?
+        // INT56?
         INT64( 8 )
         {
             @Override
-            public void putValue( PageCursor cursor, Value value )
+            public void putValue( PageCursor cursor, Object value )
             {
                 cursor.putLong( ((IntegralValue)value).longValue() );
             }
 
             @Override
-            public Value getValue( PageCursor cursor )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
                 return longValue( cursor.getLong() );
             }
-        };
+        },
+        UTF8_STRING( -1 )
+        {
+            // TODO introduce a way to stream the value
+            @Override
+            public Object prepare( Value value )
+            {
+                if ( value instanceof UTF8StringValue )
+                {
+                    return ((UTF8StringValue)value).bytes();
+                }
+                return UTF8.encode( ((TextValue)value).stringValue() );
+            }
+
+            @Override
+            public int valueLength( PageCursor cursor )
+            {
+                return cursor.getInt();
+            }
+
+            @Override
+            public int valueLength( Object preparedValue )
+            {
+                return ((byte[])preparedValue).length;
+            }
+
+            @Override
+            public void putValue( PageCursor cursor, Object preparedValue )
+            {
+                // TODO this implementation is only suitable for the first iteration of this property store where
+                // there's a limit that all property data for an entity must fit in one page, one page being 8192 - 64 max size
+                // Therefore this format doesn't add any sort of chunking or value header saying how many bytes are in this
+                // page and potentially a link to next page or something like that.
+
+                cursor.putBytes( (byte[]) preparedValue );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                byte[] bytes = new byte[valueLength];
+                cursor.getBytes( bytes );
+                return Values.utf8Value( bytes );
+            }
+
+            @Override
+            public int numberOfHeaderEntries()
+            {
+                return 2;
+            }
+
+            @Override
+            public void putHeader( PageCursor cursor, int key, int valueOffset, Object preparedValue )
+            {
+                // Put normal header entry
+                super.putHeader( cursor, key, valueOffset, preparedValue );
+                // Put value length header entry
+                cursor.putInt( valueLength( preparedValue ) );
+            }
+        }
+        ;
         // ...TODO more types here
+        // General thoughts on array values: User probably expects the same type of array back as was sent in,
+        // i.e. more strongly typed than simple numeric values. It would be great with specific types for each
+        // type of array, like BOOLEAN_ARRAY, BYTE_ARRAY, INT_ARRAY and so forth. Internally they could take advantage
+        // of INT8/16/32 whatever compression anyway.
 
         public static Type[] ALL = values(); // to avoid clone() every time
         private final int valueLength;
@@ -391,9 +466,14 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             return ALL[ordinal];
         }
 
-        public abstract void putValue( PageCursor cursor, Value value );
+        public Object prepare( Value value )
+        {
+            return value;
+        }
 
-        public abstract Value getValue( PageCursor cursor );
+        public abstract void putValue( PageCursor cursor, Object preparedValue );
+
+        public abstract Value getValue( PageCursor cursor, int valueLength );
 
         public int numberOfHeaderEntries()
         {
@@ -427,6 +507,11 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 }
                 return INT64;
             }
+            if ( value instanceof TextValue )
+            {
+                // TODO match string with short-string encodings before falling back to UTF-8
+                return UTF8_STRING;
+            }
             throw new UnsupportedOperationException( "Unfortunately values like " + value + " which is of type "
                     + value.getClass() + " aren't supported a.t.m." );
         }
@@ -436,16 +521,20 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             this.valueLength = valueLength;
         }
 
-        public int valueLength()
+        public int valueLength( PageCursor cursor )
         {
             return valueLength;
         }
 
-        public void putHeader( PageCursor cursor, int key, int relativeValueOffset )
+        public int valueLength( Object preparedValue )
+        {
+            return valueLength;
+        }
+
+        public void putHeader( PageCursor cursor, int key, int valueOffset, Object preparedValue )
         {
             int keyAndType = ordinal() << 24 | key;
             cursor.putInt( keyAndType );
-            // TODO a variable length type would also put an additional header entry containing the offset
         }
 
         public int keyOf( long headerEntryUnsignedInt )

@@ -26,7 +26,7 @@ class UnitCalculation
     static final int PAGE_SIZE = (int) kibiBytes( 8 );
     static final int UNIT_SIZE = 64;
     static final int EFFECTIVE_PAGE_SIZE = PAGE_SIZE - UNIT_SIZE; // one-unit header
-    static final int UNITS_PER_PAGE = EFFECTIVE_PAGE_SIZE / UNIT_SIZE;
+    static final int UNITS_PER_PAGE = PAGE_SIZE / UNIT_SIZE;
     static final int EFFECTIVE_UNITS_PER_PAGE = UNITS_PER_PAGE - 1; // one-unit header
 
     static long pageIdForRecord( long id )

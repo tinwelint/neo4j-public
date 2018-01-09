@@ -19,20 +19,34 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.IntValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
+import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
+import static org.neo4j.values.storable.Values.stringValue;
 
 @RunWith( Parameterized.class )
 public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropertyStoreAbstractionTestBase
 {
+    @Rule
+    public final RandomRule random = new RandomRule();
+
     public SimplePropertyStoreAbstractionCorrectnessTest( Creator creator )
     {
         super( creator );
@@ -136,6 +150,41 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
             {
                 assertEquals( intValue( k ), store.get( ids[n], k ) );
             }
+        }
+    }
+
+    @Test
+    public void shouldSetStringProperties() throws Exception
+    {
+        // given
+        TextValue value = stringValue( "New property store pwns" );
+
+        // when
+        long id = store.set( -1, 0, value );
+
+        // then
+        assertEquals( value, store.get( id, 0 ) );
+    }
+
+    @Test
+    public void shouldSetManyStrings() throws Exception
+    {
+        // given
+        long id = -1;
+        Map<Integer,Value> expected = new HashMap<>();
+
+        // when
+        for ( int key = 0; key < 150; key++ )
+        {
+            Value value = Values.of( random.string( 5, 15, CSA_LETTERS_AND_DIGITS ) );
+            id = store.set( id, key, value );
+            expected.put( key, value );
+        }
+
+        // then
+        for ( int key : expected.keySet() )
+        {
+            assertEquals( expected.get( key ), store.get( id, key ) );
         }
     }
 }

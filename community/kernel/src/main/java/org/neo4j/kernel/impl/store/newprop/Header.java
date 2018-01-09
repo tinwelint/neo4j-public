@@ -21,6 +21,8 @@ package org.neo4j.kernel.impl.store.newprop;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+import static java.lang.Integer.max;
+
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNITS_PER_PAGE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.unitInPage;
 
@@ -46,11 +48,12 @@ class Header
         }
         if ( startUnitInPage + units > 64 )
         {
-            int unitsInSecondLong = 64 - (startUnitInPage + units);
+            int startUnitInSecondLong = max( 64, startUnitInPage ) - 64;
+            int unitsInSecondLong = startUnitInPage + units - 64;
             long bits = cursor.getLong( HEADER_OFFSET_IN_USE + Long.BYTES );
             for ( int i = 0; i < unitsInSecondLong; i++ )
             {
-                bits = setBit( bits, startUnitInPage - 64 + i, inUse );
+                bits = setBit( bits, startUnitInSecondLong + i, inUse );
             }
             cursor.putLong( HEADER_OFFSET_IN_USE + Long.BYTES, bits );
         }
