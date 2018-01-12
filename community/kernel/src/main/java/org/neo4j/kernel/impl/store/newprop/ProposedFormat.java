@@ -88,13 +88,22 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     Type type = Type.fromValue( value );
                     Object preparedValue = type.prepare( value );
                     int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
+                    int newValueLength = type.valueLength( preparedValue );
+                    int diff = newValueLength - oldValueLength;
+                    int growth = headerDiff * HEADER_ENTRY_SIZE + diff;
+                    while ( growth > freeBytesInRecord )
+                    {
+                        // TODO grow once instead
+                        units = growRecord( cursor, startId, units );
+                        startId = longState;
+                        seek( cursor, -1 );
+                        recordLength = units * UNIT_SIZE;
+                        freeBytesInRecord = recordLength - sumValueLength - headerLength;
+                    }
+
                     if ( headerDiff > 0 )
                     {
                         // Grow, i.e. move the other header entries diff entries to the right (headers are written from the start)
-                        if ( headerDiff > freeBytesInRecord * HEADER_ENTRY_SIZE )
-                        {
-                            throw new UnsupportedOperationException( "Not enough space for this value, TODO grow record" );
-                        }
                         int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
                         int rightOffset = headerStart( numberOfHeaderEntries );
                         for ( int i = rightOffset - HEADER_ENTRY_SIZE; i >= leftOffset; i -= HEADER_ENTRY_SIZE )
@@ -119,7 +128,6 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     }
 
                     // Back up to the beginning of the header
-                    int newValueLength = type.valueLength( preparedValue );
                     if ( type != oldType || newValueLength != oldValueLength )
                     {
                         cursor.setOffset( headerStart( hitHeaderEntryIndex ) );
@@ -127,14 +135,9 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     }
 
                     // Grow/shrink the space for the new value
-                    int diff = newValueLength - oldValueLength;
                     if ( diff > 0 )
                     {
                         // Grow, i.e. move the other values diff bytes to the left (values are written from the end)
-                        if ( diff > freeBytesInRecord )
-                        {
-                            throw new UnsupportedOperationException( "Not enough space for this value, TODO grow record" );
-                        }
                         int leftOffset = valueStart( units, sumValueLength );
                         int rightOffset = valueStart( units, oldValueLengthSum );
                         for ( int i = leftOffset; i < rightOffset; i++ )

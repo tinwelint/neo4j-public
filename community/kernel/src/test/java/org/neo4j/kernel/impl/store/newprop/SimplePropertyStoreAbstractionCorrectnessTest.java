@@ -324,4 +324,22 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         assertEquals( newValue, store.get( id, 0 ) );
         assertEquals( otherValue, store.get( id, 1 ) );
     }
+
+    @Test
+    public void shouldGrowWhenChangingProperty() throws Exception
+    {
+        // given
+        Value value = stringValue( "abc" );
+        Value otherValue = stringValue( "LAST" );
+        long id = store.set( -1, 0, value );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = stringValue( random.string( 3_000, 3_000, CSA_LETTERS_AND_DIGITS ) );
+        id = store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
+    }
 }
