@@ -74,35 +74,117 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
                 longState = startId;
+                int recordLength = units * UNIT_SIZE;
                 if ( seek( cursor, key ) )
                 {
                     // Change property value
-                    throw new UnsupportedOperationException( "TODO implement changing a property value" );
-                }
+                    Type oldType = currentType;
+                    int oldValueLength = currentValueLength;
+                    int oldValueLengthSum = sumValueLength;
+                    int hitHeaderEntryIndex = headerEntryIndex;
+                    seekToEnd( cursor );
+                    int freeBytesInRecord = recordLength - sumValueLength - headerLength;
 
-                // OK, so we'd like to add this property.
-                // How many bytes do we have available in this record?
-                // Formula is: start of left-most value  -  end of right-most header
-                int recordLength = units * UNIT_SIZE;
-                int freeBytesInRecord = recordLength - sumValueLength - headerLength;
-                Type type = Type.fromValue( value );
-                Object preparedValue = type.prepare( value );
-                if ( type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + type.valueLength( preparedValue ) > freeBytesInRecord )
-                {   // Grow/relocate record
-                    units = growRecord( cursor, startId, units );
-                    // Perhaps unnecessary to call seek again, the point of it is to leave the cursor in the
-                    // expected place for insert, just as it would have been if we wouldn't have grown the record
-                    // -- code simplicity
-                    boolean found = seek( cursor, key );
-                    assert !found;
-                }
+                    Type type = Type.fromValue( value );
+                    Object preparedValue = type.prepare( value );
+                    int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
+                    if ( headerDiff > 0 )
+                    {
+                        // Grow, i.e. move the other header entries diff entries to the right (headers are written from the start)
+                        if ( headerDiff > freeBytesInRecord * HEADER_ENTRY_SIZE )
+                        {
+                            throw new UnsupportedOperationException( "Not enough space for this value, TODO grow record" );
+                        }
+                        int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
+                        int rightOffset = headerStart( numberOfHeaderEntries );
+                        for ( int i = rightOffset - HEADER_ENTRY_SIZE; i >= leftOffset; i -= HEADER_ENTRY_SIZE )
+                        {
+                            cursor.copyTo( i, cursor, i + HEADER_ENTRY_SIZE * headerDiff, HEADER_ENTRY_SIZE );
+                        }
+                    }
+                    else if ( headerDiff < 0 )
+                    {
+                        // Shrink, i.e. move the other header entries diff entries to the left
+                        int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
+                        int rightOffset = headerStart( numberOfHeaderEntries );
+                        for ( int i = leftOffset; i < rightOffset; i += HEADER_ENTRY_SIZE )
+                        {
+                            cursor.copyTo( i, cursor, i + HEADER_ENTRY_SIZE * headerDiff, HEADER_ENTRY_SIZE );
+                        }
+                    }
+                    if ( headerDiff != 0 )
+                    {
+                        numberOfHeaderEntries += headerDiff;
+                        writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries );
+                    }
 
-                // Here assume that we're at the correct position to add a new header
-                int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
-                type.putHeader( cursor, key, sumValueLength, preparedValue );
-                cursor.setOffset( valueStart( units, sumValueLength + type.valueLength( preparedValue ) ) );
-                type.putValue( cursor, preparedValue );
-                writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
+                    // Back up to the beginning of the header
+                    int newValueLength = type.valueLength( preparedValue );
+                    if ( type != oldType || newValueLength != oldValueLength )
+                    {
+                        cursor.setOffset( headerStart( hitHeaderEntryIndex ) );
+                        type.putHeader( cursor, key, oldValueLengthSum, preparedValue );
+                    }
+
+                    // Grow/shrink the space for the new value
+                    int diff = newValueLength - oldValueLength;
+                    if ( diff > 0 )
+                    {
+                        // Grow, i.e. move the other values diff bytes to the left (values are written from the end)
+                        if ( diff > freeBytesInRecord )
+                        {
+                            throw new UnsupportedOperationException( "Not enough space for this value, TODO grow record" );
+                        }
+                        int leftOffset = valueStart( units, sumValueLength );
+                        int rightOffset = valueStart( units, oldValueLengthSum );
+                        for ( int i = leftOffset; i < rightOffset; i++ )
+                        {
+                            // TODO move in bigger pieces
+                            cursor.copyTo( i, cursor, i - diff, 1 );
+                        }
+                    }
+                    else if ( diff < 0 )
+                    {
+                        // Shrink, i.e. move the other values diff bytes to the right (values are written from the end)
+                        int leftOffset = valueStart( units, sumValueLength );
+                        int rightOffset = valueStart( units, oldValueLengthSum );
+                        for ( int i = rightOffset - 1; i >= leftOffset; i-- )
+                        {
+                            // TODO move in bigger pieces
+                            cursor.copyTo( i, cursor, i - diff, 1 );
+                        }
+                    }
+                    oldValueLengthSum += diff;
+
+                    // Go the the correct value position and write the value
+                    cursor.setOffset( valueStart( units, oldValueLengthSum ) );
+                    type.putValue( cursor, preparedValue );
+                }
+                else
+                {
+                    // OK, so we'd like to add this property.
+                    // How many bytes do we have available in this record?
+                    // Formula is: start of left-most value  -  end of right-most header
+                    int freeBytesInRecord = recordLength - sumValueLength - headerLength;
+                    Type type = Type.fromValue( value );
+                    Object preparedValue = type.prepare( value );
+                    if ( type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + type.valueLength( preparedValue ) > freeBytesInRecord )
+                    {   // Grow/relocate record
+                        units = growRecord( cursor, startId, units );
+                        // Perhaps unnecessary to call seek again, the point of it is to leave the cursor in the
+                        // expected place for insert, just as it would have been if we wouldn't have grown the record
+                        // -- code simplicity
+                        boolean found = seek( cursor, key );
+                        assert !found;
+                    }
+
+                    // Here assume that we're at the correct position to add a new header
+                    int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
+                    type.putHeader( cursor, key, sumValueLength, preparedValue );
+                    cursor.setOffset( valueStart( units, sumValueLength + type.valueLength( preparedValue ) ) );
+                    type.putValue( cursor, preparedValue );
+                    writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
+                }
 
                 return -1; // TODO support records spanning multiple pages
             }
@@ -122,15 +204,15 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 if ( booleanState = seek( cursor, key ) )
                 {   // It exists
                     // Everything after current headerIndex should be moved back the number of header units this property has
-                    int headerEntriesToMove = numberOfHeaderEntries - headerEntryIndex - type.numberOfHeaderEntries();
-                    int gapSize = type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE;
+                    int headerEntriesToMove = numberOfHeaderEntries - headerEntryIndex - currentType.numberOfHeaderEntries();
+                    int gapSize = currentType.numberOfHeaderEntries() * HEADER_ENTRY_SIZE;
                     placeCursorAtHeaderEntry( cursor, headerEntryIndex );
                     for ( int i = 0; i < headerEntriesToMove; i++ )
                     {
                         // Assumption that header entry is integer size
                         cursor.putInt( cursor.getInt( cursor.getOffset() + gapSize ) );
                     }
-                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - type.numberOfHeaderEntries() );
+                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentType.numberOfHeaderEntries() );
 
                     // TODO also implement compacting of the value data
                 }
@@ -168,7 +250,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 if ( seek( cursor, key ) )
                 {   // found
                     cursor.setOffset( valueStart( units, sumValueLength ) );
-                    readValue = type.getValue( cursor, currentValueLength );
+                    readValue = currentType.getValue( cursor, currentValueLength );
                 }
                 return -1;
             }
@@ -216,7 +298,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         protected int currentValueLength;
         protected int headerEntryIndex;
         protected int headerLength;
-        protected Type type;
+        protected Type currentType;
         protected boolean booleanState;
         protected long longState;
         protected Value readValue;
@@ -229,11 +311,16 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             currentValueLength = 0;
             headerEntryIndex = 0;
             headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
+            return seekTo( cursor, key );
+        }
+
+        private boolean seekTo( PageCursor cursor, int key )
+        {
             while ( headerEntryIndex < numberOfHeaderEntries )
             {
                 long headerEntry = getUnsignedInt( cursor );
-                type = Type.fromHeader( headerEntry );
-                int thisKey = type.keyOf( headerEntry );
+                currentType = Type.fromHeader( headerEntry );
+                int thisKey = currentType.keyOf( headerEntry );
 
                 // TODO don't rely on keys being ordered... matters much? We have to look at all of them anyway to figure out free space
                 // (unless we keep free space as a dedicated field or something)
@@ -244,7 +331,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 //                    break;
 //                }
 
-                currentValueLength = type.valueLength( cursor );
+                currentValueLength = currentType.valueLength( cursor );
                 sumValueLength += currentValueLength;
                 if ( thisKey == key )
                 {
@@ -254,9 +341,16 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     return true;
                 }
 
-                headerEntryIndex += type.numberOfHeaderEntries();
+                headerEntryIndex += currentType.numberOfHeaderEntries();
             }
             return false;
+        }
+
+        void seekToEnd( PageCursor cursor )
+        {
+            // TODO hacky thing here with the headerEntryIndex, better to increment before return in seek?
+            headerEntryIndex += currentType.numberOfHeaderEntries();
+            seekTo( cursor, -1 );
         }
 
         int growRecord( PageCursor cursor, long startId, int units ) throws IOException
@@ -290,6 +384,11 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         int valueStart( int units, int valueOffset )
         {
             return pivotOffset + (units * UNIT_SIZE) - valueOffset;
+        }
+
+        int headerStart( int headerEntryIndex )
+        {
+            return pivotOffset + RECORD_HEADER_SIZE + headerEntryIndex * HEADER_ENTRY_SIZE;
         }
 
         void placeCursorAtHeaderEntry( PageCursor cursor, int headerEntryIndex )

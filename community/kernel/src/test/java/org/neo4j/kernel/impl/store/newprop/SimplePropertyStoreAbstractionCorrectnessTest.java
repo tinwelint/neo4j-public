@@ -36,7 +36,6 @@ import org.neo4j.values.storable.Values;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -186,5 +185,143 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         {
             assertEquals( expected.get( key ), store.get( id, key ) );
         }
+    }
+
+    @Test
+    public void shouldChangeIntPropertyValueOfEqualSize() throws Exception
+    {
+        // given
+        Value value = intValue( 100 );
+        long id = store.set( -1, 0, value );
+
+        // when
+        Value newValue = intValue( 105 );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+    }
+
+    @Test
+    public void shouldChangeIntPropertyValueOfLargerSize() throws Exception
+    {
+        // given
+        Value value = intValue( 100 );
+        long id = store.set( -1, 0, value );
+        Value otherValue = stringValue( "abcdefgh" );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = intValue( 1234567 );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
+    }
+
+    @Test
+    public void shouldChangeIntPropertyValueOfSmallerSize() throws Exception
+    {
+        // given
+        Value value = intValue( 1234567 );
+        long id = store.set( -1, 0, value );
+        Value otherValue = stringValue( "abcdefgh" );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = intValue( 100 );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
+    }
+
+    @Test
+    public void shouldChangeStringPropertyValueOfEqualSize() throws Exception
+    {
+     // given
+        Value value = stringValue( "abcdefg" );
+        long id = store.set( -1, 0, value );
+
+        // when
+        Value newValue = stringValue( "hijklmn" );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+    }
+
+    @Test
+    public void shouldChangeStringPropertyValueToLargerSize() throws Exception
+    {
+        // given
+        Value value = stringValue( "abcdefg" );
+        Value otherValue = stringValue( "LAST" );
+        long id = store.set( -1, 0, value );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = stringValue( "hijklmnopqrstuvwxyz" );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
+    }
+
+    @Test
+    public void shouldChangeStringPropertyValueToSmallerSize() throws Exception
+    {
+        // given
+        Value value = stringValue( "abcdefg" );
+        Value otherValue = stringValue( "LAST" );
+        long id = store.set( -1, 0, value );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = stringValue( "hij" );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
+    }
+
+    @Test
+    public void shouldChangeIntToStringProperty() throws Exception
+    {
+        // given
+        Value value = intValue( 10 );
+        Value otherValue = stringValue( "LAST" );
+        long id = store.set( -1, 0, value );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = stringValue( "abcdefg" );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
+    }
+
+    @Test
+    public void shouldChangeStringToIntProperty() throws Exception
+    {
+        // given
+        Value value = stringValue( "abcdefg" );
+        Value otherValue = stringValue( "LAST" );
+        long id = store.set( -1, 0, value );
+        id = store.set( id, 1, otherValue );
+
+        // when
+        Value newValue = intValue( 10 );
+        store.set( id, 0, newValue );
+
+        // then
+        assertEquals( newValue, store.get( id, 0 ) );
+        assertEquals( otherValue, store.get( id, 1 ) );
     }
 }
