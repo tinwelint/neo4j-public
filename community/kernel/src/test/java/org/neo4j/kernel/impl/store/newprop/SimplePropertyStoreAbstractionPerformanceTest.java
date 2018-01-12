@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.neo4j.helpers.Format;
+import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.System.currentTimeMillis;
@@ -37,7 +38,7 @@ public class SimplePropertyStoreAbstractionPerformanceTest extends SimplePropert
             long id = -1;
             for ( int k = 0; k < PROPERTY_COUNT; k++ )
             {
-                id = store.set( id, k, Values.intValue( k ) );
+                id = store.set( id, k, value( k ) );
             }
             ids[n] = id;
         }
@@ -51,6 +52,11 @@ public class SimplePropertyStoreAbstractionPerformanceTest extends SimplePropert
                 " " + duration( createDuration ) + " write" );
     }
 
+    private TextValue value( int k )
+    {
+        return Values.stringValue( "" + k );
+    }
+
     @Test
     public void worstCase() throws Exception
     {
@@ -62,7 +68,7 @@ public class SimplePropertyStoreAbstractionPerformanceTest extends SimplePropert
         {
             for ( int n = 0; n < NODE_COUNT; n++ )
             {
-                ids[n] = store.set( ids[n], k, Values.intValue( k ) );
+                ids[n] = store.set( ids[n], k, value( k ) );
             }
         }
         long writeDuration = currentTimeMillis() - time;
