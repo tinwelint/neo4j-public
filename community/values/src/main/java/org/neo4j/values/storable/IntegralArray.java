@@ -21,7 +21,7 @@ package org.neo4j.values.storable;
 
 public abstract class IntegralArray extends NumberArray
 {
-    abstract long longValue( int offset );
+    public abstract long longValue( int offset );
 
     @Override
     public int compareTo( IntegralArray other )

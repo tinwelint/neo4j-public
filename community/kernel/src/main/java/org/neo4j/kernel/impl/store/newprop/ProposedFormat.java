@@ -27,24 +27,46 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.string.UTF8;
+import org.neo4j.values.storable.BooleanArray;
 import org.neo4j.values.storable.BooleanValue;
+import org.neo4j.values.storable.ByteArray;
+import org.neo4j.values.storable.DoubleArray;
+import org.neo4j.values.storable.DoubleValue;
+import org.neo4j.values.storable.FloatArray;
+import org.neo4j.values.storable.FloatValue;
+import org.neo4j.values.storable.FloatingPointArray;
+import org.neo4j.values.storable.IntArray;
+import org.neo4j.values.storable.IntegralArray;
 import org.neo4j.values.storable.IntegralValue;
+import org.neo4j.values.storable.LongArray;
+import org.neo4j.values.storable.ShortArray;
+import org.neo4j.values.storable.TextArray;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.UTF8StringValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.Integer.max;
-
+import static java.lang.Math.toIntExact;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
+import static org.neo4j.values.storable.Values.booleanArray;
 import static org.neo4j.values.storable.Values.booleanValue;
+import static org.neo4j.values.storable.Values.byteArray;
 import static org.neo4j.values.storable.Values.byteValue;
+import static org.neo4j.values.storable.Values.doubleArray;
+import static org.neo4j.values.storable.Values.doubleValue;
+import static org.neo4j.values.storable.Values.floatArray;
+import static org.neo4j.values.storable.Values.floatValue;
+import static org.neo4j.values.storable.Values.intArray;
 import static org.neo4j.values.storable.Values.intValue;
+import static org.neo4j.values.storable.Values.longArray;
 import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.shortArray;
 import static org.neo4j.values.storable.Values.shortValue;
+import static org.neo4j.values.storable.Values.stringArray;
 
 public class ProposedFormat implements SimplePropertyStoreAbstraction
 {
@@ -122,7 +144,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
                     // Go the the correct value position and write the value
                     cursor.setOffset( valueStart( units, oldValueLengthSum ) );
-                    type.putValue( cursor, preparedValue );
+                    type.putValue( cursor, preparedValue, newValueLength );
                 }
                 else
                 {
@@ -147,7 +169,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
                     type.putHeader( cursor, key, sumValueLength, preparedValue );
                     cursor.setOffset( valueStart( units, sumValueLength + type.valueLength( preparedValue ) ) );
-                    type.putValue( cursor, preparedValue );
+                    type.putValue( cursor, preparedValue, type.valueLength( preparedValue ) );
                     writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
                 }
 
@@ -209,7 +231,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     }
 
     @Override
-    public boolean remove( long id, int key )
+    public long remove( long id, int key )
     {
         Visitor visitor = new Visitor()
         {
@@ -235,7 +257,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             }
         };
         store.accessForWriting( id, visitor );
-        return visitor.booleanState;
+        return id;
     }
 
     @Override
@@ -420,10 +442,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
     private enum Type
     {
-        TRUE( 0 )
+        TRUE( true, 0 )
         {
             @Override
-            public void putValue( PageCursor cursor, Object value )
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             { // No need, the type is the value
             }
 
@@ -433,10 +455,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 return booleanValue( true );
             }
         },
-        FALSE( 0 )
+        FALSE( true, 0 )
         {
             @Override
-            public void putValue( PageCursor cursor, Object value )
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             { // No need, the type is the value
             }
 
@@ -446,10 +468,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 return booleanValue( false );
             }
         },
-        INT8( 1 )
+        INT8( true, Byte.BYTES )
         {
             @Override
-            public void putValue( PageCursor cursor, Object value )
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             {
                 cursor.putByte( (byte) ((IntegralValue)value).longValue() );
             }
@@ -460,10 +482,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 return byteValue( cursor.getByte() );
             }
         },
-        INT16( 2 )
+        INT16( true, Short.BYTES )
         {
             @Override
-            public void putValue( PageCursor cursor, Object value )
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             {
                 cursor.putShort( (short) ((IntegralValue)value).longValue() );
             }
@@ -475,10 +497,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             }
         },
         // INT24?
-        INT32( 4 )
+        INT32( true, Integer.BYTES )
         {
             @Override
-            public void putValue( PageCursor cursor, Object value )
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             {
                 cursor.putInt( (int) ((IntegralValue)value).longValue() );
             }
@@ -492,10 +514,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         // INT40?
         // INT48?
         // INT56?
-        INT64( 8 )
+        INT64( true, Long.BYTES )
         {
             @Override
-            public void putValue( PageCursor cursor, Object value )
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             {
                 cursor.putLong( ((IntegralValue)value).longValue() );
             }
@@ -506,7 +528,40 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 return longValue( cursor.getLong() );
             }
         },
-        UTF8_STRING( -1 )
+        FLOAT( true, Float.BYTES )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object preparedValue, int valueLength )
+            {
+                putValue( cursor, ((FloatValue)preparedValue).value() );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                return floatValue( Float.intBitsToFloat( cursor.getInt() ) );
+            }
+
+            void putValue( PageCursor cursor, float value )
+            {
+                cursor.putInt( Float.floatToIntBits( value ) );
+            }
+        },
+        DOUBLE( true, Double.BYTES )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object preparedValue, int valueLength )
+            {
+                cursor.putLong( Double.doubleToLongBits( ((DoubleValue)preparedValue).value() ) );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                return doubleValue( Double.longBitsToDouble( cursor.getLong() ) );
+            }
+        },
+        UTF8_STRING( false, -1 )
         {
             // TODO introduce a way to stream the value
             @Override
@@ -520,19 +575,13 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             }
 
             @Override
-            public int valueLength( PageCursor cursor )
-            {
-                return cursor.getInt();
-            }
-
-            @Override
             public int valueLength( Object preparedValue )
             {
                 return ((byte[])preparedValue).length;
             }
 
             @Override
-            public void putValue( PageCursor cursor, Object preparedValue )
+            public void putValue( PageCursor cursor, Object preparedValue, int valueLength )
             {
                 // TODO this implementation is only suitable for the first iteration of this property store where
                 // there's a limit that all property data for an entity must fit in one page, one page being 8192 - 64 max size
@@ -549,30 +598,310 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 cursor.getBytes( bytes );
                 return Values.utf8Value( bytes );
             }
-
+        },
+        // FORMAT:
+        // - 1 byte to say how many values are used in the last byte
+        // - 1 bit per boolean
+        BOOLEAN_ARRAY( false, -1 )
+        {
             @Override
-            public int numberOfHeaderEntries()
+            public void putValue( PageCursor cursor, Object value, int valueLength )
             {
-                return 2;
+                BooleanArray array = (BooleanArray) value;
+                int length = array.length();
+                cursor.putByte( (byte) (length % Byte.SIZE) );
+                for ( int offset = 0; offset < length; )
+                {
+                    byte currentByte = 0;
+                    for ( int bit = 0; bit < Byte.SIZE && offset < length; bit++, offset++ )
+                    {
+                        if ( array.booleanValue( offset ) )
+                        {
+                            currentByte |= 1 << bit;
+                        }
+                    }
+                    cursor.putByte( currentByte );
+                }
             }
 
             @Override
-            public void putHeader( PageCursor cursor, int key, int valueOffset, Object preparedValue )
+            public Value getValue( PageCursor cursor, int valueLength )
             {
-                // Put normal header entry
-                super.putHeader( cursor, key, valueOffset, preparedValue );
-                // Put value length header entry
-                cursor.putInt( valueLength( preparedValue ) );
+                byte valuesInLastByte = cursor.getByte();
+                int length = (valueLength - 1 /*the first header byte we just read*/) * Byte.SIZE + valuesInLastByte;
+                boolean[] array = new boolean[length];
+                for ( int offset = 0; offset < length; )
+                {
+                    byte currentByte = 0;
+                    for ( int bit = 0; bit < Byte.SIZE && offset < length; bit++, offset++ )
+                    {
+                        if ( (bit & (1 << bit)) != 0 )
+                        {
+                            array[offset] = true;
+                        }
+                    }
+                }
+                return booleanArray( array );
+            }
+
+            @Override
+            public int valueLength( Object value )
+            {
+                BooleanArray array = (BooleanArray) value;
+                return 1 +                                    // the byte saying how many bits are used in the last byte
+                       (array.length() - 1) / Byte.BYTES + 1; // all the boolean bits
+            }
+        },
+        BYTE_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object value, int valueLength )
+            {
+                ByteArray array = (ByteArray) value;
+                int length = toIntExact( array.length() );
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    cursor.putByte( (byte) array.longValue( offset ) );
+                }
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                byte[] array = new byte[valueLength];
+                cursor.getBytes( array );
+                return byteArray( array );
+            }
+
+            @Override
+            public int valueLength( Object value )
+            {
+                return toIntExact( ((ByteArray) value).length() );
+            }
+        },
+        // TODO Perhaps use some famous number array compression library out there instead?
+        SHORT_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object value, int valueLength )
+            {
+                putIntegralArray( cursor, (IntegralArray) value, INT16.ordinal() );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                int minimalType = cursor.getByte();
+                int length = integralArrayLength( valueLength, minimalType );
+                short[] array = new short[length];
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    array[offset] = (short) getMinimalIntegralValue( cursor, minimalType );
+                }
+                return shortArray( array );
+            }
+
+            @Override
+            public int valueLength( Object value )
+            {
+                return integralArrayValueLength( (IntegralArray) value, INT16.ordinal() );
+            }
+        },
+        INT_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object value, int valueLength )
+            {
+                putIntegralArray( cursor, (IntegralArray) value, INT32.ordinal() );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                int minimalType = cursor.getByte();
+                int length = integralArrayLength( valueLength, minimalType );
+                int[] array = new int[length];
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    array[offset] = (int) getMinimalIntegralValue( cursor, minimalType );
+                }
+                return intArray( array );
+            }
+
+            @Override
+            public int valueLength( Object value )
+            {
+                return integralArrayValueLength( (IntegralArray) value, INT32.ordinal() );
+            }
+        },
+        LONG_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object value, int valueLength )
+            {
+                putIntegralArray( cursor, (IntegralArray) value, INT64.ordinal() );
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                int minimalType = cursor.getByte();
+                int length = integralArrayLength( valueLength, minimalType );
+                long[] array = new long[length];
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    array[offset] = getMinimalIntegralValue( cursor, minimalType );
+                }
+                return longArray( array );
+            }
+
+            @Override
+            public int valueLength( Object value )
+            {
+                return integralArrayValueLength( (IntegralArray) value, INT64.ordinal() );
+            }
+        },
+        FLOAT_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object value, int valueLength )
+            {
+                FloatingPointArray array = (FloatingPointArray) value;
+                int length = array.length();
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    cursor.putInt( Float.floatToIntBits( (float) array.doubleValue( offset ) ) );
+                }
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                int length = valueLength / Float.BYTES;
+                float[] array = new float[length];
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    array[offset] = Float.intBitsToFloat( cursor.getInt() );
+                }
+                return floatArray( array );
+            }
+
+            @Override
+            public int valueLength( Object preparedValue )
+            {
+                return ((FloatingPointArray)preparedValue).length() * Float.BYTES;
+            }
+        },
+        DOUBLE_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object value, int valueLength )
+            {
+                FloatingPointArray array = (FloatingPointArray) value;
+                int length = array.length();
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    cursor.putLong( Double.doubleToLongBits( array.doubleValue( offset ) ) );
+                }
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                int length = valueLength / Float.BYTES;
+                double[] array = new double[length];
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    array[offset] = Double.longBitsToDouble( cursor.getLong() );
+                }
+                return doubleArray( array );
+            }
+
+            @Override
+            public int valueLength( Object preparedValue )
+            {
+                return ((FloatingPointArray)preparedValue).length() * Double.BYTES;
+            }
+
+        },
+        UTF8_STRING_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object preparedValue, int valueLength )
+            {
+                byte[][] bytes = (byte[][]) preparedValue;
+                putLengthEfficiently( cursor, bytes.length );
+                for ( byte[] stringBytes : bytes )
+                {
+                    cursor.putInt( stringBytes.length );
+                    cursor.putBytes( stringBytes );
+                }
+            }
+
+            private void putLengthEfficiently( PageCursor cursor, int length )
+            {
+                // TODO instead of fixed 4 bytes then have some custom field size, run-length encoding or something
+                cursor.putInt( length );
+            }
+
+            private int getLengthEfficiently( PageCursor cursor )
+            {
+                // TODO instead of fixed 4 bytes then have some custom field size, run-length encoding or something
+                return cursor.getInt();
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                // TODO if there were a TextArray w/ utf8... that would be juuust great
+                int arrayLength = getLengthEfficiently( cursor );
+                String[] strings = new String[arrayLength];
+                byte[] bytes = null;
+                for ( int i = 0; i < arrayLength; i++ )
+                {
+                    int length = cursor.getInt();
+                    if ( bytes == null || bytes.length < length )
+                    {
+                        bytes = new byte[length];
+                    }
+                    cursor.getBytes( bytes, 0, length );
+                    strings[i] = UTF8.decode( bytes, 0, length );
+                }
+                return stringArray( strings );
+            }
+
+            @Override
+            public Object prepare( Value value )
+            {
+                TextArray array = (TextArray) value;
+                int length = array.length();
+                byte[][] bytes = new byte[length][];
+                for ( int offset = 0; offset < length; offset++ )
+                {
+                    bytes[offset] = UTF8.encode( array.stringValue( offset ) );
+                }
+                return bytes;
+            }
+
+            @Override
+            public int valueLength( Object preparedValue )
+            {
+                // TODO instead of 4 bytes for individual string length here then be able to have custom field size per string
+                int length = Integer.BYTES;
+                byte[][] bytes = (byte[][]) preparedValue;
+                for ( byte[] stringBytes : bytes )
+                {
+                    length += Integer.BYTES + stringBytes.length;
+                }
+                return length;
             }
         }
         ;
-        // ...TODO more types here
-        // General thoughts on array values: User probably expects the same type of array back as was sent in,
-        // i.e. more strongly typed than simple numeric values. It would be great with specific types for each
-        // type of array, like BOOLEAN_ARRAY, BYTE_ARRAY, INT_ARRAY and so forth. Internally they could take advantage
-        // of INT8/16/32 whatever compression anyway.
+        // ...TODO more types here, like point/geo?
 
         public static Type[] ALL = values(); // to avoid clone() every time
+
+        private final boolean fixedSize;
         private final int valueLength;
 
         public static Type fromHeader( long headerEntryUnsignedInt )
@@ -586,13 +915,13 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             return value;
         }
 
-        public abstract void putValue( PageCursor cursor, Object preparedValue );
+        public abstract void putValue( PageCursor cursor, Object preparedValue, int valueLength );
 
         public abstract Value getValue( PageCursor cursor, int valueLength );
 
         public int numberOfHeaderEntries()
         {
-            return 1;
+            return fixedSize ? 1 : 2;
         }
 
         public static Type fromValue( Value value )
@@ -622,23 +951,64 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 }
                 return INT64;
             }
+            if ( value instanceof FloatValue )
+            {
+                return FLOAT;
+            }
+            if ( value instanceof DoubleValue )
+            {
+                return DOUBLE;
+            }
             if ( value instanceof TextValue )
             {
-                // TODO match string with short-string encodings before falling back to UTF-8
+                // TODO match string with more compressed encodings before falling back to UTF-8
                 return UTF8_STRING;
+            }
+            if ( value instanceof BooleanArray )
+            {
+                return BOOLEAN_ARRAY;
+            }
+            if ( value instanceof ByteArray )
+            {
+                return BYTE_ARRAY;
+            }
+            if ( value instanceof ShortArray )
+            {
+                return SHORT_ARRAY;
+            }
+            if ( value instanceof IntArray )
+            {
+                return INT_ARRAY;
+            }
+            if ( value instanceof LongArray )
+            {
+                return LONG_ARRAY;
+            }
+            if ( value instanceof FloatArray )
+            {
+                return FLOAT_ARRAY;
+            }
+            if ( value instanceof DoubleArray )
+            {
+                return DOUBLE_ARRAY;
+            }
+            if ( value instanceof TextArray )
+            {
+                return UTF8_STRING_ARRAY;
             }
             throw new UnsupportedOperationException( "Unfortunately values like " + value + " which is of type "
                     + value.getClass() + " aren't supported a.t.m." );
         }
 
-        private Type( int valueLength )
+        private Type( boolean fixedSize, int valueLength )
         {
+            this.fixedSize = fixedSize;
             this.valueLength = valueLength;
         }
 
         public int valueLength( PageCursor cursor )
         {
-            return valueLength;
+            return fixedSize ? valueLength : cursor.getInt();
         }
 
         public int valueLength( Object preparedValue )
@@ -650,11 +1020,117 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         {
             int keyAndType = ordinal() << 24 | key;
             cursor.putInt( keyAndType );
+
+            if ( !fixedSize )
+            {
+                cursor.putInt( valueLength( preparedValue ) );
+            }
         }
 
         public int keyOf( long headerEntryUnsignedInt )
         {
             return (int) (headerEntryUnsignedInt & 0xFFFFFF);
+        }
+
+        int minimalIntegralArrayType( IntegralArray array, int maxType )
+        {
+            int length = array.length();
+            int minimalType = 0;
+            for ( int offset = 0; offset < length && minimalType < maxType; offset++ )
+            {
+                long candidate = array.longValue( offset );
+                if ( minimalType < INT8.ordinal() && candidate != 0 )
+                {
+                    minimalType = INT8.ordinal();
+                }
+                if ( minimalType < INT16.ordinal() && (candidate & ~0xFF) != 0 )
+                {
+                    minimalType = INT16.ordinal();
+                }
+                if ( minimalType < INT32.ordinal() && (candidate & ~0xFFFF) != 0 )
+                {
+                    minimalType = INT32.ordinal();
+                }
+                if ( minimalType < INT64.ordinal() && (candidate & ~0xFFFFFFFFL) != 0 )
+                {
+                    minimalType = INT64.ordinal();
+                }
+            }
+            return minimalType;
+        }
+
+        void putIntegralArray( PageCursor cursor, IntegralArray array, int maxType )
+        {
+            int length = toIntExact( array.length() );
+            int minimalType = minimalIntegralArrayType( array, maxType );
+            cursor.putByte( (byte) minimalType );
+            for ( int offset = 0; offset < length; offset++ )
+            {
+                long candidate = array.longValue( offset );
+                if ( minimalType == -1 )
+                {
+                    cursor.putByte( (byte) candidate );
+                }
+                else if ( minimalType == INT8.ordinal() )
+                {
+                    cursor.putByte( (byte) candidate );
+                }
+                else if ( minimalType == INT16.ordinal() )
+                {
+                    cursor.putShort( (short) candidate );
+                }
+                else if ( minimalType == INT32.ordinal() )
+                {
+                    cursor.putInt( (int) candidate );
+                }
+                else if ( minimalType == INT64.ordinal() )
+                {
+                    cursor.putLong( candidate );
+                }
+            }
+        }
+
+        int integralArrayValueLength( IntegralArray array, int maxType )
+        {
+            int minimalType = minimalIntegralArrayType( array, maxType );
+            int itemSize = ALL[minimalType].valueLength( null );
+
+            return 1 + /*header byte saying which minimal type the values are stored in*/
+                   toIntExact( array.length() ) * itemSize;
+        }
+
+        long getMinimalIntegralValue( PageCursor cursor, int minimalType )
+        {
+            if ( minimalType == 0 )
+            {
+                return 0;
+            }
+            else if ( minimalType == INT8.ordinal() )
+            {
+                return cursor.getByte() & 0xFF;
+            }
+            else if ( minimalType == INT16.ordinal() )
+            {
+                return cursor.getShort() & 0xFFFF;
+            }
+            else if ( minimalType == INT32.ordinal() )
+            {
+                return cursor.getInt() & 0xFFFFFFFFL;
+            }
+            else if ( minimalType == INT64.ordinal() )
+            {
+                return cursor.getLong();
+            }
+            else
+            {
+                throw new IllegalArgumentException( String.valueOf( minimalType ) );
+            }
+        }
+
+        int integralArrayLength( int valueLength, int minimalType )
+        {
+            int itemSize = ALL[minimalType].valueLength( null );
+            return (valueLength - 1) / itemSize;
         }
     }
 

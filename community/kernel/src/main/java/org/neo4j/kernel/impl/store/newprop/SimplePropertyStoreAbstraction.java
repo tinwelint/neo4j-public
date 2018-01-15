@@ -42,10 +42,9 @@ public interface SimplePropertyStoreAbstraction extends Closeable
     long set( long id, int key, Value value ) throws IOException;
 
     /**
-     * @return {@code true} if this removal causes the record to be empty, in which case the id could
-     * be freed for later reuse. The freeing and management in general is done externally.
+     * @return the new record id, potentially the same {@code id} that got passed in.
      */
-    boolean remove( long id, int key ) throws IOException;
+    long remove( long id, int key ) throws IOException;
 
     // Reading
     /**

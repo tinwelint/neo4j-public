@@ -28,13 +28,17 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.collection.primitive.Primitive;
+import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.test.rule.RandomRule;
+import org.neo4j.test.rule.RandomRule.Seed;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
@@ -341,5 +345,68 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         // then
         assertEquals( newValue, store.get( id, 0 ) );
         assertEquals( otherValue, store.get( id, 1 ) );
+    }
+
+    @Test
+    public void shouldStoreArrays() throws Exception
+    {
+        // given
+        Value value = Values.of( new String[] {"abc", "defg", "hi"} );
+
+        // when
+        long id = store.set( -1, 0, value );
+        Value readValue = store.get( id, 0 );
+
+        // then
+        assertEquals( value, readValue );
+    }
+
+    @Seed( 1516050416478L )
+    @Test
+    public void shouldSetAndRemoveRandomProperties() throws Exception
+    {
+        // given
+        long id = -1;
+        PrimitiveIntObjectMap<Value> expected = Primitive.intObjectMap();
+        int updates = 500;
+        int maxKeys = 100;
+
+        // when/then
+        for ( int i = 0; i < updates; i++ )
+        {
+            int key = random.nextInt( maxKeys );
+            if ( random.nextFloat() < 0.7 )
+            {   // Set
+                Value value = Values.of( random.propertyValue() );
+                id = store.set( id, key, value );
+                System.out.println( "Set " + key + " " + value + " ==> " + id );
+                expected.put( key, value );
+            }
+            else if ( !expected.isEmpty() )
+            {   // Remove
+                while ( !expected.containsKey( key ) )
+                {
+                    key = random.nextInt( maxKeys );
+                }
+                System.out.println( "Remove " + key );
+                assertEquals( expected.remove( key ), store.get( id, key ) );
+                id = store.remove( id, key );
+                assertFalse( store.has( id, key ) );
+            }
+
+            for ( int candidateKey = 0; candidateKey < maxKeys; candidateKey++ )
+            {
+                Value value = expected.get( candidateKey );
+                if ( value != null )
+                {
+                    assertTrue( store.has( id, candidateKey ) );
+                    assertEquals( value, store.get( id, candidateKey ) );
+                }
+                else
+                {
+                    assertFalse( store.has( id, candidateKey ) );
+                }
+            }
+        }
     }
 }

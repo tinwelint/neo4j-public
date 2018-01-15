@@ -35,7 +35,6 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
-import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.transaction.state.PropertyCreator;
 import org.neo4j.kernel.impl.transaction.state.PropertyDeleter;
 import org.neo4j.kernel.impl.transaction.state.PropertyTraverser;
@@ -90,11 +89,11 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
     }
 
     @Override
-    public boolean remove( long id, int key )
+    public long remove( long id, int key )
     {
         Owner owner = new Owner( id );
-        propertyDeletor.removeProperty( owner, key, recordAccess );
-        return owner.getNextProp() == Record.NULL_REFERENCE.intValue();
+        propertyDeletor.removePropertyIfExists( owner, key, recordAccess );
+        return owner.getNextProp();
     }
 
     // Reading
