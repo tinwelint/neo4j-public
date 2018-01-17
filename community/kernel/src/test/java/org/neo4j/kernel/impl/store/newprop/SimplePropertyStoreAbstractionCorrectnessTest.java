@@ -361,6 +361,19 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         assertEquals( value, readValue );
     }
 
+    @Test
+    public void shouldStoreBooleanArray() throws Exception
+    {
+        // given
+        Value value = Values.of( new boolean[] {false, false, false, true, true, false} );
+
+        // when
+        long id = store.set( -1, 0, value );
+
+        // then
+        assertEquals( value, store.get( id, 0 ) );
+    }
+
     @Seed( 1516050416478L )
     @Test
     public void shouldSetAndRemoveRandomProperties() throws Exception

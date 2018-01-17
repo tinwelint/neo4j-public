@@ -47,6 +47,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 import static java.lang.Math.toIntExact;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
@@ -154,7 +155,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     int freeBytesInRecord = recordLength - sumValueLength - headerLength;
                     Type type = Type.fromValue( value );
                     Object preparedValue = type.prepare( value );
-                    int size = type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + type.valueLength( preparedValue );
+                    int valueLength = type.valueLength( preparedValue );
+                    int size = type.numberOfHeaderEntries() * HEADER_ENTRY_SIZE + valueLength;
                     if ( size > freeBytesInRecord )
                     {   // Grow/relocate record
                         units = growRecord( cursor, startId, units, size - freeBytesInRecord );
@@ -168,8 +170,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                     // Here assume that we're at the correct position to add a new header
                     int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
                     type.putHeader( cursor, key, sumValueLength, preparedValue );
-                    cursor.setOffset( valueStart( units, sumValueLength + type.valueLength( preparedValue ) ) );
-                    type.putValue( cursor, preparedValue, type.valueLength( preparedValue ) );
+                    cursor.setOffset( valueStart( units, sumValueLength + valueLength ) );
+                    type.putValue( cursor, preparedValue, valueLength );
                     writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
                 }
 
@@ -240,24 +242,56 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             {
                 if ( booleanState = seek( cursor, key ) )
                 {   // It exists
-                    // Everything after current headerIndex should be moved back the number of header units this property has
-                    int headerEntriesToMove = numberOfHeaderEntries - headerEntryIndex - currentType.numberOfHeaderEntries();
-                    int gapSize = currentType.numberOfHeaderEntries() * HEADER_ENTRY_SIZE;
-                    placeCursorAtHeaderEntry( cursor, headerEntryIndex );
-                    for ( int i = 0; i < headerEntriesToMove; i++ )
-                    {
-                        // Assumption that header entry is integer size
-                        cursor.putInt( cursor.getInt( cursor.getOffset() + gapSize ) );
-                    }
-                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentType.numberOfHeaderEntries() );
 
-                    // TODO also implement compacting of the value data
+                    {   // Move header entries
+                        int entriesToMove = numberOfHeaderEntries - headerEntryIndex - currentType.numberOfHeaderEntries();
+                        int gapSize = currentType.numberOfHeaderEntries() * HEADER_ENTRY_SIZE;
+                        moveBytesLeft( cursor, headerStart( headerEntryIndex ) + gapSize,  entriesToMove * HEADER_ENTRY_SIZE, gapSize );
+                        writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentType.numberOfHeaderEntries() );
+                    }
+
+                    {   // Move data entries
+                        int currentSumValueLength = sumValueLength;
+                        int distance = currentValueLength;
+                        seekToEnd( cursor );
+                        int size = sumValueLength - currentSumValueLength;
+                        int lowOffset = valueStart( units, sumValueLength );
+                        moveBytesRight( cursor, lowOffset, size, distance );
+                    }
                 }
                 return -1;
             }
         };
         store.accessForWriting( id, visitor );
         return id;
+    }
+
+    private void moveBytesLeft( PageCursor cursor, int lowOffset, int size, int distance )
+    {
+        // TODO obviously optimize this to use the good approach of an optimal chunk size to read into intermediate byte[]
+        // TODO for now just do the silly move-by-gapSize
+        int moved = 0;
+        while ( moved < size )
+        {
+            int toMoveThisTime = min( size - moved, distance );
+            int sourceOffset = lowOffset + moved;
+            cursor.copyTo( sourceOffset, cursor, sourceOffset - distance, toMoveThisTime );
+            moved += toMoveThisTime;
+        }
+    }
+
+    private void moveBytesRight( PageCursor cursor, int lowOffset, int size, int distance )
+    {
+        // TODO obviously optimize this to use the good approach of an optimal chunk size to read into intermediate byte[]
+        // TODO for now just do the silly move-by-gapSize
+        int moved = 0;
+        while ( moved < size )
+        {
+            int toMoveThisTime = min( size - moved, distance );
+            int sourceOffset = lowOffset + size - moved - toMoveThisTime;
+            cursor.copyTo( sourceOffset, cursor, sourceOffset + distance, toMoveThisTime );
+            moved += toMoveThisTime;
+        }
     }
 
     @Override
@@ -431,7 +465,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
         void placeCursorAtHeaderEntry( PageCursor cursor, int headerEntryIndex )
         {
-            cursor.setOffset( pivotOffset + RECORD_HEADER_SIZE + HEADER_ENTRY_SIZE * headerEntryIndex );
+            cursor.setOffset( headerStart( headerEntryIndex ) );
         }
 
         void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries )
@@ -628,14 +662,14 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             public Value getValue( PageCursor cursor, int valueLength )
             {
                 byte valuesInLastByte = cursor.getByte();
-                int length = (valueLength - 1 /*the first header byte we just read*/) * Byte.SIZE + valuesInLastByte;
+                int length = (valueLength - 2 /*the first header byte we just read*/) * Byte.SIZE + valuesInLastByte;
                 boolean[] array = new boolean[length];
                 for ( int offset = 0; offset < length; )
                 {
-                    byte currentByte = 0;
+                    byte currentByte = cursor.getByte();
                     for ( int bit = 0; bit < Byte.SIZE && offset < length; bit++, offset++ )
                     {
-                        if ( (bit & (1 << bit)) != 0 )
+                        if ( (currentByte & (1 << bit)) != 0 )
                         {
                             array[offset] = true;
                         }
@@ -648,8 +682,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             public int valueLength( Object value )
             {
                 BooleanArray array = (BooleanArray) value;
-                return 1 +                                    // the byte saying how many bits are used in the last byte
-                       (array.length() - 1) / Byte.BYTES + 1; // all the boolean bits
+                return 1 +                                   // the byte saying how many bits are used in the last byte
+                       (array.length() - 1) / Byte.SIZE + 1; // all the boolean bits
             }
         },
         BYTE_ARRAY( false, -1 )
