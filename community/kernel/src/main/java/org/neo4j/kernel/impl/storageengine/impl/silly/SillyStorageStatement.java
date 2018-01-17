@@ -36,6 +36,7 @@ import org.neo4j.storageengine.api.NodeItem;
 import org.neo4j.storageengine.api.PropertyItem;
 import org.neo4j.storageengine.api.RelationshipItem;
 import org.neo4j.storageengine.api.StorageStatement;
+import org.neo4j.storageengine.api.schema.IndexProgressor.NodeLabelClient;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.LabelScanReader;
 
@@ -168,6 +169,12 @@ class SillyStorageStatement implements StorageStatement, LabelScanReader
             }
             return true;
         } );
+    }
+
+    @Override
+    public void nodesWithLabel( NodeLabelClient client, int labelId )
+    {
+        throw new UnsupportedOperationException( "TODO Please implement" );
     }
 
     @Override
