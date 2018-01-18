@@ -413,7 +413,8 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                 if ( value != null )
                 {
                     assertTrue( store.has( id, candidateKey ) );
-                    assertEquals( value, store.get( id, candidateKey ) );
+                    Value readValue = store.get( id, candidateKey );
+                    assertEquals( "For key " + candidateKey, value, readValue );
                 }
                 else
                 {

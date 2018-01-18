@@ -243,20 +243,28 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 if ( booleanState = seek( cursor, key ) )
                 {   // It exists
 
-                    {   // Move header entries
-                        int entriesToMove = numberOfHeaderEntries - headerEntryIndex - currentType.numberOfHeaderEntries();
-                        int gapSize = currentType.numberOfHeaderEntries() * HEADER_ENTRY_SIZE;
-                        moveBytesLeft( cursor, headerStart( headerEntryIndex ) + gapSize,  entriesToMove * HEADER_ENTRY_SIZE, gapSize );
-                        writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentType.numberOfHeaderEntries() );
-                    }
+                    int currentHeaderEntryIndex = headerEntryIndex;
+                    int currentNumberOfHeaderEntries = currentType.numberOfHeaderEntries();
+                    int headerEntriesToMove = numberOfHeaderEntries - currentHeaderEntryIndex - currentNumberOfHeaderEntries;
+                    int headerDistance = currentNumberOfHeaderEntries * HEADER_ENTRY_SIZE;
+                    int currentSumValueLength = sumValueLength;
+                    int valueDistance = currentValueLength;
 
-                    {   // Move data entries
-                        int currentSumValueLength = sumValueLength;
-                        int distance = currentValueLength;
-                        seekToEnd( cursor );
-                        int size = sumValueLength - currentSumValueLength;
-                        int lowOffset = valueStart( units, sumValueLength );
-                        moveBytesRight( cursor, lowOffset, size, distance );
+                    // Seek to the end so that we get the total value length, TODO could be done better in some way, right?
+                    seekToEnd( cursor );
+
+                    int valueSize = sumValueLength - currentSumValueLength;
+                    int valueLowOffset = valueStart( units, sumValueLength );
+
+                    // Move header entries
+                    moveBytesLeft( cursor, headerStart( currentHeaderEntryIndex ) + headerDistance,
+                            headerEntriesToMove * HEADER_ENTRY_SIZE, headerDistance );
+                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentNumberOfHeaderEntries );
+
+                    // Move data entries
+                    if ( valueDistance > 0 ) // distance == 0 for e.g. boolean values
+                    {
+                        moveBytesRight( cursor, valueLowOffset, valueSize, valueDistance );
                     }
                 }
                 return -1;
@@ -426,6 +434,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
         int growRecord( PageCursor cursor, long startId, int units, int bytesNeeded ) throws IOException
         {
+            System.out.println( "Grow" );
+
             // TODO Special case: can we grow in-place?
 
             // Normal case: find new bigger place and move there.
@@ -970,6 +980,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             }
             if ( value instanceof IntegralValue )
             {
+                // TODO don't let negative values use bigger INTXX than the type actually is
                 long longValue = ((IntegralValue)value).longValue();
                 if ( (longValue & ~0xFF) == 0 )
                 {
