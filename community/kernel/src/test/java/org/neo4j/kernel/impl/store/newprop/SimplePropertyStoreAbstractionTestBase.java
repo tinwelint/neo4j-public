@@ -11,11 +11,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.neo4j.test.rule.PageCacheRule.config;
 
@@ -63,9 +64,15 @@ public abstract class SimplePropertyStoreAbstractionTestBase
         return data;
     }
 
-    public final @Rule PageCacheRule pageCacheRule = new PageCacheRule( config().withInconsistentReads( false ) );
-    public final @Rule TestDirectory directory = TestDirectory.testDirectory( getClass() );
-    private final FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule( config().withInconsistentReads( false ) );
+    @Rule
+    public final TestDirectory directory = TestDirectory.testDirectory( getClass() );
+    @Rule
+    public final DefaultFileSystemRule fs = new DefaultFileSystemRule();
+    @Rule
+    public final RepeatRule repeater = new RepeatRule();
+
     private final Creator creator;
     protected SimplePropertyStoreAbstraction store;
 

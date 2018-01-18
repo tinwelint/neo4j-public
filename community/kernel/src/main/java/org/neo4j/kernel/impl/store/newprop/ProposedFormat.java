@@ -180,6 +180,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
             private void changeValueSize( PageCursor cursor, int diff, int units, int valueLengthSum )
             {
+                // TODO implement in terms of moveToLeftRight
                 if ( diff > 0 )
                 {
                     // Grow, i.e. move the other values diff bytes to the left (values are written from the end)
@@ -206,6 +207,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
             private void changeHeaderSize( PageCursor cursor, int headerDiff, Type oldType, int hitHeaderEntryIndex )
             {
+                // TODO implement in terms of moveToLeftRight
                 if ( headerDiff > 0 )
                 {
                     // Grow, i.e. move the other header entries diff entries to the right (headers are written from the start)
@@ -434,8 +436,6 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
         int growRecord( PageCursor cursor, long startId, int units, int bytesNeeded ) throws IOException
         {
-            System.out.println( "Grow" );
-
             // TODO Special case: can we grow in-place?
 
             // Normal case: find new bigger place and move there.
@@ -653,7 +653,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             {
                 BooleanArray array = (BooleanArray) value;
                 int length = array.length();
-                cursor.putByte( (byte) (length % Byte.SIZE) );
+                byte rest = (byte) (length % Byte.SIZE);
+                cursor.putByte( rest == 0 ? 8 : rest );
                 for ( int offset = 0; offset < length; )
                 {
                     byte currentByte = 0;
@@ -852,7 +853,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             @Override
             public Value getValue( PageCursor cursor, int valueLength )
             {
-                int length = valueLength / Float.BYTES;
+                int length = valueLength / Double.BYTES;
                 double[] array = new double[length];
                 for ( int offset = 0; offset < length; offset++ )
                 {
@@ -982,15 +983,15 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             {
                 // TODO don't let negative values use bigger INTXX than the type actually is
                 long longValue = ((IntegralValue)value).longValue();
-                if ( (longValue & ~0xFF) == 0 )
+                if ( (longValue & ~0x7F) == 0 )
                 {
                     return INT8;
                 }
-                if ( (longValue & ~0xFFFF) == 0 )
+                if ( (longValue & ~0x7FFF) == 0 )
                 {
                     return INT16;
                 }
-                if ( (longValue & ~0xFFFFFFFF) == 0 )
+                if ( (longValue & ~0x7FFFFFFFL) == 0 )
                 {
                     return INT32;
                 }

@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +43,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
+import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.shortValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
 @RunWith( Parameterized.class )
@@ -348,33 +351,56 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
     }
 
     @Test
-    public void shouldStoreArrays() throws Exception
+    public void shouldStoreStringArray() throws Exception
+    {
+        shouldSetAndGetValue( Values.of( new String[] {"abc", "defg", "hi"} ) );
+    }
+
+    @Test
+    public void shouldStoreDoubleArray() throws Exception
+    {
+        shouldSetAndGetValue( Values.of( new double[] {0.10171606200504502D, 0.4423817012294845D} ) );
+    }
+
+    @Test
+    public void shouldStoreBooleanArray() throws Exception
+    {
+        shouldSetAndGetValue( Values.of( new boolean[] {false, false, false, true, true, false} ) );
+        shouldSetAndGetValue( Values.of( new boolean[] {false, false, false, true, true, false, true, true} ) );
+    }
+
+    @Test
+    public void shouldSetNegativeLongValue() throws Exception
+    {
+        shouldSetAndGetValue( longValue( -7262393586424567340L ) );
+    }
+
+    @Test
+    public void shouldSetShortValue() throws Exception
+    {
+        shouldSetAndGetValue( shortValue( (short) 246 ) );
+    }
+
+    @Test
+    public void shouldSetNegativeShortValue() throws Exception
+    {
+        shouldSetAndGetValue( shortValue( (short) -31491 ) );
+    }
+
+    private void shouldSetAndGetValue( Value value ) throws IOException
     {
         // given
-        Value value = Values.of( new String[] {"abc", "defg", "hi"} );
+        long id = store.set( -1, 0, value );
 
         // when
-        long id = store.set( -1, 0, value );
         Value readValue = store.get( id, 0 );
 
         // then
         assertEquals( value, readValue );
     }
 
-    @Test
-    public void shouldStoreBooleanArray() throws Exception
-    {
-        // given
-        Value value = Values.of( new boolean[] {false, false, false, true, true, false} );
-
-        // when
-        long id = store.set( -1, 0, value );
-
-        // then
-        assertEquals( value, store.get( id, 0 ) );
-    }
-
-    @Seed( 1516050416478L )
+//    @Repeat( times = 100 )
+    @Seed( 1516270823605L )
     @Test
     public void shouldSetAndRemoveRandomProperties() throws Exception
     {
@@ -391,8 +417,8 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
             if ( random.nextFloat() < 0.7 )
             {   // Set
                 Value value = Values.of( random.propertyValue() );
+                System.out.println( "Set " + key + " = " + value );
                 id = store.set( id, key, value );
-                System.out.println( "Set " + key + " " + value + " ==> " + id );
                 expected.put( key, value );
             }
             else if ( !expected.isEmpty() )
