@@ -49,6 +49,7 @@ import org.neo4j.values.storable.Values;
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 import static java.lang.Math.toIntExact;
+
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
@@ -180,53 +181,33 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
             private void changeValueSize( PageCursor cursor, int diff, int units, int valueLengthSum )
             {
-                // TODO implement in terms of moveToLeftRight
+                int leftOffset = valueStart( units, sumValueLength );
+                int rightOffset = valueStart( units, valueLengthSum );
                 if ( diff > 0 )
                 {
                     // Grow, i.e. move the other values diff bytes to the left (values are written from the end)
-                    int leftOffset = valueStart( units, sumValueLength );
-                    int rightOffset = valueStart( units, valueLengthSum );
-                    for ( int i = leftOffset; i < rightOffset; i++ )
-                    {
-                        // TODO move in bigger pieces
-                        cursor.copyTo( i, cursor, i - diff, 1 );
-                    }
+                    moveBytesLeft( cursor, leftOffset, rightOffset - leftOffset, diff );
                 }
                 else if ( diff < 0 )
                 {
                     // Shrink, i.e. move the other values diff bytes to the right (values are written from the end)
-                    int leftOffset = valueStart( units, sumValueLength );
-                    int rightOffset = valueStart( units, valueLengthSum );
-                    for ( int i = rightOffset - 1; i >= leftOffset; i-- )
-                    {
-                        // TODO move in bigger pieces
-                        cursor.copyTo( i, cursor, i - diff, 1 );
-                    }
+                    moveBytesRight( cursor, leftOffset, rightOffset - leftOffset, - diff );
                 }
             }
 
             private void changeHeaderSize( PageCursor cursor, int headerDiff, Type oldType, int hitHeaderEntryIndex )
             {
-                // TODO implement in terms of moveToLeftRight
+                int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
+                int rightOffset = headerStart( numberOfHeaderEntries );
                 if ( headerDiff > 0 )
                 {
                     // Grow, i.e. move the other header entries diff entries to the right (headers are written from the start)
-                    int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
-                    int rightOffset = headerStart( numberOfHeaderEntries );
-                    for ( int i = rightOffset - HEADER_ENTRY_SIZE; i >= leftOffset; i -= HEADER_ENTRY_SIZE )
-                    {
-                        cursor.copyTo( i, cursor, i + HEADER_ENTRY_SIZE * headerDiff, HEADER_ENTRY_SIZE );
-                    }
+                    moveBytesRight( cursor, leftOffset, rightOffset - leftOffset, headerDiff * HEADER_ENTRY_SIZE );
                 }
                 else if ( headerDiff < 0 )
                 {
                     // Shrink, i.e. move the other header entries diff entries to the left
-                    int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
-                    int rightOffset = headerStart( numberOfHeaderEntries );
-                    for ( int i = leftOffset; i < rightOffset; i += HEADER_ENTRY_SIZE )
-                    {
-                        cursor.copyTo( i, cursor, i + HEADER_ENTRY_SIZE * headerDiff, HEADER_ENTRY_SIZE );
-                    }
+                    moveBytesLeft( cursor, leftOffset, rightOffset - leftOffset, - headerDiff * HEADER_ENTRY_SIZE );
                 }
             }
         };
