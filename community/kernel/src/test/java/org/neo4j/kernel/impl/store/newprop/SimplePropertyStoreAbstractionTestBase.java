@@ -33,6 +33,8 @@ import java.util.List;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
+import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -84,11 +86,13 @@ public abstract class SimplePropertyStoreAbstractionTestBase
     }
 
     @Rule
-    public final PageCacheRule pageCacheRule = new PageCacheRule( config().withInconsistentReads( false ) );
+    public final PageCacheRule pageCacheRule = new PageCacheRule( pageCacheConfig() );
     @Rule
     public final TestDirectory directory = TestDirectory.testDirectory( getClass() );
     @Rule
     public final DefaultFileSystemRule fs = new DefaultFileSystemRule();
+    @Rule
+    public final RandomRule random = new RandomRule();
     @Rule
     public final RepeatRule repeater = new RepeatRule();
 
@@ -98,6 +102,11 @@ public abstract class SimplePropertyStoreAbstractionTestBase
     public SimplePropertyStoreAbstractionTestBase( Creator creator )
     {
         this.creator = creator;
+    }
+
+    protected PageCacheConfig pageCacheConfig()
+    {
+        return config().withInconsistentReads( false );
     }
 
     @Before

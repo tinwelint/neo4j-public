@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,7 +30,6 @@ import java.util.Map;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
-import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
@@ -50,9 +48,6 @@ import static org.neo4j.values.storable.Values.stringValue;
 @RunWith( Parameterized.class )
 public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropertyStoreAbstractionTestBase
 {
-    @Rule
-    public final RandomRule random = new RandomRule();
-
     public SimplePropertyStoreAbstractionCorrectnessTest( Creator creator )
     {
         super( creator );
