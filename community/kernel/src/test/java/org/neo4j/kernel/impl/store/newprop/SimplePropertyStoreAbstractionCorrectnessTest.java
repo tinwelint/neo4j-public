@@ -32,7 +32,6 @@ import java.util.Map;
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.test.rule.RandomRule;
-import org.neo4j.test.rule.RandomRule.Seed;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
@@ -400,8 +399,6 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         assertEquals( value, readValue );
     }
 
-//    @Repeat( times = 100 )
-    @Seed( 1516270823605L )
     @Test
     public void shouldSetAndRemoveRandomProperties() throws Exception
     {
@@ -418,7 +415,6 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
             if ( random.nextFloat() < 0.7 )
             {   // Set
                 Value value = Values.of( random.propertyValue() );
-                System.out.println( "Set " + key + " = " + value );
                 id = store.set( id, key, value );
                 expected.put( key, value );
             }
@@ -428,7 +424,6 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                 {
                     key = random.nextInt( maxKeys );
                 }
-                System.out.println( "Remove " + key );
                 assertEquals( expected.remove( key ), store.get( id, key ) );
                 id = store.remove( id, key );
                 assertFalse( store.has( id, key ) );

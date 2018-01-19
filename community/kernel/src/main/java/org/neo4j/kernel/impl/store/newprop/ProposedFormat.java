@@ -123,25 +123,39 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                         seek( cursor, -1 );
                     }
 
+                    // Shrink whichever part that needs shrinking first, otherwise we risk writing into the other part,
+                    // i.e. parts being header and value
+                    if ( headerDiff < 0 )
+                    {
+                        changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+                    }
+                    if ( diff < 0 )
+                    {
+                        changeValueSize( cursor, diff, units, oldValueLengthSum );
+                    }
+                    if ( headerDiff > 0 )
+                    {
+                        changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+                    }
+                    if ( diff > 0 )
+                    {
+                        changeValueSize( cursor, diff, units, oldValueLengthSum );
+                    }
+
                     if ( headerDiff != 0 )
                     {
-                        // Grow/shrink the space for the new header
-                        changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
                         numberOfHeaderEntries += headerDiff;
                         writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries );
+                    }
+                    if ( diff != 0 )
+                    {
+                        oldValueLengthSum += diff;
                     }
 
                     if ( type != oldType || newValueLength != oldValueLength )
                     {
                         cursor.setOffset( headerStart( hitHeaderEntryIndex ) );
                         type.putHeader( cursor, key, oldValueLengthSum, preparedValue );
-                    }
-
-                    if ( diff != 0 )
-                    {
-                        // Grow/shrink the space for the new value
-                        changeValueSize( cursor, diff, units, oldValueLengthSum );
-                        oldValueLengthSum += diff;
                     }
 
                     // Go the the correct value position and write the value
