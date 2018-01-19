@@ -33,6 +33,8 @@ import org.neo4j.test.Race;
 import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.values.storable.Value;
 
+import static org.junit.Assert.assertTrue;
+
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import static org.neo4j.test.Race.throwing;
@@ -82,16 +84,16 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
             {
                 int key = random.nextInt( KEYS );
                 Value value = store.get( id, key );
-//                boolean matches = false;
-//                for ( Pair<Value,Value> alternative : VALUE_ALTERNATIVES )
-//                {
-//                    if ( value.equals( alternative.getLeft() ) || value.equals( alternative.getRight() ) )
-//                    {
-//                        matches = true;
-//                        break;
-//                    }
-//                }
-//                assertTrue( matches );
+                boolean matches = false;
+                for ( Pair<Value,Value> alternative : VALUE_ALTERNATIVES )
+                {
+                    if ( value.equals( alternative.getLeft() ) || value.equals( alternative.getRight() ) )
+                    {
+                        matches = true;
+                        break;
+                    }
+                }
+                assertTrue( matches );
                 reads.incrementAndGet();
             }
         } ) );

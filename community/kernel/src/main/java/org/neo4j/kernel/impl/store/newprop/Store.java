@@ -33,11 +33,11 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
+import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 
 public class Store implements Closeable
 {
@@ -104,6 +104,11 @@ public class Store implements Closeable
                     }
                 }
                 while ( moved || cursor.shouldRetry() );
+                cursor.checkAndClearBoundsFlag();
+                if ( (flags & PagedFile.PF_SHARED_READ_LOCK) != 0 )
+                {
+                    cursor.checkAndClearCursorException();
+                }
             }
         }
         catch ( IOException e )

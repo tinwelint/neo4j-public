@@ -555,9 +555,22 @@ enum Type
     private final boolean fixedSize;
     private final int valueLength;
 
-    public static Type fromHeader( long headerEntryUnsignedInt )
+    public static Type fromHeader( long headerEntryUnsignedInt, PageCursor cursor )
     {
         int ordinal = (int) ((headerEntryUnsignedInt & 0xFF000000) >>> 24);
+
+        // If this is a read cursor then communicate exceptions via CursorException instead of actual exception right here
+        if ( !cursor.isWriteLocked() )
+        {
+            if ( ordinal < 0 || ordinal >= ALL.length )
+            {
+                cursor.setCursorException( "Invalid value type " + ordinal );
+                // A bit hacky to just return _a_ type? We're guaranteed to fail in the end and so if we return _something_
+                // then the rest of the operation can progress, obviously going willy-nilly and out of bounds and everything,
+                // but that's all right.
+                return FALSE;
+            }
+        }
         return ALL[ordinal];
     }
 

@@ -202,7 +202,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, long startId, int units )
+            public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
                 if ( booleanState = seek( cursor, key ) )
                 {   // It exists
@@ -272,7 +272,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, long startId, int units )
+            public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
                 booleanState = seek( cursor, key );
                 return -1;
@@ -288,7 +288,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, long startId, int units )
+            public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
                 if ( seek( cursor, key ) )
                 {   // found
@@ -308,7 +308,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         Visitor visitor = new Visitor()
         {
             @Override
-            public long accept( PageCursor cursor, long startId, int units )
+            public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
                 if ( seek( cursor, key ) )
                 {   // found
@@ -346,15 +346,22 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         protected long longState;
         protected Value readValue;
 
-        boolean seek( PageCursor cursor, int key )
+        boolean seek( PageCursor cursor, int key ) throws IOException
         {
             pivotOffset = cursor.getOffset();
-            numberOfHeaderEntries = cursor.getShort();
-            sumValueLength = 0;
-            currentValueLength = 0;
-            headerEntryIndex = 0;
+            boolean found;
+            do
+            {
+                cursor.setOffset( pivotOffset );
+                numberOfHeaderEntries = cursor.getShort();
+                sumValueLength = 0;
+                currentValueLength = 0;
+                headerEntryIndex = 0;
+                found = seekTo( cursor, key );
+            }
+            while ( cursor.shouldRetry() );
             headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
-            return seekTo( cursor, key );
+            return found;
         }
 
         private boolean seekTo( PageCursor cursor, int key )
@@ -362,7 +369,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             while ( headerEntryIndex < numberOfHeaderEntries )
             {
                 long headerEntry = getUnsignedInt( cursor );
-                currentType = Type.fromHeader( headerEntry );
+                currentType = Type.fromHeader( headerEntry, cursor );
                 int thisKey = currentType.keyOf( headerEntry );
 
                 // TODO don't rely on keys being ordered... matters much? We have to look at all of them anyway to figure out free space
