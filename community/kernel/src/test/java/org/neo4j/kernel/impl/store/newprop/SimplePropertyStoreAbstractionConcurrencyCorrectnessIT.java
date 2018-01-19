@@ -19,42 +19,32 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.test.Race;
 import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import static org.neo4j.test.Race.throwing;
 import static org.neo4j.test.rule.PageCacheRule.config;
-import static org.neo4j.values.storable.Values.doubleValue;
-import static org.neo4j.values.storable.Values.floatValue;
-import static org.neo4j.values.storable.Values.intValue;
-import static org.neo4j.values.storable.Values.stringValue;
 
 @RunWith( Parameterized.class )
 public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends SimplePropertyStoreAbstractionTestBase
 {
-    private static final List<Pair<Value,Value>> VALUE_ALTERNATIVES = new ArrayList<>();
-    private static final int KEYS = 10;
-    static
-    {
-        VALUE_ALTERNATIVES.add( Pair.of( intValue( 10 ), intValue( 10_000 ) ) );
-        VALUE_ALTERNATIVES.add( Pair.of( stringValue( "abcdefg" ), stringValue( "hijlkmnopqrstuv" ) ) );
-        VALUE_ALTERNATIVES.add( Pair.of( floatValue( 0.123f ), doubleValue( 456.789d ) ) );
-    }
+    private final int KEYS = 10;
+    private final Value[] VALUE_ALTERNATIVES = new Value[KEYS * 2];
 
     public SimplePropertyStoreAbstractionConcurrencyCorrectnessIT( Creator creator )
     {
@@ -71,6 +61,7 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
     public void shouldReadConsistentValues() throws Throwable
     {
         // given
+        setUpValues();
         Race race = new Race().withMaxDuration( 10, SECONDS );
         AtomicLong idKeeper = new AtomicLong( initialPopulation() );
         AtomicLong reads = new AtomicLong();
@@ -85,15 +76,19 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
                 int key = random.nextInt( KEYS );
                 Value value = store.get( id, key );
                 boolean matches = false;
-                for ( Pair<Value,Value> alternative : VALUE_ALTERNATIVES )
+                for ( Value candidate : VALUE_ALTERNATIVES )
                 {
-                    if ( value.equals( alternative.getLeft() ) || value.equals( alternative.getRight() ) )
+                    if ( value.equals( candidate ) )
                     {
                         matches = true;
                         break;
                     }
                 }
-                assertTrue( matches );
+
+                if ( !matches )
+                {
+                    fail( "Read value " + value + " doesn't match any of " + Arrays.toString( VALUE_ALTERNATIVES ) );
+                }
                 reads.incrementAndGet();
             }
         } ) );
@@ -108,11 +103,24 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
                 idKeeper.set( newId );
             }
             writes.incrementAndGet();
-            Thread.sleep( 10 );
+
+            // Wait some time now and then to allow readers to get some breathing room
+            if ( currentTimeMillis() % 100 == 0 )
+            {
+                Thread.sleep( 1 );
+            }
         } ) );
         race.go();
 
         System.out.println( "Reads:" + reads + " Writes:" + writes );
+    }
+
+    private void setUpValues()
+    {
+        for ( int i = 0; i < KEYS * 2; i++ )
+        {
+            VALUE_ALTERNATIVES[i] = Values.of( random.propertyValue() );
+        }
     }
 
     private long initialPopulation() throws IOException
@@ -127,7 +135,6 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
 
     private Value randomValue()
     {
-        Pair<Value,Value> pair = VALUE_ALTERNATIVES.get( random.nextInt( VALUE_ALTERNATIVES.size() ) );
-        return random.nextBoolean() ? pair.getLeft() : pair.getRight();
+        return random.among( VALUE_ALTERNATIVES );
     }
 }
