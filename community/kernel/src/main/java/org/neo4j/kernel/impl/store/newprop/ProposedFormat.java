@@ -30,6 +30,7 @@ import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.BooleanArray;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.ByteArray;
+import org.neo4j.values.storable.CharArray;
 import org.neo4j.values.storable.DoubleArray;
 import org.neo4j.values.storable.DoubleValue;
 import org.neo4j.values.storable.FloatArray;
@@ -58,6 +59,7 @@ import static org.neo4j.values.storable.Values.booleanArray;
 import static org.neo4j.values.storable.Values.booleanValue;
 import static org.neo4j.values.storable.Values.byteArray;
 import static org.neo4j.values.storable.Values.byteValue;
+import static org.neo4j.values.storable.Values.charArray;
 import static org.neo4j.values.storable.Values.doubleArray;
 import static org.neo4j.values.storable.Values.doubleValue;
 import static org.neo4j.values.storable.Values.floatArray;
@@ -863,6 +865,36 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 return ((FloatingPointArray)preparedValue).length() * Double.BYTES;
             }
 
+        },
+        CHAR_ARRAY( false, -1 )
+        {
+            @Override
+            public void putValue( PageCursor cursor, Object preparedValue, int valueLength )
+            {
+                CharArray array = (CharArray) preparedValue;
+                int length = array.length();
+                for ( int i = 0; i < length; i++ )
+                {
+                    cursor.putShort( (short) array.charValue( i ) );
+                }
+            }
+
+            @Override
+            public Value getValue( PageCursor cursor, int valueLength )
+            {
+                char[] chars = new char[valueLength / Character.BYTES];
+                for ( int i = 0; i < chars.length; i++ )
+                {
+                    chars[i] = (char) cursor.getShort();
+                }
+                return charArray( chars );
+            }
+
+            @Override
+            public int valueLength( Object value )
+            {
+                return ((CharArray)value).length() * Character.BYTES;
+            }
         },
         UTF8_STRING_ARRAY( false, -1 )
         {

@@ -36,6 +36,11 @@ public class CharArray extends TextArray
         this.value = value;
     }
 
+    public char charValue( int offset )
+    {
+        return value[offset];
+    }
+
     @Override
     public boolean equals( Value other )
     {
