@@ -36,12 +36,12 @@ import static org.neo4j.helpers.Format.bytes;
 import static org.neo4j.helpers.Format.duration;
 
 @RunWith( Parameterized.class )
-public class SimplePropertyStoreAbstractionPerformanceTest extends SimplePropertyStoreAbstractionTestBase
+public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyStoreAbstractionTestBase
 {
     private static final int NODE_COUNT = 1_000_000;
     private static final int PROPERTY_COUNT = 10;
 
-    public SimplePropertyStoreAbstractionPerformanceTest( Creator creator )
+    public SimplePropertyStoreAbstractionPerformanceIT( Creator creator )
     {
         super( creator );
     }
