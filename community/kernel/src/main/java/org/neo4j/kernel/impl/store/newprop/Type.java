@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
+import java.io.IOException;
+
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.BooleanArray;
@@ -70,7 +72,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return booleanValue( true );
         }
@@ -83,7 +85,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return booleanValue( false );
         }
@@ -97,7 +99,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return byteValue( cursor.getByte() );
         }
@@ -111,7 +113,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return shortValue( cursor.getShort() );
         }
@@ -126,7 +128,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return intValue( cursor.getInt() );
         }
@@ -143,7 +145,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return longValue( cursor.getLong() );
         }
@@ -157,7 +159,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return floatValue( Float.intBitsToFloat( cursor.getInt() ) );
         }
@@ -176,7 +178,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             return doubleValue( Double.longBitsToDouble( cursor.getLong() ) );
         }
@@ -212,7 +214,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             byte[] bytes = new byte[valueLength];
             cursor.getBytes( bytes );
@@ -246,10 +248,17 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             byte valuesInLastByte = cursor.getByte();
-            int length = (valueLength - 2 /*the first header byte we just read*/) * Byte.SIZE + valuesInLastByte;
+            structure.integralValue( (valueLength - 2 /*the first header byte we just read*/) * Byte.SIZE + valuesInLastByte );
+            return true;
+        }
+
+        @Override
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
+        {
+            int length = toIntExact( structure.integralValue() );
             boolean[] array = new boolean[length];
             for ( int offset = 0; offset < length; )
             {
@@ -287,7 +296,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             byte[] array = new byte[valueLength];
             cursor.getBytes( array );
@@ -310,9 +319,16 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
-            int minimalType = cursor.getByte();
+            structure.integralValue( cursor.getByte() );
+            return true;
+        }
+
+        @Override
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
+        {
+            int minimalType = toIntExact( structure.integralValue() );
             int length = integralArrayLength( valueLength, minimalType );
             short[] array = new short[length];
             for ( int offset = 0; offset < length; offset++ )
@@ -337,9 +353,16 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
-            int minimalType = cursor.getByte();
+            structure.integralValue( cursor.getByte() );
+            return true;
+        }
+
+        @Override
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
+        {
+            int minimalType = toIntExact( structure.integralValue() );
             int length = integralArrayLength( valueLength, minimalType );
             int[] array = new int[length];
             for ( int offset = 0; offset < length; offset++ )
@@ -364,9 +387,16 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
-            int minimalType = cursor.getByte();
+            structure.integralValue( cursor.getByte() );
+            return true;
+        }
+
+        @Override
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
+        {
+            int minimalType = toIntExact( structure.integralValue() );
             int length = integralArrayLength( valueLength, minimalType );
             long[] array = new long[length];
             for ( int offset = 0; offset < length; offset++ )
@@ -396,7 +426,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             int length = valueLength / Float.BYTES;
             float[] array = new float[length];
@@ -427,7 +457,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             int length = valueLength / Double.BYTES;
             double[] array = new double[length];
@@ -459,7 +489,7 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             char[] chars = new char[valueLength / Character.BYTES];
             for ( int i = 0; i < chars.length; i++ )
@@ -485,6 +515,9 @@ enum Type
             for ( byte[] stringBytes : bytes )
             {
                 cursor.putInt( stringBytes.length );
+            }
+            for ( byte[] stringBytes : bytes )
+            {
                 cursor.putBytes( stringBytes );
             }
         }
@@ -502,15 +535,34 @@ enum Type
         }
 
         @Override
-        public Value getValue( PageCursor cursor, int valueLength )
+        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+        {
+            int arrayLength = getLengthEfficiently( cursor );
+            if ( cursor.shouldRetry() )
+            {
+                return false;
+            }
+
+            int[] stringLengths = new int[arrayLength];
+            for ( int i = 0; i < arrayLength; i++ )
+            {
+                stringLengths[i] = cursor.getInt();
+            }
+            structure.value( stringLengths );
+            return true;
+        }
+
+        @Override
+        public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             // TODO if there were a TextArray w/ utf8... that would be juuust great
-            int arrayLength = getLengthEfficiently( cursor );
+            int[] stringLengths = (int[]) structure.value();
+            int arrayLength = stringLengths.length;
             String[] strings = new String[arrayLength];
             byte[] bytes = null;
             for ( int i = 0; i < arrayLength; i++ )
             {
-                int length = cursor.getInt();
+                int length = stringLengths[i];
                 if ( bytes == null || bytes.length < length )
                 {
                     bytes = new byte[length];
@@ -581,7 +633,23 @@ enum Type
 
     public abstract void putValue( PageCursor cursor, Object preparedValue, int valueLength );
 
-    public abstract Value getValue( PageCursor cursor, int valueLength );
+    /**
+     * {@link #getValue(PageCursor, int, ValueStructure)} has a pre-phase of {@link #getValueStructure(PageCursor, int)} where stuff like
+     * array lengths and what-not is read. This information affects how other data is read from the {@link PageCursor} and so
+     * must be read in a should-retry loop. The result of this call will be passed into {@link #getValue(PageCursor, int, ValueStructure)}.
+     *
+     * @param cursor {@link PageCursor} to read structure from.
+     * @param valueLength as gotten from {@link #valueLength(PageCursor)}
+     * @param structure value structure object to fill and then to pass on to {@link #getValue(PageCursor, int, ValueStructure)}.
+     * @return {@code true} if the read was consistent, otherwise {@code false} where a full retry will have to be made.
+     * @throws IOException on PageCursor read error.
+     */
+    public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+    {
+        return true;
+    }
+
+    public abstract Value getValue( PageCursor cursor, int valueLength, ValueStructure structure );
 
     public int numberOfHeaderEntries()
     {

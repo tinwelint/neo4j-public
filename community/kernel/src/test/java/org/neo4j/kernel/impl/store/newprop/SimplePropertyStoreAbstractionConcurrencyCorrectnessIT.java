@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.test.Race;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -38,7 +39,6 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import static org.neo4j.test.Race.throwing;
-import static org.neo4j.test.rule.PageCacheRule.config;
 
 @RunWith( Parameterized.class )
 public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends SimplePropertyStoreAbstractionTestBase
@@ -54,7 +54,7 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
     @Override
     protected PageCacheConfig pageCacheConfig()
     {
-        return config().withInconsistentReads( true );
+        return PageCacheRule.config().withInconsistentReads( true ).withAccessChecks( true );
     }
 
     @Test
@@ -105,7 +105,7 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
             writes.incrementAndGet();
 
             // Wait some time now and then to allow readers to get some breathing room
-            if ( currentTimeMillis() % 100 == 0 )
+            if ( currentTimeMillis() % 10 == 0 )
             {
                 Thread.sleep( 1 );
             }

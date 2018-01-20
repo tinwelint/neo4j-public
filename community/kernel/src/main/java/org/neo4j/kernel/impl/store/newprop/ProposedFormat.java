@@ -33,6 +33,7 @@ import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 
 import static org.neo4j.io.ByteUnit.kibiBytes;
+import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
@@ -290,10 +291,26 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             @Override
             public long accept( PageCursor cursor, long startId, int units ) throws IOException
             {
-                if ( seek( cursor, key ) )
-                {   // found
+                boolean found = seek( cursor, key );
+
+                // Check consistency because we just read data which affects how we're going to continue reading.
+                if ( cursor.shouldRetry() )
+                {
+                    return SPECIAL_ID_SHOULD_RETRY;
+                }
+
+                if ( found )
+                {
                     cursor.setOffset( valueStart( units, sumValueLength ) );
-                    readValue = currentType.getValue( cursor, currentValueLength );
+                    boolean valueStructureRead = currentType.getValueStructure( cursor, currentValueLength, this );
+
+                    // Check consistency because we just read data which affects how we're going to continue reading.
+                    if ( !valueStructureRead || cursor.shouldRetry() )
+                    {
+                        return SPECIAL_ID_SHOULD_RETRY;
+                    }
+
+                    readValue = currentType.getValue( cursor, currentValueLength, this );
                 }
                 return -1;
             }
@@ -333,7 +350,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         store.close();
     }
 
-    abstract class Visitor implements RecordVisitor
+    abstract class Visitor implements RecordVisitor, ValueStructure
     {
         protected int pivotOffset;
         protected int numberOfHeaderEntries;
@@ -346,20 +363,19 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         protected long longState;
         protected Value readValue;
 
+        // value structure stuff
+        protected long integralStructureValue;
+        protected Object objectStructureValue;
+
         boolean seek( PageCursor cursor, int key ) throws IOException
         {
             pivotOffset = cursor.getOffset();
-            boolean found;
-            do
-            {
-                cursor.setOffset( pivotOffset );
-                numberOfHeaderEntries = cursor.getShort();
-                sumValueLength = 0;
-                currentValueLength = 0;
-                headerEntryIndex = 0;
-                found = seekTo( cursor, key );
-            }
-            while ( cursor.shouldRetry() );
+            cursor.setOffset( pivotOffset );
+            numberOfHeaderEntries = cursor.getShort();
+            sumValueLength = 0;
+            currentValueLength = 0;
+            headerEntryIndex = 0;
+            boolean found = seekTo( cursor, key );
             headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
             return found;
         }
@@ -450,6 +466,30 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries )
         {
             cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
+        }
+
+        @Override
+        public void integralValue( long value )
+        {
+            this.integralStructureValue = value;
+        }
+
+        @Override
+        public long integralValue()
+        {
+            return integralStructureValue;
+        }
+
+        @Override
+        public void value( Object value )
+        {
+            this.objectStructureValue = value;
+        }
+
+        @Override
+        public Object value()
+        {
+            return objectStructureValue;
         }
     }
 

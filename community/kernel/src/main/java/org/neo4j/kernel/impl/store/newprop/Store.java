@@ -41,6 +41,8 @@ import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecor
 
 public class Store implements Closeable
 {
+    static final long SPECIAL_ID_SHOULD_RETRY = -2;
+
     final PagedFile storeFile;
     private final int pageSize;
     private final AtomicLong nextId = new AtomicLong();
@@ -86,24 +88,30 @@ public class Store implements Closeable
         {
             if ( cursor.next() )
             {
-                boolean moved = false;
+                boolean forceRetry;
                 do
                 {
+                    forceRetry = false;
                     int units = Header.numberOfUnits( cursor, id );
                     cursor.setOffset( offset );
                     long nextId = visitor.accept( cursor, id, units );
-                    if ( nextId != -1 )
+                    if ( nextId == SPECIAL_ID_SHOULD_RETRY )
                     {
+                        forceRetry = true;
+                    }
+                    else if ( nextId != -1 )
+                    {
+                        // TODO this will actually never happen yet
                         pageId = pageIdForRecord( nextId );
                         offset = offsetForId( nextId );
                         if ( !cursor.next( pageId ) )
                         {
                             break;
                         }
-                        moved = true;
+                        forceRetry = true;
                     }
                 }
-                while ( moved || cursor.shouldRetry() );
+                while ( forceRetry | cursor.shouldRetry() );
                 cursor.checkAndClearBoundsFlag();
                 if ( (flags & PagedFile.PF_SHARED_READ_LOCK) != 0 )
                 {
