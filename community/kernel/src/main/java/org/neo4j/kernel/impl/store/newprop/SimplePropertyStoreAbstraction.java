@@ -72,7 +72,7 @@ public interface SimplePropertyStoreAbstraction extends Closeable
      */
     int all( long id, PropertyVisitor visitor ) throws IOException;
 
-    long storeSize();
+    long storeSize() throws IOException;
 
     interface PropertyVisitor
     {

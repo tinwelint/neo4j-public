@@ -81,6 +81,11 @@ class Header
     static int numberOfUnits( PageCursor cursor, long id )
     {
         int startUnit = unitInPage( id );
+        if ( !isStartUnit( cursor, startUnit ) )
+        {
+            return 0;
+        }
+
         int searchUnit = startUnit + 1;
         if ( searchUnit == UNITS_PER_PAGE )
         {   // This is the last unit in this page, for now this means that this record is length 1
@@ -136,6 +141,20 @@ class Header
             }
         }
         return unit - startUnit;
+    }
+
+    static boolean isStartUnit( PageCursor cursor, long id )
+    {
+        int unit = unitInPage( id );
+        return isStartUnit( cursor, unit );
+    }
+
+    private static boolean isStartUnit( PageCursor cursor, int unit )
+    {
+        int offset = unit < 64 ? HEADER_OFFSET_START : HEADER_OFFSET_START + Long.BYTES;
+        long bits = cursor.getLong( offset );
+        int checkUnit = unit % 64;
+        return bitIsSet( bits, checkUnit );
     }
 
     private static boolean bitIsSet( long bits, int bit )

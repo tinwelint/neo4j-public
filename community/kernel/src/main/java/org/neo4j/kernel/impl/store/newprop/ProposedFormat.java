@@ -21,7 +21,6 @@ package org.neo4j.kernel.impl.store.newprop;
 
 import java.io.File;
 import java.io.IOException;
-
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
@@ -31,7 +30,6 @@ import org.neo4j.values.storable.Values;
 
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
-
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
@@ -55,10 +53,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     {
         if ( Record.NULL_REFERENCE.is( id ) )
         {
-            // Allocate room, 2 units to start off with and then binary increase when growing.
+            // Allocate room, some number of units to start off with and then grow from there.
             // In a real scenario we'd probably have a method setting multiple properties and so
             // we'd know how big our record would be right away. This is just to prototype the design
-            id = store.allocate( 2 );
+            id = store.allocate( 1 );
         }
         // Read header and see if property by the given key already exists
         // For now let's store the number of header entries as a 2B entry first
@@ -432,17 +430,18 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             try ( PageCursor newCursor = cursor.openLinkedCursor( newPageId ) )
             {
                 newCursor.next();
-                newCursor.setOffset( newOffset );
                 // Copy header
-                int fromBase = pivotOffset;
-                int toBase = newCursor.getOffset();
-                cursor.copyTo( fromBase, newCursor, toBase, headerLength );
+                cursor.copyTo( pivotOffset, newCursor, newOffset, headerLength );
                 // Copy values
                 cursor.copyTo(
-                        fromBase + units * UNIT_SIZE - sumValueLength, newCursor,
-                        toBase + newUnits * UNIT_SIZE - sumValueLength, sumValueLength );
+                        pivotOffset + units * UNIT_SIZE - sumValueLength, newCursor,
+                        newOffset + newUnits * UNIT_SIZE - sumValueLength, sumValueLength );
             }
-            Header.mark( cursor, startId, units, false );
+            // TODO don't mark as unused right here because that may leave a reader stranded. This should be done
+            // at some point later, like how buffered id freeing happens in neo4j, where we can be certain that
+            // no reader is in there when doing this marking.
+
+//            Header.mark( cursor, startId, units, false );
             cursor.next( newPageId );
             cursor.setOffset( newOffset );
             return newUnits;
@@ -504,15 +503,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     }
 
     @Override
-    public long storeSize()
+    public long storeSize() throws IOException
     {
-        try
-        {
-            return store.storeFile.getLastPageId() * kibiBytes( 8 );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
+        return store.storeFile.getLastPageId() * kibiBytes( 8 );
     }
 }
