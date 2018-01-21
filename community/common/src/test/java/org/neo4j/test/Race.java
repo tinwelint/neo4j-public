@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -83,13 +84,12 @@ public class Race
      *
      * @param time time value.
      * @param unit unit of time in {@link TimeUnit}.
-     * @return this {@link Race} instance.
+     * @return the duration condition as {@link BooleanSupplier}.
      */
-    public Race withMaxDuration( long time, TimeUnit unit )
+    public static BooleanSupplier maxDuration( long time, TimeUnit unit )
     {
         long endTime = currentTimeMillis() + unit.toMillis( time );
-        this.endCondition = mergeEndCondition( () -> currentTimeMillis() >= endTime );
-        return this;
+        return () -> currentTimeMillis() >= endTime;
     }
 
     private BooleanSupplier mergeEndCondition( BooleanSupplier additionalEndCondition )
@@ -123,14 +123,24 @@ public class Race
 
     public void addContestants( int count, Runnable contestant )
     {
-        addContestants( count, contestant, UNLIMITED );
+        addContestants( count, () -> contestant );
     }
 
     public void addContestants( int count, Runnable contestant, int maxNumberOfRuns )
     {
+        addContestants( count, () -> contestant, maxNumberOfRuns );
+    }
+
+    public void addContestants( int count, Supplier<Runnable> contestant )
+    {
+        addContestants( count, contestant, UNLIMITED );
+    }
+
+    public void addContestants( int count, Supplier<Runnable> contestant, int maxNumberOfRuns )
+    {
         for ( int i = 0; i < count; i++ )
         {
-            addContestant( contestant, maxNumberOfRuns );
+            addContestant( contestant.get(), maxNumberOfRuns );
         }
     }
 

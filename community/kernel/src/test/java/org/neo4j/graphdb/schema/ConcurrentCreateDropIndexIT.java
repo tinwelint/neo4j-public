@@ -44,6 +44,7 @@ import static org.junit.Assert.assertTrue;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.helpers.collection.Iterables.singleOrNull;
+import static org.neo4j.test.Race.maxDuration;
 
 public class ConcurrentCreateDropIndexIT
 {
@@ -170,7 +171,7 @@ public class ConcurrentCreateDropIndexIT
     public void concurrentCreatingUniquenessConstraint() throws Throwable
     {
         // given
-        Race race = new Race().withMaxDuration( 10, SECONDS );
+        Race race = new Race().withEndCondition( maxDuration( 10, SECONDS ) );
         Label label = label( 0 );
         race.addContestants( 10, () ->
         {
@@ -211,7 +212,7 @@ public class ConcurrentCreateDropIndexIT
             }
             tx.success();
         }
-        Race race = new Race().withMaxDuration( 10, SECONDS );
+        Race race = new Race().withEndCondition( maxDuration( 10, SECONDS ) );
         race.addContestants( 3, () ->
         {
             try ( Transaction tx = db.beginTx() )
