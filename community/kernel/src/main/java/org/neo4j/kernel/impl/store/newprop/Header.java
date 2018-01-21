@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.store.newprop;
 import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNITS_PER_PAGE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.unitInPage;
@@ -49,7 +50,7 @@ class Header
         if ( startUnitInPage + units > 64 )
         {
             int startUnitInSecondLong = max( 64, startUnitInPage ) - 64;
-            int unitsInSecondLong = startUnitInPage + units - 64;
+            int unitsInSecondLong = min( units, startUnitInPage + units - 64 );
             long bits = cursor.getLong( HEADER_OFFSET_IN_USE + Long.BYTES );
             for ( int i = 0; i < unitsInSecondLong; i++ )
             {
@@ -93,22 +94,25 @@ class Header
         }
 
         // First check for the next start mark
+        int endUnit = UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
         if ( searchUnit < 64 )
         {   // First long
             long bits = cursor.getLong( HEADER_OFFSET_START );
             long higherBits = bits & ~((1L << searchUnit) - 1);
             int nextStartUnit = Long.numberOfTrailingZeros( higherBits );
             if ( nextStartUnit < 64 )
-            {   // A record start found after this point
-                return nextStartUnit - startUnit;
+            {   // Next start found in the first long
+                endUnit = nextStartUnit;
             }
-
-            // No more records after this point in the first long, check the second long
-            long secondBits = cursor.getLong( HEADER_OFFSET_START + Long.BYTES );
-            int secondNextStartUnit = Long.numberOfTrailingZeros( secondBits );
-            if ( secondNextStartUnit < 64 )
-            {   // Next start found in the second long
-                return 2 + secondNextStartUnit;
+            else
+            {
+                // No more records after this point in the first long, check the second long
+                long secondBits = cursor.getLong( HEADER_OFFSET_START + Long.BYTES );
+                int secondNextStartUnit = Long.numberOfTrailingZeros( secondBits );
+                if ( secondNextStartUnit < 64 )
+                {   // Next start found in the second long
+                    endUnit = 64 + secondNextStartUnit;
+                }
             }
         }
         else
@@ -117,8 +121,8 @@ class Header
             long higherBits = bits & ~((1L << (searchUnit - 64)) - 1);
             int nextSetBitIndex = Long.numberOfTrailingZeros( higherBits );
             if ( nextSetBitIndex < 64 )
-            {   // A record start found after this point
-                return (64 + nextSetBitIndex) - startUnit;
+            {   // Next start found in the second long
+                endUnit = 64 + nextSetBitIndex;
             }
         }
 
@@ -126,16 +130,18 @@ class Header
         int unit = searchUnit;
         if ( unit < 64 )
         {   // Count in the first long
+            // TODO use Long.numberOfTrailing/LeadingZeros method instead of looping?
             long bits = cursor.getLong( HEADER_OFFSET_IN_USE );
-            while ( unit < 64 && bitIsSet( bits, unit ) )
+            while ( unit < 64 && unit < endUnit && bitIsSet( bits, unit )  )
             {
                 unit++;
             }
         }
         if ( unit >= 64 )
         {   // Count in the second long
+            // TODO use Long.numberOfTrailing/LeadingZeros method instead of looping?
             long bits = cursor.getLong( HEADER_OFFSET_IN_USE + Long.BYTES );
-            while ( unit < 128 && bitIsSet( bits, unit - 64 ) )
+            while ( unit < 128 && unit < endUnit && bitIsSet( bits, unit - 64 ) )
             {
                 unit++;
             }
@@ -160,5 +166,38 @@ class Header
     private static boolean bitIsSet( long bits, int bit )
     {
         return (bits & (1L << bit)) != 0;
+    }
+
+    static String rawBits( PageCursor cursor )
+    {
+        StringBuilder builder = new StringBuilder();
+
+        appendBitsFromLong( builder, "START", cursor.getLong( HEADER_OFFSET_START ), cursor.getLong( HEADER_OFFSET_START + Long.BYTES ) );
+        appendBitsFromLong( builder, "USED ", cursor.getLong( HEADER_OFFSET_IN_USE ), cursor.getLong( HEADER_OFFSET_IN_USE + Long.BYTES ) );
+
+        return builder.toString();
+    }
+
+    private static void appendBitsFromLong( StringBuilder builder, String name, long bitsA, long bitsB )
+    {
+        builder.append( name + " " );
+        for ( int i = 0; i < 64; i++ )
+        {
+            if ( i > 0 && i % 8 == 0 )
+            {
+                builder.append( " " );
+            }
+            builder.append( bitIsSet( bitsA, i ) ? "1" : "0" );
+        }
+        builder.append( "  " );
+        for ( int i = 0; i < 64; i++ )
+        {
+            if ( i > 0 && i % 8 == 0 )
+            {
+                builder.append( " " );
+            }
+            builder.append( bitIsSet( bitsB, i ) ? "1" : "0" );
+        }
+        builder.append( "\n" );
     }
 }
