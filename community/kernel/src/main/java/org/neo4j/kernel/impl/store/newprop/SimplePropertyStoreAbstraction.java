@@ -33,44 +33,52 @@ import org.neo4j.values.storable.Value;
  */
 public interface SimplePropertyStoreAbstraction extends Closeable
 {
-    // Writing
-    /**
-     * The (first) property record id.
-     *
-     * @return the new record id, potentially the same {@code id} that got passed in.
-     */
-    long set( long id, int key, Value value ) throws IOException;
+    interface Read extends Closeable
+    {
+        /**
+         * @return whether or not the property exists.
+         */
+        boolean has( long id, int key ) throws IOException;
 
-    /**
-     * @return the new record id, potentially the same {@code id} that got passed in.
-     */
-    long remove( long id, int key ) throws IOException;
+        /**
+         * @return the {@link Value}.
+         */
+        Value get( long id, int key ) throws IOException;
 
-    // Reading
-    /**
-     * @return whether or not the property exists.
-     */
-    boolean has( long id, int key ) throws IOException;
+        /**
+         * The idea with this method is to get the data, i.e. read it byte for byte or whatever, but
+         * not do deserialization, because we're not really interested in that deserialization cost since
+         * it's more or less the same in all conceivable implementations and will most likely tower above
+         * the cost of getting to the property data.
+         *
+         * @return number of property data bytes visited.
+         */
+        int getWithoutDeserializing( long id, int key ) throws IOException;
 
-    /**
-     * @return the {@link Value}.
-     */
-    Value get( long id, int key ) throws IOException;
+        /**
+         * @return number of properties visited.
+         */
+        int all( long id, PropertyVisitor visitor ) throws IOException;
+    }
 
-    /**
-     * The idea with this method is to get the data, i.e. read it byte for byte or whatever, but
-     * not do deserialization, because we're not really interested in that deserialization cost since
-     * it's more or less the same in all conceivable implementations and will most likely tower above
-     * the cost of getting to the property data.
-     *
-     * @return number of property data bytes visited.
-     */
-    int getWithoutDeserializing( long id, int key ) throws IOException;
+    interface Write extends Read
+    {
+        /**
+         * The (first) property record id.
+         *
+         * @return the new record id, potentially the same {@code id} that got passed in.
+         */
+        long set( long id, int key, Value value ) throws IOException;
 
-    /**
-     * @return number of properties visited.
-     */
-    int all( long id, PropertyVisitor visitor ) throws IOException;
+        /**
+         * @return the new record id, potentially the same {@code id} that got passed in.
+         */
+        long remove( long id, int key ) throws IOException;
+    }
+
+    Write newWrite() throws IOException;
+
+    Read newRead() throws IOException;
 
     long storeSize() throws IOException;
 

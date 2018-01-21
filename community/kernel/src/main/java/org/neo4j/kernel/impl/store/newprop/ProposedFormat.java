@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.store.newprop;
 import java.io.File;
 import java.io.IOException;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -40,59 +41,108 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         this.store = new Store( pageCache, directory, "main" );
     }
 
-    @Override
-    public long set( long id, int key, Value value ) throws IOException
+    class Reader implements Read
     {
-        if ( Record.NULL_REFERENCE.is( id ) )
+        protected final PageCursor cursor;
+        private final Visitor hasVisitor = new HasVisitor( store );
+        private final Visitor getVisitor = new GetVisitor( store );
+        private final Visitor getLightVisitor = new GetLightVisitor( store );
+
+        Reader() throws IOException
         {
-            // Allocate room, some number of units to start off with and then grow from there.
-            // In a real scenario we'd probably have a method setting multiple properties and so
-            // we'd know how big our record would be right away. This is just to prototype the design
-            id = store.allocate( 1 );
+            cursor = store.readCursor();
         }
-        // Read header and see if property by the given key already exists
-        // For now let's store the number of header entries as a 2B entry first
-        Visitor visitor = new SetVisitor( store, value, key );
-        store.accessForWriting( id, visitor );
-        return visitor.longState;
+
+        // For Writer subclass
+        Reader( PageCursor cursor )
+        {
+            this.cursor = cursor;
+        }
+
+        @Override
+        public boolean has( long id, int key ) throws IOException
+        {
+            hasVisitor.setKey( key );
+            store.access( id, cursor, hasVisitor );
+            return hasVisitor.booleanState;
+        }
+
+        @Override
+        public Value get( long id, int key ) throws IOException
+        {
+            getVisitor.setKey( key );
+            store.access( id, cursor, getVisitor );
+            return getVisitor.readValue != null ? getVisitor.readValue : Values.NO_VALUE;
+        }
+
+        @Override
+        public int getWithoutDeserializing( long id, int key ) throws IOException
+        {
+            getLightVisitor.setKey( key );
+            store.access( id, cursor, getLightVisitor );
+            return (int) getLightVisitor.longState;
+        }
+
+        @Override
+        public int all( long id, PropertyVisitor visitor ) throws IOException
+        {
+            return 0;
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+            cursor.close();
+        }
+    }
+
+    class Writer extends Reader implements Write
+    {
+        private final SetVisitor setVisitor = new SetVisitor( store );
+        private final Visitor removeVisitor = new RemoveVisitor( store );
+
+        Writer() throws IOException
+        {
+            super( store.writeCursor() );
+        }
+
+        @Override
+        public long set( long id, int key, Value value ) throws IOException
+        {
+            if ( Record.NULL_REFERENCE.is( id ) )
+            {
+                // Allocate room, some number of units to start off with and then grow from there.
+                // In a real scenario we'd probably have a method setting multiple properties and so
+                // we'd know how big our record would be right away. This is just to prototype the design
+                id = store.allocate( 1 );
+            }
+            // Read header and see if property by the given key already exists
+            // For now let's store the number of header entries as a 2B entry first
+            setVisitor.setKey( key );
+            setVisitor.setValue( value );
+            store.access( id, cursor, setVisitor );
+            return setVisitor.longState;
+        }
+
+        @Override
+        public long remove( long id, int key ) throws IOException
+        {
+            removeVisitor.setKey( key );
+            store.access( id, cursor, removeVisitor );
+            return id;
+        }
     }
 
     @Override
-    public long remove( long id, int key )
+    public Write newWrite() throws IOException
     {
-        Visitor visitor = new RemoveVisitor( store, key );
-        store.accessForWriting( id, visitor );
-        return id;
+        return new Writer();
     }
 
     @Override
-    public boolean has( long id, int key )
+    public Read newRead() throws IOException
     {
-        Visitor visitor = new HasVisitor( store, key );
-        store.accessForReading( id, visitor );
-        return visitor.booleanState;
-    }
-
-    @Override
-    public Value get( long id, int key )
-    {
-        Visitor visitor = new GetVisitor( store, key );
-        store.accessForReading( id, visitor );
-        return visitor.readValue != null ? visitor.readValue : Values.NO_VALUE;
-    }
-
-    @Override
-    public int getWithoutDeserializing( long id, int key )
-    {
-        Visitor visitor = new GetLightVisitor( store, key );
-        store.accessForReading( id, visitor );
-        return (int) visitor.longState;
-    }
-
-    @Override
-    public int all( long id, PropertyVisitor visitor )
-    {
-        return 0;
+        return new Reader();
     }
 
     @Override

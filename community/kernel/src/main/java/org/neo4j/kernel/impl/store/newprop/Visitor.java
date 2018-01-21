@@ -45,6 +45,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     protected boolean booleanState;
     protected long longState;
     protected Value readValue;
+    protected int key = -1;
 
     // value structure stuff
     protected long integralStructureValue;
@@ -55,10 +56,16 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         this.store = store;
     }
 
-    boolean seek( PageCursor cursor, int key )
+    void setKey( int key )
     {
+        this.key = key;
+    }
+
+    boolean seek( PageCursor cursor )
+    {
+        assert key != -1;
+
         pivotOffset = cursor.getOffset();
-        cursor.setOffset( pivotOffset );
         numberOfHeaderEntries = cursor.getShort();
         sumValueLength = 0;
         currentValueLength = 0;
@@ -134,6 +141,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
 //            Header.mark( cursor, startId, units, false );
         cursor.next( newPageId );
         cursor.setOffset( newOffset );
+        pivotOffset = newOffset;
         return newUnits;
     }
 

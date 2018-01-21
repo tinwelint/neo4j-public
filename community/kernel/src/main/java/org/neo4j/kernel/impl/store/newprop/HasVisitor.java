@@ -25,18 +25,15 @@ import org.neo4j.io.pagecache.PageCursor;
 
 class HasVisitor extends Visitor
 {
-    private final int key;
-
-    HasVisitor( Store store, int key )
+    HasVisitor( Store store )
     {
         super( store );
-        this.key = key;
     }
 
     @Override
     public long accept( PageCursor cursor, long startId, int units ) throws IOException
     {
-        booleanState = seek( cursor, key );
+        booleanState = seek( cursor );
         return -1;
     }
 }

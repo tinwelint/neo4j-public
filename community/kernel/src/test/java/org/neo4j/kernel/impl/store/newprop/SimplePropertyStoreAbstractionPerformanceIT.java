@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.neo4j.helpers.Format;
+import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
+import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
 
@@ -52,14 +54,17 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         // given
         long time = currentTimeMillis();
         long[] ids = new long[NODE_COUNT];
-        for ( int n = 0; n < NODE_COUNT; n++ )
+        try ( Write write = store.newWrite() )
         {
-            long id = -1;
-            for ( int k = 0; k < PROPERTY_COUNT; k++ )
+            for ( int n = 0; n < NODE_COUNT; n++ )
             {
-                id = store.set( id, k, value( k ) );
+                long id = -1;
+                for ( int k = 0; k < PROPERTY_COUNT; k++ )
+                {
+                    id = write.set( id, k, value( k ) );
+                }
+                ids[n] = id;
             }
-            ids[n] = id;
         }
         long createDuration = currentTimeMillis() - time;
 
@@ -83,11 +88,14 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         long time = currentTimeMillis();
         long[] ids = new long[NODE_COUNT];
         Arrays.fill( ids, -1 );
-        for ( int k = 0; k < PROPERTY_COUNT; k++ )
+        try ( Write write = store.newWrite() )
         {
-            for ( int n = 0; n < NODE_COUNT; n++ )
+            for ( int k = 0; k < PROPERTY_COUNT; k++ )
             {
-                ids[n] = store.set( ids[n], k, value( k ) );
+                for ( int n = 0; n < NODE_COUNT; n++ )
+                {
+                    ids[n] = write.set( ids[n], k, value( k ) );
+                }
             }
         }
         long writeDuration = currentTimeMillis() - time;
@@ -103,11 +111,14 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
     private long readAll( long[] ids ) throws IOException
     {
         long time = currentTimeMillis();
-        for ( int i = 0; i < NODE_COUNT; i++ )
+        try ( Read read = store.newRead() )
         {
-            for ( int j = 0; j < PROPERTY_COUNT; j++ )
+            for ( int i = 0; i < NODE_COUNT; i++ )
             {
-                store.getWithoutDeserializing( ids[i], j );
+                for ( int j = 0; j < PROPERTY_COUNT; j++ )
+                {
+                    read.getWithoutDeserializing( ids[i], j );
+                }
             }
         }
         long duration = currentTimeMillis() - time;

@@ -25,18 +25,15 @@ import org.neo4j.io.pagecache.PageCursor;
 
 class GetLightVisitor extends Visitor
 {
-    private final int key;
-
-    GetLightVisitor( Store store, int key )
+    GetLightVisitor( Store store )
     {
         super( store );
-        this.key = key;
     }
 
     @Override
     public long accept( PageCursor cursor, long startId, int units ) throws IOException
     {
-        if ( seek( cursor, key ) )
+        if ( seek( cursor ) )
         {   // found
             longState = currentValueLength;
         }

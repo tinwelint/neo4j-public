@@ -27,19 +27,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
-
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
 
-public class Store implements Closeable
+class Store implements Closeable
 {
     static final long SPECIAL_ID_SHOULD_RETRY = -2;
 
@@ -47,13 +44,13 @@ public class Store implements Closeable
     private final int pageSize;
     private final AtomicLong nextId = new AtomicLong();
 
-    public Store( PageCache pageCache, File directory, String name ) throws IOException
+    Store( PageCache pageCache, File directory, String name ) throws IOException
     {
         this.pageSize = pageCache.pageSize();
         this.storeFile = pageCache.map( new File( directory, name ), pageSize, CREATE, WRITE, READ );
     }
 
-    public long allocate( int units ) throws IOException
+    long allocate( int units ) throws IOException
     {
         if ( units > EFFECTIVE_UNITS_PER_PAGE )
         {
@@ -80,60 +77,57 @@ public class Store implements Closeable
         return startId;
     }
 
-    protected void access( long id, int flags, RecordVisitor visitor )
+    private PageCursor cursor( int flags ) throws IOException
+    {
+        return storeFile.io( 0, flags );
+    }
+
+    PageCursor writeCursor() throws IOException
+    {
+        return cursor( PagedFile.PF_SHARED_WRITE_LOCK );
+    }
+
+    PageCursor readCursor() throws IOException
+    {
+        return cursor( PagedFile.PF_SHARED_READ_LOCK );
+    }
+
+    void access( long id, PageCursor cursor, RecordVisitor visitor ) throws IOException
     {
         long pageId = pageIdForRecord( id );
         int offset = offsetForId( id );
-        try ( PageCursor cursor = storeFile.io( pageId, flags ) )
+        if ( cursor.next( pageId ) )
         {
-            if ( cursor.next() )
+            boolean forceRetry;
+            do
             {
-                boolean forceRetry;
-                do
+                forceRetry = false;
+                int units = Header.numberOfUnits( cursor, id );
+                cursor.setOffset( offset );
+                long nextId = visitor.accept( cursor, id, units );
+                if ( nextId == SPECIAL_ID_SHOULD_RETRY )
                 {
-                    forceRetry = false;
-                    int units = Header.numberOfUnits( cursor, id );
-                    cursor.setOffset( offset );
-                    long nextId = visitor.accept( cursor, id, units );
-                    if ( nextId == SPECIAL_ID_SHOULD_RETRY )
-                    {
-                        forceRetry = true;
-                    }
-                    else if ( nextId != -1 )
-                    {
-                        // TODO this will actually never happen yet
-                        pageId = pageIdForRecord( nextId );
-                        offset = offsetForId( nextId );
-                        if ( !cursor.next( pageId ) )
-                        {
-                            break;
-                        }
-                        forceRetry = true;
-                    }
+                    forceRetry = true;
                 }
-                while ( forceRetry | cursor.shouldRetry() );
-                cursor.checkAndClearBoundsFlag();
-                if ( (flags & PagedFile.PF_SHARED_READ_LOCK) != 0 )
+                else if ( nextId != -1 )
                 {
-                    cursor.checkAndClearCursorException();
+                    // TODO this will actually never happen yet
+                    pageId = pageIdForRecord( nextId );
+                    offset = offsetForId( nextId );
+                    if ( !cursor.next( pageId ) )
+                    {
+                        break;
+                    }
+                    forceRetry = true;
                 }
             }
+            while ( forceRetry | cursor.shouldRetry() );
+            cursor.checkAndClearBoundsFlag();
+            if ( !cursor.isWriteLocked() )
+            {
+                cursor.checkAndClearCursorException();
+            }
         }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
-    }
-
-    // Just convenience
-    protected void accessForWriting( long id, RecordVisitor visitor )
-    {
-        access( id, PF_SHARED_WRITE_LOCK, visitor );
-    }
-
-    protected void accessForReading( long id, RecordVisitor visitor )
-    {
-        access( id, PF_SHARED_READ_LOCK, visitor );
     }
 
     @Override

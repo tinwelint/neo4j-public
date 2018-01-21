@@ -24,10 +24,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
+import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
 import org.neo4j.test.Race;
+import org.neo4j.test.Race.ThrowingRunnable;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.values.storable.Value;
@@ -38,6 +42,7 @@ import static org.junit.Assert.fail;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import static org.neo4j.test.Race.maxDuration;
 import static org.neo4j.test.Race.throwing;
 
 @RunWith( Parameterized.class )
@@ -62,52 +67,76 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
     {
         // given
         setUpValues();
-        Race race = new Race().withMaxDuration( 10, SECONDS );
+        Race race = new Race().withEndCondition( maxDuration( 10, SECONDS ) );
         AtomicLong idKeeper = new AtomicLong( initialPopulation() );
         AtomicLong reads = new AtomicLong();
         AtomicLong writes = new AtomicLong();
 
         // The readers
-        race.addContestants( Runtime.getRuntime().availableProcessors() - 1, throwing( () ->
+        race.addContestants( Runtime.getRuntime().availableProcessors() - 1, () -> throwing( new ThrowingRunnable()
         {
-            long id = idKeeper.get();
-            if ( id != -1 )
+            private final Read read;
             {
-                int key = random.nextInt( KEYS );
-                Value value = store.get( id, key );
-                boolean matches = false;
-                for ( Value candidate : VALUE_ALTERNATIVES )
+                try
                 {
-                    if ( value.equals( candidate ) )
-                    {
-                        matches = true;
-                        break;
-                    }
+                    read = store.newRead();
                 }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( e );
+                }
+            }
 
-                if ( !matches )
+            @Override
+            public void run() throws IOException
+            {
+                long id = idKeeper.get();
+                if ( id != -1 )
                 {
-                    fail( "Read value " + value + " doesn't match any of " + Arrays.toString( VALUE_ALTERNATIVES ) );
+                    int key = random.nextInt( KEYS );
+                    Value value = read.get( id, key );
+                    boolean matches = false;
+                    for ( Value candidate : VALUE_ALTERNATIVES )
+                    {
+                        if ( value.equals( candidate ) )
+                        {
+                            matches = true;
+                            break;
+                        }
+                    }
+
+                    if ( !matches )
+                    {
+                        fail( "Read value " + value + " doesn't match any of " + Arrays.toString( VALUE_ALTERNATIVES ) );
+                    }
+                    reads.incrementAndGet();
                 }
-                reads.incrementAndGet();
             }
         } ) );
         // The writer
-        race.addContestant( throwing( () ->
+        race.addContestant( throwing( new ThrowingRunnable()
         {
-            long id = idKeeper.get();
-            int key = random.nextInt( KEYS );
-            long newId = store.set( id, key, randomValue() );
-            if ( newId != id )
+            @Override
+            public void run() throws Throwable
             {
-                idKeeper.set( newId );
-            }
-            writes.incrementAndGet();
+                long id = idKeeper.get();
+                int key = random.nextInt( KEYS );
+                long newId;
+                try ( Write write = store.newWrite() )
+                {
+                    newId = write.set( id, key, randomValue() );
+                }
+                if ( newId != id )
+                {
+                    idKeeper.set( newId );
+                }
+                writes.incrementAndGet();
 
-            // Wait some time now and then to allow readers to get some breathing room
-            if ( currentTimeMillis() % 10 == 0 )
-            {
-                Thread.sleep( 1 );
+                // Wait some time now and then to allow readers to get some breathing room
+                if ( currentTimeMillis() % 10 == 0 )
+                {
+                    Thread.sleep( 1 );
+                }
             }
         } ) );
         race.go();
@@ -126,9 +155,12 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
     private long initialPopulation() throws IOException
     {
         long id = -1;
-        for ( int key = 0; key < KEYS; key++ )
+        try ( Write write = store.newWrite() )
         {
-            id = store.set( id, key, randomValue() );
+            for ( int key = 0; key < KEYS; key++ )
+            {
+                id = write.set( id, key, randomValue() );
+            }
         }
         return id;
     }

@@ -27,18 +27,15 @@ import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
 
 class GetVisitor extends Visitor
 {
-    private final int key;
-
-    GetVisitor( Store store, int key )
+    GetVisitor( Store store )
     {
         super( store );
-        this.key = key;
     }
 
     @Override
     public long accept( PageCursor cursor, long startId, int units ) throws IOException
     {
-        boolean found = seek( cursor, key );
+        boolean found = seek( cursor );
 
         // Check consistency because we just read data which affects how we're going to continue reading.
         if ( cursor.shouldRetry() )

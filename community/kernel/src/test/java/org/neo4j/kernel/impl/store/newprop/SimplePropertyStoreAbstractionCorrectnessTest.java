@@ -30,6 +30,8 @@ import java.util.Map;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
+import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
+import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
@@ -61,11 +63,18 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         IntValue value = intValue( 10 );
 
         // WHEN
-        long id = store.set( -1, key, value );
+        long id;
+        try ( Write access = store.newWrite() )
+        {
+            id = access.set( -1, key, value );
+        }
 
-        // THEN
-        assertTrue( store.has( id, key ) );
-        assertEquals( value, store.get( id, key ) );
+        try ( Read access = store.newRead() )
+        {
+            // THEN
+            assertTrue( access.has( id, key ) );
+            assertEquals( value, access.get( id, key ) );
+        }
     }
 
     @Test
@@ -77,15 +86,22 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         IntValue value2 = intValue( 1_000_000_000 );
 
         // WHEN
-        long id = store.set( -1, key1, value1 );
-        id = store.set( id, key2, value2 );
+        long id;
+        try ( Write access = store.newWrite() )
+        {
+            id = access.set( -1, key1, value1 );
+            id = access.set( id, key2, value2 );
+        }
 
          // THEN
-        assertTrue( store.has( id, key1 ) );
-        assertEquals( value1, store.get( id, key1 ) );
+        try ( Read access = store.newRead() )
+        {
+            assertTrue( access.has( id, key1 ) );
+            assertEquals( value1, access.get( id, key1 ) );
 
-        assertTrue( store.has( id, key2 ) );
-        assertEquals( value2, store.get( id, key2 ) );
+            assertTrue( access.has( id, key2 ) );
+            assertEquals( value2, access.get( id, key2 ) );
+        }
     }
 
     @Test
@@ -93,16 +109,22 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
     {
         // WHEN
         long id = -1;
-        for ( int i = 0; i < 100; i++ )
+        try ( Write access = store.newWrite() )
         {
-            id = store.set( id, i, intValue( i ) );
+            for ( int i = 0; i < 100; i++ )
+            {
+                id = access.set( id, i, intValue( i ) );
+            }
         }
 
         // THEN
-        for ( int i = 0; i < 100; i++ )
+        try ( Read access = store.newRead() )
         {
-            assertTrue( store.has( id, i ) );
-            assertEquals( intValue( i ), store.get( id, i ) );
+            for ( int i = 0; i < 100; i++ )
+            {
+                assertTrue( access.has( id, i ) );
+                assertEquals( intValue( i ), access.get( id, i ) );
+            }
         }
     }
 
@@ -111,18 +133,24 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
     {
         // GIVEN
         long id = -1;
-        for ( int i = 0; i < 10; i++ )
+        try ( Write access = store.newWrite() )
         {
-            id = store.set( id, i, intValue( i ) );
+            for ( int i = 0; i < 10; i++ )
+            {
+                id = access.set( id, i, intValue( i ) );
+            }
+
+            // WHEN
+            access.remove( id, 1 );
         }
 
-        // WHEN
-        store.remove( id, 1 );
-
         // THEN
-        for ( int i = 0; i < 10; i++ )
+        try ( Read access = store.newRead() )
         {
-            assertEquals( "" + i, i != 1, store.has( id, i ) );
+            for ( int i = 0; i < 10; i++ )
+            {
+                assertEquals( "" + i, i != 1, access.has( id, i ) );
+            }
         }
     }
 
@@ -136,20 +164,26 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         Arrays.fill( ids, -1 );
 
         // when
-        for ( int n = 0; n < nodeCount; n++ )
+        try ( Write access = store.newWrite() )
         {
-            for ( int k = 0; k < keyCount; k++ )
+            for ( int n = 0; n < nodeCount; n++ )
             {
-                ids[n] = store.set( ids[n], k, intValue( k ) );
+                for ( int k = 0; k < keyCount; k++ )
+                {
+                    ids[n] = access.set( ids[n], k, intValue( k ) );
+                }
             }
         }
 
         // then
-        for ( int n = 0; n < nodeCount; n++ )
+        try ( Read access = store.newRead() )
         {
-            for ( int k = 0; k < keyCount; k++ )
+            for ( int n = 0; n < nodeCount; n++ )
             {
-                assertEquals( intValue( k ), store.get( ids[n], k ) );
+                for ( int k = 0; k < keyCount; k++ )
+                {
+                    assertEquals( intValue( k ), access.get( ids[n], k ) );
+                }
             }
         }
     }
@@ -161,10 +195,17 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         TextValue value = stringValue( "New property store pwns" );
 
         // when
-        long id = store.set( -1, 0, value );
+        long id;
+        try ( Write access = store.newWrite() )
+        {
+            id = access.set( -1, 0, value );
+        }
 
         // then
-        assertEquals( value, store.get( id, 0 ) );
+        try ( Read access = store.newRead() )
+        {
+            assertEquals( value, access.get( id, 0 ) );
+        }
     }
 
     @Test
@@ -175,174 +216,100 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         Map<Integer,Value> expected = new HashMap<>();
 
         // when
-        for ( int key = 0; key < 150; key++ )
+        try ( Write access = store.newWrite() )
         {
-            Value value = Values.of( random.string( 5, 15, CSA_LETTERS_AND_DIGITS ) );
-            id = store.set( id, key, value );
-            expected.put( key, value );
+            for ( int key = 0; key < 150; key++ )
+            {
+                Value value = Values.of( random.string( 5, 15, CSA_LETTERS_AND_DIGITS ) );
+                id = access.set( id, key, value );
+                expected.put( key, value );
+            }
         }
 
         // then
-        for ( int key : expected.keySet() )
+        try ( Read access = store.newRead() )
         {
-            assertEquals( expected.get( key ), store.get( id, key ) );
+            for ( int key : expected.keySet() )
+            {
+                assertEquals( expected.get( key ), access.get( id, key ) );
+            }
         }
     }
 
     @Test
     public void shouldChangeIntPropertyValueOfEqualSize() throws Exception
     {
-        // given
-        Value value = intValue( 100 );
-        long id = store.set( -1, 0, value );
+        shouldChangeProperty( intValue( 100 ), intValue( 105 ) );
+    }
 
-        // when
-        Value newValue = intValue( 105 );
-        store.set( id, 0, newValue );
+    private void shouldChangeProperty( Value value, Value newValue ) throws IOException
+    {
+        // given
+        Value otherValue = stringValue( "sdkfhdk" );
+        long id;
+        try ( Write access = store.newWrite() )
+        {
+            id = access.set( -1, 0, value );
+            id = access.set( id, 1, otherValue );
+
+            // when
+            id = access.set( id, 0, newValue );
+        }
 
         // then
-        assertEquals( newValue, store.get( id, 0 ) );
+        try ( Read access = store.newRead() )
+        {
+            assertEquals( newValue, access.get( id, 0 ) );
+            assertEquals( otherValue, access.get( id, 1 ) );
+        }
     }
 
     @Test
     public void shouldChangeIntPropertyValueOfLargerSize() throws Exception
     {
-        // given
-        Value value = intValue( 100 );
-        long id = store.set( -1, 0, value );
-        Value otherValue = stringValue( "abcdefgh" );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = intValue( 1234567 );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( intValue( 100 ), intValue( 1234567 ) );
     }
 
     @Test
     public void shouldChangeIntPropertyValueOfSmallerSize() throws Exception
     {
-        // given
-        Value value = intValue( 1234567 );
-        long id = store.set( -1, 0, value );
-        Value otherValue = stringValue( "abcdefgh" );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = intValue( 100 );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( intValue( 1234567 ), intValue( 100 ) );
     }
 
     @Test
     public void shouldChangeStringPropertyValueOfEqualSize() throws Exception
     {
-     // given
-        Value value = stringValue( "abcdefg" );
-        long id = store.set( -1, 0, value );
-
-        // when
-        Value newValue = stringValue( "hijklmn" );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
+        shouldChangeProperty( stringValue( "abcdefg" ), stringValue( "hijklmn" ) );
     }
 
     @Test
     public void shouldChangeStringPropertyValueToLargerSize() throws Exception
     {
-        // given
-        Value value = stringValue( "abcdefg" );
-        Value otherValue = stringValue( "LAST" );
-        long id = store.set( -1, 0, value );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = stringValue( "hijklmnopqrstuvwxyz" );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( stringValue( "abcdefg" ), stringValue( "hijklmnopqrstuvwxyz" ) );
     }
 
     @Test
     public void shouldChangeStringPropertyValueToSmallerSize() throws Exception
     {
-        // given
-        Value value = stringValue( "abcdefg" );
-        Value otherValue = stringValue( "LAST" );
-        long id = store.set( -1, 0, value );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = stringValue( "hij" );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( stringValue( "abcdefg" ), stringValue( "hij" ) );
     }
 
     @Test
     public void shouldChangeIntToStringProperty() throws Exception
     {
-        // given
-        Value value = intValue( 10 );
-        Value otherValue = stringValue( "LAST" );
-        long id = store.set( -1, 0, value );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = stringValue( "abcdefg" );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( intValue( 10 ), stringValue( "abcdefg" ) );
     }
 
     @Test
     public void shouldChangeStringToIntProperty() throws Exception
     {
-        // given
-        Value value = stringValue( "abcdefg" );
-        Value otherValue = stringValue( "LAST" );
-        long id = store.set( -1, 0, value );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = intValue( 10 );
-        store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( stringValue( "abcdefg" ), intValue( 10 ) );
     }
 
     @Test
     public void shouldGrowWhenChangingProperty() throws Exception
     {
-        // given
-        Value value = stringValue( "abc" );
-        Value otherValue = stringValue( "LAST" );
-        long id = store.set( -1, 0, value );
-        id = store.set( id, 1, otherValue );
-
-        // when
-        Value newValue = stringValue( random.string( 3_000, 3_000, CSA_LETTERS_AND_DIGITS ) );
-        id = store.set( id, 0, newValue );
-
-        // then
-        assertEquals( newValue, store.get( id, 0 ) );
-        assertEquals( otherValue, store.get( id, 1 ) );
+        shouldChangeProperty( stringValue( "abc" ), stringValue( random.string( 3_000, 3_000, CSA_LETTERS_AND_DIGITS ) ) );
     }
 
     @Test
@@ -384,14 +351,19 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
 
     private void shouldSetAndGetValue( Value value ) throws IOException
     {
-        // given
-        long id = store.set( -1, 0, value );
-
         // when
-        Value readValue = store.get( id, 0 );
+        long id;
+        try ( Write access = store.newWrite() )
+        {
+            id = access.set( -1, 0, value );
+        }
 
         // then
-        assertEquals( value, readValue );
+        try ( Read access = store.newRead() )
+        {
+            Value readValue = access.get( id, 0 );
+            assertEquals( value, readValue );
+        }
     }
 
     @Test
@@ -406,36 +378,42 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         // when/then
         for ( int i = 0; i < updates; i++ )
         {
-            int key = random.nextInt( maxKeys );
-            if ( random.nextFloat() < 0.7 )
-            {   // Set
-                Value value = Values.of( random.propertyValue() );
-                id = store.set( id, key, value );
-                expected.put( key, value );
-            }
-            else if ( !expected.isEmpty() )
-            {   // Remove
-                while ( !expected.containsKey( key ) )
-                {
-                    key = random.nextInt( maxKeys );
+            try ( Write access = store.newWrite() )
+            {
+                int key = random.nextInt( maxKeys );
+                if ( random.nextFloat() < 0.7 )
+                {   // Set
+                    Value value = Values.of( random.propertyValue() );
+                    id = access.set( id, key, value );
+                    expected.put( key, value );
                 }
-                assertEquals( expected.remove( key ), store.get( id, key ) );
-                id = store.remove( id, key );
-                assertFalse( store.has( id, key ) );
+                else if ( !expected.isEmpty() )
+                {   // Remove
+                    while ( !expected.containsKey( key ) )
+                    {
+                        key = random.nextInt( maxKeys );
+                    }
+                    assertEquals( expected.remove( key ), access.get( id, key ) );
+                    id = access.remove( id, key );
+                    assertFalse( access.has( id, key ) );
+                }
             }
 
-            for ( int candidateKey = 0; candidateKey < maxKeys; candidateKey++ )
+            try ( Read access = store.newRead() )
             {
-                Value value = expected.get( candidateKey );
-                if ( value != null )
+                for ( int candidateKey = 0; candidateKey < maxKeys; candidateKey++ )
                 {
-                    assertTrue( store.has( id, candidateKey ) );
-                    Value readValue = store.get( id, candidateKey );
-                    assertEquals( "For key " + candidateKey, value, readValue );
-                }
-                else
-                {
-                    assertFalse( "For key " + candidateKey, store.has( id, candidateKey ) );
+                    Value value = expected.get( candidateKey );
+                    if ( value != null )
+                    {
+                        assertTrue( access.has( id, candidateKey ) );
+                        Value readValue = access.get( id, candidateKey );
+                        assertEquals( "For key " + candidateKey, value, readValue );
+                    }
+                    else
+                    {
+                        assertFalse( "For key " + candidateKey, access.has( id, candidateKey ) );
+                    }
                 }
             }
         }

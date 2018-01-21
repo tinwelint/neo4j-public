@@ -28,14 +28,16 @@ import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 
 class SetVisitor extends Visitor
 {
-    private final Value value;
-    private final int key;
+    private Value value;
 
-    SetVisitor( Store store, Value value, int key )
+    SetVisitor( Store store )
     {
         super( store );
+    }
+
+    void setValue( Value value )
+    {
         this.value = value;
-        this.key = key;
     }
 
     @Override
@@ -43,7 +45,7 @@ class SetVisitor extends Visitor
     {
         longState = startId;
         int recordLength = units * UNIT_SIZE;
-        if ( seek( cursor, key ) )
+        if ( seek( cursor ) )
         {
             // Change property value
             Type oldType = currentType;
@@ -62,7 +64,7 @@ class SetVisitor extends Visitor
             if ( growth > freeBytesInRecord )
             {
                 units = growRecord( cursor, startId, units, growth );
-                seek( cursor, -1 );
+                seekToEnd( cursor );
             }
 
             // Shrink whichever part that needs shrinking first, otherwise we risk writing into the other part,
@@ -120,7 +122,7 @@ class SetVisitor extends Visitor
                 // Perhaps unnecessary to call seek again, the point of it is to leave the cursor in the
                 // expected place for insert, just as it would have been if we wouldn't have grown the record
                 // -- code simplicity
-                boolean found = seek( cursor, key );
+                boolean found = seek( cursor );
                 assert !found;
             }
 

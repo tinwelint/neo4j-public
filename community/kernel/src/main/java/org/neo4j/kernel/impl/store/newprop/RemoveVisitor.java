@@ -25,18 +25,15 @@ import org.neo4j.io.pagecache.PageCursor;
 
 class RemoveVisitor extends Visitor
 {
-    private final int key;
-
-    RemoveVisitor( Store store, int key )
+    RemoveVisitor( Store store )
     {
         super( store );
-        this.key = key;
     }
 
     @Override
     public long accept( PageCursor cursor, long startId, int units ) throws IOException
     {
-        if ( booleanState = seek( cursor, key ) )
+        if ( booleanState = seek( cursor ) )
         {   // It exists
 
             int currentHeaderEntryIndex = headerEntryIndex;

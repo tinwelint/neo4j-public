@@ -81,87 +81,102 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
         this.recordAccess = new DirectRecordAccess<>( propertyStore, propertyLoader( propertyStore ) );
     }
 
-    // Writing
-    @Override
-    public long set( long id, final int key, Value value )
+    class Reader implements Read
     {
-        Owner owner = new Owner( id );
-        propertyCreator.primitiveSetProperty( owner, key, value, recordAccess );
-        recordAccess.commit();
-        return owner.getNextProp();
-    }
-
-    @Override
-    public long remove( long id, int key )
-    {
-        Owner owner = new Owner( id );
-        propertyDeletor.removePropertyIfExists( owner, key, recordAccess );
-        recordAccess.commit();
-        return owner.getNextProp();
-    }
-
-    // Reading
-    @Override
-    public boolean has( long id, final int key )
-    {
-        NodeRecord owner = new NodeRecord( -1 );
-        owner.setNextProp( id );
-        return getPropertyBlock( id, key ) != null;
-    }
-
-    @Override
-    public Value get( long id, int key )
-    {
-        PropertyBlock block = getPropertyBlock( id, key );
-        return block == null ? Values.NO_VALUE : block.getType().value( block, propertyStore );
-    }
-
-    private PropertyBlock getPropertyBlock( long id, int key )
-    {
-        PropertyRecord record = propertyStore.newRecord();
-        PropertyBlock block = null;
-        try ( RecordCursor<PropertyRecord> cursor = propertyStore.newRecordCursor( record ).acquire( id, RecordLoad.FORCE ) )
+        @Override
+        public boolean has( long id, final int key )
         {
-            long propertyRecordId = id;
-            while ( !Record.NO_NEXT_PROPERTY.is( propertyRecordId ) )
+            return getPropertyBlock( id, key ) != null;
+        }
+
+        @Override
+        public Value get( long id, int key )
+        {
+            PropertyBlock block = getPropertyBlock( id, key );
+            return block == null ? Values.NO_VALUE : block.getType().value( block, propertyStore );
+        }
+
+        @Override
+        public int getWithoutDeserializing( long id, int key )
+        {
+            PropertyBlock block = getPropertyBlock( id, key );
+            return block == null ? 0 : block.getSize();
+        }
+
+        @Override
+        public int all( final long id, final PropertyVisitor visitor )
+        {
+            // TODO reimplement w/o recordAccess
+            PropertyListener collector = new PropertyListener( id, visitor );
+            propertyTraverser.getPropertyChain( id, recordAccess, collector );
+            return collector.count;
+        }
+
+        private PropertyBlock getPropertyBlock( long id, int key )
+        {
+            PropertyRecord record = propertyStore.newRecord();
+            PropertyBlock block = null;
+            try ( RecordCursor<PropertyRecord> cursor = propertyStore.newRecordCursor( record ).acquire( id, RecordLoad.FORCE ) )
             {
-                if ( cursor.next( propertyRecordId ) )
+                long propertyRecordId = id;
+                while ( !Record.NO_NEXT_PROPERTY.is( propertyRecordId ) )
                 {
-                    block = record.getPropertyBlock( key );
-                    if ( block != null )
+                    if ( cursor.next( propertyRecordId ) )
                     {
-                        break;
+                        block = record.getPropertyBlock( key );
+                        if ( block != null )
+                        {
+                            break;
+                        }
+                        propertyRecordId = record.getNextProp();
                     }
-                    propertyRecordId = record.getNextProp();
                 }
             }
+            catch ( InvalidRecordException e )
+            {   // These things happen
+            }
+            return block;
         }
-        catch ( InvalidRecordException e )
+
+        @Override
+        public void close() throws IOException
         {
         }
-        return block;
+    }
+
+    class Writer extends Reader implements Write
+    {
+        private final NodeRecord owner = new NodeRecord( -1 ).initialize( true, -1, false, -1, 0 );
+
+        @Override
+        public long set( long id, final int key, Value value )
+        {
+            Owner owner = new Owner( id );
+            propertyCreator.primitiveSetProperty( owner, key, value, recordAccess );
+            recordAccess.commit();
+            return owner.getNextProp();
+        }
+
+        @Override
+        public long remove( long id, int key )
+        {
+            Owner owner = new Owner( id );
+            propertyDeletor.removePropertyIfExists( owner, key, recordAccess );
+            recordAccess.commit();
+            return owner.getNextProp();
+        }
     }
 
     @Override
-    public int getWithoutDeserializing( long id, int key )
+    public Read newRead()
     {
-        NodeRecord node = new NodeRecord( 0 ).initialize( true, id, false, -1, 0 );
-        PropertyRecord foundRecord = propertyTraverser.findActualPropertyRecordContaining( node, key, recordAccess, false );
-        if ( foundRecord == null )
-        {
-            return 0;
-        }
-
-        PropertyBlock propertyBlock = foundRecord.getPropertyBlock( key );
-        return propertyBlock.getSize();
+        return new Reader();
     }
 
     @Override
-    public int all( final long id, final PropertyVisitor visitor )
+    public Write newWrite()
     {
-        PropertyListener collector = new PropertyListener( id, visitor );
-        propertyTraverser.getPropertyChain( id, recordAccess, collector );
-        return collector.count;
+        return new Writer();
     }
 
     protected static long longFromIntAndMod( long base, long modifier )
