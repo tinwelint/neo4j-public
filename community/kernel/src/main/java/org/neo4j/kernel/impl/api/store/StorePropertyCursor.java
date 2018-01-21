@@ -24,8 +24,10 @@ import java.util.function.Consumer;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.RecordCursors;
+import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.storageengine.api.PropertyItem;
@@ -42,14 +44,23 @@ public class StorePropertyCursor implements Cursor<PropertyItem>, PropertyItem
     private final StorePropertyPayloadCursor payload;
     private final RecordCursor<PropertyRecord> recordCursor;
 
-    private Lock lock;
+    private Lock lock = LockService.NO_LOCK;
     private AssertOpen assertOpen;
 
     public StorePropertyCursor( RecordCursors cursors, Consumer<StorePropertyCursor> instanceCache )
     {
+        this( cursors.property(), cursors.propertyString(), cursors.propertyArray(), instanceCache );
+    }
+
+    public StorePropertyCursor(
+            RecordCursor<PropertyRecord> propertyCursor,
+            RecordCursor<DynamicRecord> stringCursor,
+            RecordCursor<DynamicRecord> arrayCursor,
+            Consumer<StorePropertyCursor> instanceCache )
+    {
         this.instanceCache = instanceCache;
-        this.payload = new StorePropertyPayloadCursor( cursors.propertyString(), cursors.propertyArray() );
-        this.recordCursor = cursors.property();
+        this.payload = new StorePropertyPayloadCursor( stringCursor, arrayCursor );
+        this.recordCursor = propertyCursor;
     }
 
     public StorePropertyCursor init( long firstPropertyId, Lock readLock, AssertOpen assertOpen )

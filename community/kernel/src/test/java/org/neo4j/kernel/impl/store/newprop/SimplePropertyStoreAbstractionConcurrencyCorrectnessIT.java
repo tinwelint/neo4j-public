@@ -24,7 +24,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -75,21 +74,17 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
         // The readers
         race.addContestants( Runtime.getRuntime().availableProcessors() - 1, () -> throwing( new ThrowingRunnable()
         {
-            private final Read read;
-            {
-                try
-                {
-                    read = store.newRead();
-                }
-                catch ( IOException e )
-                {
-                    throw new UncheckedIOException( e );
-                }
-            }
+            private Read read;
 
             @Override
             public void run() throws IOException
             {
+                // We have to let this Thread instantiate this reader itself
+                if ( read == null )
+                {
+                    read = store.newRead();
+                }
+
                 long id = idKeeper.get();
                 if ( id != -1 )
                 {

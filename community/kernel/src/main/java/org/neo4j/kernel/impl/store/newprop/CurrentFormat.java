@@ -25,7 +25,7 @@ import java.io.IOException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.store.InvalidRecordException;
+import org.neo4j.kernel.impl.api.store.StorePropertyCursor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RecordCursor;
@@ -33,22 +33,25 @@ import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
+import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
-import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.transaction.state.PropertyCreator;
 import org.neo4j.kernel.impl.transaction.state.PropertyDeleter;
 import org.neo4j.kernel.impl.transaction.state.PropertyTraverser;
 import org.neo4j.kernel.impl.transaction.state.RecordAccess.RecordProxy;
+import org.neo4j.kernel.impl.util.InstanceCache;
 import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.unsafe.batchinsert.internal.DirectRecordAccess;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static org.neo4j.kernel.api.AssertOpen.ALWAYS_OPEN;
+import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK;
 import static org.neo4j.kernel.impl.transaction.state.Loaders.propertyLoader;
 
 /**
@@ -83,24 +86,67 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
 
     class Reader implements Read
     {
+        private final PropertyRecord record = propertyStore.newRecord();
+        private final RecordCursor<PropertyRecord> propertyCursor;
+        private final RecordCursor<DynamicRecord> stringCursor;
+        private final RecordCursor<DynamicRecord> arrayCursor;
+        private final StorePropertyCursor cursor;
+
+        Reader()
+        {
+            propertyCursor = propertyStore.newRecordCursor( record ).acquire( 0, RecordLoad.FORCE );
+            stringCursor = propertyStore.getStringStore().newRecordCursor( propertyStore.getStringStore().newRecord() ).acquire( 0, RecordLoad.FORCE );
+            arrayCursor = propertyStore.getArrayStore().newRecordCursor( propertyStore.getArrayStore().newRecord() ).acquire( 0, RecordLoad.FORCE );
+            cursor = new StorePropertyCursor( propertyCursor, stringCursor, arrayCursor, new InstanceCache<StorePropertyCursor>()
+            {
+                @Override
+                protected StorePropertyCursor create()
+                {
+                    return cursor;
+                }
+            } );
+        }
+
         @Override
         public boolean has( long id, final int key )
         {
-            return getPropertyBlock( id, key ) != null;
+            cursor.init( id, NO_LOCK, ALWAYS_OPEN );
+            while ( cursor.next() )
+            {
+                if ( cursor.propertyKeyId() == key )
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
         public Value get( long id, int key )
         {
-            PropertyBlock block = getPropertyBlock( id, key );
-            return block == null ? Values.NO_VALUE : block.getType().value( block, propertyStore );
+            cursor.init( id, NO_LOCK, ALWAYS_OPEN );
+            while ( cursor.next() )
+            {
+                if ( cursor.propertyKeyId() == key )
+                {
+                    return cursor.value();
+                }
+            }
+            return Values.NO_VALUE;
         }
 
         @Override
         public int getWithoutDeserializing( long id, int key )
         {
-            PropertyBlock block = getPropertyBlock( id, key );
-            return block == null ? 0 : block.getSize();
+            cursor.init( id, NO_LOCK, ALWAYS_OPEN );
+            while ( cursor.next() )
+            {
+                if ( cursor.propertyKeyId() == key )
+                {
+                    return 1;
+                }
+            }
+            return 0;
         }
 
         @Override
@@ -112,35 +158,13 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
             return collector.count;
         }
 
-        private PropertyBlock getPropertyBlock( long id, int key )
-        {
-            PropertyRecord record = propertyStore.newRecord();
-            PropertyBlock block = null;
-            try ( RecordCursor<PropertyRecord> cursor = propertyStore.newRecordCursor( record ).acquire( id, RecordLoad.FORCE ) )
-            {
-                long propertyRecordId = id;
-                while ( !Record.NO_NEXT_PROPERTY.is( propertyRecordId ) )
-                {
-                    if ( cursor.next( propertyRecordId ) )
-                    {
-                        block = record.getPropertyBlock( key );
-                        if ( block != null )
-                        {
-                            break;
-                        }
-                        propertyRecordId = record.getNextProp();
-                    }
-                }
-            }
-            catch ( InvalidRecordException e )
-            {   // These things happen
-            }
-            return block;
-        }
-
         @Override
         public void close() throws IOException
         {
+            cursor.close();
+            propertyCursor.close();
+            stringCursor.close();
+            arrayCursor.close();
         }
     }
 
