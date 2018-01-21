@@ -44,6 +44,8 @@ public class RepeatRule implements TestRule
     public @interface Repeat
     {
         int times();
+
+        boolean print() default false;
     }
 
     private final boolean printRepeats;
@@ -67,10 +69,12 @@ public class RepeatRule implements TestRule
         private final int times;
         private final Statement statement;
         private final String testName;
+        private final boolean printRepeats;
 
-        private RepeatStatement( int times, Statement statement, Description testDescription )
+        private RepeatStatement( int times, boolean printRepeats, Statement statement, Description testDescription )
         {
             this.times = times;
+            this.printRepeats = printRepeats;
             this.statement = statement;
             this.testName = testDescription.getDisplayName();
         }
@@ -95,11 +99,11 @@ public class RepeatRule implements TestRule
         Repeat repeat = description.getAnnotation( Repeat.class );
         if ( repeat != null )
         {
-            return new RepeatStatement( repeat.times(), base, description );
+            return new RepeatStatement( repeat.times(), printRepeats | repeat.print(), base, description );
         }
         if ( defaultTimes > 1 )
         {
-            return new RepeatStatement( defaultTimes, base, description );
+            return new RepeatStatement( defaultTimes, printRepeats, base, description );
         }
         return base;
     }
