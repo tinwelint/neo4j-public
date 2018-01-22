@@ -26,10 +26,10 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.neo4j.helpers.Format;
+import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
-import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.System.currentTimeMillis;
@@ -54,6 +54,7 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         // given
         long time = currentTimeMillis();
         long[] ids = new long[NODE_COUNT];
+        ProgressListener progress = progress( "Write", NODE_COUNT );
         try ( Write write = store.newWrite() )
         {
             for ( int n = 0; n < NODE_COUNT; n++ )
@@ -64,21 +65,18 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
                     id = write.set( id, k, value( k ) );
                 }
                 ids[n] = id;
+                progress.add( 1 );
             }
         }
-        long createDuration = currentTimeMillis() - time;
+        long writeDuration = currentTimeMillis() - time;
 
         // when
-        long duration = readAll( ids );
+        long readDuration = readAll( ids );
+        long readDurationLow = readAll( ids, 0 );
+        long readDurationHigh = readAll( ids, PROPERTY_COUNT - 1 );
 
         // then
-        System.out.println( store + " best-case " + Format.duration( duration ) + " size " + bytes( store.storeSize() ) +
-                " " + duration( createDuration ) + " write" );
-    }
-
-    private TextValue value( int k )
-    {
-        return Values.stringValue( "" + k );
+        print( store, "best-case", writeDuration, readDuration, readDurationLow, readDurationHigh );
     }
 
     @Test
@@ -88,6 +86,7 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         long time = currentTimeMillis();
         long[] ids = new long[NODE_COUNT];
         Arrays.fill( ids, -1 );
+        ProgressListener progress = progress( "Write", PROPERTY_COUNT );
         try ( Write write = store.newWrite() )
         {
             for ( int k = 0; k < PROPERTY_COUNT; k++ )
@@ -96,20 +95,23 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
                 {
                     ids[n] = write.set( ids[n], k, value( k ) );
                 }
+                progress.add( 1 );
             }
         }
         long writeDuration = currentTimeMillis() - time;
 
         // when
-        long duration = readAll( ids );
+        long readDuration = readAll( ids );
+        long readDurationLow = readAll( ids, 0 );
+        long readDurationHigh = readAll( ids, PROPERTY_COUNT - 1 );
 
         // then
-        System.out.println( store + " worst-case " + Format.duration( duration ) + " size " + bytes( store.storeSize() ) +
-                " " + duration( writeDuration ) + " write");
+        print( store, "worst-case", writeDuration, readDuration, readDurationLow, readDurationHigh );
     }
 
     private long readAll( long[] ids ) throws IOException
     {
+        ProgressListener progress = progress( "Read", NODE_COUNT );
         long time = currentTimeMillis();
         try ( Read read = store.newRead() )
         {
@@ -117,11 +119,53 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
             {
                 for ( int j = 0; j < PROPERTY_COUNT; j++ )
                 {
-                    read.getWithoutDeserializing( ids[i], j );
+                    read.get( ids[i], j );
                 }
+                progress.add( 1 );
             }
         }
         long duration = currentTimeMillis() - time;
         return duration;
+    }
+
+    private long readAll( long[] ids, int specificKey ) throws IOException
+    {
+        ProgressListener progress = progress( "Read", NODE_COUNT );
+        long time = currentTimeMillis();
+        try ( Read read = store.newRead() )
+        {
+            for ( int i = 0; i < NODE_COUNT; i++ )
+            {
+                read.get( ids[i], specificKey );
+                progress.add( 1 );
+            }
+        }
+        long duration = currentTimeMillis() - time;
+        return duration;
+    }
+
+    private void print( SimplePropertyStoreAbstraction store, String name, long writeDuration, long readDuration,
+            long readDurationLow, long readDurationHigh ) throws IOException
+    {
+        System.out.println( store.getClass().getSimpleName() + " " + name + "\n" +
+                " write " + duration( writeDuration ) + "\n" +
+                " read " + duration( readDuration ) + "\n" +
+                " readL " + duration( readDurationLow ) + "\n" +
+                " readH " + duration( readDurationHigh ) + "\n" +
+                " size " + bytes( store.storeSize() ) );
+    }
+
+    private static final Value VALUE = Values.of( "sskldskdaslkdlas&*$^%&*^D&f6d7f67e 6r72346r78^&*^&*^#*kd" );
+
+    private Value value( int k )
+    {
+//        return Values.intValue( k );
+        return VALUE;
+    }
+
+    private ProgressListener progress( String name, long count )
+    {
+//        return ProgressMonitorFactory.textual( System.out ).singlePart( name, count );
+        return ProgressListener.NONE;
     }
 }

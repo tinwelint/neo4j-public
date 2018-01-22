@@ -28,4 +28,6 @@ public interface ValueStructure
     void value( Object value );
 
     Object value();
+
+    byte[] byteArray( int length );
 }

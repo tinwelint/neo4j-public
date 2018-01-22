@@ -216,9 +216,9 @@ enum Type
         @Override
         public Value getValue( PageCursor cursor, int valueLength, ValueStructure structure )
         {
-            byte[] bytes = new byte[valueLength];
-            cursor.getBytes( bytes );
-            return Values.utf8Value( bytes );
+            byte[] bytes = structure.byteArray( valueLength );
+            cursor.getBytes( bytes, 0, valueLength );
+            return Values.utf8Value( bytes, 0, valueLength );
         }
     },
     // FORMAT:

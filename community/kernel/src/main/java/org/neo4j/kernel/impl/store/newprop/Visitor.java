@@ -32,7 +32,7 @@ import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
 
-abstract class Visitor implements RecordVisitor, ValueStructure
+abstract class Visitor implements RecordVisitor
 {
     private final Store store;
     protected int pivotOffset;
@@ -163,30 +163,6 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries )
     {
         cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
-    }
-
-    @Override
-    public void integralValue( long value )
-    {
-        this.integralStructureValue = value;
-    }
-
-    @Override
-    public long integralValue()
-    {
-        return integralStructureValue;
-    }
-
-    @Override
-    public void value( Object value )
-    {
-        this.objectStructureValue = value;
-    }
-
-    @Override
-    public Object value()
-    {
-        return objectStructureValue;
     }
 
     void moveBytesLeft( PageCursor cursor, int lowOffset, int size, int distance )
