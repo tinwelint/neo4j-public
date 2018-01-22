@@ -29,6 +29,7 @@ import java.util.Arrays;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
+import org.neo4j.test.rule.RepeatRule.Repeat;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -48,6 +49,7 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         super( creator );
     }
 
+    @Repeat( times = 3 )
     @Test
     public void bestCase() throws Exception
     {
@@ -79,6 +81,7 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         print( store, "best-case", writeDuration, readDuration, readDurationLow, readDurationHigh );
     }
 
+    @Repeat( times = 3 )
     @Test
     public void worstCase() throws Exception
     {
@@ -155,7 +158,11 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
                 " size " + bytes( store.storeSize() ) );
     }
 
-    private static final Value VALUE = Values.of( "sskldskdaslkdlas&*$^%&*^D&f6d7f67e 6r72346r78^&*^&*^#*kd" );
+    private static final Value VALUE = Values.of(
+//            "sskldskdaslkdlas&*$^%&*^D&f6d7f67e 6r72346r78^&*^&*^#*kd"
+//            "abcde"
+            12345
+            );
 
     private Value value( int k )
     {

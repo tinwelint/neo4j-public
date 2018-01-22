@@ -27,6 +27,10 @@ import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
 
 class GetVisitor extends Visitor implements ValueStructure
 {
+    // value structure stuff
+    private long integralStructureValue;
+    private Object objectStructureValue;
+
     // grows on demand
     private byte[] byteArray = new byte[8];
     private int byteArrayCursor;

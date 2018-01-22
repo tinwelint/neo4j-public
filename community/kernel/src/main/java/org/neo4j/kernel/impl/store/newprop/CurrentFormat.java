@@ -295,6 +295,8 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
     @Override
     public long storeSize()
     {
-        return propertyStore.getHighId() * propertyStore.getRecordSize();
+        return propertyStore.getHighId() * propertyStore.getRecordSize() +
+               propertyStore.getStringStore().getHighId() * propertyStore.getStringStore().getRecordSize() +
+               propertyStore.getArrayStore().getHighId() * propertyStore.getArrayStore().getRecordSize();
     }
 }

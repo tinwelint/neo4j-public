@@ -26,8 +26,6 @@ import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Integer.max;
-import static java.lang.Integer.min;
-
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
@@ -46,10 +44,6 @@ abstract class Visitor implements RecordVisitor
     protected long longState;
     protected Value readValue;
     protected int key = -1;
-
-    // value structure stuff
-    protected long integralStructureValue;
-    protected Object objectStructureValue;
 
     Visitor( Store store )
     {
@@ -167,30 +161,12 @@ abstract class Visitor implements RecordVisitor
 
     void moveBytesLeft( PageCursor cursor, int lowOffset, int size, int distance )
     {
-        // TODO obviously optimize this to use the good approach of an optimal chunk size to read into intermediate byte[]
-        // TODO for now just do the silly move-by-gapSize
-        int moved = 0;
-        while ( moved < size )
-        {
-            int toMoveThisTime = min( size - moved, distance );
-            int sourceOffset = lowOffset + moved;
-            cursor.copyTo( sourceOffset, cursor, sourceOffset - distance, toMoveThisTime );
-            moved += toMoveThisTime;
-        }
+        cursor.shiftBytes( lowOffset, size, -distance );
     }
 
     void moveBytesRight( PageCursor cursor, int lowOffset, int size, int distance )
     {
-        // TODO obviously optimize this to use the good approach of an optimal chunk size to read into intermediate byte[]
-        // TODO for now just do the silly move-by-gapSize
-        int moved = 0;
-        while ( moved < size )
-        {
-            int toMoveThisTime = min( size - moved, distance );
-            int sourceOffset = lowOffset + size - moved - toMoveThisTime;
-            cursor.copyTo( sourceOffset, cursor, sourceOffset + distance, toMoveThisTime );
-            moved += toMoveThisTime;
-        }
+        cursor.shiftBytes( lowOffset, size, distance );
     }
 
     static long getUnsignedInt( PageCursor cursor )
