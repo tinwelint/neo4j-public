@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.store.newprop;
 
 import java.io.File;
 import java.io.IOException;
+
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -31,6 +32,50 @@ import static org.neo4j.io.ByteUnit.kibiBytes;
 
 public class ProposedFormat implements SimplePropertyStoreAbstraction
 {
+    // =====================================================================================
+    // === THE IMPLEMENTATION CONTROL PANEL                                              ===
+    // === Some global aspects of this implementation can be tweaked here                ===
+    // === to easily switch behavior for quick comparison                                ===
+    // =====================================================================================
+
+    /**
+     * If {@code true}:  properties (both keys and values) are physically ordered by key
+     * If {@code false}: properties are appended in the order they arrive
+     *
+     * Thoughts: Having keys ordered has some cost of maintaining the key order, which means
+     * moving keys (and potentially values, see thoughts in {@link #BEHAVIOUR_CHANGE_IN_PLACE})
+     * when adding properties, but allows binary searching the key array. Otoh all keys
+     * are very likely to fit inside one cache line for most entities and scanning
+     * through a cache line is roughly the same as binary searching and much simpler.
+     */
+    static final boolean BEHAVIOUR_ORDERED_BY_KEY = false;
+
+    /**
+     * If {@code true}:  [K1,K2,K3,...    ,V1,V2,V3...                                     ]
+     * If {@code false}: [K1,K2,K3,...                                         ...,V3,V2,V1]
+     *
+     * Thoughts: If {@code false} then new header entries will have to move all values,
+     * which is super annoying. There could be some slack between header end and value start,
+     * but that would only reduce this need and at the same time introduce wasted space.
+     */
+    static final boolean BEHAVIOUR_VALUES_FROM_END = true;
+
+    /**
+     * If {@code true}:  different size move other keys/values around it
+     * If {@code false}: changed value appended as new property (left behind on copy record)
+     *
+     * Thoughts: {@code false} could mean that no bytes will ever move in a record,
+     * remove will mark as unused and change will append a new. There could be a middle way
+     * where {@link #BEHAVIOUR_ORDERED_BY_KEY} is {@code true}, but that would mean that
+     * keys would have to be moved and all header entries would need an offset into the
+     * record too (i.e. each header would need to be 2 x {@link #HEADER_ENTRY_SIZE}.
+     */
+    static final boolean BEHAVIOUR_CHANGE_IN_PLACE = true;
+
+    // =====================================================================================
+    // === END OF CONTROL PANEL                                                          ===
+    // =====================================================================================
+
     static final int HEADER_ENTRY_SIZE = Integer.BYTES;
     static final int RECORD_HEADER_SIZE = Short.BYTES;
 

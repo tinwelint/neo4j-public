@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.values.storable.Value;
 
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 
 class SetVisitor extends Visitor
@@ -59,52 +60,58 @@ class SetVisitor extends Visitor
             Object preparedValue = type.prepare( value );
             int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
             int newValueLength = type.valueLength( preparedValue );
-            int diff = newValueLength - oldValueLength;
-            int growth = headerDiff * ProposedFormat.HEADER_ENTRY_SIZE + diff;
-            if ( growth > freeBytesInRecord )
-            {
-                units = growRecord( cursor, startId, units, growth );
-                seekToEnd( cursor );
-            }
 
-            // Shrink whichever part that needs shrinking first, otherwise we risk writing into the other part,
-            // i.e. parts being header and value
-            if ( headerDiff < 0 )
+            if ( BEHAVIOUR_CHANGE_IN_PLACE )
             {
-                changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
-            }
-            if ( diff < 0 )
-            {
-                changeValueSize( cursor, diff, units, oldValueLengthSum );
-            }
-            if ( headerDiff > 0 )
-            {
-                changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
-            }
-            if ( diff > 0 )
-            {
-                changeValueSize( cursor, diff, units, oldValueLengthSum );
-            }
+                int diff = newValueLength - oldValueLength;
+                int growth = headerDiff * ProposedFormat.HEADER_ENTRY_SIZE + diff;
+                if ( growth > freeBytesInRecord )
+                {
+                    units = growRecord( cursor, startId, units, growth );
+                    seekToEnd( cursor );
+                }
 
-            if ( headerDiff != 0 )
-            {
-                numberOfHeaderEntries += headerDiff;
-                writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries );
-            }
-            if ( diff != 0 )
-            {
-                oldValueLengthSum += diff;
-            }
+                // Shrink whichever part that needs shrinking first, otherwise we risk writing into the other part,
+                // i.e. parts being header and value
+                if ( headerDiff < 0 )
+                {
+                    changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+                }
+                if ( diff < 0 )
+                {
+                    changeValueSize( cursor, diff, units, oldValueLengthSum );
+                }
+                if ( headerDiff > 0 )
+                {
+                    changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+                }
+                if ( diff > 0 )
+                {
+                    changeValueSize( cursor, diff, units, oldValueLengthSum );
+                }
 
-            if ( type != oldType || newValueLength != oldValueLength )
-            {
-                cursor.setOffset( headerStart( hitHeaderEntryIndex ) );
-                type.putHeader( cursor, key, oldValueLengthSum, preparedValue );
-            }
+                // Overwrite header
+                if ( type != oldType || newValueLength != oldValueLength )
+                {
+                    cursor.setOffset( headerStart( hitHeaderEntryIndex ) );
+                    type.putHeader( cursor, key, oldValueLengthSum + diff, preparedValue );
+                }
 
-            // Go the the correct value position and write the value
-            cursor.setOffset( valueStart( units, oldValueLengthSum ) );
-            type.putValue( cursor, preparedValue, newValueLength );
+                // Overwrite number of header entries
+                if ( headerDiff != 0 )
+                {
+                    numberOfHeaderEntries += headerDiff;
+                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries );
+                }
+
+                // Overwrite value, go the the correct value position and write the value
+                cursor.setOffset( valueStart( units, oldValueLengthSum + diff ) );
+                type.putValue( cursor, preparedValue, newValueLength );
+            }
+            else
+            {
+                throw new UnsupportedOperationException( "Not supported a.t.m." );
+            }
         }
         else
         {

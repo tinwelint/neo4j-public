@@ -26,6 +26,8 @@ import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Integer.max;
+
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUES_FROM_END;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
@@ -141,7 +143,14 @@ abstract class Visitor implements RecordVisitor
 
     int valueStart( int units, int valueOffset )
     {
-        return pivotOffset + (units * UNIT_SIZE) - valueOffset;
+        if ( BEHAVIOUR_VALUES_FROM_END )
+        {
+            return pivotOffset + (units * UNIT_SIZE) - valueOffset;
+        }
+        else
+        {
+            throw new UnsupportedOperationException( "Not supported a.t.m." );
+        }
     }
 
     int headerStart( int headerEntryIndex )
