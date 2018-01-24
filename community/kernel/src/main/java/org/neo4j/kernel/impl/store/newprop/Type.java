@@ -609,7 +609,7 @@ enum Type
 
     public static Type fromHeader( long headerEntryUnsignedInt, PageCursor cursor )
     {
-        int ordinal = (int) ((headerEntryUnsignedInt & 0xFF000000) >>> 24);
+        int ordinal = (int) ((headerEntryUnsignedInt & 0x7F000000) >>> 24);
 
         // If this is a read cursor then communicate exceptions via CursorException instead of actual exception right here
         if ( !cursor.isWriteLocked() )

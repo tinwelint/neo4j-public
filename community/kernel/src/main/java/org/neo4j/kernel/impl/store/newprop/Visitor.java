@@ -76,31 +76,45 @@ abstract class Visitor implements RecordVisitor
         while ( headerEntryIndex < numberOfHeaderEntries )
         {
             long headerEntry = getUnsignedInt( cursor );
+            boolean isUsed = isUsed( headerEntry );
             currentType = Type.fromHeader( headerEntry, cursor );
-            int thisKey = currentType.keyOf( headerEntry );
-
-            // TODO don't rely on keys being ordered... matters much? We have to look at all of them anyway to figure out free space
-            // (unless we keep free space as a dedicated field or something)
-//                if ( thisKey > key )
-//                {
-//                    // We got too far, i.e. this key doesn't exist
-//                    // We leave offsets at the start of this header entry so that insert can insert right there
-//                    break;
-//                }
-
-            currentValueLength = currentType.valueLength( cursor );
-            sumValueLength += currentValueLength;
-            if ( thisKey == key )
+            if ( isUsed )
             {
-                // valueLength == length of found value
-                // relativeValueOffset == relative start of this value, i.e.
-                // actual page offset == pivotOffset + recordSize - relativeValueOffset
-                return true;
+                int thisKey = currentType.keyOf( headerEntry );
+
+                // TODO don't rely on keys being ordered... matters much? We have to look at all of them anyway to figure out free space
+                // (unless we keep free space as a dedicated field or something)
+    //                if ( thisKey > key )
+    //                {
+    //                    // We got too far, i.e. this key doesn't exist
+    //                    // We leave offsets at the start of this header entry so that insert can insert right there
+    //                    break;
+    //                }
+
+                currentValueLength = currentType.valueLength( cursor );
+                sumValueLength += currentValueLength;
+                if ( thisKey == key )
+                {
+                    // valueLength == length of found value
+                    // relativeValueOffset == relative start of this value, i.e.
+                    // actual page offset == pivotOffset + recordSize - relativeValueOffset
+                    return true;
+                }
             }
 
             headerEntryIndex += currentType.numberOfHeaderEntries();
         }
         return false;
+    }
+
+    boolean isUsed( long headerEntry )
+    {
+        return (headerEntry & 0x10000000) == 0;
+    }
+
+    long setUnused( long headerEntry )
+    {
+        return headerEntry | 0x10000000;
     }
 
     void seekToEnd( PageCursor cursor )

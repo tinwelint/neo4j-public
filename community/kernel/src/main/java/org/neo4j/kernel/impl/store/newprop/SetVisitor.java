@@ -24,7 +24,9 @@ import java.io.IOException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.values.storable.Value;
 
-import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_IN_PLACE;
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE;
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 
 class SetVisitor extends Visitor
@@ -60,88 +62,129 @@ class SetVisitor extends Visitor
             Object preparedValue = type.prepare( value );
             int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
             int newValueLength = type.valueLength( preparedValue );
-
-            if ( BEHAVIOUR_CHANGE_IN_PLACE )
+            int diff = newValueLength - oldValueLength;
+            if ( diff != 0 || headerDiff != 0 )
             {
-                int diff = newValueLength - oldValueLength;
-                int growth = headerDiff * ProposedFormat.HEADER_ENTRY_SIZE + diff;
-                if ( growth > freeBytesInRecord )
+                // Value/key size changed
+                if ( BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE )
                 {
-                    units = growRecord( cursor, startId, units, growth );
-                    seekToEnd( cursor );
+                    units = growIfNeeded( cursor, startId, units, freeBytesInRecord, headerDiff, diff, false );
+                    makeRoomForPropertyInPlace( cursor, units, oldType, oldValueLengthSum, hitHeaderEntryIndex, headerDiff, diff );
+                    writeValue( cursor, units, oldValueLengthSum + diff, type, preparedValue, newValueLength );
+                    if ( type != oldType || newValueLength != oldValueLength )
+                    {
+                        writeHeader( cursor, oldValueLengthSum + diff, hitHeaderEntryIndex, type, preparedValue );
+                    }
                 }
-
-                // Shrink whichever part that needs shrinking first, otherwise we risk writing into the other part,
-                // i.e. parts being header and value
-                if ( headerDiff < 0 )
+                else
                 {
-                    changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+                    units = growIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), newValueLength, false );
+                    markHeaderAsUnused( cursor, hitHeaderEntryIndex );
+                    writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
+                    if ( type != oldType )
+                    {
+                        writeHeader( cursor, sumValueLength, hitHeaderEntryIndex, type, preparedValue );
+                    }
                 }
-                if ( diff < 0 )
-                {
-                    changeValueSize( cursor, diff, units, oldValueLengthSum );
-                }
-                if ( headerDiff > 0 )
-                {
-                    changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
-                }
-                if ( diff > 0 )
-                {
-                    changeValueSize( cursor, diff, units, oldValueLengthSum );
-                }
-
-                // Overwrite header
-                if ( type != oldType || newValueLength != oldValueLength )
-                {
-                    cursor.setOffset( headerStart( hitHeaderEntryIndex ) );
-                    type.putHeader( cursor, key, oldValueLengthSum + diff, preparedValue );
-                }
-
-                // Overwrite number of header entries
-                if ( headerDiff != 0 )
-                {
-                    numberOfHeaderEntries += headerDiff;
-                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries );
-                }
-
-                // Overwrite value, go the the correct value position and write the value
-                cursor.setOffset( valueStart( units, oldValueLengthSum + diff ) );
-                type.putValue( cursor, preparedValue, newValueLength );
             }
             else
             {
-                throw new UnsupportedOperationException( "Not supported a.t.m." );
+                // Both value and key size are the same
+                if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE )
+                {
+                    writeValue( cursor, units, oldValueLengthSum, type, preparedValue, oldValueLength );
+                    if ( type != oldType )
+                    {
+                        writeHeader( cursor, oldValueLengthSum, hitHeaderEntryIndex, type, preparedValue );
+                    }
+                }
+                else
+                {
+                    markHeaderAsUnused( cursor, hitHeaderEntryIndex );
+                    writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
+                    if ( type != oldType )
+                    {
+                        writeHeader( cursor, sumValueLength, hitHeaderEntryIndex, type, preparedValue );
+                    }
+                }
             }
         }
         else
         {
-            // OK, so we'd like to add this property.
-            // How many bytes do we have available in this record?
-            // Formula is: start of left-most value  -  end of right-most header
+            // Add property
             int freeBytesInRecord = recordLength - sumValueLength - headerLength;
             Type type = Type.fromValue( value );
             Object preparedValue = type.prepare( value );
             int valueLength = type.valueLength( preparedValue );
-            int size = type.numberOfHeaderEntries() * ProposedFormat.HEADER_ENTRY_SIZE + valueLength;
-            if ( size > freeBytesInRecord )
-            {   // Grow/relocate record
-                units = growRecord( cursor, startId, units, size - freeBytesInRecord );
-                // Perhaps unnecessary to call seek again, the point of it is to leave the cursor in the
-                // expected place for insert, just as it would have been if we wouldn't have grown the record
-                // -- code simplicity
-                boolean found = seek( cursor );
-                assert !found;
-            }
-
-            // Here assume that we're at the correct position to add a new header
+            growIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength, true );
+            writeValue( cursor, units, sumValueLength + valueLength, type, preparedValue, valueLength );
+            writeHeader( cursor, sumValueLength, numberOfHeaderEntries, type, preparedValue );
             int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
-            type.putHeader( cursor, key, sumValueLength, preparedValue );
-            cursor.setOffset( valueStart( units, sumValueLength + valueLength ) );
-            type.putValue( cursor, preparedValue, valueLength );
             writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
         }
 
         return -1; // TODO support records spanning multiple pages
+    }
+
+    private void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
+    {
+        int offset = headerStart( headerEntryIndex );
+        long headerEntry = getUnsignedInt( cursor, offset );
+        headerEntry = setUnused( headerEntry );
+        cursor.putInt( offset, (int) headerEntry );
+    }
+
+    private int growIfNeeded( PageCursor cursor, long startId, int units, int freeBytesInRecord, int headerDiff, int diff, boolean forSet )
+            throws IOException
+    {
+        int growth = headerDiff * HEADER_ENTRY_SIZE + diff;
+        if ( growth > freeBytesInRecord )
+        {
+            units = growRecord( cursor, startId, units, growth );
+            // TODO This is a silly hack, to have this difference like this
+            if ( forSet )
+            {
+                seek( cursor );
+            }
+            else
+            {
+                seekToEnd( cursor );
+            }
+        }
+        return units;
+    }
+
+    private void writeHeader( PageCursor cursor, int valueOffset, int headerEntryIndex, Type type, Object preparedValue )
+    {
+        cursor.setOffset( headerStart( headerEntryIndex ) );
+        type.putHeader( cursor, key, valueOffset, preparedValue );
+    }
+
+    private void writeValue( PageCursor cursor, int units, int valueLengthSum, Type type, Object preparedValue, int valueLength )
+    {
+        cursor.setOffset( valueStart( units, valueLengthSum ) );
+        type.putValue( cursor, preparedValue, valueLength );
+    }
+
+    private void makeRoomForPropertyInPlace( PageCursor cursor, int units, Type oldType, int oldValueLengthSum, int hitHeaderEntryIndex,
+            int headerDiff, int diff )
+    {
+        if ( headerDiff < 0 )
+        {
+            changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+        }
+        if ( diff < 0 )
+        {
+            changeValueSize( cursor, diff, units, oldValueLengthSum );
+        }
+        if ( headerDiff > 0 )
+        {
+            changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+        }
+        if ( diff > 0 )
+        {
+            changeValueSize( cursor, diff, units, oldValueLengthSum );
+        }
     }
 
     private void changeValueSize( PageCursor cursor, int diff, int units, int valueLengthSum )

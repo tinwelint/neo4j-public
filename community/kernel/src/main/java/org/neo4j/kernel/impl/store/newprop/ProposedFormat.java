@@ -42,11 +42,10 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      * If {@code true}:  properties (both keys and values) are physically ordered by key
      * If {@code false}: properties are appended in the order they arrive
      *
-     * Thoughts: Having keys ordered has some cost of maintaining the key order, which means
-     * moving keys (and potentially values, see thoughts in {@link #BEHAVIOUR_CHANGE_IN_PLACE})
-     * when adding properties, but allows binary searching the key array. Otoh all keys
-     * are very likely to fit inside one cache line for most entities and scanning
-     * through a cache line is roughly the same as binary searching and much simpler.
+     * Thoughts: Having keys ordered has some cost of maintaining the key order, which means moving keys (and potentially values,
+     * see thoughts in {@link #BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE}) when adding properties, but allows binary searching
+     * the key array. Otoh all keys are very likely to fit inside one cache line for most entities and scanning through a cache line
+     * takes roughly the same time as binary searching and is much simpler.
      */
     static final boolean BEHAVIOUR_ORDERED_BY_KEY = false;
 
@@ -54,23 +53,50 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      * If {@code true}:  [K1,K2,K3,...    ,V1,V2,V3...                                     ]
      * If {@code false}: [K1,K2,K3,...                                         ...,V3,V2,V1]
      *
-     * Thoughts: If {@code false} then new header entries will have to move all values,
-     * which is super annoying. There could be some slack between header end and value start,
-     * but that would only reduce this need and at the same time introduce wasted space.
+     * Thoughts: If {@code false} then added header entries will have to move all values, which is super annoying.
+     * There could be some slack between header end and value start, but that would only reduce this need and at the same time
+     * introduce wasted space.
      */
     static final boolean BEHAVIOUR_VALUES_FROM_END = true;
 
     /**
-     * If {@code true}:  different size move other keys/values around it
-     * If {@code false}: changed value appended as new property (left behind on copy record)
+     * If {@code true}:  same sized value of same sized type (header) are overwritten in-place.
+     * If {@code false}: same sized value of same sized type (header) appended as new property (left behind on copy record).
      *
-     * Thoughts: {@code false} could mean that no bytes will ever move in a record,
-     * remove will mark as unused and change will append a new. There could be a middle way
-     * where {@link #BEHAVIOUR_ORDERED_BY_KEY} is {@code true}, but that would mean that
-     * keys would have to be moved and all header entries would need an offset into the
-     * record too (i.e. each header would need to be 2 x {@link #HEADER_ENTRY_SIZE}.
+     * Thoughts: {@code true} accompanied a {@code false} {@link #BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE} will
+     * remove the need to move other keys and values around when setting properties, whether it being adding or changing.
+     * This is great from a command POV, both amount of data in property commands and also logic for populating such commands.
+     * {@code false} Will also do this, but fill up records quicker, resulting on more copies and therefore also more command data.
      */
-    static final boolean BEHAVIOUR_CHANGE_IN_PLACE = true;
+    static final boolean BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE = true;
+
+    /**
+     * If {@code true}:  different sized value move other keys/values around it, which means more data needs to be stored in commands.
+     * If {@code false}: different sized value appended as new property, marking the existing as unused. This means more header
+     * entries to search through, but less data to put into records on changing such properties. Unused properties are left behind
+     * when copying to new record.
+     */
+    static final boolean BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = true;
+
+    /*
+     * SUMMARY OF ABOVE THOUGHTS/ASSUMPTIONS:
+     *
+     * BEHAVIOUR_ORDERED_BY_KEY = false
+     * BEHAVIOUR_VALUES_FROM_END = true
+     * BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE = true
+     * BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = false
+     *
+     * It's still possible and encouraged to play with the values in the above control panel to see how that affects different use cases.
+     */
+
+    static
+    {
+        // It's reasonable to enforce that if different-sized values are change in-place then so will also same-size values be.
+        if ( BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE )
+        {
+            assert BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
+        }
+    }
 
     // =====================================================================================
     // === END OF CONTROL PANEL                                                          ===
