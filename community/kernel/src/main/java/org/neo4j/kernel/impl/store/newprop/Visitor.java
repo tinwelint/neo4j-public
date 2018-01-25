@@ -28,6 +28,8 @@ import org.neo4j.values.storable.Value;
 import static java.lang.Integer.max;
 
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUES_FROM_END;
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.RECORD_HEADER_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
@@ -46,6 +48,8 @@ abstract class Visitor implements RecordVisitor
     protected long longState;
     protected Value readValue;
     protected int key = -1;
+    protected int unusedHeaderEntries;
+    protected int unusedValueLength;
 
     Visitor( Store store )
     {
@@ -66,8 +70,10 @@ abstract class Visitor implements RecordVisitor
         sumValueLength = 0;
         currentValueLength = 0;
         headerEntryIndex = 0;
+        unusedHeaderEntries = 0;
+        unusedValueLength = 0;
         boolean found = seekTo( cursor, key );
-        headerLength = ProposedFormat.RECORD_HEADER_SIZE + numberOfHeaderEntries * ProposedFormat.HEADER_ENTRY_SIZE;
+        headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
         return found;
     }
 
@@ -78,6 +84,8 @@ abstract class Visitor implements RecordVisitor
             long headerEntry = getUnsignedInt( cursor );
             boolean isUsed = isUsed( headerEntry );
             currentType = Type.fromHeader( headerEntry, cursor );
+            currentValueLength = currentType.valueLength( cursor );
+            int currentNumberOfHeaderEntries = currentType.numberOfHeaderEntries();
             if ( isUsed )
             {
                 int thisKey = currentType.keyOf( headerEntry );
@@ -91,7 +99,6 @@ abstract class Visitor implements RecordVisitor
     //                    break;
     //                }
 
-                currentValueLength = currentType.valueLength( cursor );
                 sumValueLength += currentValueLength;
                 if ( thisKey == key )
                 {
@@ -101,8 +108,13 @@ abstract class Visitor implements RecordVisitor
                     return true;
                 }
             }
+            else
+            {
+                unusedValueLength += currentValueLength;
+                unusedHeaderEntries += currentNumberOfHeaderEntries;
+            }
 
-            headerEntryIndex += currentType.numberOfHeaderEntries();
+            headerEntryIndex += currentNumberOfHeaderEntries;
         }
         return false;
     }
@@ -169,7 +181,7 @@ abstract class Visitor implements RecordVisitor
 
     int headerStart( int headerEntryIndex )
     {
-        return pivotOffset + ProposedFormat.RECORD_HEADER_SIZE + headerEntryIndex * ProposedFormat.HEADER_ENTRY_SIZE;
+        return pivotOffset + ProposedFormat.RECORD_HEADER_SIZE + headerEntryIndex * HEADER_ENTRY_SIZE;
     }
 
     void placeCursorAtHeaderEntry( PageCursor cursor, int headerEntryIndex )
