@@ -182,6 +182,14 @@ abstract class Visitor implements RecordVisitor
         cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
     }
 
+    protected void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
+    {
+        int offset = headerStart( headerEntryIndex );
+        long headerEntry = getUnsignedInt( cursor, offset );
+        headerEntry = setUnused( headerEntry );
+        cursor.putInt( offset, (int) headerEntry );
+    }
+
     static long getUnsignedInt( PageCursor cursor )
     {
         return cursor.getInt() & 0xFFFFFFFFL;

@@ -128,14 +128,6 @@ class SetVisitor extends Visitor
         return -1; // TODO support records spanning multiple pages
     }
 
-    private void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
-    {
-        int offset = headerStart( headerEntryIndex );
-        long headerEntry = getUnsignedInt( cursor, offset );
-        headerEntry = setUnused( headerEntry );
-        cursor.putInt( offset, (int) headerEntry );
-    }
-
     private int growIfNeeded( PageCursor cursor, long startId, int units, int freeBytesInRecord, int headerDiff, int diff, boolean forSet )
             throws IOException
     {
