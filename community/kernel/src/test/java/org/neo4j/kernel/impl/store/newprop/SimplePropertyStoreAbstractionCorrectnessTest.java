@@ -109,21 +109,21 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
     {
         // WHEN
         long id = -1;
-        try ( Write access = store.newWrite() )
+        for ( int i = 0; i < 100; i++ )
         {
-            for ( int i = 0; i < 100; i++ )
+            try ( Write access = store.newWrite() )
             {
                 id = access.set( id, i, intValue( i ) );
             }
-        }
 
-        // THEN
-        try ( Read access = store.newRead() )
-        {
-            for ( int i = 0; i < 100; i++ )
+            // THEN
+            try ( Read access = store.newRead() )
             {
-                assertTrue( access.has( id, i ) );
-                assertEquals( intValue( i ), access.get( id, i ) );
+                for ( int j = 0; j <= i; j++ )
+                {
+                    assertTrue( "Key " + j, access.has( id, j ) );
+                    assertEquals( "Key " + j, intValue( j ), access.get( id, j ) );
+                }
             }
         }
     }
@@ -386,6 +386,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                     Value value = Values.of( random.propertyValue() );
                     id = access.set( id, key, value );
                     expected.put( key, value );
+//                    System.out.println( "Set " + key + " " + value );
                 }
                 else if ( !expected.isEmpty() )
                 {   // Remove
@@ -395,6 +396,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                     }
                     assertEquals( expected.remove( key ), access.get( id, key ) );
                     id = access.remove( id, key );
+//                    System.out.println( "Remove " + key );
                     assertFalse( access.has( id, key ) );
                 }
             }

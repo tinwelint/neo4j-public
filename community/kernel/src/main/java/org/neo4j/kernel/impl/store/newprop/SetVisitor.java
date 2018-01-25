@@ -73,8 +73,9 @@ class SetVisitor extends Visitor
                     writeValue( cursor, units, oldValueLengthSum + diff, type, preparedValue, newValueLength );
                     if ( type != oldType || newValueLength != oldValueLength )
                     {
-                        writeHeader( cursor, oldValueLengthSum + diff, hitHeaderEntryIndex, type, preparedValue );
+                        writeHeader( cursor, oldValueLengthSum, newValueLength, hitHeaderEntryIndex, type );
                     }
+                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + headerDiff );
                 }
                 else
                 {
@@ -83,8 +84,9 @@ class SetVisitor extends Visitor
                     writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
                     if ( type != oldType )
                     {
-                        writeHeader( cursor, sumValueLength, hitHeaderEntryIndex, type, preparedValue );
+                        writeHeader( cursor, sumValueLength, newValueLength, hitHeaderEntryIndex, type );
                     }
+                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + type.numberOfHeaderEntries() );
                 }
             }
             else
@@ -95,7 +97,7 @@ class SetVisitor extends Visitor
                     writeValue( cursor, units, oldValueLengthSum, type, preparedValue, oldValueLength );
                     if ( type != oldType )
                     {
-                        writeHeader( cursor, oldValueLengthSum, hitHeaderEntryIndex, type, preparedValue );
+                        writeHeader( cursor, oldValueLengthSum, newValueLength, hitHeaderEntryIndex, type );
                     }
                 }
                 else
@@ -104,7 +106,7 @@ class SetVisitor extends Visitor
                     writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
                     if ( type != oldType )
                     {
-                        writeHeader( cursor, sumValueLength, hitHeaderEntryIndex, type, preparedValue );
+                        writeHeader( cursor, sumValueLength, newValueLength, hitHeaderEntryIndex, type );
                     }
                 }
             }
@@ -116,9 +118,9 @@ class SetVisitor extends Visitor
             Type type = Type.fromValue( value );
             Object preparedValue = type.prepare( value );
             int valueLength = type.valueLength( preparedValue );
-            growIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength, true );
+            units = growIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength, true );
             writeValue( cursor, units, sumValueLength + valueLength, type, preparedValue, valueLength );
-            writeHeader( cursor, sumValueLength, numberOfHeaderEntries, type, preparedValue );
+            writeHeader( cursor, sumValueLength, valueLength, numberOfHeaderEntries, type );
             int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
             writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
         }
@@ -140,7 +142,7 @@ class SetVisitor extends Visitor
         int growth = headerDiff * HEADER_ENTRY_SIZE + diff;
         if ( growth > freeBytesInRecord )
         {
-            units = growRecord( cursor, startId, units, growth );
+            units = growRecord( cursor, startId, units, growth - freeBytesInRecord );
             // TODO This is a silly hack, to have this difference like this
             if ( forSet )
             {
@@ -154,10 +156,10 @@ class SetVisitor extends Visitor
         return units;
     }
 
-    private void writeHeader( PageCursor cursor, int valueOffset, int headerEntryIndex, Type type, Object preparedValue )
+    private void writeHeader( PageCursor cursor, int valueOffset, int valueLength, int headerEntryIndex, Type type )
     {
         cursor.setOffset( headerStart( headerEntryIndex ) );
-        type.putHeader( cursor, key, valueOffset, preparedValue );
+        type.putHeader( cursor, key, valueOffset, valueLength );
     }
 
     private void writeValue( PageCursor cursor, int units, int valueLengthSum, Type type, Object preparedValue, int valueLength )
@@ -191,31 +193,13 @@ class SetVisitor extends Visitor
     {
         int leftOffset = valueStart( units, sumValueLength );
         int rightOffset = valueStart( units, valueLengthSum );
-        if ( diff > 0 )
-        {
-            // Grow, i.e. move the other values diff bytes to the left (values are written from the end)
-            moveBytesLeft( cursor, leftOffset, rightOffset - leftOffset, diff );
-        }
-        else if ( diff < 0 )
-        {
-            // Shrink, i.e. move the other values diff bytes to the right (values are written from the end)
-            moveBytesRight( cursor, leftOffset, rightOffset - leftOffset, - diff );
-        }
+        cursor.shiftBytes( leftOffset, rightOffset - leftOffset, - diff );
     }
 
     private void changeHeaderSize( PageCursor cursor, int headerDiff, Type oldType, int hitHeaderEntryIndex )
     {
         int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
         int rightOffset = headerStart( numberOfHeaderEntries );
-        if ( headerDiff > 0 )
-        {
-            // Grow, i.e. move the other header entries diff entries to the right (headers are written from the start)
-            moveBytesRight( cursor, leftOffset, rightOffset - leftOffset, headerDiff * ProposedFormat.HEADER_ENTRY_SIZE );
-        }
-        else if ( headerDiff < 0 )
-        {
-            // Shrink, i.e. move the other header entries diff entries to the left
-            moveBytesLeft( cursor, leftOffset, rightOffset - leftOffset, - headerDiff * ProposedFormat.HEADER_ENTRY_SIZE );
-        }
+        cursor.shiftBytes( leftOffset, rightOffset - leftOffset, headerDiff * HEADER_ENTRY_SIZE );
     }
 }

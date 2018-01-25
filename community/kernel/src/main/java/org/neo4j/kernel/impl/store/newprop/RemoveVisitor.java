@@ -50,14 +50,14 @@ class RemoveVisitor extends Visitor
             int valueLowOffset = valueStart( units, sumValueLength );
 
             // Move header entries
-            moveBytesLeft( cursor, headerStart( currentHeaderEntryIndex ) + headerDistance,
-                    headerEntriesToMove * ProposedFormat.HEADER_ENTRY_SIZE, headerDistance );
+            cursor.shiftBytes( headerStart( currentHeaderEntryIndex ) + headerDistance,
+                    headerEntriesToMove * ProposedFormat.HEADER_ENTRY_SIZE, - headerDistance );
             writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentNumberOfHeaderEntries );
 
             // Move data entries
             if ( valueDistance > 0 ) // distance == 0 for e.g. boolean values
             {
-                moveBytesRight( cursor, valueLowOffset, valueSize, valueDistance );
+                cursor.shiftBytes( valueLowOffset, valueSize, valueDistance );
             }
         }
         return -1;

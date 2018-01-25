@@ -109,12 +109,12 @@ abstract class Visitor implements RecordVisitor
 
     boolean isUsed( long headerEntry )
     {
-        return (headerEntry & 0x10000000) == 0;
+        return (headerEntry & 0x80000000) == 0;
     }
 
     long setUnused( long headerEntry )
     {
-        return headerEntry | 0x10000000;
+        return headerEntry | 0x80000000;
     }
 
     void seekToEnd( PageCursor cursor )
@@ -180,16 +180,6 @@ abstract class Visitor implements RecordVisitor
     void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries )
     {
         cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
-    }
-
-    void moveBytesLeft( PageCursor cursor, int lowOffset, int size, int distance )
-    {
-        cursor.shiftBytes( lowOffset, size, -distance );
-    }
-
-    void moveBytesRight( PageCursor cursor, int lowOffset, int size, int distance )
-    {
-        cursor.shiftBytes( lowOffset, size, distance );
     }
 
     static long getUnsignedInt( PageCursor cursor )

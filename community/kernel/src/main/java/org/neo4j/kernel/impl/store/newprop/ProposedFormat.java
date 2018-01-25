@@ -72,9 +72,11 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
 
     /**
      * If {@code true}:  different sized value move other keys/values around it, which means more data needs to be stored in commands.
+     * This also implies remove in-place.
      * If {@code false}: different sized value appended as new property, marking the existing as unused. This means more header
      * entries to search through, but less data to put into records on changing such properties. Unused properties are left behind
      * when copying to new record.
+     * This also implies NOT remove in-place.
      */
     static final boolean BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = true;
 
