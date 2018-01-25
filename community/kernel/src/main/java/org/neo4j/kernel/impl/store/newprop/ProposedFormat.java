@@ -89,6 +89,15 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      * BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = false
      *
      * It's still possible and encouraged to play with the values in the above control panel to see how that affects different use cases.
+     *
+     * SWEETSPOT OF SUCK:
+     * - record with lots of properties
+     * - overwrite string property w/ different size
+     *
+     * Results in record copy every time this property is set, i.e. lots of command data.
+     * Suggestion: for strings we could keep a bigger valueLength if it shrinks and treat it as same-size
+     * and the string could be terminated with null-byte character. This way there would be some wiggle-room for change.
+     * May be inefficient to find such a terminator from the end... or perhaps it's super simple?
      */
 
     static
