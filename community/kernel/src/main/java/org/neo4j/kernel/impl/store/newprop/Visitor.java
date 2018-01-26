@@ -27,6 +27,7 @@ import org.neo4j.values.storable.Value;
 
 import static java.lang.Integer.max;
 
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_ORDERED_BY_KEY;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUES_FROM_END;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
@@ -40,6 +41,8 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     private static final int FLAG_UNUSED = 0x80000000;
 
     private final Store store;
+
+    // internal mutable state
     protected int pivotOffset;
     protected int numberOfHeaderEntries;
     protected int sumValueLength;
@@ -49,9 +52,11 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     protected boolean booleanState;
     protected long longState;
     protected Value readValue;
-    protected int key = -1;
     protected int unusedHeaderEntries;
     protected int unusedValueLength;
+
+    // user supplied state
+    protected int key = -1;
 
     // value structure stuff
     private long integralStructureValue;
@@ -68,9 +73,9 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         this.key = key;
     }
 
-    boolean seek( PageCursor cursor )
+    @Override
+    public void initialize( PageCursor cursor )
     {
-        assert key != -1;
         pivotOffset = cursor.getOffset();
         numberOfHeaderEntries = cursor.getShort();
         sumValueLength = 0;
@@ -78,6 +83,13 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         headerEntryIndex = 0;
         unusedHeaderEntries = 0;
         unusedValueLength = 0;
+        currentType = null;
+        readValue = null;
+    }
+
+    boolean seek( PageCursor cursor )
+    {
+        assert key != -1;
         return seekTo( cursor, key );
     }
 
@@ -122,11 +134,19 @@ abstract class Visitor implements RecordVisitor, ValueStructure
             {
                 unusedValueLength += currentValueLength;
                 unusedHeaderEntries += currentNumberOfHeaderEntries;
+                if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE )
+                {
+                    skippedUnused( currentNumberOfHeaderEntries );
+                }
             }
 
             headerEntryIndex += currentNumberOfHeaderEntries;
         }
         return false;
+    }
+
+    protected void skippedUnused( int skippedNumberOfHeaderEntries )
+    {
     }
 
     /**
@@ -194,7 +214,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
                         int key = type.keyOf( headerEntry );
 
                         // Copy key
-                        type.putHeader( newCursor, key, i, valueLength );
+                        type.putHeader( newCursor, key, valueLength );
                         // Copy value
                         if ( valueLength > 0 )
                         {

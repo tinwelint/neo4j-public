@@ -104,6 +104,7 @@ class Store implements Closeable
                 forceRetry = false;
                 int units = Header.numberOfUnits( cursor, id );
                 cursor.setOffset( offset );
+                visitor.initialize( cursor );
                 long nextId = visitor.accept( cursor, id, units );
                 if ( nextId == SPECIAL_ID_SHOULD_RETRY )
                 {
@@ -138,6 +139,12 @@ class Store implements Closeable
 
     interface RecordVisitor
     {
+        /**
+         * Initializes this visitor with cursor set at the beginning of the record.
+         * @param cursor {@link PageCursor} at the beginning of the record.
+         */
+        void initialize( PageCursor cursor );
+
         /**
          * @return -1 if no more pages should be accessed, non-negative if the access should
          * continue in a new place, another id.

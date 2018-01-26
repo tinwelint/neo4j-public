@@ -749,7 +749,7 @@ enum Type
         return valueLength;
     }
 
-    public void putHeader( PageCursor cursor, int key, int valueOffset, int valueLength )
+    public void putHeader( PageCursor cursor, int key, int valueLength )
     {
         int keyAndType = ordinal() << 24 | key;
         cursor.putInt( keyAndType );

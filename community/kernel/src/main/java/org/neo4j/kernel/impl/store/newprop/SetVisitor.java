@@ -31,7 +31,14 @@ import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 
 class SetVisitor extends Visitor
 {
-    private Value value;
+    // internal mutable state
+    private int freeHeaderEntryIndex;
+    private int freeSumValueLength;
+
+    // user supplied state
+    private Type type;
+    private Object preparedValue;
+    private int valueLength;
 
     SetVisitor( Store store )
     {
@@ -40,7 +47,27 @@ class SetVisitor extends Visitor
 
     void setValue( Value value )
     {
-        this.value = value;
+        type = Type.fromValue( value );
+        preparedValue = type.prepare( value );
+        valueLength = type.valueLength( preparedValue );
+    }
+
+    @Override
+    public void initialize( PageCursor cursor )
+    {
+        super.initialize( cursor );
+        freeHeaderEntryIndex = -1;
+        freeSumValueLength = 0;
+    }
+
+    @Override
+    protected void skippedUnused( int skippedNumberOfHeaderEntries )
+    {
+        if ( freeHeaderEntryIndex == -1 && skippedNumberOfHeaderEntries == type.numberOfHeaderEntries() && currentValueLength == valueLength )
+        {
+            freeHeaderEntryIndex = headerEntryIndex;
+            freeSumValueLength = sumValueLength;
+        }
     }
 
     @Override
@@ -48,9 +75,6 @@ class SetVisitor extends Visitor
     {
         longState = startId;
         int recordLength = units * UNIT_SIZE;
-        Type type = Type.fromValue( value );
-        Object preparedValue = type.prepare( value );
-        int newValueLength = type.valueLength( preparedValue );
         if ( seek( cursor ) )
         {
             // Change property value
@@ -61,7 +85,7 @@ class SetVisitor extends Visitor
             continueSeekUntilEnd( cursor );
             int freeBytesInRecord = recordLength - sumValueLength - headerLength();
             int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
-            int diff = newValueLength - oldValueLength;
+            int diff = valueLength - oldValueLength;
             if ( diff != 0 || headerDiff != 0 )
             {
                 // Value/key size changed
@@ -69,19 +93,19 @@ class SetVisitor extends Visitor
                 {
                     units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, headerDiff, diff );
                     makeRoomForPropertyInPlace( cursor, units, oldType, oldValueLengthSum, hitHeaderEntryIndex, headerDiff, diff );
-                    writeValue( cursor, units, oldValueLengthSum + diff, type, preparedValue, newValueLength );
-                    if ( type != oldType || newValueLength != oldValueLength )
+                    writeValue( cursor, units, oldValueLengthSum + diff, type, preparedValue, valueLength );
+                    if ( type != oldType || valueLength != oldValueLength )
                     {
-                        writeHeader( cursor, oldValueLengthSum, newValueLength, hitHeaderEntryIndex, type );
+                        writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
                     }
                     writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + headerDiff );
                 }
                 else
                 {
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
-                    units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), newValueLength );
-                    writeValue( cursor, units, sumValueLength + newValueLength, type, preparedValue, newValueLength );
-                    writeHeader( cursor, sumValueLength, newValueLength, numberOfHeaderEntries, type );
+                    units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength );
+                    writeValue( cursor, units, sumValueLength + valueLength, type, preparedValue, valueLength );
+                    writeHeader( cursor, valueLength, numberOfHeaderEntries, type );
                     writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + type.numberOfHeaderEntries() );
                 }
             }
@@ -93,29 +117,34 @@ class SetVisitor extends Visitor
                     writeValue( cursor, units, oldValueLengthSum, type, preparedValue, oldValueLength );
                     if ( type != oldType )
                     {
-                        writeHeader( cursor, oldValueLengthSum, newValueLength, hitHeaderEntryIndex, type );
+                        writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
                     }
                 }
                 else
                 {
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
-                    writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
-                    writeHeader( cursor, sumValueLength, newValueLength, hitHeaderEntryIndex, type );
+                    writeValue( cursor, units, sumValueLength, type, preparedValue, valueLength );
+                    writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
                 }
             }
         }
         else
         {
-            // TODO if there's an unused spot with this exact size then put it there
-            // if BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE == true
-
-            // Add property
-            int freeBytesInRecord = recordLength - sumValueLength - headerLength();
-            units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), newValueLength );
-            writeValue( cursor, units, sumValueLength + newValueLength, type, preparedValue, newValueLength );
-            writeHeader( cursor, sumValueLength, newValueLength, numberOfHeaderEntries, type );
-            int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
-            writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
+            if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE && freeHeaderEntryIndex != -1 )
+            {
+                writeValue( cursor, units, freeSumValueLength, type, preparedValue, valueLength );
+                writeHeader( cursor, valueLength, freeHeaderEntryIndex, type );
+            }
+            else
+            {
+                // Add property
+                int freeBytesInRecord = recordLength - sumValueLength - headerLength();
+                units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength );
+                writeValue( cursor, units, sumValueLength + valueLength, type, preparedValue, valueLength );
+                writeHeader( cursor, valueLength, numberOfHeaderEntries, type );
+                int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
+                writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
+            }
         }
 
         return -1; // TODO support records spanning multiple pages
@@ -132,10 +161,10 @@ class SetVisitor extends Visitor
         return units;
     }
 
-    private void writeHeader( PageCursor cursor, int valueOffset, int valueLength, int headerEntryIndex, Type type )
+    private void writeHeader( PageCursor cursor, int valueLength, int headerEntryIndex, Type type )
     {
         cursor.setOffset( headerStart( headerEntryIndex ) );
-        type.putHeader( cursor, key, valueOffset, valueLength );
+        type.putHeader( cursor, key, valueLength );
     }
 
     private void writeValue( PageCursor cursor, int units, int valueLengthSum, Type type, Object preparedValue, int valueLength )
