@@ -32,6 +32,7 @@ import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
+import org.neo4j.test.rule.RepeatRule.Repeat;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
@@ -366,6 +367,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         }
     }
 
+    @Repeat( times = 10 )
     @Test
     public void shouldSetAndRemoveRandomProperties() throws Exception
     {

@@ -45,7 +45,6 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     protected int sumValueLength;
     protected int currentValueLength;
     protected int headerEntryIndex;
-    protected int headerLength;
     protected Type currentType;
     protected boolean booleanState;
     protected long longState;
@@ -72,11 +71,6 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     boolean seek( PageCursor cursor )
     {
         assert key != -1;
-        return seek( cursor, key );
-    }
-
-    boolean seek( PageCursor cursor, int key )
-    {
         pivotOffset = cursor.getOffset();
         numberOfHeaderEntries = cursor.getShort();
         sumValueLength = 0;
@@ -84,9 +78,12 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         headerEntryIndex = 0;
         unusedHeaderEntries = 0;
         unusedValueLength = 0;
-        boolean found = seekTo( cursor, key );
-        headerLength = RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
-        return found;
+        return seekTo( cursor, key );
+    }
+
+    int headerLength()
+    {
+        return RECORD_HEADER_SIZE + numberOfHeaderEntries * HEADER_ENTRY_SIZE;
     }
 
     private boolean seekTo( PageCursor cursor, int key )
@@ -132,6 +129,21 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         return false;
     }
 
+    /**
+     * This is needed to figure out the sum of all value lengths, an alternative would be to store that in
+     * a header field, but should we?
+     * @param cursor {@link PageCursor} which should by mid-way through seeking the header entries from a
+     * previous call to {@link #seek(PageCursor)}.
+     */
+    void continueSeekUntilEnd( PageCursor cursor )
+    {
+        assert headerEntryIndex < numberOfHeaderEntries;
+
+        // TODO hacky thing here with the headerEntryIndex, better to increment before return in seek?
+        headerEntryIndex += currentType.numberOfHeaderEntries();
+        seekTo( cursor, -1 );
+    }
+
     boolean isUsed( long headerEntry )
     {
         return (headerEntry & FLAG_UNUSED) == 0;
@@ -140,13 +152,6 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     long setUnused( long headerEntry )
     {
         return headerEntry | FLAG_UNUSED;
-    }
-
-    void seekToEnd( PageCursor cursor )
-    {
-        // TODO hacky thing here with the headerEntryIndex, better to increment before return in seek?
-        headerEntryIndex += currentType.numberOfHeaderEntries();
-        seekTo( cursor, -1 );
     }
 
     int relocateRecord( PageCursor cursor, long startId, int units, int totalRecordBytesRequired ) throws IOException
@@ -165,7 +170,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
             if ( unusedHeaderEntries == 0 )
             {
                 // Copy header as one chunk
-                cursor.copyTo( pivotOffset, newCursor, newPivotOffset, headerLength );
+                cursor.copyTo( pivotOffset, newCursor, newPivotOffset, headerLength() );
                 // Copy values as one chunk
                 cursor.copyTo(
                         pivotOffset + units * UNIT_SIZE - sumValueLength, newCursor,
@@ -177,7 +182,8 @@ abstract class Visitor implements RecordVisitor, ValueStructure
                 cursor.setOffset( headerStart( 0 ) );
                 newCursor.setOffset( headerStart( newPivotOffset, 0 ) );
                 int liveNumberOfHeaderEntries = 0;
-                for ( int i = 0, sourceValueOffset = 0, targetValueOffset = 0; i < numberOfHeaderEntries; )
+                int targetValueOffset = 0;
+                for ( int i = 0, sourceValueOffset = 0; i < numberOfHeaderEntries; )
                 {
                     long headerEntry = getUnsignedInt( cursor );
                     Type type = Type.fromHeader( headerEntry, cursor );
@@ -202,6 +208,13 @@ abstract class Visitor implements RecordVisitor, ValueStructure
                     i += numberOfHeaderEntries;
                     sourceValueOffset += valueLength;
                 }
+
+                numberOfHeaderEntries = liveNumberOfHeaderEntries;
+                headerEntryIndex = liveNumberOfHeaderEntries;
+                sumValueLength = targetValueOffset;
+                unusedValueLength = 0;
+                unusedHeaderEntries = 0;
+
                 writeNumberOfHeaderEntries( newCursor, liveNumberOfHeaderEntries, newPivotOffset );
             }
         }

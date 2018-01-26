@@ -47,7 +47,7 @@ class RemoveVisitor extends Visitor
                 int valueDistance = currentValueLength;
 
                 // Seek to the end so that we get the total value length, TODO could be done better in some way, right?
-                seekToEnd( cursor );
+                continueSeekUntilEnd( cursor );
 
                 int valueSize = sumValueLength - currentSumValueLength;
                 int valueLowOffset = valueStart( units, sumValueLength );
