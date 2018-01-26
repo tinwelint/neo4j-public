@@ -48,6 +48,9 @@ class SetVisitor extends Visitor
     {
         longState = startId;
         int recordLength = units * UNIT_SIZE;
+        Type type = Type.fromValue( value );
+        Object preparedValue = type.prepare( value );
+        int newValueLength = type.valueLength( preparedValue );
         if ( seek( cursor ) )
         {
             // Change property value
@@ -57,18 +60,14 @@ class SetVisitor extends Visitor
             int hitHeaderEntryIndex = headerEntryIndex;
             seekToEnd( cursor );
             int freeBytesInRecord = recordLength - sumValueLength - headerLength;
-
-            Type type = Type.fromValue( value );
-            Object preparedValue = type.prepare( value );
             int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
-            int newValueLength = type.valueLength( preparedValue );
             int diff = newValueLength - oldValueLength;
             if ( diff != 0 || headerDiff != 0 )
             {
                 // Value/key size changed
                 if ( BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE )
                 {
-                    units = growIfNeeded( cursor, startId, units, freeBytesInRecord, headerDiff, diff, false );
+                    units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, headerDiff, diff, false );
                     makeRoomForPropertyInPlace( cursor, units, oldType, oldValueLengthSum, hitHeaderEntryIndex, headerDiff, diff );
                     writeValue( cursor, units, oldValueLengthSum + diff, type, preparedValue, newValueLength );
                     if ( type != oldType || newValueLength != oldValueLength )
@@ -79,13 +78,10 @@ class SetVisitor extends Visitor
                 }
                 else
                 {
-                    units = growIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), newValueLength, false );
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
-                    writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
-                    if ( type != oldType )
-                    {
-                        writeHeader( cursor, sumValueLength, newValueLength, hitHeaderEntryIndex, type );
-                    }
+                    units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), newValueLength, false );
+                    writeValue( cursor, units, sumValueLength + newValueLength, type, preparedValue, newValueLength );
+                    writeHeader( cursor, sumValueLength, newValueLength, numberOfHeaderEntries, type );
                     writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + type.numberOfHeaderEntries() );
                 }
             }
@@ -104,23 +100,20 @@ class SetVisitor extends Visitor
                 {
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
                     writeValue( cursor, units, sumValueLength, type, preparedValue, newValueLength );
-                    if ( type != oldType )
-                    {
-                        writeHeader( cursor, sumValueLength, newValueLength, hitHeaderEntryIndex, type );
-                    }
+                    writeHeader( cursor, sumValueLength, newValueLength, hitHeaderEntryIndex, type );
                 }
             }
         }
         else
         {
+            // TODO if there's an unused spot with this exact size then put it there
+            // if BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE == true
+
             // Add property
             int freeBytesInRecord = recordLength - sumValueLength - headerLength;
-            Type type = Type.fromValue( value );
-            Object preparedValue = type.prepare( value );
-            int valueLength = type.valueLength( preparedValue );
-            units = growIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength, true );
-            writeValue( cursor, units, sumValueLength + valueLength, type, preparedValue, valueLength );
-            writeHeader( cursor, sumValueLength, valueLength, numberOfHeaderEntries, type );
+            units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), newValueLength, true );
+            writeValue( cursor, units, sumValueLength + newValueLength, type, preparedValue, newValueLength );
+            writeHeader( cursor, sumValueLength, newValueLength, numberOfHeaderEntries, type );
             int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
             writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
         }
@@ -128,13 +121,13 @@ class SetVisitor extends Visitor
         return -1; // TODO support records spanning multiple pages
     }
 
-    private int growIfNeeded( PageCursor cursor, long startId, int units, int freeBytesInRecord, int headerDiff, int diff, boolean forSet )
+    private int relocateRecordIfNeeded( PageCursor cursor, long startId, int units, int freeBytesInRecord, int headerDiff, int diff, boolean forSet )
             throws IOException
     {
         int growth = headerDiff * HEADER_ENTRY_SIZE + diff;
         if ( growth > freeBytesInRecord )
         {
-            units = growRecord( cursor, startId, units, growth - freeBytesInRecord );
+            units = relocateRecord( cursor, startId, units, units * UNIT_SIZE + growth );
             // TODO This is a silly hack, to have this difference like this
             if ( forSet )
             {
@@ -142,7 +135,7 @@ class SetVisitor extends Visitor
             }
             else
             {
-                seekToEnd( cursor );
+                seek( cursor, -1 );
             }
         }
         return units;
@@ -157,6 +150,7 @@ class SetVisitor extends Visitor
     private void writeValue( PageCursor cursor, int units, int valueLengthSum, Type type, Object preparedValue, int valueLength )
     {
         cursor.setOffset( valueStart( units, valueLengthSum ) );
+//        debug( "Writing " + key + " " + value + " of length " + valueLength + " in page " + cursor.getCurrentPageId() + " at " + cursor.getOffset() );
         type.putValue( cursor, preparedValue, valueLength );
     }
 

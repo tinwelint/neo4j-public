@@ -88,6 +88,20 @@ public class HeaderTest
         markAndReadNumberOfUnits( 0, 2, false );
     }
 
+    @Test
+    public void shouldMarkFirstUnitOnSecondPage() throws Exception
+    {
+        // given
+        long startId = EFFECTIVE_UNITS_PER_PAGE;
+
+        // when
+        Header.mark( cursor, startId, 7, true );
+
+        // then
+        assertTrue( Header.isStartUnit( cursor, startId ) );
+        assertEquals( 7, Header.numberOfUnits( cursor, startId ) );
+    }
+
     private void markAndReadNumberOfUnits( long id, int units, boolean used )
     {
         // when

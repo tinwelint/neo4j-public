@@ -78,7 +78,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      * when copying to new record.
      * This also implies NOT remove in-place.
      */
-    static final boolean BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = true;
+    static final boolean BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = false;
 
     /*
      * SUMMARY OF ABOVE THOUGHTS/ASSUMPTIONS:

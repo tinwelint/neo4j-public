@@ -24,7 +24,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 
-import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNITS_PER_PAGE;
+import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.unitInPage;
 
 class Header
@@ -88,13 +88,13 @@ class Header
         }
 
         int searchUnit = startUnit + 1;
-        if ( searchUnit == UNITS_PER_PAGE )
-        {   // This is the last unit in this page, for now this means that this record is length 1
-            return 1;
-        }
+//        if ( searchUnit % EFFECTIVE_UNITS_PER_PAGE == EFFECTIVE_UNITS_PER_PAGE - 1 )
+//        {   // This is the last unit in this page, for now this means that this record is length 1
+//            return 1;
+//        }
 
         // First check for the next start mark
-        int endUnit = UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
+        int endUnit = EFFECTIVE_UNITS_PER_PAGE;
         if ( searchUnit < 64 )
         {   // First long
             long bits = cursor.getLong( HEADER_OFFSET_START );

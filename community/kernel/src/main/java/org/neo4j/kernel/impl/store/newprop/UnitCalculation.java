@@ -19,11 +19,9 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
-import static org.neo4j.io.ByteUnit.kibiBytes;
-
 class UnitCalculation
 {
-    static final int PAGE_SIZE = (int) kibiBytes( 8 );
+    static final int PAGE_SIZE = 8 * 1024;
     static final int UNIT_SIZE = 64;
     static final int EFFECTIVE_PAGE_SIZE = PAGE_SIZE - UNIT_SIZE; // one-unit header
     static final int UNITS_PER_PAGE = PAGE_SIZE / UNIT_SIZE;
@@ -41,6 +39,6 @@ class UnitCalculation
 
     static int unitInPage( long id )
     {
-        return (int) (id % UNITS_PER_PAGE);
+        return (int) (id % EFFECTIVE_UNITS_PER_PAGE);
     }
 }
