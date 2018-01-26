@@ -42,6 +42,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import static org.neo4j.kernel.impl.store.newprop.Visitor.debug;
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.longValue;
@@ -388,7 +389,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                     Value value = Values.of( random.propertyValue() );
                     id = access.set( id, key, value );
                     expected.put( key, value );
-//                    System.out.println( "Set " + key + " " + value );
+                    debug( "Set %d %s", key, value );
                 }
                 else if ( !expected.isEmpty() )
                 {   // Remove
@@ -398,7 +399,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                     }
                     assertEquals( expected.remove( key ), access.get( id, key ) );
                     id = access.remove( id, key );
-//                    System.out.println( "Remove " + key );
+                    debug( "Remove %d", key );
                     assertFalse( access.has( id, key ) );
                 }
             }

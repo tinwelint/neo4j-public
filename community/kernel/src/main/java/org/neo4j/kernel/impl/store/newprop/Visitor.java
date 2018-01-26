@@ -19,13 +19,9 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
-import java.io.IOException;
-
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
 import org.neo4j.values.storable.Value;
-
-import static java.lang.Integer.max;
 
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_ORDERED_BY_KEY;
@@ -33,14 +29,12 @@ import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUE
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.RECORD_HEADER_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
-import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
-import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
 
 abstract class Visitor implements RecordVisitor, ValueStructure
 {
     private static final int FLAG_UNUSED = 0x80000000;
 
-    private final Store store;
+    protected final Store store;
 
     // internal mutable state
     protected int pivotOffset;
@@ -174,81 +168,6 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         return headerEntry | FLAG_UNUSED;
     }
 
-    int relocateRecord( PageCursor cursor, long startId, int units, int totalRecordBytesRequired ) throws IOException
-    {
-        // TODO Special case: can we grow in-place?
-
-        // Normal case: find new bigger place and move there.
-        int unusedBytes = unusedValueLength + unusedHeaderEntries * HEADER_ENTRY_SIZE;
-        int newUnits = max( 1, (totalRecordBytesRequired - unusedBytes - 1) / 64 + 1 );
-        long newStartId = longState = store.allocate( newUnits );
-        long newPageId = pageIdForRecord( newStartId );
-        int newPivotOffset = offsetForId( newStartId );
-        try ( PageCursor newCursor = cursor.openLinkedCursor( newPageId ) )
-        {
-            newCursor.next();
-            if ( unusedHeaderEntries == 0 )
-            {
-                // Copy header as one chunk
-                cursor.copyTo( pivotOffset, newCursor, newPivotOffset, headerLength() );
-                // Copy values as one chunk
-                cursor.copyTo(
-                        pivotOffset + units * UNIT_SIZE - sumValueLength, newCursor,
-                        newPivotOffset + newUnits * UNIT_SIZE - sumValueLength, sumValueLength );
-            }
-            else
-            {
-                // Copy live properties, one by one
-                cursor.setOffset( headerStart( 0 ) );
-                newCursor.setOffset( headerStart( newPivotOffset, 0 ) );
-                int liveNumberOfHeaderEntries = 0;
-                int targetValueOffset = 0;
-                for ( int i = 0, sourceValueOffset = 0; i < numberOfHeaderEntries; )
-                {
-                    long headerEntry = getUnsignedInt( cursor );
-                    Type type = Type.fromHeader( headerEntry, cursor );
-                    int valueLength = type.valueLength( cursor );
-                    int numberOfHeaderEntries = type.numberOfHeaderEntries();
-                    if ( isUsed( headerEntry ) )
-                    {
-                        int key = type.keyOf( headerEntry );
-
-                        // Copy key
-                        type.putHeader( newCursor, key, valueLength );
-                        // Copy value
-                        if ( valueLength > 0 )
-                        {
-                            cursor.copyTo( valueStart( units, sourceValueOffset ) - valueLength, newCursor,
-                                    valueStart( newUnits, targetValueOffset, newPivotOffset ) - valueLength, valueLength );
-                            targetValueOffset += valueLength;
-                        }
-                        liveNumberOfHeaderEntries += numberOfHeaderEntries;
-//                        debug( "Copied " + key + " w/ value length " + valueLength + " from page " + cursor.getCurrentPageId() + " at " + cursor.getOffset() + " to page " + newCursor.getCurrentPageId() + " at " + newCursor.getOffset() );
-                    }
-                    i += numberOfHeaderEntries;
-                    sourceValueOffset += valueLength;
-                }
-
-                numberOfHeaderEntries = liveNumberOfHeaderEntries;
-                headerEntryIndex = liveNumberOfHeaderEntries;
-                sumValueLength = targetValueOffset;
-                unusedValueLength = 0;
-                unusedHeaderEntries = 0;
-
-                writeNumberOfHeaderEntries( newCursor, liveNumberOfHeaderEntries, newPivotOffset );
-            }
-        }
-        // TODO don't mark as unused right here because that may leave a reader stranded. This should be done
-        // at some point later, like how buffered id freeing happens in neo4j, where we can be certain that
-        // no reader is in there when doing this marking.
-
-//            Header.mark( cursor, startId, units, false );
-        cursor.next( newPageId );
-        cursor.setOffset( newPivotOffset );
-        pivotOffset = newPivotOffset;
-        return newUnits;
-    }
-
     int valueStart( int units, int valueOffset )
     {
         return valueStart( units, valueOffset, pivotOffset );
@@ -296,7 +215,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         int offset = headerStart( headerEntryIndex );
         long headerEntry = getUnsignedInt( cursor, offset );
         int length = Type.fromHeader( headerEntry, cursor ).valueLength( cursor );
-//        debug( "Marking header entry " + headerEntryIndex + " as unused key " + key + " valueOffset " + valueStart( units, sumValueLength ) + " length " + length );
+        debug( "Marking header entry %d as unused key %d valueOffset length %d", headerEntryIndex, key, valueStart( units, sumValueLength ), length );
         headerEntry = setUnused( headerEntry );
         cursor.putInt( offset, (int) headerEntry );
     }
@@ -345,8 +264,8 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         return byteArray;
     }
 
-//    protected void debug( String message )
-//    {
-//        System.out.println( message );
-//    }
+    static void debug( String message, Object... values )
+    {
+//        System.out.println( String.format( message, values ) );
+    }
 }
