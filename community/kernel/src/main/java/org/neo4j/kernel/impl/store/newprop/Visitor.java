@@ -291,10 +291,12 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
     }
 
-    protected void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
+    protected void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex, int units )
     {
         int offset = headerStart( headerEntryIndex );
         long headerEntry = getUnsignedInt( cursor, offset );
+        int length = Type.fromHeader( headerEntry, cursor ).valueLength( cursor );
+//        debug( "Marking header entry " + headerEntryIndex + " as unused key " + key + " valueOffset " + valueStart( units, sumValueLength ) + " length " + length );
         headerEntry = setUnused( headerEntry );
         cursor.putInt( offset, (int) headerEntry );
     }
@@ -343,8 +345,8 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         return byteArray;
     }
 
-    protected void debug( String message )
-    {
-//        debug( message );
-    }
+//    protected void debug( String message )
+//    {
+//        System.out.println( message );
+//    }
 }

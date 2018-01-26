@@ -65,7 +65,7 @@ class RemoveVisitor extends Visitor
             }
             else
             {
-                markHeaderAsUnused( cursor, headerEntryIndex );
+                markHeaderAsUnused( cursor, headerEntryIndex, units );
             }
         }
         return -1;

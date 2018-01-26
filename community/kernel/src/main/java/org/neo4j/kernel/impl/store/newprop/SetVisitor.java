@@ -39,6 +39,7 @@ class SetVisitor extends Visitor
     private Type type;
     private Object preparedValue;
     private int valueLength;
+    private Value value;
 
     SetVisitor( Store store )
     {
@@ -47,6 +48,7 @@ class SetVisitor extends Visitor
 
     void setValue( Value value )
     {
+        this.value = value;
         type = Type.fromValue( value );
         preparedValue = type.prepare( value );
         valueLength = type.valueLength( preparedValue );
@@ -100,9 +102,16 @@ class SetVisitor extends Visitor
                     }
                     writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + headerDiff );
                 }
+                else if ( freeHeaderEntryIndex != -1 )
+                {
+//                    debug( "Found another spot" );
+                    markHeaderAsUnused( cursor, hitHeaderEntryIndex, units );
+                    writeValue( cursor, units, freeSumValueLength, type, preparedValue, valueLength );
+                    writeHeader( cursor, valueLength, freeHeaderEntryIndex, type );
+                }
                 else
                 {
-                    markHeaderAsUnused( cursor, hitHeaderEntryIndex );
+                    markHeaderAsUnused( cursor, hitHeaderEntryIndex, units );
                     units = relocateRecordIfNeeded( cursor, startId, units, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength );
                     writeValue( cursor, units, sumValueLength + valueLength, type, preparedValue, valueLength );
                     writeHeader( cursor, valueLength, numberOfHeaderEntries, type );
@@ -122,7 +131,7 @@ class SetVisitor extends Visitor
                 }
                 else
                 {
-                    markHeaderAsUnused( cursor, hitHeaderEntryIndex );
+                    markHeaderAsUnused( cursor, hitHeaderEntryIndex, units );
                     writeValue( cursor, units, sumValueLength, type, preparedValue, valueLength );
                     writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
                 }
