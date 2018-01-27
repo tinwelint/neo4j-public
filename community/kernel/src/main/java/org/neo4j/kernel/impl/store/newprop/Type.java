@@ -62,6 +62,49 @@ import static org.neo4j.values.storable.Values.shortArray;
 import static org.neo4j.values.storable.Values.shortValue;
 import static org.neo4j.values.storable.Values.stringArray;
 
+/**
+ * Value type in {@link ProposedFormat property store}. It's involved in both reading and writing values,
+ * as well as their headers (key and value length).
+ *
+ * For writing the interaction goes like this:
+ *
+ * <pre>
+ * int key = ...;
+ * Value myValue = ...;
+ * PageCursor cursor = ...;
+ *
+ * Type type = Type.fromValue( myValue );
+ * Object preparedValue = type.prepareValue( myValue );
+ * int valueLength = type.valueLength( preparedValue );
+ *
+ * // assume cursor placed at correct position to write header.
+ * type.putHeader( cursor, key, valueLength );
+ *
+ * // assume cursor placed at correct position to write value.
+ * type.putValue( cursor, preparedValue, valueLength );
+ * </pre>
+ *
+ * For reading the interaction goes like this:
+ *
+ * <pre>
+ * int key = ...;
+ * PageCursor cursor = ...;
+ *
+ * // assume cursor placed at correct position to read header (usually seeking the entire header, but essentially):
+ * long headerEntry = cursor.getInt() & 0xFFFFFFFFL;
+ * Type type = Type.fromHeader( headerEntry, cursor );
+ * int valueLength = type.valueLength( cursor );
+ *
+ * // === check cursor.shouldRetry() because we're about to have next read guided by previous read ===
+ *
+ * // assume cursor placed at correct position to read value
+ * int valueStructureRead = type.getValueStructure( cursor, valueLength, this ); // 'this' can be used if GetVisitor is this instance
+ *
+ * // === valueStructureRead AND check cursor.shouldRetry() because we're about to have next read guided by previous read ===
+ *
+ * Value value = type.getValue( cursor, valueLength, this ); // 'this' can be used if GetVisitor is this instance
+ * </pre>
+ */
 enum Type
 {
     TRUE( true, 0 )
@@ -248,11 +291,11 @@ enum Type
         }
 
         @Override
-        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure )
+        public int getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure )
         {
             byte valuesInLastByte = cursor.getByte();
             structure.integralValue( (valueLength - 2 /*the first header byte we just read*/) * Byte.SIZE + valuesInLastByte );
-            return true;
+            return ValueStructure.READ;
         }
 
         @Override
@@ -319,10 +362,10 @@ enum Type
         }
 
         @Override
-        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+        public int getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
             structure.integralValue( cursor.getByte() );
-            return true;
+            return ValueStructure.READ;
         }
 
         @Override
@@ -353,10 +396,10 @@ enum Type
         }
 
         @Override
-        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+        public int getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
             structure.integralValue( cursor.getByte() );
-            return true;
+            return ValueStructure.READ;
         }
 
         @Override
@@ -387,10 +430,10 @@ enum Type
         }
 
         @Override
-        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+        public int getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
             structure.integralValue( cursor.getByte() );
-            return true;
+            return ValueStructure.READ;
         }
 
         @Override
@@ -535,12 +578,12 @@ enum Type
         }
 
         @Override
-        public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+        public int getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
         {
             int arrayLength = getLengthEfficiently( cursor );
             if ( cursor.shouldRetry() )
             {
-                return false;
+                return ValueStructure.READ_INCONSISTENT;
             }
 
             int[] stringLengths = new int[arrayLength];
@@ -549,7 +592,7 @@ enum Type
                 stringLengths[i] = cursor.getInt();
             }
             structure.value( stringLengths );
-            return true;
+            return ValueStructure.READ;
         }
 
         @Override
@@ -634,9 +677,10 @@ enum Type
     public abstract void putValue( PageCursor cursor, Object preparedValue, int valueLength );
 
     /**
-     * {@link #getValue(PageCursor, int, ValueStructure)} has a pre-phase of {@link #getValueStructure(PageCursor, int)} where stuff like
-     * array lengths and what-not is read. This information affects how other data is read from the {@link PageCursor} and so
-     * must be read in a should-retry loop. The result of this call will be passed into {@link #getValue(PageCursor, int, ValueStructure)}.
+     * {@link #getValue(PageCursor, int, ValueStructure)} has a pre-phase of {@link #getValueStructure(PageCursor, int, ValueStructure)}
+     * where stuff like array lengths and what-not is read. This information affects how other data is read from the {@link PageCursor}
+     * and so must be read in a should-retry loop. The result of this call will be passed into
+     * {@link #getValue(PageCursor, int, ValueStructure)}.
      *
      * @param cursor {@link PageCursor} to read structure from.
      * @param valueLength as gotten from {@link #valueLength(PageCursor)}
@@ -644,9 +688,9 @@ enum Type
      * @return {@code true} if the read was consistent, otherwise {@code false} where a full retry will have to be made.
      * @throws IOException on PageCursor read error.
      */
-    public boolean getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
+    public int getValueStructure( PageCursor cursor, int valueLength, ValueStructure structure ) throws IOException
     {
-        return true;
+        return ValueStructure.READ_NOTHING;
     }
 
     public abstract Value getValue( PageCursor cursor, int valueLength, ValueStructure structure );

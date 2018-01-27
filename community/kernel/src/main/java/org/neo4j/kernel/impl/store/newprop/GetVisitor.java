@@ -46,10 +46,10 @@ class GetVisitor extends Visitor
         if ( found )
         {
             cursor.setOffset( valueStart( units, sumValueLength ) );
-            boolean valueStructureRead = currentType.getValueStructure( cursor, currentValueLength, this );
+            int valueStructureRead = currentType.getValueStructure( cursor, currentValueLength, this );
 
             // Check consistency because we just read data which affects how we're going to continue reading.
-            if ( !valueStructureRead || cursor.shouldRetry() )
+            if ( valueStructureRead == READ_INCONSISTENT || (valueStructureRead == READ && cursor.shouldRetry()) )
             {
                 return SPECIAL_ID_SHOULD_RETRY;
             }

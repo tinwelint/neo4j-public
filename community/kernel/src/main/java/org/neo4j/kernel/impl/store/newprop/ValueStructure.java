@@ -21,6 +21,22 @@ package org.neo4j.kernel.impl.store.newprop;
 
 public interface ValueStructure
 {
+    /**
+     * Nothing read, i.e. no additional consistency checking measure needs to be made.
+     */
+    int READ_NOTHING = 0;
+
+    /**
+     * Something was read, i.e. additional consistency checking measures needs to be made after this read
+     * before acting on the read data.
+     */
+    int READ = 1;
+
+    /**
+     * Something was read, but was detected to be inconsistent.
+     */
+    int READ_INCONSISTENT = 2;
+
     void integralValue( long value );
 
     long integralValue();
