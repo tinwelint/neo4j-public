@@ -668,21 +668,12 @@ enum Type
         }
         if ( value instanceof IntegralValue )
         {
-            // TODO don't let negative values use bigger INTXX than the type actually is
-            long longValue = ((IntegralValue)value).longValue();
-            if ( (longValue & ~0x7F) == 0 )
-            {
-                return INT8;
-            }
-            if ( (longValue & ~0x7FFF) == 0 )
-            {
-                return INT16;
-            }
-            if ( (longValue & ~0x7FFFFFFFL) == 0 )
-            {
-                return INT32;
-            }
-            return INT64;
+            long n = ((IntegralValue)value).longValue();
+            return within( n, Byte.MIN_VALUE, Byte.MAX_VALUE )
+                    ? INT8
+                    : within( n, Short.MIN_VALUE, Short.MAX_VALUE )
+                            ? INT16
+                            : within( n, Integer.MIN_VALUE, Integer.MAX_VALUE ) ? INT32 : INT64;
         }
         if ( value instanceof FloatValue )
         {
@@ -731,6 +722,11 @@ enum Type
         }
         throw new UnsupportedOperationException( "Unfortunately values like " + value + " which is of type "
                 + value.getClass() + " aren't supported a.t.m." );
+    }
+
+    private static boolean within( long n, long minValue, long maxValue )
+    {
+        return n >= minValue & n <= maxValue;
     }
 
     private Type( boolean fixedSize, int valueLength )
