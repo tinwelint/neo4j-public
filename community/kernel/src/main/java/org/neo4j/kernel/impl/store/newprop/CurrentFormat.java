@@ -142,20 +142,6 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
         }
 
         @Override
-        public int getWithoutDeserializing( long id, int key )
-        {
-            cursor.init( id, NO_LOCK, ALWAYS_OPEN );
-            while ( cursor.next() )
-            {
-                if ( cursor.propertyKeyId() == key )
-                {
-                    return 1;
-                }
-            }
-            return 0;
-        }
-
-        @Override
         public int all( final long id, final PropertyVisitor visitor )
         {
             // TODO reimplement w/o recordAccess

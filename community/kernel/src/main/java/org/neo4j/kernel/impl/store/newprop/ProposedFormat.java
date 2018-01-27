@@ -35,6 +35,14 @@ import static org.neo4j.io.ByteUnit.kibiBytes;
 public class ProposedFormat implements SimplePropertyStoreAbstraction
 {
     // =====================================================================================
+    // === HIGH LEVEL TODO                                                               ===
+    // === + Free-list                                                                   ===
+    // === + Large values                                                                ===
+    // === + "main" property record spanning multiple pages (perhaps extreme edge case)  ===
+    // ===   given that large values may exist in other records                          ===
+    // =====================================================================================
+
+    // =====================================================================================
     // === THE IMPLEMENTATION CONTROL PANEL                                              ===
     // === Some global aspects of this implementation can be tweaked here                ===
     // === to easily switch behavior for quick comparison                                ===
@@ -133,7 +141,6 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         private final PageCursorTracer tracer;
         private final Visitor hasVisitor = new HasVisitor( store );
         private final Visitor getVisitor = new GetVisitor( store );
-        private final Visitor getLightVisitor = new GetLightVisitor( store );
 
         Reader() throws IOException
         {
@@ -161,14 +168,6 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             getVisitor.setKey( key );
             store.access( id, cursor, getVisitor );
             return getVisitor.readValue != null ? getVisitor.readValue : Values.NO_VALUE;
-        }
-
-        @Override
-        public int getWithoutDeserializing( long id, int key ) throws IOException
-        {
-            getLightVisitor.setKey( key );
-            store.access( id, cursor, getLightVisitor );
-            return (int) getLightVisitor.longState;
         }
 
         @Override

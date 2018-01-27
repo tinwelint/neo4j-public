@@ -46,16 +46,6 @@ public interface SimplePropertyStoreAbstraction extends Closeable
         Value get( long id, int key ) throws IOException;
 
         /**
-         * The idea with this method is to get the data, i.e. read it byte for byte or whatever, but
-         * not do deserialization, because we're not really interested in that deserialization cost since
-         * it's more or less the same in all conceivable implementations and will most likely tower above
-         * the cost of getting to the property data.
-         *
-         * @return number of property data bytes visited.
-         */
-        int getWithoutDeserializing( long id, int key ) throws IOException;
-
-        /**
          * @return number of properties visited.
          */
         int all( long id, PropertyVisitor visitor ) throws IOException;

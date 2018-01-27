@@ -41,7 +41,6 @@ import org.neo4j.values.storable.Values;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.kernel.impl.store.newprop.Visitor.debug;
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
