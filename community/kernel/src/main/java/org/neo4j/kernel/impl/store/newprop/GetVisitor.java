@@ -54,7 +54,7 @@ class GetVisitor extends Visitor
                 return SPECIAL_ID_SHOULD_RETRY;
             }
 
-            debug( "Reading value of %d and length %d from page %d at %d", key, currentValueLength, cursor.getCurrentPageId(), cursor.getOffset() );
+            assert debug( "Reading value of %d and length %d from page %d at %d", key, currentValueLength, cursor.getCurrentPageId(), cursor.getOffset() );
             readValue = currentType.getValue( cursor, currentValueLength, this );
         }
         return -1;

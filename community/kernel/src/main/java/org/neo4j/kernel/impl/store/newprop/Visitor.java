@@ -215,7 +215,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         int offset = headerStart( headerEntryIndex );
         long headerEntry = getUnsignedInt( cursor, offset );
         int length = Type.fromHeader( headerEntry, cursor ).valueLength( cursor );
-        debug( "Marking header entry %d as unused key %d valueOffset length %d", headerEntryIndex, key, valueStart( units, sumValueLength ), length );
+        assert debug( "Marking header entry %d as unused key %d valueOffset length %d", headerEntryIndex, key, valueStart( units, sumValueLength ), length );
         headerEntry = setUnused( headerEntry );
         cursor.putInt( offset, (int) headerEntry );
     }
@@ -264,8 +264,9 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         return byteArray;
     }
 
-    static void debug( String message, Object... values )
+    static boolean debug( String message, Object... values )
     {
 //        System.out.println( String.format( message, values ) );
+        return true;
     }
 }

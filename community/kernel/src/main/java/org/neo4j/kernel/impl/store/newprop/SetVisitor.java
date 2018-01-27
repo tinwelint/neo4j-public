@@ -235,7 +235,7 @@ class SetVisitor extends Visitor
                         if ( key == this.key )
                         {
                             relocateHeaderEntryIndex = liveNumberOfHeaderEntries;
-                            debug( "Relocate key %d", relocateHeaderEntryIndex );
+                            assert debug( "Relocate key %d", relocateHeaderEntryIndex );
                         }
 
                         // Copy key
@@ -247,7 +247,7 @@ class SetVisitor extends Visitor
                                     valueStart( newUnits, targetValueOffset, newPivotOffset ) - valueLength, valueLength );
                             targetValueOffset += valueLength;
                         }
-                        debug( "Copied %d w/ value length %d from page %d at %d to page %d at %d from header index %d to %d",
+                        assert debug( "Copied %d w/ value length %d from page %d at %d to page %d at %d from header index %d to %d",
                                 key, valueLength, cursor.getCurrentPageId(), cursor.getOffset(), newCursor.getCurrentPageId(),
                                 newCursor.getOffset(), i, liveNumberOfHeaderEntries );
                         liveNumberOfHeaderEntries += numberOfHeaderEntries;
@@ -285,7 +285,7 @@ class SetVisitor extends Visitor
     private void writeValue( PageCursor cursor, int units, int valueLengthSum, Type type, Object preparedValue, int valueLength )
     {
         cursor.setOffset( valueStart( units, valueLengthSum ) );
-        debug( "Writing %d %s of length %d in page %d at %d", key, value, valueLength, cursor.getCurrentPageId(), cursor.getOffset() );
+        assert debug( "Writing %d %s of length %d in page %d at %d", key, value, valueLength, cursor.getCurrentPageId(), cursor.getOffset() );
         type.putValue( cursor, preparedValue, valueLength );
     }
 
