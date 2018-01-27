@@ -32,6 +32,9 @@ import java.util.List;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.test.rule.RandomRule;
@@ -45,7 +48,7 @@ public abstract class SimplePropertyStoreAbstractionTestBase
 {
     interface Creator
     {
-        SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir )
+        SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir, PageCursorTracerSupplier tracerSupplier )
                 throws IOException;
     }
 
@@ -56,9 +59,10 @@ public abstract class SimplePropertyStoreAbstractionTestBase
         data.add( new Object[] {new Creator()
         {
             @Override
-            public SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir )
+            public SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir,
+                    PageCursorTracerSupplier tracerSupplier )
             {
-                return new CurrentFormat( pageCache, fs, dir );
+                return new CurrentFormat( pageCache, fs, dir, tracerSupplier );
             }
 
             @Override
@@ -70,10 +74,10 @@ public abstract class SimplePropertyStoreAbstractionTestBase
         data.add( new Object[] {new Creator()
         {
             @Override
-            public SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir )
-                    throws IOException
+            public SimplePropertyStoreAbstraction create( PageCache pageCache, FileSystemAbstraction fs, File dir,
+                    PageCursorTracerSupplier tracerSupplier ) throws IOException
             {
-                return new ProposedFormat( pageCache, dir );
+                return new ProposedFormat( pageCache, dir, tracerSupplier );
             }
 
             @Override
@@ -98,6 +102,8 @@ public abstract class SimplePropertyStoreAbstractionTestBase
 
     private final Creator creator;
     protected SimplePropertyStoreAbstraction store;
+    protected PageCursorTracerSupplier tracerSupplier;
+    protected DefaultPageCacheTracer tracer;
 
     public SimplePropertyStoreAbstractionTestBase( Creator creator )
     {
@@ -106,13 +112,15 @@ public abstract class SimplePropertyStoreAbstractionTestBase
 
     protected PageCacheConfig pageCacheConfig()
     {
-        return config().withInconsistentReads( false );
+        this.tracer = new DefaultPageCacheTracer();
+        this.tracerSupplier = DefaultPageCursorTracerSupplier.INSTANCE;
+        return config().withInconsistentReads( false ).withTracer( tracer ).withCursorTracerSupplier( tracerSupplier );
     }
 
     @Before
     public void before() throws IOException
     {
-        this.store = creator.create( pageCacheRule.getPageCache( fs ), fs, directory.directory() );
+        this.store = creator.create( pageCacheRule.getPageCache( fs ), fs, directory.directory(), tracerSupplier );
     }
 
     @After

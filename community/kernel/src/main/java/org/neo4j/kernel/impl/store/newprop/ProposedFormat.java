@@ -24,6 +24,8 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -117,28 +119,32 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     static final int RECORD_HEADER_SIZE = Short.BYTES;
 
     private final Store store;
+    private final PageCursorTracerSupplier tracerSupplier;
 
-    public ProposedFormat( PageCache pageCache, File directory ) throws IOException
+    public ProposedFormat( PageCache pageCache, File directory, PageCursorTracerSupplier tracerSupplier ) throws IOException
     {
+        this.tracerSupplier = tracerSupplier;
         this.store = new Store( pageCache, directory, "main" );
     }
 
     class Reader implements Read
     {
         protected final PageCursor cursor;
+        private final PageCursorTracer tracer;
         private final Visitor hasVisitor = new HasVisitor( store );
         private final Visitor getVisitor = new GetVisitor( store );
         private final Visitor getLightVisitor = new GetLightVisitor( store );
 
         Reader() throws IOException
         {
-            cursor = store.readCursor();
+            this( store.readCursor() );
         }
 
         // For Writer subclass
         Reader( PageCursor cursor )
         {
             this.cursor = cursor;
+            this.tracer = tracerSupplier.get();
         }
 
         @Override
@@ -175,6 +181,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         public void close() throws IOException
         {
             cursor.close();
+            tracer.reportEvents();
         }
     }
 

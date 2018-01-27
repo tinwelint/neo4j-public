@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.store.newprop;
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -29,10 +30,10 @@ import java.util.Arrays;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
-import org.neo4j.test.rule.RepeatRule.Repeat;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 
 import static org.neo4j.helpers.Format.bytes;
@@ -49,7 +50,12 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         super( creator );
     }
 
-    @Repeat( times = 3 )
+    @After
+    public void printTracing()
+    {
+        System.out.println( format( "pins:%d, faults:%d, evictions:%d", tracer.pins(), tracer.faults(), tracer.evictions() ) );
+    }
+
     @Test
     public void bestCase() throws Exception
     {
@@ -81,7 +87,6 @@ public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyS
         print( store, "best-case", writeDuration, readDuration, readDurationLow, readDurationHigh );
     }
 
-    @Repeat( times = 3 )
     @Test
     public void worstCase() throws Exception
     {

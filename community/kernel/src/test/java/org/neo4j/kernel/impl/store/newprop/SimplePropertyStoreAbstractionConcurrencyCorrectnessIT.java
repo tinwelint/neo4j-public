@@ -31,7 +31,6 @@ import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
 import org.neo4j.test.Race;
 import org.neo4j.test.Race.ThrowingRunnable;
-import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -58,7 +57,7 @@ public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends Simp
     @Override
     protected PageCacheConfig pageCacheConfig()
     {
-        return PageCacheRule.config().withInconsistentReads( true ).withAccessChecks( true );
+        return super.pageCacheConfig().withInconsistentReads( true ).withAccessChecks( true );
     }
 
     @Test
