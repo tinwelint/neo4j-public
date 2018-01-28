@@ -136,7 +136,7 @@ class Store implements Closeable
      * to the visitor.
      *
      * {@link Header} is consulted to get number of units for the given record id, information which is passed into
-     * {@link RecordVisitor#accept(PageCursor, long, int)}, after visitor has been {@link RecordVisitor#initialize(PageCursor) initialized}.
+     * {@link RecordVisitor#accept(PageCursor)}, after visitor has been {@link RecordVisitor#initialize(PageCursor, long, int) initialized}.
      *
      * @param id record id, as handed out by {@link #allocate(int)}.
      * @param cursor {@link PageCursor} as handed out by {@link #writeCursor()} or {@link #readCursor()}.
@@ -155,8 +155,8 @@ class Store implements Closeable
                 forceRetry = false;
                 int units = Header.numberOfUnits( cursor, id );
                 cursor.setOffset( offset );
-                visitor.initialize( cursor );
-                long nextId = visitor.accept( cursor, id, units );
+                visitor.initialize( cursor, id, units );
+                long nextId = visitor.accept( cursor );
                 if ( nextId == SPECIAL_ID_SHOULD_RETRY )
                 {
                     forceRetry = true;
@@ -201,23 +201,23 @@ class Store implements Closeable
         /**
          * Initializes this visitor with cursor set at the beginning of the record.
          * @param cursor {@link PageCursor} at the beginning of the record.
+         * @param startId record id retrieved from {@link Store#allocate(int)}.
+         * @param units number of units that makes up this record.
          */
-        void initialize( PageCursor cursor );
+        void initialize( PageCursor cursor, long startId, int units );
 
         /**
-         * Called by {@link Store#access(long, PageCursor, RecordVisitor)} after {@link #initialize(PageCursor)} have
+         * Called by {@link Store#access(long, PageCursor, RecordVisitor)} after {@link #initialize(PageCursor, long, int)} have
          * been called and the proper ceremonies around {@link PageCursor} have been made. This visitor is now allowed
          * to read or write (depending on cursor of course) what ever it wants to read/write.
          * For reading {@link PageCursor#shouldRetry()} may result in this method being called multiple times for a single
          * read, so the implementation must be able to handle that.
          *
          * @param cursor {@link PageCursor} retrieved from {@link Store#readCursor()} or {@link Store#writeCursor()}.
-         * @param startId record id retrieved from {@link Store#allocate(int)}.
-         * @param units number of units that makes up this record.
          * @return -1 if no more pages should be accessed, non-negative if the access should
          * continue in a new place, another id.
          * @throws IOException on {@link PageCursor} I/O error.
          */
-        long accept( PageCursor cursor, long startId, int units ) throws IOException;
+        long accept( PageCursor cursor ) throws IOException;
     }
 }

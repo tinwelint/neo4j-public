@@ -33,7 +33,7 @@ class RemoveVisitor extends Visitor
     }
 
     @Override
-    public long accept( PageCursor cursor, long startId, int units ) throws IOException
+    public long accept( PageCursor cursor ) throws IOException
     {
         if ( booleanState = seek( cursor ) )
         {   // It exists
@@ -50,7 +50,7 @@ class RemoveVisitor extends Visitor
                 continueSeekUntilEnd( cursor );
 
                 int valueSize = sumValueLength - currentSumValueLength;
-                int valueLowOffset = valueStart( units, sumValueLength );
+                int valueLowOffset = valueStart( sumValueLength );
 
                 // Move header entries
                 cursor.shiftBytes( headerStart( currentHeaderEntryIndex ) + headerDistance,
@@ -65,7 +65,7 @@ class RemoveVisitor extends Visitor
             }
             else
             {
-                markHeaderAsUnused( cursor, headerEntryIndex, units );
+                markHeaderAsUnused( cursor, headerEntryIndex );
             }
         }
         return -1;

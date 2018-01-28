@@ -37,6 +37,8 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     protected final Store store;
 
     // internal mutable state
+    protected long startId;
+    protected int units;
     protected int pivotOffset;
     protected int numberOfHeaderEntries;
     protected int sumValueLength;
@@ -68,8 +70,10 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     }
 
     @Override
-    public void initialize( PageCursor cursor )
+    public void initialize( PageCursor cursor, long startId, int units )
     {
+        this.startId = startId;
+        this.units = units;
         pivotOffset = cursor.getOffset();
         numberOfHeaderEntries = cursor.getShort();
         sumValueLength = 0;
@@ -168,12 +172,12 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         return headerEntry | FLAG_UNUSED;
     }
 
-    int valueStart( int units, int valueOffset )
+    int valueStart( int valueOffset )
     {
-        return valueStart( units, valueOffset, pivotOffset );
+        return valueStart( valueOffset, units, pivotOffset );
     }
 
-    int valueStart( int units, int valueOffset, int pivotOffset )
+    int valueStart( int valueOffset, int units, int pivotOffset )
     {
         if ( BEHAVIOUR_VALUES_FROM_END )
         {
@@ -210,12 +214,12 @@ abstract class Visitor implements RecordVisitor, ValueStructure
         cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
     }
 
-    protected void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex, int units )
+    protected void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
     {
         int offset = headerStart( headerEntryIndex );
         long headerEntry = getUnsignedInt( cursor, offset );
         int length = Type.fromHeader( headerEntry, cursor ).valueLength( cursor );
-        assert debug( "Marking header entry %d as unused key %d valueOffset length %d", headerEntryIndex, key, valueStart( units, sumValueLength ), length );
+        assert debug( "Marking header entry %d as unused key %d valueOffset length %d", headerEntryIndex, key, valueStart( sumValueLength ), length );
         headerEntry = setUnused( headerEntry );
         cursor.putInt( offset, (int) headerEntry );
     }

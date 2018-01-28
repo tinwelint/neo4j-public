@@ -33,7 +33,7 @@ class GetVisitor extends Visitor
     }
 
     @Override
-    public long accept( PageCursor cursor, long startId, int units ) throws IOException
+    public long accept( PageCursor cursor ) throws IOException
     {
         boolean found = seek( cursor );
 
@@ -45,7 +45,7 @@ class GetVisitor extends Visitor
 
         if ( found )
         {
-            cursor.setOffset( valueStart( units, sumValueLength ) );
+            cursor.setOffset( valueStart( sumValueLength ) );
             int valueStructureRead = currentType.getValueStructure( cursor, currentValueLength, this );
 
             // Check consistency because we just read data which affects how we're going to continue reading.

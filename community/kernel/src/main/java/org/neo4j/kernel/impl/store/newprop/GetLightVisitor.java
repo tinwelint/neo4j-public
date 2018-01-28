@@ -31,7 +31,7 @@ class GetLightVisitor extends Visitor
     }
 
     @Override
-    public long accept( PageCursor cursor, long startId, int units ) throws IOException
+    public long accept( PageCursor cursor ) throws IOException
     {
         if ( seek( cursor ) )
         {   // found
