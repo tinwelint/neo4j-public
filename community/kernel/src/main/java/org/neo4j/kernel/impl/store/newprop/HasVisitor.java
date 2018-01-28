@@ -33,7 +33,7 @@ class HasVisitor extends Visitor
     @Override
     public long accept( PageCursor cursor ) throws IOException
     {
-        booleanState = seek( cursor );
+        propertyExisted = seek( cursor );
         return -1;
     }
 }

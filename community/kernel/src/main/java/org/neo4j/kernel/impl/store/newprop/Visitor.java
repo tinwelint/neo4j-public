@@ -21,8 +21,6 @@ package org.neo4j.kernel.impl.store.newprop;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
-import org.neo4j.values.storable.Value;
-
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_ORDERED_BY_KEY;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUES_FROM_END;
@@ -30,34 +28,27 @@ import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SI
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.RECORD_HEADER_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 
-abstract class Visitor implements RecordVisitor, ValueStructure
+abstract class Visitor implements RecordVisitor
 {
     private static final int FLAG_UNUSED = 0x80000000;
 
     protected final Store store;
 
     // internal mutable state
-    protected long startId;
+    protected long recordId;
     protected int units;
     protected int pivotOffset;
     protected int numberOfHeaderEntries;
     protected int sumValueLength;
     protected int currentValueLength;
-    protected int headerEntryIndex;
+    protected int currentHeaderEntryIndex;
     protected Type currentType;
-    protected boolean booleanState;
-    protected long longState;
-    protected Value readValue;
-    protected int unusedHeaderEntries;
+    protected int unusedNumberOfHeaderEntries;
     protected int unusedValueLength;
 
-    // user supplied state
+    // user state
     protected int key = -1;
-
-    // value structure stuff
-    private long integralStructureValue;
-    private Object objectStructureValue;
-    private byte[] byteArray; // grows on demand
+    protected boolean propertyExisted;
 
     Visitor( Store store )
     {
@@ -72,17 +63,17 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     @Override
     public void initialize( PageCursor cursor, long startId, int units )
     {
-        this.startId = startId;
+        this.recordId = startId;
         this.units = units;
         pivotOffset = cursor.getOffset();
         numberOfHeaderEntries = cursor.getShort();
         sumValueLength = 0;
         currentValueLength = 0;
-        headerEntryIndex = 0;
-        unusedHeaderEntries = 0;
+        currentHeaderEntryIndex = 0;
+        unusedNumberOfHeaderEntries = 0;
         unusedValueLength = 0;
         currentType = null;
-        readValue = null;
+        propertyExisted = false;
     }
 
     boolean seek( PageCursor cursor )
@@ -98,7 +89,7 @@ abstract class Visitor implements RecordVisitor, ValueStructure
 
     private boolean seekTo( PageCursor cursor, int key )
     {
-        while ( headerEntryIndex < numberOfHeaderEntries )
+        while ( currentHeaderEntryIndex < numberOfHeaderEntries )
         {
             long headerEntry = getUnsignedInt( cursor );
             boolean isUsed = isUsed( headerEntry );
@@ -131,14 +122,14 @@ abstract class Visitor implements RecordVisitor, ValueStructure
             else
             {
                 unusedValueLength += currentValueLength;
-                unusedHeaderEntries += currentNumberOfHeaderEntries;
+                unusedNumberOfHeaderEntries += currentNumberOfHeaderEntries;
                 if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE )
                 {
                     skippedUnused( currentNumberOfHeaderEntries );
                 }
             }
 
-            headerEntryIndex += currentNumberOfHeaderEntries;
+            currentHeaderEntryIndex += currentNumberOfHeaderEntries;
         }
         return false;
     }
@@ -155,10 +146,10 @@ abstract class Visitor implements RecordVisitor, ValueStructure
      */
     void continueSeekUntilEnd( PageCursor cursor )
     {
-        assert headerEntryIndex < numberOfHeaderEntries;
+        assert currentHeaderEntryIndex < numberOfHeaderEntries;
 
         // TODO hacky thing here with the headerEntryIndex, better to increment before return in seek?
-        headerEntryIndex += currentType.numberOfHeaderEntries();
+        currentHeaderEntryIndex += currentType.numberOfHeaderEntries();
         seekTo( cursor, -1 );
     }
 
@@ -232,40 +223,6 @@ abstract class Visitor implements RecordVisitor, ValueStructure
     static long getUnsignedInt( PageCursor cursor, int offset )
     {
         return cursor.getInt( offset ) & 0xFFFFFFFFL;
-    }
-
-    @Override
-    public void integralValue( long value )
-    {
-        this.integralStructureValue = value;
-    }
-
-    @Override
-    public long integralValue()
-    {
-        return integralStructureValue;
-    }
-
-    @Override
-    public void value( Object value )
-    {
-        this.objectStructureValue = value;
-    }
-
-    @Override
-    public Object value()
-    {
-        return objectStructureValue;
-    }
-
-    @Override
-    public byte[] byteArray( int length )
-    {
-        if ( byteArray == null || length > byteArray.length )
-        {
-            byteArray = new byte[length * 2];
-        }
-        return byteArray;
     }
 
     static boolean debug( String message, Object... values )

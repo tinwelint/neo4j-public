@@ -73,7 +73,7 @@ class SetVisitor extends Visitor
     {
         if ( freeHeaderEntryIndex == -1 && skippedNumberOfHeaderEntries == type.numberOfHeaderEntries() && currentValueLength == valueLength )
         {
-            freeHeaderEntryIndex = headerEntryIndex;
+            freeHeaderEntryIndex = currentHeaderEntryIndex;
             freeSumValueLength = sumValueLength;
         }
     }
@@ -81,7 +81,6 @@ class SetVisitor extends Visitor
     @Override
     public long accept( PageCursor cursor ) throws IOException
     {
-        longState = startId;
         int recordLength = units * UNIT_SIZE;
         if ( seek( cursor ) )
         {
@@ -89,7 +88,7 @@ class SetVisitor extends Visitor
             Type oldType = currentType;
             int oldValueLength = currentValueLength;
             int oldValueLengthSum = sumValueLength;
-            int hitHeaderEntryIndex = headerEntryIndex;
+            int hitHeaderEntryIndex = currentHeaderEntryIndex;
             continueSeekUntilEnd( cursor );
             int freeBytesInRecord = recordLength - sumValueLength - headerLength();
             int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
@@ -198,15 +197,15 @@ class SetVisitor extends Visitor
         // TODO Special case: can we grow in-place?
 
         // Normal case: find new bigger place and move there.
-        int unusedBytes = unusedValueLength + unusedHeaderEntries * HEADER_ENTRY_SIZE;
+        int unusedBytes = unusedValueLength + unusedNumberOfHeaderEntries * HEADER_ENTRY_SIZE;
         int newUnits = max( 1, (totalRecordBytesRequired - unusedBytes - 1) / 64 + 1 );
-        long newStartId = longState = store.allocate( newUnits );
+        long newStartId = store.allocate( newUnits );
         long newPageId = pageIdForRecord( newStartId );
         int newPivotOffset = offsetForId( newStartId );
         try ( PageCursor newCursor = cursor.openLinkedCursor( newPageId ) )
         {
             newCursor.next();
-            if ( unusedHeaderEntries == 0 )
+            if ( unusedNumberOfHeaderEntries == 0 )
             {
                 // Copy header as one chunk
                 cursor.copyTo( pivotOffset, newCursor, newPivotOffset, headerLength() );
@@ -256,10 +255,10 @@ class SetVisitor extends Visitor
                 }
 
                 numberOfHeaderEntries = liveNumberOfHeaderEntries;
-                headerEntryIndex = liveNumberOfHeaderEntries;
+                currentHeaderEntryIndex = liveNumberOfHeaderEntries;
                 sumValueLength = targetValueOffset;
                 unusedValueLength = 0;
-                unusedHeaderEntries = 0;
+                unusedNumberOfHeaderEntries = 0;
 
                 writeNumberOfHeaderEntries( newCursor, liveNumberOfHeaderEntries, newPivotOffset );
             }
@@ -273,6 +272,7 @@ class SetVisitor extends Visitor
         cursor.setOffset( newPivotOffset );
         pivotOffset = newPivotOffset;
         units = newUnits;
+        recordId = newStartId;
     }
 
     private void writeHeader( PageCursor cursor, int valueLength, int headerEntryIndex, Type type )

@@ -140,7 +140,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         protected final PageCursor cursor;
         private final PageCursorTracer tracer;
         private final Visitor hasVisitor = new HasVisitor( store );
-        private final Visitor getVisitor = new GetVisitor( store );
+        private final GetVisitor getVisitor = new GetVisitor( store );
 
         Reader() throws IOException
         {
@@ -159,7 +159,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
         {
             hasVisitor.setKey( key );
             store.access( id, cursor, hasVisitor );
-            return hasVisitor.booleanState;
+            return hasVisitor.propertyExisted;
         }
 
         @Override
@@ -209,7 +209,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
             setVisitor.setKey( key );
             setVisitor.setValue( value );
             store.access( id, cursor, setVisitor );
-            return setVisitor.longState;
+            return setVisitor.recordId;
         }
 
         @Override

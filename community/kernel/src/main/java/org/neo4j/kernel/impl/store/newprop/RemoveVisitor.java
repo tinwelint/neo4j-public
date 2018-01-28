@@ -35,13 +35,13 @@ class RemoveVisitor extends Visitor
     @Override
     public long accept( PageCursor cursor ) throws IOException
     {
-        if ( booleanState = seek( cursor ) )
+        if ( propertyExisted = seek( cursor ) )
         {   // It exists
             if ( BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE )
             {
-                int currentHeaderEntryIndex = headerEntryIndex;
+                int hitHeaderEntryIndex = currentHeaderEntryIndex;
                 int currentNumberOfHeaderEntries = currentType.numberOfHeaderEntries();
-                int headerEntriesToMove = numberOfHeaderEntries - currentHeaderEntryIndex - currentNumberOfHeaderEntries;
+                int headerEntriesToMove = numberOfHeaderEntries - hitHeaderEntryIndex - currentNumberOfHeaderEntries;
                 int headerDistance = currentNumberOfHeaderEntries * ProposedFormat.HEADER_ENTRY_SIZE;
                 int currentSumValueLength = sumValueLength;
                 int valueDistance = currentValueLength;
@@ -53,7 +53,7 @@ class RemoveVisitor extends Visitor
                 int valueLowOffset = valueStart( sumValueLength );
 
                 // Move header entries
-                cursor.shiftBytes( headerStart( currentHeaderEntryIndex ) + headerDistance,
+                cursor.shiftBytes( headerStart( hitHeaderEntryIndex ) + headerDistance,
                         headerEntriesToMove * ProposedFormat.HEADER_ENTRY_SIZE, - headerDistance );
                 writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentNumberOfHeaderEntries );
 
@@ -65,7 +65,7 @@ class RemoveVisitor extends Visitor
             }
             else
             {
-                markHeaderAsUnused( cursor, headerEntryIndex );
+                markHeaderAsUnused( cursor, currentHeaderEntryIndex );
             }
         }
         return -1;

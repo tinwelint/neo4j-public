@@ -22,14 +22,30 @@ package org.neo4j.kernel.impl.store.newprop;
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.values.storable.Value;
 
 import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
 
-class GetVisitor extends Visitor
+class GetVisitor extends Visitor implements ValueStructure
 {
+    // value structure stuff
+    private long integralStructureValue;
+    private Object objectStructureValue;
+    private byte[] byteArray; // grows on demand
+
+    // user state
+    protected Value readValue;
+
     GetVisitor( Store store )
     {
         super( store );
+    }
+
+    @Override
+    public void initialize( PageCursor cursor, long startId, int units )
+    {
+        super.initialize( cursor, startId, units );
+        readValue = null;
     }
 
     @Override
@@ -58,5 +74,39 @@ class GetVisitor extends Visitor
             readValue = currentType.getValue( cursor, currentValueLength, this );
         }
         return -1;
+    }
+
+    @Override
+    public void integralValue( long value )
+    {
+        this.integralStructureValue = value;
+    }
+
+    @Override
+    public long integralValue()
+    {
+        return integralStructureValue;
+    }
+
+    @Override
+    public void value( Object value )
+    {
+        this.objectStructureValue = value;
+    }
+
+    @Override
+    public Object value()
+    {
+        return objectStructureValue;
+    }
+
+    @Override
+    public byte[] byteArray( int length )
+    {
+        if ( byteArray == null || length > byteArray.length )
+        {
+            byteArray = new byte[length * 2];
+        }
+        return byteArray;
     }
 }
