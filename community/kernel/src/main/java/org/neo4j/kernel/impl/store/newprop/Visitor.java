@@ -27,6 +27,7 @@ import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUE
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.RECORD_HEADER_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
+import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 
 abstract class Visitor implements RecordVisitor
 {
@@ -223,11 +224,5 @@ abstract class Visitor implements RecordVisitor
     static long getUnsignedInt( PageCursor cursor, int offset )
     {
         return cursor.getInt( offset ) & 0xFFFFFFFFL;
-    }
-
-    static boolean debug( String message, Object... values )
-    {
-//        System.out.println( String.format( message, values ) );
-        return true;
     }
 }

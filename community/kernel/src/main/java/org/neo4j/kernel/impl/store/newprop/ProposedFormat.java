@@ -90,6 +90,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      */
     static final boolean BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = false;
 
+    static final boolean BEHAVIOUR_REUSE_IDS = false;
+
     /*
      * SUMMARY OF ABOVE THOUGHTS/ASSUMPTIONS:
      *
@@ -203,6 +205,8 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
                 // In a real scenario we'd probably have a method setting multiple properties and so
                 // we'd know how big our record would be right away. This is just to prototype the design
                 id = store.allocate( 1 );
+                cursor.next( UnitCalculation.pageIdForRecord( id ) );
+                store.markAsUsed( cursor, id, 1 );
             }
             // Read header and see if property by the given key already exists
             // For now let's store the number of header entries as a 2B entry first

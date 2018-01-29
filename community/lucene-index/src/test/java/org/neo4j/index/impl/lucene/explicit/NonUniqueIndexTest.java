@@ -65,17 +65,17 @@ import static org.junit.Assert.assertThat;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SchemaIndex.LUCENE10;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SchemaIndex.NATIVE10;
+import static org.neo4j.test.rule.PageCacheAndDependenciesRule.pageCacheAndDependencies;
 
 public class NonUniqueIndexTest
 {
     @Rule
-    public PageCacheAndDependenciesRule resources =
-            new PageCacheAndDependenciesRule( DefaultFileSystemRule::new, NonUniqueIndexTest.class );
+    public PageCacheAndDependenciesRule resources = pageCacheAndDependencies().fs( DefaultFileSystemRule::new ).build();
 
     @Test
     public void concurrentIndexPopulationAndInsertsShouldNotProduceDuplicates() throws Exception
     {
-        // Given
+        // Givencommunity/lucene-index/src/test/java/org/neo4j/index/impl/lucene/explicit/NonUniqueIndexTest.java
         Config config = Config.defaults();
         GraphDatabaseService db = newEmbeddedGraphDatabaseWithSlowJobScheduler( config );
 

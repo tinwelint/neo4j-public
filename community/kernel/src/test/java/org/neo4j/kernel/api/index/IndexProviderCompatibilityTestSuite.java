@@ -47,6 +47,8 @@ import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static org.neo4j.test.rule.PageCacheAndDependenciesRule.pageCacheAndDependencies;
+
 @RunWith( ParameterizedSuiteRunner.class )
 @Suite.SuiteClasses( {
         SimpleIndexPopulatorCompatibility.General.class,
@@ -142,7 +144,7 @@ public abstract class IndexProviderCompatibilityTestSuite
                     Arrays.asList( Values.pointValue( CoordinateReferenceSystem.Cartesian, 10, 10 ),
                             Values.pointValue( CoordinateReferenceSystem.WGS84, 87.21, 7.65 ) ) );
 
-            pageCacheAndDependenciesRule = new PageCacheAndDependenciesRule( DefaultFileSystemRule::new, testSuite.getClass() );
+            pageCacheAndDependenciesRule = pageCacheAndDependencies().fs( DefaultFileSystemRule::new ).build();
         }
 
         void withPopulator( IndexPopulator populator, ThrowingConsumer<IndexPopulator,Exception> runWithPopulator ) throws Exception

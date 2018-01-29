@@ -39,13 +39,14 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import static org.neo4j.test.rule.PageCacheAndDependenciesRule.pageCacheAndDependencies;
+
 @RunWith( Parameterized.class )
 public class GBPTreeFileUtilTest extends AbstractGBPTreeFileUtilTest
 {
     @ClassRule
-    public static PageCacheAndDependenciesRule pageCacheAndDependenciesRule = new PageCacheAndDependenciesRule(
-            DefaultFileSystemRule::new, GBPTreeFileUtilTest.class
-    );
+    public static PageCacheAndDependenciesRule pageCacheAndDependenciesRule =
+            pageCacheAndDependencies().fs( DefaultFileSystemRule::new ).testClass( GBPTreeFileUtilTest.class ).build();
 
     private static FileSystemAbstraction fs;
     private static TestDirectory directory;

@@ -32,6 +32,7 @@ import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SI
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
+import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 
 class SetVisitor extends Visitor
 {
@@ -199,12 +200,14 @@ class SetVisitor extends Visitor
         // Normal case: find new bigger place and move there.
         int unusedBytes = unusedValueLength + unusedNumberOfHeaderEntries * HEADER_ENTRY_SIZE;
         int newUnits = max( 1, (totalRecordBytesRequired - unusedBytes - 1) / 64 + 1 );
-        long newStartId = store.allocate( newUnits );
-        long newPageId = pageIdForRecord( newStartId );
-        int newPivotOffset = offsetForId( newStartId );
+        long newRecordId = store.allocate( newUnits );
+        assert debug( "Relocating %d (%d units) --> %d (%d units)", recordId, units, newRecordId, newUnits );
+        long newPageId = pageIdForRecord( newRecordId );
+        int newPivotOffset = offsetForId( newRecordId );
         try ( PageCursor newCursor = cursor.openLinkedCursor( newPageId ) )
         {
             newCursor.next();
+            store.markAsUsed( newCursor, newRecordId, newUnits );
             if ( unusedNumberOfHeaderEntries == 0 )
             {
                 // Copy header as one chunk
@@ -263,16 +266,12 @@ class SetVisitor extends Visitor
                 writeNumberOfHeaderEntries( newCursor, liveNumberOfHeaderEntries, newPivotOffset );
             }
         }
-        // TODO don't mark as unused right here because that may leave a reader stranded. This should be done
-        // at some point later, like how buffered id freeing happens in neo4j, where we can be certain that
-        // no reader is in there when doing this marking.
-
-//            Header.mark( cursor, startId, units, false );
+        store.markAsUnused( cursor, recordId, units );
         cursor.next( newPageId );
         cursor.setOffset( newPivotOffset );
         pivotOffset = newPivotOffset;
         units = newUnits;
-        recordId = newStartId;
+        recordId = newRecordId;
     }
 
     private void writeHeader( PageCursor cursor, int valueLength, int headerEntryIndex, Type type )

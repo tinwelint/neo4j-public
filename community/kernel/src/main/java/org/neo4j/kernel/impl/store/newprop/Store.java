@@ -22,17 +22,16 @@ package org.neo4j.kernel.impl.store.newprop;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.kernel.impl.store.newprop.BitsetFreelist.Marker;
+
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
-import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
+import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_REUSE_IDS;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
 
@@ -55,17 +54,24 @@ class Store implements Closeable
 
     final PagedFile storeFile;
     private final int pageSize;
-    private final AtomicLong nextId = new AtomicLong();
+    private final BitsetFreelist freelist;
 
     Store( PageCache pageCache, File directory, String name ) throws IOException
     {
         this.pageSize = pageCache.pageSize();
         this.storeFile = pageCache.map( new File( directory, name ), pageSize, CREATE, WRITE, READ );
+        this.freelist = new BitsetFreelist( pageCache.map( new File( directory, name + ".id" ), pageSize, CREATE, WRITE, READ ) );
     }
 
     /**
      * Allocates a number of consecutive units in this store. Allocation generally prioritizes all units residing
      * on the same page.
+     *
+     * The reason this method doesn't mark the ids as used in a real and transactional scenario allocating ids and
+     * marking them as used should be separated because the freelist must only be changed under the control of the transaction log,
+     * i.e. when applying a transaction, after being committed (i.e. written to the transaction log).
+     *
+     * Freeing of ids, however, happens straight away because that happens when applying from a transaction log anyway.
      *
      * @param units number of 64 byte units to allocate.
      * @return the start id of this record.
@@ -73,29 +79,52 @@ class Store implements Closeable
      */
     long allocate( int units ) throws IOException
     {
-        if ( units > EFFECTIVE_UNITS_PER_PAGE )
+        return freelist.allocate( units );
+    }
+
+    /**
+     * Marks ids as used. Must be called during applying committed transaction. Id have previously been {@link #allocate(int) allocated}.
+     *
+     * @param cursor {@link PageCursor} for using in the {@link Header} marking.
+     * @param id record id.
+     * @param units number of units the record uses.
+     * @throws IOException on {@link PageCursor} I/O error.
+     */
+    void markAsUsed( PageCursor cursor, long id, int units ) throws IOException
+    {
+        if ( BEHAVIOUR_REUSE_IDS )
         {
-            throw new UnsupportedOperationException( "TODO implement support for records spanning multiple pages" );
+            try ( Marker marker = freelist.marker() )
+            {
+                marker.mark( id, units, true );
+            }
         }
 
-        // TODO make thread-safe
-        long startId = nextId.get();
-        if ( pageIdForRecord( startId ) != pageIdForRecord( startId + units - 1 ) )
-        {
-            // Crossing page boundary, go to the next page
-            long idOfNextPage = pageIdForRecord( startId + units - 1 );
-            nextId.set( idOfNextPage * EFFECTIVE_UNITS_PER_PAGE );
-        }
-        startId = nextId.getAndAdd( units );
+        Header.mark( cursor, id, units, true );
+    }
 
-        // TODO Let's predict if we'll cross a page boundary and if so start on a new page instead.
-        // TODO a bit weird to put stuff in the header here, isn't it? This is before the data has arrived
-        try ( PageCursor cursor = storeFile.io( pageIdForRecord( startId ), PF_SHARED_WRITE_LOCK ) )
+    /**
+     * Marks ids as unused. Must be called during applying committed transaction.
+     *
+     * @param cursor {@link PageCursor} for using in the {@link Header} marking.
+     * @param id record id.
+     * @param units number of units the record uses.
+     * @throws IOException on {@link PageCursor} I/O error.
+     */
+    void markAsUnused( PageCursor cursor, long id, int units ) throws IOException
+    {
+        if ( BEHAVIOUR_REUSE_IDS )
         {
-            cursor.next();
-            Header.mark( cursor, startId, units, true );
+            try ( Marker marker = freelist.marker() )
+            {
+                marker.mark( id, units, false );
+            }
+
+            // TODO don't mark as unused right here because that may leave a reader stranded. This should be done
+            // at some point later, like how buffered id freeing happens in neo4j, where we can be certain that
+            // no reader is in there when doing this marking.
+            Header.mark( cursor, id, units, false );
         }
-        return startId;
     }
 
     private PageCursor cursor( int flags ) throws IOException
@@ -154,6 +183,7 @@ class Store implements Closeable
             {
                 forceRetry = false;
                 int units = Header.numberOfUnits( cursor, id );
+//                assert debug( "Accessing %d of size %d", id, units );
                 cursor.setOffset( offset );
                 visitor.initialize( cursor, id, units );
                 long nextId = visitor.accept( cursor );
@@ -190,6 +220,7 @@ class Store implements Closeable
     @Override
     public void close() throws IOException
     {
+        freelist.close();
         storeFile.close();
     }
 

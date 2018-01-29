@@ -29,12 +29,22 @@ class UnitCalculation
 
     static long pageIdForRecord( long id )
     {
-        return id / EFFECTIVE_UNITS_PER_PAGE;
+        return pageIdForRecord( id, EFFECTIVE_UNITS_PER_PAGE );
+    }
+
+    static long pageIdForRecord( long id, int unitsPerPage )
+    {
+        return id / unitsPerPage;
     }
 
     static int offsetForId( long id )
     {
-        return (int) ((id % EFFECTIVE_UNITS_PER_PAGE) * UNIT_SIZE) + UNIT_SIZE;
+        return offsetForId( id, EFFECTIVE_UNITS_PER_PAGE, UNIT_SIZE );
+    }
+
+    static int offsetForId( long id, int unitsPerPage, int baseOffset )
+    {
+        return (int) ((id % unitsPerPage) * UNIT_SIZE) + baseOffset;
     }
 
     static int unitInPage( long id )

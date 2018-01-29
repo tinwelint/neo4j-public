@@ -43,6 +43,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.neo4j.graphdb.config.Configuration.EMPTY;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.SimpleLongLayout.longLayout;
+import static org.neo4j.test.rule.PageCacheAndDependenciesRule.pageCacheAndDependencies;
 
 /**
  * Tests functionality around process crashing, or similar, when having started, but not completed creation of an index file,
@@ -55,7 +56,7 @@ import static org.neo4j.index.internal.gbptree.SimpleLongLayout.longLayout;
 public class GBPTreePartialCreateFuzzIT
 {
     @Rule
-    public final PageCacheAndDependenciesRule storage = new PageCacheAndDependenciesRule( DefaultFileSystemRule::new, getClass() );
+    public final PageCacheAndDependenciesRule storage = pageCacheAndDependencies().fs( DefaultFileSystemRule::new ).build();
 
     @Test
     public void shouldDetectAndThrowIOExceptionOnPartiallyCreatedFile() throws Exception

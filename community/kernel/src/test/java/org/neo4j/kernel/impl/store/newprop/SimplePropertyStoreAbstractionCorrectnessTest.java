@@ -32,6 +32,7 @@ import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
+import org.neo4j.test.rule.RandomRule.Seed;
 import org.neo4j.test.rule.RepeatRule.Repeat;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
@@ -41,7 +42,8 @@ import org.neo4j.values.storable.Values;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.impl.store.newprop.Visitor.debug;
+
+import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.longValue;
@@ -209,6 +211,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         }
     }
 
+    @Seed( 1517773564050L )
     @Test
     public void shouldSetManyStrings() throws Exception
     {
@@ -221,6 +224,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         {
             for ( int key = 0; key < 150; key++ )
             {
+                assert debug( "=== Writing %d into record %d ===", key, id );
                 Value value = Values.of( random.string( 5, 15, CSA_LETTERS_AND_DIGITS ) );
                 id = access.set( id, key, value );
                 expected.put( key, value );
@@ -388,7 +392,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                     Value value = Values.of( random.propertyValue() );
                     id = access.set( id, key, value );
                     expected.put( key, value );
-                    debug( "Set %d %s", key, value );
+                    assert debug( "Set %d %s", key, value );
                 }
                 else if ( !expected.isEmpty() )
                 {   // Remove
@@ -398,7 +402,7 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
                     }
                     assertEquals( expected.remove( key ), access.get( id, key ) );
                     id = access.remove( id, key );
-                    debug( "Remove %d", key );
+                    assert debug( "Remove %d", key );
                     assertFalse( access.has( id, key ) );
                 }
             }

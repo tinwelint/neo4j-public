@@ -25,6 +25,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.values.storable.Value;
 
 import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
+import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 
 class GetVisitor extends Visitor implements ValueStructure
 {

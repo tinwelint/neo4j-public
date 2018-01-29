@@ -28,8 +28,11 @@ import java.util.function.Supplier;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.test.rule.PageCacheRule.PageCacheConfig;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 import org.neo4j.test.rule.fs.FileSystemRule;
+
+import static org.neo4j.test.rule.PageCacheRule.config;
 
 /**
  * Very often when you want a {@link PageCacheRule} you also want {@link TestDirectory} and some {@link FileSystemRule}.
@@ -41,22 +44,18 @@ public class PageCacheAndDependenciesRule implements TestRule
     private final RuleChain chain;
     private final FileSystemRule<? extends FileSystemAbstraction> fs;
     private final TestDirectory directory;
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
+    private final PageCacheRule pageCacheRule;
 
     public PageCacheAndDependenciesRule()
     {
-        this( EphemeralFileSystemRule::new, null );
+        this( new Builder() );
     }
 
-    /**
-     * @param fsSupplier as {@link Supplier} to make it clear that it is this class that owns the created
-     * {@link FileSystemRule} instance.
-     * @param clazz class to make distinctions for test directories
-     */
-    public PageCacheAndDependenciesRule( Supplier<FileSystemRule<? extends FileSystemAbstraction>> fsSupplier, Class<?> clazz )
+    private PageCacheAndDependenciesRule( Builder builder )
     {
-        this.fs = fsSupplier.get();
-        this.directory = TestDirectory.testDirectory( clazz, fs );
+        this.fs = builder.fsSupplier.get();
+        this.directory = builder.clazz != null ? TestDirectory.testDirectory( builder.clazz, fs ) : TestDirectory.testDirectory( fs );
+        this.pageCacheRule = new PageCacheRule( builder.pageCacheConfig );
         this.chain = RuleChain.outerRule( fs ).around( directory ).around( pageCacheRule );
     }
 
@@ -89,5 +88,40 @@ public class PageCacheAndDependenciesRule implements TestRule
     public PageCache pageCache()
     {
         return pageCacheRule.getPageCache( fs );
+    }
+
+    public static class Builder
+    {
+        private Supplier<FileSystemRule<? extends FileSystemAbstraction>> fsSupplier = EphemeralFileSystemRule::new;
+        private Class<?> clazz;
+        private PageCacheConfig pageCacheConfig = config();
+
+        public Builder fs( Supplier<FileSystemRule<? extends FileSystemAbstraction>> fsSupplier )
+        {
+            this.fsSupplier = fsSupplier;
+            return this;
+        }
+
+        public Builder testClass( Class<?> clazz )
+        {
+            this.clazz = clazz;
+            return this;
+        }
+
+        public Builder pageCacheConfig( PageCacheConfig config )
+        {
+            this.pageCacheConfig = config;
+            return this;
+        }
+
+        public PageCacheAndDependenciesRule build()
+        {
+            return new PageCacheAndDependenciesRule( this );
+        }
+    }
+
+    public static Builder pageCacheAndDependencies()
+    {
+        return new Builder();
     }
 }
