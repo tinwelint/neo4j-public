@@ -25,7 +25,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Integer.max;
-
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
@@ -34,11 +33,11 @@ import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
 import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 
-class SetVisitor extends Visitor
+class SetVisitor extends BaseVisitor
 {
     // internal mutable state
     private int freeHeaderEntryIndex;
-    private int freeSumValueLength;
+    private int freeValueOffset;
     private int relocateHeaderEntryIndex;
 
     // user supplied state
@@ -65,8 +64,9 @@ class SetVisitor extends Visitor
     {
         super.initialize( cursor, startId, units );
         freeHeaderEntryIndex = -1;
-        freeSumValueLength = 0;
+        freeValueOffset = 0;
         relocateHeaderEntryIndex = -1;
+        // TODO consider "large" values where the valueLength in this main record and how it's written may be affected
     }
 
     @Override
@@ -75,59 +75,67 @@ class SetVisitor extends Visitor
         if ( freeHeaderEntryIndex == -1 && skippedNumberOfHeaderEntries == type.numberOfHeaderEntries() && currentValueLength == valueLength )
         {
             freeHeaderEntryIndex = currentHeaderEntryIndex;
-            freeSumValueLength = sumValueLength;
+            freeValueOffset = valueOffset;
         }
     }
 
     @Override
     public long accept( PageCursor cursor ) throws IOException
     {
-        int recordLength = units * UNIT_SIZE;
+        // We're going to write somewhere. Depending on configured behaviour and existing data that place is going to be different,
+        // both for key and for value. This code is set up such that first comes a series of checks and preparations to write key/value
+        // and finally the actual writing. Preparation may include relocation, growing/shrinking and what not.
+        // The variables defined below are updated with key/value locations and other state for deciding where to write after
+        // preparations have been made.
+        int targetHeaderEntryIndex;
+        int targetValueOffset;
+        int targetNumberOfHeaderEntries = -1;
+
         if ( seek( cursor ) )
         {
             // Change property value
             Type oldType = currentType;
             int oldValueLength = currentValueLength;
-            int oldValueLengthSum = sumValueLength;
+            int oldValueOffset = valueOffset;
             int hitHeaderEntryIndex = currentHeaderEntryIndex;
             continueSeekUntilEnd( cursor );
-            int freeBytesInRecord = recordLength - sumValueLength - headerLength();
             int headerDiff = type.numberOfHeaderEntries() - oldType.numberOfHeaderEntries();
-            int diff = valueLength - oldValueLength;
-            if ( diff != 0 || headerDiff != 0 )
+            int valueDiff = valueLength - oldValueLength;
+            if ( valueDiff != 0 || headerDiff != 0 )
             {
-                // Value/key size changed
+                // Key/value size changed
                 if ( BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE )
                 {
-                    relocateRecordIfNeeded( cursor, freeBytesInRecord, headerDiff, diff );
-                    makeRoomForPropertyInPlace( cursor, oldType, oldValueLengthSum, hitHeaderEntryIndex, headerDiff, diff );
-                    writeValue( cursor, oldValueLengthSum + diff, type, preparedValue, valueLength );
-                    if ( type != oldType || valueLength != oldValueLength )
-                    {
-                        writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
-                    }
-                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + headerDiff );
+                    // Make room in-place by moving other properties our of the way
+                    relocateRecordIfNeeded( cursor, headerDiff, valueDiff );
+                    makeRoomForPropertyInPlace( cursor, oldType, oldValueOffset, hitHeaderEntryIndex, headerDiff, valueDiff );
+                    targetHeaderEntryIndex = hitHeaderEntryIndex;
+                    targetValueOffset = oldValueOffset + valueDiff;
+                    targetNumberOfHeaderEntries = numberOfHeaderEntries + headerDiff;
                 }
-                else if ( freeHeaderEntryIndex != -1 )
+                else if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE && freeHeaderEntryIndex != -1 )
                 {
+                    // There's an open space with just the right size
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
-                    writeValue( cursor, freeSumValueLength, type, preparedValue, valueLength );
-                    writeHeader( cursor, valueLength, freeHeaderEntryIndex, type );
+                    targetHeaderEntryIndex = freeHeaderEntryIndex;
+                    targetValueOffset = freeValueOffset;
                 }
                 else
                 {
+                    // Append the new version of this property at the end and mark the old one as unused
+
                     // TODO Marking this property as unused BEFORE relocating may leave this record in a state
-                    // where this particular property is unused and its new value ends up on the new record... sparks a discussion
+                    // where this particular property is unused and its new value ends up in the new record... sparks a discussion
                     // about generally leaving retrying readers stranded on a record that doesn't have this property.
                     // Reader will finally do a consistent read and report that the property of that key doesn't exist.
                     // The reader would see it on the next attempt (after getting hold of the new record id), but would see
                     // this temporary incorrect state. Instead marking this property as unused AFTER relocating will move the
-                    // to-by-unused bytes to the new record where it will occupy space, which is wasted space, but will avoid this issue.
+                    // to-be-unused bytes to the new record where it will occupy space, which is wasted space, but will avoid this issue.
                     //
-                    // Otherwise a relocated record, the origin, would point forwards to its newer version so that readers could
+                    // Otherwise a relocated record, the origin, could point forwards to its newer version so that readers could
                     // get to the newer record and read the property there. This requires an added pointer in the record header.
 
-                    relocateRecordIfNeeded( cursor, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength );
+                    relocateRecordIfNeeded( cursor, type.numberOfHeaderEntries(), valueLength );
                     // Since the previous value currently is marked as unused AFTER relocation then we need to get hold of its
                     // header entry index and value offset here so that we're marking the correct property
                     if ( relocateHeaderEntryIndex != -1 )
@@ -137,55 +145,64 @@ class SetVisitor extends Visitor
                     }
 
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
-                    writeValue( cursor, sumValueLength + valueLength, type, preparedValue, valueLength );
-                    writeHeader( cursor, valueLength, numberOfHeaderEntries, type );
-                    writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries + type.numberOfHeaderEntries() );
+                    targetHeaderEntryIndex = numberOfHeaderEntries;
+                    targetValueOffset = valueOffset + valueLength;
+                    targetNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
                 }
             }
             else
             {
-                // Both value and key size are the same
+                // Both value and key sizes are the same
                 if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE )
                 {
-                    writeValue( cursor, oldValueLengthSum, type, preparedValue, oldValueLength );
-                    if ( type != oldType )
-                    {
-                        writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
-                    }
+                    // Overwrite the value in-place
+                    targetHeaderEntryIndex = hitHeaderEntryIndex;
+                    targetValueOffset = oldValueOffset;
                 }
                 else
                 {
+                    // Append the new version of this property at the end and mark the old one as unused
                     markHeaderAsUnused( cursor, hitHeaderEntryIndex );
-                    writeValue( cursor, sumValueLength, type, preparedValue, valueLength );
-                    writeHeader( cursor, valueLength, hitHeaderEntryIndex, type );
+                    targetHeaderEntryIndex = numberOfHeaderEntries;
+                    targetValueOffset = valueOffset + valueLength;
+                    targetNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
                 }
             }
         }
         else
         {
+            // Add property
             if ( BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE && freeHeaderEntryIndex != -1 )
             {
-                writeValue( cursor, freeSumValueLength, type, preparedValue, valueLength );
-                writeHeader( cursor, valueLength, freeHeaderEntryIndex, type );
+                // There's an open space with just the right size
+                targetHeaderEntryIndex = freeHeaderEntryIndex;
+                targetValueOffset = freeValueOffset;
             }
             else
             {
-                // Add property
-                int freeBytesInRecord = recordLength - sumValueLength - headerLength();
-                relocateRecordIfNeeded( cursor, freeBytesInRecord, type.numberOfHeaderEntries(), valueLength );
-                writeValue( cursor, sumValueLength + valueLength, type, preparedValue, valueLength );
-                writeHeader( cursor, valueLength, numberOfHeaderEntries, type );
-                int newNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
-                writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries );
+                // Append this property at the end
+                relocateRecordIfNeeded( cursor, type.numberOfHeaderEntries(), valueLength );
+                targetHeaderEntryIndex = numberOfHeaderEntries;
+                targetValueOffset = valueOffset + valueLength;
+                targetNumberOfHeaderEntries = numberOfHeaderEntries + type.numberOfHeaderEntries();
             }
+        }
+
+        // The "target" variables have now been initialized so it's time to write the data to this record
+        writeValue( cursor, targetValueOffset, type, preparedValue, valueLength );
+        writeHeader( cursor, valueLength, targetHeaderEntryIndex, type );
+        if ( targetNumberOfHeaderEntries != -1 )
+        {
+            writeNumberOfHeaderEntries( cursor, targetNumberOfHeaderEntries );
         }
 
         return -1; // TODO support records spanning multiple pages
     }
 
-    private void relocateRecordIfNeeded( PageCursor cursor, int freeBytesInRecord, int headerDiff, int diff )
+    private void relocateRecordIfNeeded( PageCursor cursor, int headerDiff, int diff )
             throws IOException
     {
+        int freeBytesInRecord = recordLength - valueOffset - headerLength();
         int growth = headerDiff * HEADER_ENTRY_SIZE + diff;
         if ( growth > freeBytesInRecord )
         {
@@ -193,11 +210,8 @@ class SetVisitor extends Visitor
         }
     }
 
-    void relocateRecord( PageCursor cursor, int totalRecordBytesRequired ) throws IOException
+    private void relocateRecord( PageCursor cursor, int totalRecordBytesRequired ) throws IOException
     {
-        // TODO Special case: can we grow in-place?
-
-        // Normal case: find new bigger place and move there.
         int unusedBytes = unusedValueLength + unusedNumberOfHeaderEntries * HEADER_ENTRY_SIZE;
         int newUnits = max( 1, (totalRecordBytesRequired - unusedBytes - 1) / 64 + 1 );
         long newRecordId = store.allocate( newUnits );
@@ -213,15 +227,13 @@ class SetVisitor extends Visitor
                 // Copy header as one chunk
                 cursor.copyTo( pivotOffset, newCursor, newPivotOffset, headerLength() );
                 // Copy values as one chunk
-                cursor.copyTo(
-                        pivotOffset + units * UNIT_SIZE - sumValueLength, newCursor,
-                        newPivotOffset + newUnits * UNIT_SIZE - sumValueLength, sumValueLength );
+                cursor.copyTo( pivotOffset + units * UNIT_SIZE - valueOffset, newCursor, newPivotOffset + newUnits * UNIT_SIZE - valueOffset, valueOffset );
             }
             else
             {
                 // Copy live properties, one by one
-                cursor.setOffset( headerStart( 0 ) );
-                newCursor.setOffset( headerStart( newPivotOffset, 0 ) );
+                cursor.setOffset( headerRecordOffset( 0 ) );
+                newCursor.setOffset( headerRecordOffset( newPivotOffset, 0 ) );
                 int liveNumberOfHeaderEntries = 0;
                 int targetValueOffset = 0;
                 for ( int i = 0, sourceValueOffset = 0; i < numberOfHeaderEntries; )
@@ -244,8 +256,8 @@ class SetVisitor extends Visitor
                         // Copy value
                         if ( valueLength > 0 )
                         {
-                            cursor.copyTo( valueStart( sourceValueOffset ) - valueLength, newCursor,
-                                    valueStart( targetValueOffset, newUnits, newPivotOffset ) - valueLength, valueLength );
+                            cursor.copyTo( valueRecordOffset( sourceValueOffset ) - valueLength, newCursor,
+                                    valueRecordOffset( targetValueOffset, newUnits, newPivotOffset ) - valueLength, valueLength );
                             targetValueOffset += valueLength;
                         }
                         assert debug( "Copied %d w/ value length %d from page %d at %d to page %d at %d from header index %d to %d",
@@ -259,7 +271,7 @@ class SetVisitor extends Visitor
 
                 numberOfHeaderEntries = liveNumberOfHeaderEntries;
                 currentHeaderEntryIndex = liveNumberOfHeaderEntries;
-                sumValueLength = targetValueOffset;
+                valueOffset = targetValueOffset;
                 unusedValueLength = 0;
                 unusedNumberOfHeaderEntries = 0;
 
@@ -276,49 +288,48 @@ class SetVisitor extends Visitor
 
     private void writeHeader( PageCursor cursor, int valueLength, int headerEntryIndex, Type type )
     {
-        cursor.setOffset( headerStart( headerEntryIndex ) );
+        cursor.setOffset( headerRecordOffset( headerEntryIndex ) );
         type.putHeader( cursor, key, valueLength );
     }
 
-    private void writeValue( PageCursor cursor, int valueLengthSum, Type type, Object preparedValue, int valueLength )
+    private void writeValue( PageCursor cursor, int valueOffset, Type type, Object preparedValue, int valueLength )
     {
-        cursor.setOffset( valueStart( valueLengthSum ) );
+        cursor.setOffset( valueRecordOffset( valueOffset ) );
         assert debug( "Writing %d %s of length %d in page %d at %d", key, value, valueLength, cursor.getCurrentPageId(), cursor.getOffset() );
         type.putValue( cursor, preparedValue, valueLength );
     }
 
-    private void makeRoomForPropertyInPlace( PageCursor cursor, Type oldType, int oldValueLengthSum, int hitHeaderEntryIndex,
-            int headerDiff, int diff )
+    private void makeRoomForPropertyInPlace( PageCursor cursor, Type oldType, int valueOffset, int headerEntryIndex, int headerDiff, int valueDiff )
     {
         if ( headerDiff < 0 )
         {
-            changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+            changeHeaderSize( cursor, headerDiff, oldType, headerEntryIndex );
         }
-        if ( diff < 0 )
+        if ( valueDiff < 0 )
         {
-            changeValueSize( cursor, diff, oldValueLengthSum );
+            changeValueSize( cursor, valueDiff, valueOffset );
         }
         if ( headerDiff > 0 )
         {
-            changeHeaderSize( cursor, headerDiff, oldType, hitHeaderEntryIndex );
+            changeHeaderSize( cursor, headerDiff, oldType, headerEntryIndex );
         }
-        if ( diff > 0 )
+        if ( valueDiff > 0 )
         {
-            changeValueSize( cursor, diff, oldValueLengthSum );
+            changeValueSize( cursor, valueDiff, valueOffset );
         }
     }
 
-    private void changeValueSize( PageCursor cursor, int diff, int valueLengthSum )
+    private void changeValueSize( PageCursor cursor, int diff, int valueOffset )
     {
-        int leftOffset = valueStart( sumValueLength );
-        int rightOffset = valueStart( valueLengthSum );
+        int leftOffset = valueRecordOffset( this.valueOffset );
+        int rightOffset = valueRecordOffset( valueOffset );
         cursor.shiftBytes( leftOffset, rightOffset - leftOffset, - diff );
     }
 
-    private void changeHeaderSize( PageCursor cursor, int headerDiff, Type oldType, int hitHeaderEntryIndex )
+    private void changeHeaderSize( PageCursor cursor, int diff, Type oldType, int headerEntryIndex )
     {
-        int leftOffset = headerStart( hitHeaderEntryIndex + oldType.numberOfHeaderEntries() );
-        int rightOffset = headerStart( numberOfHeaderEntries );
-        cursor.shiftBytes( leftOffset, rightOffset - leftOffset, headerDiff * HEADER_ENTRY_SIZE );
+        int leftOffset = headerRecordOffset( headerEntryIndex + oldType.numberOfHeaderEntries() );
+        int rightOffset = headerRecordOffset( numberOfHeaderEntries );
+        cursor.shiftBytes( leftOffset, rightOffset - leftOffset, diff * HEADER_ENTRY_SIZE );
     }
 }

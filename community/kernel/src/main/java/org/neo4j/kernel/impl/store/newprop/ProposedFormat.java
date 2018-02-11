@@ -147,7 +147,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     {
         protected final PageCursor cursor;
         private final PageCursorTracer tracer;
-        private final Visitor hasVisitor = new HasVisitor( store );
+        private final BaseVisitor hasVisitor = new HasVisitor( store );
         private final GetVisitor getVisitor = new GetVisitor( store );
 
         Reader() throws IOException
@@ -195,7 +195,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     class Writer extends Reader implements Write
     {
         private final SetVisitor setVisitor = new SetVisitor( store );
-        private final Visitor removeVisitor = new RemoveVisitor( store );
+        private final BaseVisitor removeVisitor = new RemoveVisitor( store );
 
         Writer() throws IOException
         {

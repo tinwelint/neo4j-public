@@ -21,37 +21,42 @@ package org.neo4j.kernel.impl.store.newprop;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.newprop.Store.RecordVisitor;
+
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_ORDERED_BY_KEY;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_VALUES_FROM_END;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.HEADER_ENTRY_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.RECORD_HEADER_SIZE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.UNIT_SIZE;
-import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 
-abstract class Visitor implements RecordVisitor
+abstract class BaseVisitor implements RecordVisitor
 {
+    // This flag is in the main header entry int
     private static final int FLAG_UNUSED = 0x80000000;
+    // This flag is in the secondary header entry int
+    private static final int FLAG_LARGE_VALUE = 0x80000000;
 
     protected final Store store;
 
     // internal mutable state
     protected long recordId;
     protected int units;
-    protected int pivotOffset;
-    protected int numberOfHeaderEntries;
-    protected int sumValueLength;
-    protected int currentValueLength;
-    protected int currentHeaderEntryIndex;
-    protected Type currentType;
-    protected int unusedNumberOfHeaderEntries;
-    protected int unusedValueLength;
+    int recordLength;
+    int pivotOffset;
+    int numberOfHeaderEntries;
+    int valueOffset;
+    int currentValueLength;
+    int currentHeaderEntryIndex;
+    boolean currentValueIsLarge;
+    Type currentType;
+    int unusedNumberOfHeaderEntries;
+    int unusedValueLength;
 
     // user state
     protected int key = -1;
     protected boolean propertyExisted;
 
-    Visitor( Store store )
+    BaseVisitor( Store store )
     {
         this.store = store;
     }
@@ -66,15 +71,17 @@ abstract class Visitor implements RecordVisitor
     {
         this.recordId = startId;
         this.units = units;
+        recordLength = units * UNIT_SIZE;
         pivotOffset = cursor.getOffset();
         numberOfHeaderEntries = cursor.getShort();
-        sumValueLength = 0;
+        valueOffset = 0;
         currentValueLength = 0;
         currentHeaderEntryIndex = 0;
         unusedNumberOfHeaderEntries = 0;
         unusedValueLength = 0;
         currentType = null;
         propertyExisted = false;
+        currentValueIsLarge = false;
     }
 
     boolean seek( PageCursor cursor )
@@ -95,8 +102,10 @@ abstract class Visitor implements RecordVisitor
             long headerEntry = getUnsignedInt( cursor );
             boolean isUsed = isUsed( headerEntry );
             currentType = Type.fromHeader( headerEntry, cursor );
-            currentValueLength = currentType.valueLength( cursor );
-            sumValueLength += currentValueLength;
+            int rawValueLength = currentType.valueLength( cursor );
+            currentValueLength = rawValueLength & ~FLAG_LARGE_VALUE;
+            currentValueIsLarge = (rawValueLength & FLAG_LARGE_VALUE) != 0;
+            valueOffset += currentValueLength;
             int currentNumberOfHeaderEntries = currentType.numberOfHeaderEntries();
             if ( isUsed )
             {
@@ -159,17 +168,17 @@ abstract class Visitor implements RecordVisitor
         return (headerEntry & FLAG_UNUSED) == 0;
     }
 
-    long setUnused( long headerEntry )
+    private long setUnused( long headerEntry )
     {
         return headerEntry | FLAG_UNUSED;
     }
 
-    int valueStart( int valueOffset )
+    int valueRecordOffset( int valueOffset )
     {
-        return valueStart( valueOffset, units, pivotOffset );
+        return valueRecordOffset( valueOffset, units, pivotOffset );
     }
 
-    int valueStart( int valueOffset, int units, int pivotOffset )
+    int valueRecordOffset( int valueOffset, int units, int pivotOffset )
     {
         if ( BEHAVIOUR_VALUES_FROM_END )
         {
@@ -181,37 +190,30 @@ abstract class Visitor implements RecordVisitor
         }
     }
 
-    int headerStart( int headerEntryIndex )
+    int headerRecordOffset( int headerEntryIndex )
     {
-        return headerStart( pivotOffset, headerEntryIndex );
+        return headerRecordOffset( pivotOffset, headerEntryIndex );
     }
 
-    int headerStart( int pivotOffset, int headerEntryIndex )
+    int headerRecordOffset( int pivotOffset, int headerEntryIndex )
     {
         return pivotOffset + RECORD_HEADER_SIZE + headerEntryIndex * HEADER_ENTRY_SIZE;
     }
 
-    void placeCursorAtHeaderEntry( PageCursor cursor, int headerEntryIndex )
+    void writeNumberOfHeaderEntries( PageCursor cursor, int numberOfHeaderEntries )
     {
-        cursor.setOffset( headerStart( headerEntryIndex ) );
+        writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries, pivotOffset );
     }
 
-    void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries )
+    void writeNumberOfHeaderEntries( PageCursor cursor, int numberOfHeaderEntries, int pivotOffset )
     {
-        writeNumberOfHeaderEntries( cursor, newNumberOfHeaderEntries, pivotOffset );
+        cursor.putShort( pivotOffset, (short) numberOfHeaderEntries ); // TODO safe cast
     }
 
-    void writeNumberOfHeaderEntries( PageCursor cursor, int newNumberOfHeaderEntries, int pivotOffset )
+    void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
     {
-        cursor.putShort( pivotOffset, (short) newNumberOfHeaderEntries ); // TODO safe cast
-    }
-
-    protected void markHeaderAsUnused( PageCursor cursor, int headerEntryIndex )
-    {
-        int offset = headerStart( headerEntryIndex );
+        int offset = headerRecordOffset( headerEntryIndex );
         long headerEntry = getUnsignedInt( cursor, offset );
-        int length = Type.fromHeader( headerEntry, cursor ).valueLength( cursor );
-        assert debug( "Marking header entry %d as unused key %d valueOffset length %d", headerEntryIndex, key, valueStart( sumValueLength ), length );
         headerEntry = setUnused( headerEntry );
         cursor.putInt( offset, (int) headerEntry );
     }
@@ -221,7 +223,7 @@ abstract class Visitor implements RecordVisitor
         return cursor.getInt() & 0xFFFFFFFFL;
     }
 
-    static long getUnsignedInt( PageCursor cursor, int offset )
+    private static long getUnsignedInt( PageCursor cursor, int offset )
     {
         return cursor.getInt( offset ) & 0xFFFFFFFFL;
     }

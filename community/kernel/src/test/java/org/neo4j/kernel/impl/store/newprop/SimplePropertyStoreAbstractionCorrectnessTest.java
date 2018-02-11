@@ -32,7 +32,6 @@ import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Read;
 import org.neo4j.kernel.impl.store.newprop.SimplePropertyStoreAbstraction.Write;
-import org.neo4j.test.rule.RandomRule.Seed;
 import org.neo4j.test.rule.RepeatRule.Repeat;
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.TextValue;
@@ -42,7 +41,6 @@ import org.neo4j.values.storable.Values;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 import static org.neo4j.test.Randoms.CSA_LETTERS_AND_DIGITS;
 import static org.neo4j.values.storable.Values.intValue;
@@ -211,7 +209,6 @@ public class SimplePropertyStoreAbstractionCorrectnessTest extends SimplePropert
         }
     }
 
-    @Seed( 1517773564050L )
     @Test
     public void shouldSetManyStrings() throws Exception
     {

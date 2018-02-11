@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 
-class HasVisitor extends Visitor
+class HasVisitor extends BaseVisitor
 {
     HasVisitor( Store store )
     {

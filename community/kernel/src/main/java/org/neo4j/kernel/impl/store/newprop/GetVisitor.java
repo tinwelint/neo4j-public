@@ -27,7 +27,7 @@ import org.neo4j.values.storable.Value;
 import static org.neo4j.kernel.impl.store.newprop.Store.SPECIAL_ID_SHOULD_RETRY;
 import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
 
-class GetVisitor extends Visitor implements ValueStructure
+class GetVisitor extends BaseVisitor implements ValueStructure
 {
     // value structure stuff
     private long integralStructureValue;
@@ -62,7 +62,7 @@ class GetVisitor extends Visitor implements ValueStructure
 
         if ( found )
         {
-            cursor.setOffset( valueStart( sumValueLength ) );
+            cursor.setOffset( valueRecordOffset( valueOffset ) );
             int valueStructureRead = currentType.getValueStructure( cursor, currentValueLength, this );
 
             // Check consistency because we just read data which affects how we're going to continue reading.

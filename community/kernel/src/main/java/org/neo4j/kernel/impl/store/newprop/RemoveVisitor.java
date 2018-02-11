@@ -25,7 +25,7 @@ import org.neo4j.io.pagecache.PageCursor;
 
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE;
 
-class RemoveVisitor extends Visitor
+class RemoveVisitor extends BaseVisitor
 {
     RemoveVisitor( Store store )
     {
@@ -43,17 +43,17 @@ class RemoveVisitor extends Visitor
                 int currentNumberOfHeaderEntries = currentType.numberOfHeaderEntries();
                 int headerEntriesToMove = numberOfHeaderEntries - hitHeaderEntryIndex - currentNumberOfHeaderEntries;
                 int headerDistance = currentNumberOfHeaderEntries * ProposedFormat.HEADER_ENTRY_SIZE;
-                int currentSumValueLength = sumValueLength;
+                int currentSumValueLength = valueOffset;
                 int valueDistance = currentValueLength;
 
                 // Seek to the end so that we get the total value length, TODO could be done better in some way, right?
                 continueSeekUntilEnd( cursor );
 
-                int valueSize = sumValueLength - currentSumValueLength;
-                int valueLowOffset = valueStart( sumValueLength );
+                int valueSize = valueOffset - currentSumValueLength;
+                int valueLowOffset = valueRecordOffset( valueOffset );
 
                 // Move header entries
-                cursor.shiftBytes( headerStart( hitHeaderEntryIndex ) + headerDistance,
+                cursor.shiftBytes( headerRecordOffset( hitHeaderEntryIndex ) + headerDistance,
                         headerEntriesToMove * ProposedFormat.HEADER_ENTRY_SIZE, - headerDistance );
                 writeNumberOfHeaderEntries( cursor, numberOfHeaderEntries - currentNumberOfHeaderEntries );
 
