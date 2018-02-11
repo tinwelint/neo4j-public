@@ -35,7 +35,7 @@ import static org.neo4j.io.ByteUnit.kibiBytes;
 public class ProposedFormat implements SimplePropertyStoreAbstraction
 {
     // =====================================================================================
-    // === HIGH LEVEL TODO                                                               ===
+    // === HIGH LEVEL FUNCTIONALITY TODO                                                 ===
     // === + Free-list                                                                   ===
     // === + Large values                                                                ===
     // === + "main" property record spanning multiple pages (perhaps extreme edge case)  ===
@@ -86,10 +86,19 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      * If {@code false}: different sized value appended as new property, marking the existing as unused. This means more header
      * entries to search through, but less data to put into records on changing such properties. Unused properties are left behind
      * when copying to new record.
+     *
      * This also implies NOT remove in-place.
      */
     static final boolean BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE = false;
 
+    /**
+     * If {@code true}:  record ids will be marked as unused and eventually reused.
+     * If {@code false}: record ids will not be marked as unused and not reused.
+     * <p>
+     * Currently this means that readers may see reused and completely random data because a record may have been deleted and reused
+     * for something else in between the time of getting the record id and actually reading it. There will have to be some external mechanism
+     * for telling which ids can be reused when for this to work properly.
+     */
     static final boolean BEHAVIOUR_REUSE_IDS = false;
 
     /*
@@ -115,10 +124,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     static
     {
         // It's reasonable to enforce that if different-sized values are change in-place then so will also same-size values be.
-        if ( BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE )
-        {
-            assert BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
-        }
+        assert !BEHAVIOUR_CHANGE_DIFFERENT_SIZE_VALUE_IN_PLACE || BEHAVIOUR_CHANGE_SAME_SIZE_VALUE_IN_PLACE;
     }
 
     // =====================================================================================
@@ -131,7 +137,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
     private final Store store;
     private final PageCursorTracerSupplier tracerSupplier;
 
-    public ProposedFormat( PageCache pageCache, File directory, PageCursorTracerSupplier tracerSupplier ) throws IOException
+    ProposedFormat( PageCache pageCache, File directory, PageCursorTracerSupplier tracerSupplier ) throws IOException
     {
         this.tracerSupplier = tracerSupplier;
         this.store = new Store( pageCache, directory, "main" );
