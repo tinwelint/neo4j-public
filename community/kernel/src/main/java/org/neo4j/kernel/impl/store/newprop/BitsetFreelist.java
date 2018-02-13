@@ -47,12 +47,14 @@ class BitsetFreelist implements Closeable
     private static final int BITS_PER_PAGE = PAGE_SIZE * Byte.SIZE;
     private static final int BEHAVIOUR_NUMBER_OF_PAGES_TO_SEARCH = 5;
     private static final long NO_ID = -1;
+    private static final int SCAN_THRESHOLD = 1_000;
 
     private final PagedFile pagedFile;
     private final PageCursor traverseCursor;
     private boolean traverseHitEnd = true;
     // 1, 2, 4, 8, 16, 32, 64, 128
     private final CachedIds[] cachedIds = new CachedIds[8];
+    private int globalEstimatedUncollectedSlots = SCAN_THRESHOLD;
     private final byte[] readBuffer;
     private final SlotVisitor slotCacher = this::cacheFreeId;
 
@@ -87,19 +89,16 @@ class BitsetFreelist implements Closeable
 
         if ( BEHAVIOUR_REUSE_IDS )
         {
-            for ( int i = 0; i < BEHAVIOUR_NUMBER_OF_PAGES_TO_SEARCH; i++ )
+            long startId = getCachedSlot( units );
+            if ( startId == NO_ID  && cacheSomeMore() )
             {
-                long startId = findFromCache( units );
-                if ( startId != NO_ID )
-                {
-                    assert debug( "CACHE: Found cached %d matching units %d", startId, units );
-                    return startId;
-                }
-
-                if ( !cacheNextPage() )
-                {
-                    break;
-                }
+                startId = getCachedSlot( units );
+            }
+            if ( startId != NO_ID )
+            {
+                System.out.println( "reusing startId = " + startId );
+                assert debug( "CACHE: Found cached slot id %d matching units %d", startId, units );
+                return startId;
             }
         }
 
@@ -108,8 +107,8 @@ class BitsetFreelist implements Closeable
         if ( pageIdForRecord( startId ) != pageIdForEnd )
         {
             // Would have crossed page boundary, go to the next page
-            long idOfNextPage = pageIdForEnd;
-            highId = idOfNextPage * EFFECTIVE_UNITS_PER_PAGE;
+            // TODO could add the skipped ids here to the freelist?
+            highId = pageIdForEnd * EFFECTIVE_UNITS_PER_PAGE;
         }
         startId = highId;
         highId += units;
@@ -118,7 +117,12 @@ class BitsetFreelist implements Closeable
         return startId;
     }
 
-    private long findFromCache( int units )
+    private boolean worthTheEffortOfScanningFreelistPages()
+    {
+        return !traverseHitEnd || (traverseHitEnd && globalEstimatedUncollectedSlots >= SCAN_THRESHOLD);
+    }
+
+    private long getCachedSlot( int units )
     {
         for ( int slot = slotIndexForGet( units ); slot < cachedIds.length; slot++ )
         {
@@ -132,11 +136,19 @@ class BitsetFreelist implements Closeable
         return NO_ID;
     }
 
-    private boolean cacheNextPage() throws IOException
+    private boolean cacheSomeMore() throws IOException
     {
         if ( traverseHitEnd )
         {
-            clearCachedIds();
+            if ( worthTheEffortOfScanningFreelistPages() )
+            {
+                clearCachedIds();
+                System.out.println( "Starting new freelist scan" );
+            }
+            else
+            {
+                return false;
+            }
         }
 
         for ( int i = 0; i < BEHAVIOUR_NUMBER_OF_PAGES_TO_SEARCH; i++ )
@@ -145,7 +157,7 @@ class BitsetFreelist implements Closeable
             traverseHitEnd = !traverseCursor.next( nextPageId );
             if ( traverseHitEnd )
             {
-                // TODO don't break, but continue from the beginning in this loop
+                System.out.println( "Ending freelist scan" );
                 break;
             }
 
@@ -163,6 +175,7 @@ class BitsetFreelist implements Closeable
         {
             ids.clear();
         }
+        globalEstimatedUncollectedSlots = 0;
         assert debug( "CACHE: clear" );
     }
 
@@ -192,7 +205,7 @@ class BitsetFreelist implements Closeable
             {
                 int mask = 1 << i;
                 boolean inUse = (currentByte & mask) != 0;
-//                assert debug( "SCAN %d %b", bit, inUse );
+                assert debug( "SCAN %d %b", bit, inUse );
                 if ( inUse )
                 {
                     if ( startBit != -1 )
@@ -256,15 +269,13 @@ class BitsetFreelist implements Closeable
     private static int slotIndexForPut( int slotSize )
     {
         int high = Integer.highestOneBit( slotSize );
-        int slotIndex = Integer.numberOfTrailingZeros( high );
-        return slotIndex;
+        return Integer.numberOfTrailingZeros( high );
     }
 
     private static int slotIndexForGet( int slotSize )
     {
         int high = Integer.highestOneBit( slotSize );
-        int slotIndex = Integer.numberOfTrailingZeros( high == slotSize ? high : high << 1 );
-        return slotIndex;
+        return Integer.numberOfTrailingZeros( high == slotSize ? high : high << 1 );
     }
 
     Marker marker() throws IOException
@@ -279,30 +290,47 @@ class BitsetFreelist implements Closeable
         pagedFile.close();
     }
 
-    private static class CachedIds
+    private class CachedIds
     {
         private static final int CAPACITY = 1 << 13;
 
         private final PrimitiveLongArrayQueue queue = new PrimitiveLongArrayQueue( CAPACITY );
+        private boolean wrappedAround;
+        // updated while doing other operations, like freeing as well as scanning and helps decide whether or not it's
+        // worth starting another scan ones the current one is completed.
+        private long estimatedUncollectedSlots;
 
         boolean add( long id )
         {
+            if ( wrappedAround )
+            {
+                wrappedAround = false;
+                queue.clear();
+            }
             if ( queue.size() < CAPACITY )
             {
                 queue.enqueue( id );
                 return true;
             }
+            estimatedUncollectedSlots++;
             return false;
         }
 
         void clear()
         {
-            queue.clear();
+            estimatedUncollectedSlots = 0;
+            wrappedAround = true;
         }
 
         long poll()
         {
             return queue.isEmpty() ? NO_ID : queue.dequeue();
+        }
+
+        void incFreeEstimate()
+        {
+            estimatedUncollectedSlots++;
+            globalEstimatedUncollectedSlots++;
         }
     }
 
@@ -315,18 +343,17 @@ class BitsetFreelist implements Closeable
             this.cursor = cursor;
         }
 
-        void mark( long id, int units, boolean inUse ) throws IOException
+        void mark( long id, int slotSize, boolean inUse ) throws IOException
         {
             long pageId = id / BITS_PER_PAGE;
             int bitOffset = (int) (id % BITS_PER_PAGE);
-            // TODO perhaps longs instead of bytes?
             int byteOffset = bitOffset / Byte.SIZE;
             int bitInByte = bitOffset % Byte.SIZE;
             cursor.next( pageId );
-            for ( int i = 0; i < units; )
+            for ( int i = 0; i < slotSize; )
             {
                 byte currentByte = cursor.getByte( byteOffset );
-                for ( ; bitInByte < Byte.SIZE && i < units; i++, bitInByte++ )
+                for ( ; bitInByte < Byte.SIZE && i < slotSize; i++, bitInByte++ )
                 {
                     int mask = 1 << bitInByte;
                     if ( inUse )
@@ -337,15 +364,22 @@ class BitsetFreelist implements Closeable
                     {
                         currentByte &= ~mask;
                     }
-//                    assert debug( "MARK %d %b", id + i, inUse );
+                    assert debug( "MARK %d %b", id + i, inUse );
                 }
                 cursor.putByte( byteOffset, currentByte );
 
-                if ( i < units )
+                if ( i < slotSize )
                 {
                     byteOffset++;
                     bitInByte = 0;
                 }
+            }
+
+            if ( !inUse )
+            {
+                // even if this id is in front of the current scan and hence will be collected in this scan then
+                // still account for it because this is a best-effort optimization anyway.
+                cachedIds[slotIndexForPut( slotSize )].incFreeEstimate();
             }
         }
 

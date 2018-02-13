@@ -99,7 +99,7 @@ public class ProposedFormat implements SimplePropertyStoreAbstraction
      * for something else in between the time of getting the record id and actually reading it. There will have to be some external mechanism
      * for telling which ids can be reused when for this to work properly.
      */
-    static final boolean BEHAVIOUR_REUSE_IDS = false;
+    static final boolean BEHAVIOUR_REUSE_IDS = true;
 
     /*
      * SUMMARY OF ABOVE THOUGHTS/ASSUMPTIONS:

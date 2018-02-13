@@ -44,12 +44,12 @@ import static org.neo4j.test.Race.maxDuration;
 import static org.neo4j.test.Race.throwing;
 
 @RunWith( Parameterized.class )
-public class SimplePropertyStoreAbstractionConcurrencyCorrectnessIT extends SimplePropertyStoreAbstractionTestBase
+public class SimplePropertyStoreAbstractionReadConcurrencyCorrectnessIT extends SimplePropertyStoreAbstractionTestBase
 {
     private final int KEYS = 10;
     private final Value[] VALUE_ALTERNATIVES = new Value[KEYS * 2];
 
-    public SimplePropertyStoreAbstractionConcurrencyCorrectnessIT( Creator creator )
+    public SimplePropertyStoreAbstractionReadConcurrencyCorrectnessIT( Creator creator )
     {
         super( creator );
     }

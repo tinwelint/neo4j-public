@@ -43,7 +43,7 @@ import static org.neo4j.helpers.Format.duration;
 public class SimplePropertyStoreAbstractionPerformanceIT extends SimplePropertyStoreAbstractionTestBase
 {
     private static final int NODE_COUNT = 1_000_000;
-    private static final int PROPERTY_COUNT = 10;
+    private static final int PROPERTY_COUNT = 30;
 
     public SimplePropertyStoreAbstractionPerformanceIT( Creator creator )
     {
