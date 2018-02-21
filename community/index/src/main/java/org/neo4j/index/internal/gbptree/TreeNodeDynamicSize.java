@@ -25,6 +25,7 @@ import java.util.StringJoiner;
 import org.neo4j.collection.primitive.PrimitiveIntStack;
 import org.neo4j.io.pagecache.PageCursor;
 
+import static java.lang.Integer.min;
 import static java.lang.String.format;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.SIZE_KEY_SIZE;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.SIZE_OFFSET;
@@ -34,9 +35,9 @@ import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.extractKeySize;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.extractTombstone;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.extractValueSize;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.getOverhead;
+import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.putKeyChildHeader;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.putKeyOffset;
-import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.putKeySize;
-import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.putKeyValueSize;
+import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.putKeyValueHeader;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.putTombstone;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.readKeyOffset;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.readKeyValueSize;
@@ -164,11 +165,11 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         // Where to write key?
         int currentKeyOffset = getAllocOffset( cursor );
         int keySize = layout.keySize( key );
-        int newKeyOffset = currentKeyOffset - keySize - getOverhead( keySize, 0 );
+        int newKeyOffset = currentKeyOffset - keySize - getOverhead( keySize, 0, keyValueSizeCap );
 
         // Write key
         cursor.setOffset( newKeyOffset );
-        putKeySize( cursor, keySize );
+        putKeyChildHeader( cursor, keySize );
         layout.writeKey( cursor, key );
 
         // Update alloc space
@@ -188,11 +189,15 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         int currentKeyValueOffset = getAllocOffset( cursor );
         int keySize = layout.keySize( key );
         int valueSize = layout.valueSize( value );
-        int newKeyValueOffset = currentKeyValueOffset - keySize - valueSize - getOverhead( keySize, valueSize );
+        long combinedSpaceForKeyValue = totalSpaceOfKeyValue( keySize, valueSize );
+        assert extractOffloadPartOfTotalSpace( combinedSpaceForKeyValue ) == 0 : "Implement support for writing large key/value entries";
+        // In this case we're not interested in the total space of the tree node, only the entry, i.e. excluding the offset
+        int treeNodeEntrySize = extractTreeNodePartOfTotalSpace( combinedSpaceForKeyValue ) - bytesKeyOffset();
+        int newKeyValueOffset = currentKeyValueOffset - treeNodeEntrySize;
 
         // Write key and value
         cursor.setOffset( newKeyValueOffset );
-        putKeyValueSize( cursor, keySize, valueSize );
+        putKeyValueHeader( cursor, keySize, valueSize );
         layout.writeKey( cursor, key );
         layout.writeValue( cursor, value );
 
@@ -219,7 +224,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
         // Update dead space
         int deadSpace = getDeadSpace( cursor );
-        setDeadSpace( cursor, deadSpace + keySize + valueSize + getOverhead( keySize, valueSize ) );
+        setDeadSpace( cursor, deadSpace + keySize + valueSize + getOverhead( keySize, valueSize, keyValueSizeCap ) );
 
         // Remove from offset array
         removeSlotAt( cursor, pos, keyCount, keyPosOffsetLeaf( 0 ), bytesKeyOffset() );
@@ -237,7 +242,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
         // Update dead space
         int deadSpace = getDeadSpace( cursor );
-        setDeadSpace( cursor, deadSpace + keySize + getOverhead( keySize, 0 ) );
+        setDeadSpace( cursor, deadSpace + keySize + getOverhead( keySize, 0, keyValueSizeCap ) );
 
         // Remove for offsetArray
         removeSlotAt( cursor, keyPos, keyCount, keyPosOffsetInternal( 0 ), keyChildSize() );
@@ -258,7 +263,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
         // Update dead space
         int deadSpace = getDeadSpace( cursor );
-        setDeadSpace( cursor, deadSpace + keySize + getOverhead( keySize, 0 ) );
+        setDeadSpace( cursor, deadSpace + keySize + getOverhead( keySize, 0, keyValueSizeCap ) );
 
         // Remove for offsetArray
         removeSlotAt( cursor, keyPos, keyCount, keyPosOffsetInternal( 0 ) - childSize(), keyChildSize() );
@@ -392,7 +397,9 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         int allocSpace = getAllocSpace( cursor, currentKeyCount, LEAF );
 
         // How much space do we need?
-        int neededSpace = totalSpaceOfKeyValue( newKey, newValue );
+        long combinedNeededSpace = totalSpaceOfKeyValue( newKey, newValue );
+        int neededSpace = extractTreeNodePartOfTotalSpace( combinedNeededSpace );
+        assert extractOffloadPartOfTotalSpace( combinedNeededSpace ) == 0 : "Implement support for offload storage";
 
         // There is your answer!
         return neededSpace < allocSpace ? Overflow.NO :
@@ -788,7 +795,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         int valueSize = extractValueSize( keyValueSize );
 
         // Copy
-        int toCopy = getOverhead( keySize, valueSize ) + keySize + valueSize;
+        int toCopy = getOverhead( keySize, valueSize, keyValueSizeCap ) + keySize + valueSize;
         int newRightAllocSpace = toAllocOffset - toCopy;
         fromCursor.copyTo( fromKeyOffset, toCursor, newRightAllocSpace, toCopy );
 
@@ -840,7 +847,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         int valueSize = extractValueSize( keyValueSize );
 
         // Copy
-        int toCopy = getOverhead( keySize, valueSize ) + keySize + valueSize;
+        int toCopy = getOverhead( keySize, valueSize, keyValueSizeCap ) + keySize + valueSize;
         int newRightAllocSpace = toAllocOffset - toCopy;
         fromCursor.copyTo( fromKeyOffset, toCursor, newRightAllocSpace, toCopy );
         return newRightAllocSpace;
@@ -872,7 +879,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             {
                 aliveKeysOffset.push( currentOffset );
             }
-            currentOffset += keySize + valueSize + getOverhead( keySize, valueSize );
+            currentOffset += keySize + valueSize + getOverhead( keySize, valueSize, keyValueSizeCap );
         }
     }
 
@@ -894,7 +901,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             {
                 aliveKeysOffset.push( currentOffset );
             }
-            currentOffset += keySize + getOverhead( keySize, 0 );
+            currentOffset += keySize + getOverhead( keySize, 0, keyValueSizeCap );
         }
     }
 
@@ -945,7 +952,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         int keySize = extractKeySize( readKeyValueSize( fromCursor ) );
 
         // Copy
-        int toCopy = getOverhead( keySize, 0 ) + keySize;
+        int toCopy = getOverhead( keySize, 0, keyValueSizeCap ) + keySize;
         toAllocOffset -= toCopy;
         fromCursor.copyTo( fromKeyOffset, toCursor, toAllocOffset, toCopy );
 
@@ -1008,7 +1015,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             int space;
             if ( currentPos == insertPos & !includedNew )
             {
-                space = totalSpaceOfKeyValue( newKey, newValue );
+                space = extractTreeNodePartOfTotalSpace( totalSpaceOfKeyValue( newKey, newValue ) );
                 includedNew = true;
                 currentPos--;
             }
@@ -1032,17 +1039,79 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         return totalSpace - deadSpace - allocSpace;
     }
 
-    private int totalSpaceOfKeyValue( KEY key, VALUE value )
+    private long totalSpaceOfKeyValue( KEY key, VALUE value )
     {
         int keySize = layout.keySize( key );
         int valueSize = layout.valueSize( value );
-        return bytesKeyOffset() + getOverhead( keySize, valueSize ) + keySize + valueSize;
+        return totalSpaceOfKeyValue( keySize, valueSize );
+    }
+
+    /**
+     * Calculates total space required by a key/value pair. The resulting {@code long} has two parts to it:
+     * <pre>
+     *     [O][O][O][O][N][N][N][N]
+     *     N: node size, i.e. number of bytes (including any overhead like offset and offload pointer(s)) that needs to be stored in the tree node
+     *     O: offload size, i.e. number of bytes that needs to be stored in offload storage
+     * </pre>
+     *
+     * Use {@link #extractTreeNodePartOfTotalSpace(long)} for extracting N and {@link #extractOffloadPartOfTotalSpace(long)} for extracting O.
+     *
+     * OBS! For now, for simplicity, ths assumption is that there will be zero or one offload pointer for an entry, not one for key and another for value.
+     *
+     * @param keySize the key size to calculate space for.
+     * @param valueSize the value size to calculate space for.
+     * @return combination of tree node space and offload space needed for storing this entry (key/value).
+     */
+    private long totalSpaceOfKeyValue( int keySize, int valueSize )
+    {
+        int entrySize = getOverhead( keySize, valueSize, keyValueSizeCap ) + keySize + valueSize;
+
+        // Divide the size into what will be in the tree node and what will have to be stored in offload
+        int treeNodeSize;
+        int offloadSize;
+        if ( entrySize <= keyValueSizeCap )
+        {
+            treeNodeSize = entrySize;
+            offloadSize = 0;
+        }
+        else
+        {
+            // Value will not be split up where some of its bytes lives in tree node and some in offload storage,
+            // i.e. valueSize doesn't enter into treeNodeSize calculation
+            treeNodeSize = min( keyValueSizeCap, keySize + entrySize );
+            offloadSize = entrySize - treeNodeSize;
+        }
+
+        //     [O][O][O][O]                    [N][N][N][N]
+        return (offloadSize << Integer.SIZE) | (treeNodeSize + bytesKeyOffset());
+    }
+
+    /**
+     * Extracts N part from result of {@link #totalSpaceOfKeyValue(Object, Object)} or {@link #totalSpaceOfKeyChild(Object)}.
+     *
+     * @param space result from {@link #totalSpaceOfKeyValue(Object, Object)}.
+     * @return N part of the space.
+     */
+    private static int extractTreeNodePartOfTotalSpace( long space )
+    {
+        return (int) space;
+    }
+
+    /**
+     * Extracts O part from result of {@link #totalSpaceOfKeyValue(Object, Object)} or {@link #totalSpaceOfKeyChild(Object)}.
+     *
+     * @param space result from {@link #totalSpaceOfKeyValue(Object, Object)}.
+     * @return O part of the space.
+     */
+    private static int extractOffloadPartOfTotalSpace( long space )
+    {
+        return (int) (space >>> Integer.SIZE);
     }
 
     private int totalSpaceOfKeyChild( KEY key )
     {
         int keySize = layout.keySize( key );
-        return bytesKeyOffset() + getOverhead( keySize, 0 ) + childSize() + keySize;
+        return bytesKeyOffset() + getOverhead( keySize, 0, keyValueSizeCap ) + childSize() + keySize;
     }
 
     private int totalSpaceOfKeyValue( PageCursor cursor, int pos )
@@ -1051,14 +1120,14 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         long keyValueSize = readKeyValueSize( cursor );
         int keySize = extractKeySize( keyValueSize );
         int valueSize = extractValueSize( keyValueSize );
-        return bytesKeyOffset() + getOverhead( keySize, valueSize ) + keySize + valueSize;
+        return bytesKeyOffset() + getOverhead( keySize, valueSize, keyValueSizeCap ) + keySize + valueSize;
     }
 
     private int totalSpaceOfKeyChild( PageCursor cursor, int pos )
     {
         placeCursorAtActualKey( cursor, pos, INTERNAL );
         int keySize = extractKeySize( readKeyValueSize( cursor ) );
-        return bytesKeyOffset() + getOverhead( keySize, 0 ) + childSize() + keySize;
+        return bytesKeyOffset() + getOverhead( keySize, 0, keyValueSizeCap ) + childSize() + keySize;
     }
 
     private void setAllocOffset( PageCursor cursor, int allocOffset )

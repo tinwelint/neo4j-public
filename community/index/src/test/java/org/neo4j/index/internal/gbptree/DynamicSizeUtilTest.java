@@ -22,11 +22,11 @@ package org.neo4j.index.internal.gbptree;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runners.Parameterized.Parameter;
+
 import org.neo4j.io.pagecache.ByteArrayPageCursor;
 import org.neo4j.io.pagecache.PageCursor;
 
 import static org.junit.Assert.assertEquals;
-
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.extractKeySize;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.extractValueSize;
 import static org.neo4j.index.internal.gbptree.DynamicSizeUtil.readKeyValueSize;
@@ -101,7 +101,7 @@ public class DynamicSizeUtilTest
     private int putAndGetKey( int keySize )
     {
         int offsetBefore = cursor.getOffset();
-        DynamicSizeUtil.putKeySize( cursor, keySize );
+        DynamicSizeUtil.putKeyChildHeader( cursor, keySize );
         int offsetAfter = cursor.getOffset();
         cursor.setOffset( offsetBefore );
         long readKeySize = readKeyValueSize( cursor );
@@ -118,7 +118,7 @@ public class DynamicSizeUtilTest
     private int putAndGetKeyValue( int keySize, int valueSize )
     {
         int offsetBefore = cursor.getOffset();
-        DynamicSizeUtil.putKeyValueSize( cursor, keySize, valueSize );
+        DynamicSizeUtil.putKeyValueHeader( cursor, keySize, valueSize );
         int offsetAfter = cursor.getOffset();
         cursor.setOffset( offsetBefore );
         long readKeyValueSize = readKeyValueSize( cursor );

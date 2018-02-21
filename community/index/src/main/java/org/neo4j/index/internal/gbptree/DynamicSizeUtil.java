@@ -95,6 +95,12 @@ class DynamicSizeUtil
     private static final int FLAG_ADDITIONAL_VALUE_SIZE = 0x80;
     private static final int SHIFT_LSB_KEY_SIZE = 5;
     private static final int SHIFT_LSB_VALUE_SIZE = 7;
+    // Size in bytes of a pointer to an offload record
+    private static final int SIZE_OFFLOAD_POINTER = Long.BYTES;
+    // Size in bytes of a size of data to be read from offload storage
+    private static final int SIZE_OFFLOAD_SIZE = Integer.SIZE;
+    // Total size (overhead as it's meta data for an entry) of an offload reference
+    private static final int SIZE_OFFLOAD_REFERENCE_OVERHEAD = SIZE_OFFLOAD_POINTER + SIZE_OFFLOAD_SIZE;
 
     static void putKeyOffset( PageCursor cursor, int keyOffset )
     {
@@ -106,12 +112,19 @@ class DynamicSizeUtil
         return getUnsignedShort( cursor );
     }
 
-    static void putKeySize( PageCursor cursor, int keySize )
+    static void putKeyChildHeader( PageCursor cursor, int keySize )
     {
-        putKeyValueSize( cursor, keySize, 0 );
+        putKeyValueHeader( cursor, keySize, 0 );
     }
 
-    static void putKeyValueSize( PageCursor cursor, int keySize, int valueSize )
+    /**
+     * Writes header to key/value entry in a tree node. This may include a pointer to offload storage too.
+     *
+     * @param cursor {@link PageCursor} placed at correct offset to start writing.
+     * @param keySize number of bytes needed to store whole key.
+     * @param valueSize number of bytes needed to store whole value.
+     */
+    static void putKeyValueHeader( PageCursor cursor, int keySize, int valueSize )
     {
         boolean hasAdditionalKeySize = keySize > MASK_ONE_BYTE_KEY_SIZE;
         boolean hasValueSize = valueSize > 0;
@@ -209,9 +222,27 @@ class DynamicSizeUtil
         return (int) ((keyValueSize & ~FLAG_READ_TOMBSTONE) >>> Integer.SIZE);
     }
 
-    static int getOverhead( int keySize, int valueSize )
+    static int getOverhead( int keySize, int valueSize, int maxTreeNodeEntrySize )
     {
-        return 1 + (keySize > MASK_ONE_BYTE_KEY_SIZE ? 1 : 0) + (valueSize > 0 ? 1 : 0) + (valueSize > MASK_ONE_BYTE_VALUE_SIZE ? 1 : 0);
+        int result = 1; // 1 byte is always needed
+        if ( keySize > MASK_ONE_BYTE_KEY_SIZE )
+        {
+            // One more byte is needed for this key
+            result++;
+        }
+        if ( valueSize > 0 )
+        {
+            // There's a value so one or two bytes is needed for it
+            result += valueSize > MASK_ONE_BYTE_VALUE_SIZE ? 2 : 1;
+        }
+
+        if ( result > maxTreeNodeEntrySize )
+        {
+            // This result doesn't fit entirely inside the tree node, so this requires an additional pointer to offload storage
+            result += SIZE_OFFLOAD_REFERENCE_OVERHEAD;
+        }
+
+        return result;
     }
 
     static boolean extractTombstone( long keyValueSize )
