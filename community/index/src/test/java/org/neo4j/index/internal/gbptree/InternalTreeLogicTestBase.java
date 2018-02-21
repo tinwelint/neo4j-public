@@ -67,6 +67,7 @@ public abstract class InternalTreeLogicTestBase<KEY,VALUE>
     private InternalTreeLogic<KEY,VALUE> treeLogic;
     private VALUE dontCare;
     private StructurePropagation<KEY> structurePropagation;
+    private SimpleOffloadIdProvider offloadIdProvider;
 
     private static long stableGeneration = GenerationSafePointer.MIN_GENERATION;
     private static long unstableGeneration = stableGeneration + 1;
@@ -112,7 +113,7 @@ public abstract class InternalTreeLogicTestBase<KEY,VALUE>
         readCursor.next( newId );
 
         layout = getLayout();
-        node = getTreeNode( pageSize, layout );
+        node = getTreeNode( pageSize, layout, offloadIdProvider );
         adder = getAdder();
         treeLogic = new InternalTreeLogic<>( id, node, layout );
         dontCare = layout.newValue();
@@ -121,7 +122,7 @@ public abstract class InternalTreeLogicTestBase<KEY,VALUE>
 
     protected abstract ValueMerger<KEY,VALUE> getAdder();
 
-    protected abstract TreeNode<KEY,VALUE> getTreeNode( int pageSize, Layout<KEY,VALUE> layout );
+    protected abstract TreeNode<KEY,VALUE> getTreeNode( int pageSize, Layout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider );
 
     protected abstract TestLayout<KEY,VALUE> getLayout();
 

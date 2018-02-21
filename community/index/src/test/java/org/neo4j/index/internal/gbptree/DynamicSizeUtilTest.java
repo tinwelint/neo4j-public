@@ -118,7 +118,7 @@ public class DynamicSizeUtilTest
     private int putAndGetKeyValue( int keySize, int valueSize )
     {
         int offsetBefore = cursor.getOffset();
-        DynamicSizeUtil.putKeyValueHeader( cursor, keySize, valueSize );
+        DynamicSizeUtil.putKeyValueHeader( cursor, keySize, valueSize, 0, TreeNode.NO_NODE_FLAG );
         int offsetAfter = cursor.getOffset();
         cursor.setOffset( offsetBefore );
         long readKeyValueSize = readKeyValueSize( cursor );

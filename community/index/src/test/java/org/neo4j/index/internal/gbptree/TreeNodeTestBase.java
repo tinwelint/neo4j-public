@@ -54,6 +54,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     PageCursor cursor;
 
     private TestLayout<KEY,VALUE> layout;
+    OffloadIdProvider offloadIdProvider;
     TreeNode<KEY,VALUE> node;
 
     @Rule
@@ -65,12 +66,12 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
         cursor = new PageAwareByteArrayCursor( PAGE_SIZE );
         cursor.next();
         layout = getLayout();
-        node = getNode( PAGE_SIZE, layout );
+        node = getNode( PAGE_SIZE, layout, offloadIdProvider );
     }
 
     protected abstract TestLayout<KEY,VALUE> getLayout();
 
-    protected abstract TreeNode<KEY,VALUE> getNode( int pageSize, Layout<KEY,VALUE> layout );
+    protected abstract TreeNode<KEY,VALUE> getNode( int pageSize, Layout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider );
 
     abstract void assertAdditionalHeader( PageCursor cursor, TreeNode<KEY,VALUE> node, int pageSize );
 
@@ -171,7 +172,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void keyValueOperationsInLeaf()
+    public void keyValueOperationsInLeaf() throws IOException
     {
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
@@ -376,7 +377,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void shouldDefragLeafWithTombstoneOnLast()
+    public void shouldDefragLeafWithTombstoneOnLast() throws IOException
     {
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
@@ -399,7 +400,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void shouldDefragLeafWithTombstoneOnFirst()
+    public void shouldDefragLeafWithTombstoneOnFirst() throws IOException
     {
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
@@ -422,7 +423,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void shouldDefragLeafWithTombstoneInterleaved()
+    public void shouldDefragLeafWithTombstoneInterleaved() throws IOException
     {
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
@@ -449,7 +450,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void shouldDefragLeafWithMultipleTombstonesInterleavedOdd()
+    public void shouldDefragLeafWithMultipleTombstonesInterleavedOdd() throws IOException
     {
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
@@ -484,7 +485,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void shouldDefragLeafWithMultipleTombstonesInterleavedEven()
+    public void shouldDefragLeafWithMultipleTombstonesInterleavedEven() throws IOException
     {
         // GIVEN
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
@@ -519,7 +520,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
     }
 
     @Test
-    public void shouldInsertAndRemoveRandomKeysAndValues()
+    public void shouldInsertAndRemoveRandomKeysAndValues() throws IOException
     {
         // This test doesn't care about sorting, that's an aspect that lies outside of TreeNode, really
 

@@ -82,6 +82,7 @@ import static org.neo4j.index.internal.gbptree.PageCursorUtil.putUnsignedShort;
 class DynamicSizeUtil
 {
     static final int SIZE_OFFSET = 2;
+    // TODO these should probably not exist
     static final int SIZE_KEY_SIZE = 2;
     static final int SIZE_VALUE_SIZE = 2;
     static final int SIZE_TOTAL_OVERHEAD = SIZE_OFFSET + SIZE_KEY_SIZE + SIZE_VALUE_SIZE;
@@ -114,17 +115,19 @@ class DynamicSizeUtil
 
     static void putKeyChildHeader( PageCursor cursor, int keySize )
     {
-        putKeyValueHeader( cursor, keySize, 0 );
+        // TODO this method should probably also get some offload arguments
+        putKeyValueHeader( cursor, keySize, 0, 0, TreeNode.NO_NODE_FLAG );
     }
 
     /**
      * Writes header to key/value entry in a tree node. This may include a pointer to offload storage too.
-     *
      * @param cursor {@link PageCursor} placed at correct offset to start writing.
      * @param keySize number of bytes needed to store whole key.
      * @param valueSize number of bytes needed to store whole value.
+     * @param offloadSize number of bytes needed for offload storage.
+     * @param offloadRecordReference offload reference to use if offload storage is needed.
      */
-    static void putKeyValueHeader( PageCursor cursor, int keySize, int valueSize )
+    static void putKeyValueHeader( PageCursor cursor, int keySize, int valueSize, int offloadSize, long offloadRecordReference )
     {
         boolean hasAdditionalKeySize = keySize > MASK_ONE_BYTE_KEY_SIZE;
         boolean hasValueSize = valueSize > 0;

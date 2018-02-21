@@ -33,7 +33,7 @@ class TreeNodeSelector
     static Factory FIXED = new Factory()
     {
         @Override
-        public <KEY,VALUE> TreeNode<KEY,VALUE> create( int pageSize, Layout<KEY,VALUE> layout )
+        public <KEY,VALUE> TreeNode<KEY,VALUE> create( int pageSize, Layout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider )
         {
             return new TreeNodeFixedSize<>( pageSize, layout );
         }
@@ -57,9 +57,9 @@ class TreeNodeSelector
     static Factory DYNAMIC = new Factory()
     {
         @Override
-        public <KEY,VALUE> TreeNode<KEY,VALUE> create( int pageSize, Layout<KEY,VALUE> layout )
+        public <KEY,VALUE> TreeNode<KEY,VALUE> create( int pageSize, Layout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider )
         {
-            return new TreeNodeDynamicSize<>( pageSize, layout );
+            return new TreeNodeDynamicSize<>( pageSize, layout, offloadIdProvider );
         }
 
         @Override
@@ -120,9 +120,10 @@ class TreeNodeSelector
          *
          * @param pageSize page size, i.e. size of tree nodes.
          * @param layout {@link Layout} that will be used in this format.
+         * @param offloadIdProvider {@link OffloadIdProvider} to use for offload record allocations.
          * @return the instantiated {@link TreeNode}.
          */
-        <KEY,VALUE> TreeNode<KEY,VALUE> create( int pageSize, Layout<KEY,VALUE> layout );
+        <KEY,VALUE> TreeNode<KEY,VALUE> create( int pageSize, Layout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider );
 
         /**
          * Specifies the format identifier of the physical layout of tree nodes.

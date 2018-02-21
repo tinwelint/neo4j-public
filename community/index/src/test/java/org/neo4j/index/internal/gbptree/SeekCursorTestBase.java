@@ -76,6 +76,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
     private PageAwareByteArrayCursor cursor;
     private PageAwareByteArrayCursor utilCursor;
     private SimpleIdProvider id;
+    private SimpleOffloadIdProvider offloadId;
 
     private static long stableGeneration = GenerationSafePointer.MIN_GENERATION;
     private static long unstableGeneration = stableGeneration + 1;
@@ -91,7 +92,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
         id = new SimpleIdProvider( cursor::duplicate );
 
         layout = getLayout();
-        node = getTreeNode( PAGE_SIZE, layout );
+        node = getTreeNode( PAGE_SIZE, layout, offloadId );
         treeLogic = new InternalTreeLogic<>( id, node, layout );
         structurePropagation = new StructurePropagation<>( layout.newKey(), layout.newKey(), layout.newKey() );
 
@@ -105,7 +106,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
 
     abstract TestLayout<KEY,VALUE> getLayout();
 
-    abstract TreeNode<KEY,VALUE> getTreeNode( int pageSize, TestLayout<KEY,VALUE> layout );
+    abstract TreeNode<KEY,VALUE> getTreeNode( int pageSize, TestLayout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider );
 
     private static void goTo( PageCursor cursor, long pageId ) throws IOException
     {
@@ -951,17 +952,17 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
         }
     }
 
-    private long fullLeaf( List<Long> expectedSeeds )
+    private long fullLeaf( List<Long> expectedSeeds ) throws IOException
     {
         return fullLeaf( 0, expectedSeeds );
     }
 
-    private long fullLeaf( long firstSeed )
+    private long fullLeaf( long firstSeed ) throws IOException
     {
         return fullLeaf( firstSeed, new ArrayList<>() );
     }
 
-    private long fullLeaf( long firstSeed, List<Long> expectedSeeds )
+    private long fullLeaf( long firstSeed, List<Long> expectedSeeds ) throws IOException
     {
         int keyCount = 0;
         KEY key = key( firstSeed + keyCount );
@@ -981,7 +982,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
     /**
      * @return next seed to be inserted
      */
-    private long fullLeaf()
+    private long fullLeaf() throws IOException
     {
         return fullLeaf( 0 );
     }
@@ -2253,7 +2254,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
                 layout.compareValue( expected, actual ) == 0 );
     }
 
-    private void insertKeysAndValues( int keyCount )
+    private void insertKeysAndValues( int keyCount ) throws IOException
     {
         for ( int i = 0; i < keyCount; i++ )
         {
@@ -2261,14 +2262,14 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
         }
     }
 
-    private void append( long k )
+    private void append( long k ) throws IOException
     {
         int keyCount = TreeNode.keyCount( cursor );
         node.insertKeyValueAt( cursor, key( k ), value( k ), keyCount, keyCount );
         TreeNode.setKeyCount( cursor, keyCount + 1 );
     }
 
-    private void insertIn( int pos, long k )
+    private void insertIn( int pos, long k ) throws IOException
     {
         int keyCount = TreeNode.keyCount( cursor );
         KEY key = key( k );

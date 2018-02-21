@@ -21,6 +21,8 @@ package org.neo4j.index.internal.gbptree;
 
 import org.junit.Test;
 
+import java.io.IOException;
+
 import org.neo4j.io.pagecache.PageCursor;
 
 import static org.junit.Assert.assertEquals;
@@ -36,9 +38,9 @@ public class TreeNodeDynamicSizeTest extends TreeNodeTestBase<RawBytes,RawBytes>
     }
 
     @Override
-    protected TreeNodeDynamicSize<RawBytes,RawBytes> getNode( int pageSize, Layout<RawBytes,RawBytes> layout )
+    protected TreeNodeDynamicSize<RawBytes,RawBytes> getNode( int pageSize, Layout<RawBytes,RawBytes> layout, OffloadIdProvider offloadIdProvider )
     {
-        return new TreeNodeDynamicSize<>( pageSize, layout );
+        return new TreeNodeDynamicSize<>( pageSize, layout, offloadIdProvider );
     }
 
     @Override
@@ -57,7 +59,7 @@ public class TreeNodeDynamicSizeTest extends TreeNodeTestBase<RawBytes,RawBytes>
         int oneByteKeyMax = DynamicSizeUtil.MASK_ONE_BYTE_KEY_SIZE;
         int oneByteValueMax = DynamicSizeUtil.MASK_ONE_BYTE_VALUE_SIZE;
 
-        TreeNodeDynamicSize<RawBytes,RawBytes> node = getNode( PAGE_SIZE, layout );
+        TreeNodeDynamicSize<RawBytes,RawBytes> node = getNode( PAGE_SIZE, layout, offloadIdProvider );
 
         verifyOverhead( node, oneByteKeyMax, 0, 1 );
         verifyOverhead( node, oneByteKeyMax, 1, 2 );
@@ -69,7 +71,7 @@ public class TreeNodeDynamicSizeTest extends TreeNodeTestBase<RawBytes,RawBytes>
         verifyOverhead( node, oneByteKeyMax + 1, oneByteValueMax +  1, 4 );
     }
 
-    private void verifyOverhead( TreeNodeDynamicSize<RawBytes,RawBytes> node, int keySize, int valueSize, int expectedOverhead )
+    private void verifyOverhead( TreeNodeDynamicSize<RawBytes,RawBytes> node, int keySize, int valueSize, int expectedOverhead ) throws IOException
     {
         cursor.zapPage();
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );

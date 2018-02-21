@@ -19,6 +19,7 @@
  */
 package org.neo4j.index.internal.gbptree;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.StringJoiner;
 
@@ -95,13 +96,19 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     private final int[] oldOffset = new int[maxKeyCount];
     private final int[] newOffset = new int[maxKeyCount];
     private final int totalSpace;
+    private final OffloadIdProvider offloadIdProvider;
     private final int halfSpace;
 
-    TreeNodeDynamicSize( int pageSize, Layout<KEY,VALUE> layout )
+    TreeNodeDynamicSize( int pageSize, Layout<KEY,VALUE> layout, OffloadIdProvider offloadIdProvider )
     {
         super( pageSize, layout );
         totalSpace = pageSize - HEADER_LENGTH_DYNAMIC;
+        this.offloadIdProvider = offloadIdProvider;
         halfSpace = totalSpace / 2;
+        // TODO update this calculation, it should include:
+        // - key/value header (potentially including offload reference)
+        // - key bytes
+        // - value bytes
         keyValueSizeCap = totalSpace / LEAST_NUMBER_OF_ENTRIES_PER_PAGE - SIZE_TOTAL_OVERHEAD;
 
         if ( keyValueSizeCap < MINIMUM_ENTRY_SIZE_CAP )
@@ -183,23 +190,73 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount )
+    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount ) throws IOException
     {
         // Where to write key?
         int currentKeyValueOffset = getAllocOffset( cursor );
         int keySize = layout.keySize( key );
         int valueSize = layout.valueSize( value );
-        long combinedSpaceForKeyValue = totalSpaceOfKeyValue( keySize, valueSize );
-        assert extractOffloadPartOfTotalSpace( combinedSpaceForKeyValue ) == 0 : "Implement support for writing large key/value entries";
-        // In this case we're not interested in the total space of the tree node, only the entry, i.e. excluding the offset
-        int treeNodeEntrySize = extractTreeNodePartOfTotalSpace( combinedSpaceForKeyValue ) - bytesKeyOffset();
-        int newKeyValueOffset = currentKeyValueOffset - treeNodeEntrySize;
+        int overheadSize = getOverhead( keySize, valueSize, keyValueSizeCap );
+        long combinedSpaceForKeyValue = totalSpaceOfKeyValue( keySize, valueSize, overheadSize );
 
-        // Write key and value
+        // Write key and value header
+        int treeNodeKeyValueSize = extractTreeNodePartOfTotalSpace( combinedSpaceForKeyValue ) - bytesKeyOffset();
+        int offloadSize = extractOffloadPartOfTotalSpace( combinedSpaceForKeyValue );
+        long offloadRecordReference = NO_NODE_FLAG;
+        if ( offloadSize > 0 )
+        {
+            // Some of the bytes needs to go to offload storage, allocate a record ID for that
+            offloadRecordReference = offloadIdProvider.allocate( offloadSize );
+        }
+        int newKeyValueOffset = currentKeyValueOffset - treeNodeKeyValueSize;
         cursor.setOffset( newKeyValueOffset );
-        putKeyValueHeader( cursor, keySize, valueSize );
-        layout.writeKey( cursor, key, 0, keySize );
-        layout.writeValue( cursor, value, 0, valueSize );
+        putKeyValueHeader( cursor, keySize, valueSize, offloadSize, offloadRecordReference );
+
+        // Write key and value data
+        if ( offloadSize == 0 )
+        {
+            // Everything fits in tree-node
+            layout.writeKey( cursor, key, 0, keySize );
+            layout.writeValue( cursor, value, 0, valueSize );
+        }
+        else
+        {
+            // Some data in tree-node, the rest in offload storage
+            long currentTreeNodeId = cursor.getCurrentPageId();
+
+            // Write key. Regardless of the size of the key, the value will be written to offload storage
+            int treeNodeKeySize = min( keyValueSizeCap - overheadSize, keySize );
+            layout.writeKey( cursor, key, 0, treeNodeKeySize );
+            int offloadKeySize = keySize - treeNodeKeySize;
+            int keyOffset = treeNodeKeySize;
+            int bytesLeftOnCurrentOffloadRecord = 0;
+            int maxDataInOffloadRecord = offloadIdProvider.maxDataInRecord();
+            while ( offloadKeySize > 0 )
+            {
+                offloadRecordReference = offloadIdProvider.placeAt( cursor, offloadRecordReference );
+                int length = min( offloadKeySize, maxDataInOffloadRecord );
+                layout.writeKey( cursor, key, keyOffset, length );
+                offloadKeySize -= length;
+                bytesLeftOnCurrentOffloadRecord = maxDataInOffloadRecord - length;
+            }
+
+            // Write value
+            int offloadValueSize = valueSize;
+            int valueOffset = 0;
+            while ( offloadValueSize > 0 )
+            {
+                if ( bytesLeftOnCurrentOffloadRecord == 0 )
+                {
+                    offloadRecordReference = offloadIdProvider.placeAt( cursor, offloadRecordReference );
+                    bytesLeftOnCurrentOffloadRecord = 0;
+                }
+
+                int length = min( bytesLeftOnCurrentOffloadRecord, min( offloadValueSize, maxDataInOffloadRecord ) );
+                layout.writeValue( cursor, value, length, valueOffset );
+            }
+
+            goTo( cursor, "Back to tree node from offload", currentTreeNodeId );
+        }
 
         // Update alloc space
         setAllocOffset( cursor, newKeyValueOffset );
@@ -619,7 +676,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
     @Override
     void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey,
-            VALUE newValue, KEY newSplitter )
+            VALUE newValue, KEY newSplitter ) throws IOException
     {
         // Find middle
         int keyCountAfterInsert = leftKeyCount + 1;
@@ -1043,7 +1100,8 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     {
         int keySize = layout.keySize( key );
         int valueSize = layout.valueSize( value );
-        return totalSpaceOfKeyValue( keySize, valueSize );
+        int overheadSize = getOverhead( keySize, valueSize, keyValueSizeCap );
+        return totalSpaceOfKeyValue( keySize, valueSize, overheadSize );
     }
 
     /**
@@ -1062,15 +1120,16 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
      * @param valueSize the value size to calculate space for.
      * @return combination of tree node space and offload space needed for storing this entry (key/value).
      */
-    private long totalSpaceOfKeyValue( int keySize, int valueSize )
+    private long totalSpaceOfKeyValue( int keySize, int valueSize, int overheadSize )
     {
-        int entrySize = getOverhead( keySize, valueSize, keyValueSizeCap ) + keySize + valueSize;
+        int entrySize = overheadSize + keySize + valueSize;
 
         // Divide the size into what will be in the tree node and what will have to be stored in offload
         int treeNodeSize;
         int offloadSize;
         if ( entrySize <= keyValueSizeCap )
         {
+            // All bytes fit inside tree-node
             treeNodeSize = entrySize;
             offloadSize = 0;
         }
@@ -1078,12 +1137,12 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         {
             // Value will not be split up where some of its bytes lives in tree node and some in offload storage,
             // i.e. valueSize doesn't enter into treeNodeSize calculation
-            treeNodeSize = min( keyValueSizeCap, keySize + entrySize );
+            treeNodeSize = min( keyValueSizeCap, keySize + overheadSize );
             offloadSize = entrySize - treeNodeSize;
         }
 
-        //     [O][O][O][O]                    [N][N][N][N]
-        return (offloadSize << Integer.SIZE) | (treeNodeSize + bytesKeyOffset());
+        //     [O][O][O][O]                             [N][N][N][N]
+        return (((long) offloadSize) << Integer.SIZE) | (treeNodeSize + bytesKeyOffset());
     }
 
     /**

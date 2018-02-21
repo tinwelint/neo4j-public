@@ -42,7 +42,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import static java.lang.String.format;
-
 import static org.neo4j.helpers.Exceptions.withMessage;
 import static org.neo4j.index.internal.gbptree.Generation.generation;
 import static org.neo4j.index.internal.gbptree.Generation.stableGeneration;
@@ -230,6 +229,12 @@ public class GBPTree<KEY,VALUE> implements Closeable
      * as a fall-back allocate a new id at the end of the store.
      */
     private final FreeListIdProvider freeList;
+
+    /**
+     * A free-list of offload records. Acquiring new ids involves first trying out the free-list and then
+     * falling back to {@link #freeList}.
+     */
+    private final OffloadIdProvider offloadFreeList;
 
     /**
      * A single instance {@link Writer} because tree only supports single writer.
@@ -425,8 +430,9 @@ public class GBPTree<KEY,VALUE> implements Closeable
                 meta.verify( layout );
                 format = TreeNodeSelector.selectByFormat( meta.getFormatIdentifier(), meta.getFormatVersion() );
             }
-            this.bTreeNode = format.create( pageSize, layout );
             this.freeList = new FreeListIdProvider( pagedFile, pageSize, rootId, FreeListIdProvider.NO_MONITOR );
+            this.offloadFreeList = null; // TODO instantiate
+            this.bTreeNode = format.create( pageSize, layout, offloadFreeList );
             this.writer = new SingleWriter( new InternalTreeLogic<>( freeList, bTreeNode, layout ) );
 
             // Create or load state
