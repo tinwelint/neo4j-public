@@ -135,7 +135,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
                     keySize, keyValueSizeCap, extractTombstone( keyValueSize ), offset, pos ) );
             return into;
         }
-        layout.readKey( cursor, into, keySize );
+        layout.readKey( cursor, into, keySize, 0, keySize );
         return into;
     }
 
@@ -154,8 +154,8 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
                     keySize, valueSize, keyValueSizeCap, extractTombstone( keyValueSize ), offset, pos ) );
             return;
         }
-        layout.readKey( cursor, intoKey, keySize );
-        layout.readValue( cursor, intoValue, valueSize );
+        layout.readKey( cursor, intoKey, keySize, 0, keySize );
+        layout.readValue( cursor, intoValue, valueSize, 0, valueSize );
     }
 
     @Override
@@ -170,7 +170,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         // Write key
         cursor.setOffset( newKeyOffset );
         putKeyChildHeader( cursor, keySize );
-        layout.writeKey( cursor, key );
+        layout.writeKey( cursor, key, 0, keySize );
 
         // Update alloc space
         setAllocOffset( cursor, newKeyOffset );
@@ -198,8 +198,8 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         // Write key and value
         cursor.setOffset( newKeyValueOffset );
         putKeyValueHeader( cursor, keySize, valueSize );
-        layout.writeKey( cursor, key );
-        layout.writeValue( cursor, value );
+        layout.writeKey( cursor, key, 0, keySize );
+        layout.writeValue( cursor, value, 0, valueSize );
 
         // Update alloc space
         setAllocOffset( cursor, newKeyValueOffset );
@@ -290,7 +290,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         if ( newKeySize == oldKeySize )
         {
             // Fine, we can just overwrite
-            layout.writeKey( cursor, key );
+            layout.writeKey( cursor, key, 0, newKeySize );
             return true;
         }
         return false;
@@ -313,7 +313,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             return into;
         }
         progressCursor( cursor, keySize );
-        layout.readValue( cursor, into, valueSize );
+        layout.readValue( cursor, into, valueSize, 0, valueSize );
         return into;
     }
 
@@ -330,7 +330,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         {
             // Fine we can just overwrite
             progressCursor( cursor, keySize );
-            layout.writeValue( cursor, value );
+            layout.writeValue( cursor, value, 0, newValueSize );
             return true;
         }
         return false;
@@ -1269,10 +1269,10 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             {
                 singleKey.add( "_" );
             }
-            layout.readKey( cursor, readKey, keySize );
+            layout.readKey( cursor, readKey, keySize, 0, keySize );
             if ( type == LEAF )
             {
-                layout.readValue( cursor, readValue, valueSize );
+                layout.readValue( cursor, readValue, valueSize, 0, valueSize );
             }
             singleKey.add( Integer.toString( keySize ) );
             if ( type == LEAF && includeValue )

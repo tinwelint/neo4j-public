@@ -76,35 +76,45 @@ public interface Layout<KEY, VALUE> extends Comparator<KEY>
 
     /**
      * Writes contents of {@code key} into {@code cursor} at its current offset.
-     *
      * @param cursor {@link PageCursor} to write into, at current offset.
      * @param key key containing data to write.
+     * @param offset offset into the key bytes to start writing from to the cursor,
+     * not to be conflated with the {@link PageCursor#getOffset()} cursor offset}
+     * @param length number of bytes of the key to write into the cursor.
      */
-    void writeKey( PageCursor cursor, KEY key );
+    void writeKey( PageCursor cursor, KEY key, int offset, int length );
 
     /**
      * Writes contents of {@code value} into {@code cursor} at its current offset.
-     *
-     * @param cursor {@link PageCursor} to write into, at current offset.
+     *  @param cursor {@link PageCursor} to write into, at current offset.
      * @param value value containing data to write.
+     * @param offset offset into the value bytes to start writing to the cursor,
+     * not to be conflated with the {@link PageCursor#getOffset()} cursor offset}
+     * @param length number of bytes of the value to write into the cursor.
      */
-    void writeValue( PageCursor cursor, VALUE value );
+    void writeValue( PageCursor cursor, VALUE value, int offset, int length );
 
     /**
      * Reads key contents at {@code cursor} at its current offset into {@code key}.
      * @param cursor {@link PageCursor} to read from, at current offset.
      * @param into key instances to read into.
      * @param keySize size of key to read or {@link #FIXED_SIZE_KEY} if key is fixed size.
+     * @param offset offset into the key bytes to start reading into from the cursor,
+     * not to be conflated with the {@link PageCursor#getOffset()} cursor offset}
+     * @param length number of bytes of the key to read from the cursor.
      */
-    void readKey( PageCursor cursor, KEY into, int keySize );
+    void readKey( PageCursor cursor, KEY into, int keySize, int offset, int length );
 
     /**
      * Reads value contents at {@code cursor} at its current offset into {@code value}.
      * @param cursor {@link PageCursor} to read from, at current offset.
      * @param into value instances to read into.
      * @param valueSize size of key to read or {@link #FIXED_SIZE_VALUE} if value is fixed size.
+     * @param offset offset into the value bytes to start reading into from the cursor,
+     * not to be conflated with the {@link PageCursor#getOffset()} cursor offset}
+     * @param length number of bytes of the value to read from the cursor.
      */
-    void readValue( PageCursor cursor, VALUE into, int valueSize );
+    void readValue( PageCursor cursor, VALUE into, int valueSize, int offset, int length );
 
     /**
      * Indicate if keys and values are fixed or dynamix size.

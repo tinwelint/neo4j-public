@@ -62,7 +62,7 @@ abstract class NumberLayout extends Layout.Adapter<NumberSchemaKey,NativeSchemaV
     }
 
     @Override
-    public void writeKey( PageCursor cursor, NumberSchemaKey key )
+    public void writeKey( PageCursor cursor, NumberSchemaKey key, int offset, int length )
     {
         cursor.putByte( key.type );
         cursor.putLong( key.rawValueBits );
@@ -70,12 +70,12 @@ abstract class NumberLayout extends Layout.Adapter<NumberSchemaKey,NativeSchemaV
     }
 
     @Override
-    public void writeValue( PageCursor cursor, NativeSchemaValue value )
+    public void writeValue( PageCursor cursor, NativeSchemaValue value, int offset, int length )
     {
     }
 
     @Override
-    public void readKey( PageCursor cursor, NumberSchemaKey into, int keySize )
+    public void readKey( PageCursor cursor, NumberSchemaKey into, int keySize, int offset, int length )
     {
         into.type = cursor.getByte();
         into.rawValueBits = cursor.getLong();
@@ -83,7 +83,7 @@ abstract class NumberLayout extends Layout.Adapter<NumberSchemaKey,NativeSchemaV
     }
 
     @Override
-    public void readValue( PageCursor cursor, NativeSchemaValue into, int valueSize )
+    public void readValue( PageCursor cursor, NativeSchemaValue into, int valueSize, int offset, int length )
     {
     }
 

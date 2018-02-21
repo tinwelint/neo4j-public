@@ -91,7 +91,7 @@ class LabelScanLayout extends Layout.Adapter<LabelScanKey,LabelScanValue>
     }
 
     @Override
-    public void writeKey( PageCursor cursor, LabelScanKey key )
+    public void writeKey( PageCursor cursor, LabelScanKey key, int offset, int length )
     {
         cursor.putInt( key.labelId );
         put6ByteLong( cursor, key.idRange );
@@ -104,13 +104,13 @@ class LabelScanLayout extends Layout.Adapter<LabelScanKey,LabelScanValue>
     }
 
     @Override
-    public void writeValue( PageCursor cursor, LabelScanValue value )
+    public void writeValue( PageCursor cursor, LabelScanValue value, int offset, int length )
     {
         cursor.putLong( value.bits );
     }
 
     @Override
-    public void readKey( PageCursor cursor, LabelScanKey into, int keySize )
+    public void readKey( PageCursor cursor, LabelScanKey into, int keySize, int offset, int length )
     {
         into.labelId = cursor.getInt();
         into.idRange = get6ByteLong( cursor );
@@ -124,7 +124,7 @@ class LabelScanLayout extends Layout.Adapter<LabelScanKey,LabelScanValue>
     }
 
     @Override
-    public void readValue( PageCursor cursor, LabelScanValue into, int valueSize )
+    public void readValue( PageCursor cursor, LabelScanValue into, int valueSize, int offset, int length )
     {
         into.bits = cursor.getLong();
     }

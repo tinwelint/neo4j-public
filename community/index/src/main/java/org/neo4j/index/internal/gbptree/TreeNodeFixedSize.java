@@ -108,7 +108,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     KEY keyAt( PageCursor cursor, KEY into, int pos, Type type )
     {
         cursor.setOffset( keyOffset( pos ) );
-        layout.readKey( cursor, into, FIXED_SIZE_KEY );
+        layout.readKey( cursor, into, FIXED_SIZE_KEY, 0, keySize );
         return into;
     }
 
@@ -159,7 +159,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     boolean setKeyAtInternal( PageCursor cursor, KEY key, int pos )
     {
         cursor.setOffset( keyOffset( pos ) );
-        layout.writeKey( cursor, key );
+        layout.writeKey( cursor, key, 0, keySize );
         return true;
     }
 
@@ -167,7 +167,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     VALUE valueAt( PageCursor cursor, VALUE value, int pos )
     {
         cursor.setOffset( valueOffset( pos ) );
-        layout.readValue( cursor, value, FIXED_SIZE_VALUE );
+        layout.readValue( cursor, value, FIXED_SIZE_VALUE, 0, valueSize );
         return value;
     }
 
@@ -175,7 +175,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     boolean setValueAt( PageCursor cursor, VALUE value, int pos )
     {
         cursor.setOffset( valueOffset( pos ) );
-        layout.writeValue( cursor, value );
+        layout.writeValue( cursor, value, 0, valueSize );
         return true;
     }
 
@@ -220,7 +220,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     {
         insertKeySlotsAt( cursor, pos, 1, keyCount );
         cursor.setOffset( keyOffset( pos ) );
-        layout.writeKey( cursor, key );
+        layout.writeKey( cursor, key, 0, keySize );
     }
 
     private int leafMaxKeyCount()

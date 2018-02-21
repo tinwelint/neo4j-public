@@ -145,25 +145,25 @@ class SimpleLongLayout extends TestLayout<MutableLong,MutableLong>
     }
 
     @Override
-    public void writeKey( PageCursor cursor, MutableLong key )
+    public void writeKey( PageCursor cursor, MutableLong key, int offset, int length )
     {
         cursor.putLong( key.longValue() );
     }
 
     @Override
-    public void writeValue( PageCursor cursor, MutableLong value )
+    public void writeValue( PageCursor cursor, MutableLong value, int offset, int length )
     {
         cursor.putLong( value.longValue() );
     }
 
     @Override
-    public void readKey( PageCursor cursor, MutableLong into, int keySize )
+    public void readKey( PageCursor cursor, MutableLong into, int keySize, int offset, int length )
     {
         into.setValue( cursor.getLong() );
     }
 
     @Override
-    public void readValue( PageCursor cursor, MutableLong into, int valueSize )
+    public void readValue( PageCursor cursor, MutableLong into, int valueSize, int offset, int length )
     {
         into.setValue( cursor.getLong() );
     }

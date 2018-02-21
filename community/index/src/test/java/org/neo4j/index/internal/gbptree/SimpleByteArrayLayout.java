@@ -68,26 +68,26 @@ public class SimpleByteArrayLayout extends TestLayout<RawBytes,RawBytes>
     }
 
     @Override
-    public void writeKey( PageCursor cursor, RawBytes rawBytes )
+    public void writeKey( PageCursor cursor, RawBytes rawBytes, int offset, int length )
     {
         cursor.putBytes( rawBytes.bytes );
     }
 
     @Override
-    public void writeValue( PageCursor cursor, RawBytes rawBytes )
+    public void writeValue( PageCursor cursor, RawBytes rawBytes, int offset, int length )
     {
         cursor.putBytes( rawBytes.bytes );
     }
 
     @Override
-    public void readKey( PageCursor cursor, RawBytes into, int keySize )
+    public void readKey( PageCursor cursor, RawBytes into, int keySize, int offset, int length )
     {
         into.bytes = new byte[keySize];
         cursor.getBytes( into.bytes );
     }
 
     @Override
-    public void readValue( PageCursor cursor, RawBytes into, int valueSize )
+    public void readValue( PageCursor cursor, RawBytes into, int valueSize, int offset, int length )
     {
         into.bytes = new byte[valueSize];
         cursor.getBytes( into.bytes );

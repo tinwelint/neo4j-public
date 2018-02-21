@@ -79,26 +79,26 @@ abstract class SpatialLayout extends Layout.Adapter<SpatialSchemaKey,NativeSchem
     }
 
     @Override
-    public void writeKey( PageCursor cursor, SpatialSchemaKey key )
+    public void writeKey( PageCursor cursor, SpatialSchemaKey key, int offset, int length )
     {
         cursor.putLong( key.rawValueBits );
         cursor.putLong( key.getEntityId() );
     }
 
     @Override
-    public void writeValue( PageCursor cursor, NativeSchemaValue value )
+    public void writeValue( PageCursor cursor, NativeSchemaValue value, int offset, int length )
     {
     }
 
     @Override
-    public void readKey( PageCursor cursor, SpatialSchemaKey into, int keySize )
+    public void readKey( PageCursor cursor, SpatialSchemaKey into, int keySize, int offset, int length )
     {
         into.rawValueBits = cursor.getLong();
         into.setEntityId( cursor.getLong() );
     }
 
     @Override
-    public void readValue( PageCursor cursor, NativeSchemaValue into, int valueSize )
+    public void readValue( PageCursor cursor, NativeSchemaValue into, int valueSize, int offset, int length )
     {
     }
 
