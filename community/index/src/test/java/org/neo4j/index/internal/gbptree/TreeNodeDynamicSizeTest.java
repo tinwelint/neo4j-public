@@ -82,7 +82,7 @@ public class TreeNodeDynamicSizeTest extends TreeNodeTestBase<RawBytes,RawBytes>
         value.bytes = new byte[valueSize];
 
         int allocOffsetBefore = node.getAllocOffset( cursor );
-        node.insertKeyValueAt( cursor, key, value, 0, 0 );
+        node.insertKeyValueAt( cursor, key, value, 0, 0, STABLE_GENERATION, UNSTABLE_GENERATION );
         int allocOffsetAfter = node.getAllocOffset( cursor );
         assertEquals( allocOffsetBefore - keySize - valueSize - expectedOverhead, allocOffsetAfter );
     }

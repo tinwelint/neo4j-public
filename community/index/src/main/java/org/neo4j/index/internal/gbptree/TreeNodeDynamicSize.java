@@ -190,7 +190,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount ) throws IOException
+    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount, long stableGeneration, long unstableGeneration ) throws IOException
     {
         // Where to write key?
         int currentKeyValueOffset = getAllocOffset( cursor );
@@ -206,7 +206,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         if ( offloadSize > 0 )
         {
             // Some of the bytes needs to go to offload storage, allocate a record ID for that
-            offloadRecordReference = offloadIdProvider.allocate( offloadSize );
+            offloadRecordReference = offloadIdProvider.allocate( stableGeneration, unstableGeneration, offloadSize );
         }
         int newKeyValueOffset = currentKeyValueOffset - treeNodeKeyValueSize;
         cursor.setOffset( newKeyValueOffset );
@@ -675,8 +675,8 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey,
-            VALUE newValue, KEY newSplitter ) throws IOException
+    void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue, KEY newSplitter,
+            long stableGeneration, long unstableGeneration ) throws IOException
     {
         // Find middle
         int keyCountAfterInsert = leftKeyCount + 1;
@@ -700,7 +700,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             // middle           ^
             moveKeysAndValues( leftCursor, middlePos - 1, rightCursor, 0, rightKeyCount );
             defragmentLeaf( leftCursor );
-            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, middlePos - 1 );
+            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, middlePos - 1, stableGeneration, unstableGeneration );
         }
         else
         {
@@ -715,7 +715,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             int keysToMove = leftKeyCount - middlePos;
             moveKeysAndValues( leftCursor, middlePos, rightCursor, 0, keysToMove );
             defragmentLeaf( leftCursor );
-            insertKeyValueAt( rightCursor, newKey, newValue, newInsertPos, keysToMove );
+            insertKeyValueAt( rightCursor, newKey, newValue, newInsertPos, keysToMove, stableGeneration, unstableGeneration );
         }
         TreeNode.setKeyCount( leftCursor, middlePos );
         TreeNode.setKeyCount( rightCursor, rightKeyCount );

@@ -472,7 +472,7 @@ public class KeySearchTest
             }
             layout.copyKey( key, expectedKey );
             keys.add( keyCount, expectedKey );
-            node.insertKeyValueAt( cursor, key, dummyValue, keyCount, keyCount );
+            node.insertKeyValueAt( cursor, key, dummyValue, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION );
             currentKey += random.nextInt( 100 ) + 10;
             keyCount++;
         }
@@ -532,7 +532,7 @@ public class KeySearchTest
         }
         else
         {
-            node.insertKeyValueAt( cursor, insertKey, dummyValue, keyCount, keyCount );
+            node.insertKeyValueAt( cursor, insertKey, dummyValue, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION );
         }
         TreeNode.setKeyCount( cursor, keyCount + 1 );
     }
@@ -551,7 +551,7 @@ public class KeySearchTest
         for ( int i = 0; i < KEY_COUNT; i++ )
         {
             key.setValue( key( i ) );
-            node.insertKeyValueAt( cursor, key, dummyValue, i, i );
+            node.insertKeyValueAt( cursor, key, dummyValue, i, i, STABLE_GENERATION, UNSTABLE_GENERATION );
         }
         TreeNode.setKeyCount( cursor, KEY_COUNT );
     }

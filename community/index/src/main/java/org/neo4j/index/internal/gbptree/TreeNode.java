@@ -240,7 +240,7 @@ abstract class TreeNode<KEY,VALUE>
     abstract void insertKeyAndRightChildAt( PageCursor cursor, KEY key, long child, int pos, int keyCount,
             long stableGeneration, long unstableGeneration );
 
-    abstract void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount ) throws IOException;
+    abstract void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount, long stableGeneration, long unstableGeneration ) throws IOException;
 
     abstract void removeKeyValueAt( PageCursor cursor, int pos, int keyCount );
 
@@ -338,8 +338,8 @@ abstract class TreeNode<KEY,VALUE>
      *
      * Key count is updated.
      */
-    abstract void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue,
-            KEY newSplitter ) throws IOException;
+    abstract void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue, KEY newSplitter,
+            long stableGeneration, long unstableGeneration ) throws IOException;
 
     /**
      * Performs the entry moving part of split in internal.

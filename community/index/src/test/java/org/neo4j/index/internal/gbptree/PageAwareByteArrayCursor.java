@@ -322,7 +322,10 @@ class PageAwareByteArrayCursor extends PageCursor
         {
             linkedCursor.close();
         }
-        current.close();
+        if ( current != null )
+        {
+            current.close();
+        }
     }
 
     @Override

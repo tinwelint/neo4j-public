@@ -128,7 +128,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount )
+    void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount, long stableGeneration, long unstableGeneration )
     {
         insertKeyAt( cursor, key, pos, keyCount );
         insertValueAt( cursor, value, pos, keyCount );
@@ -348,8 +348,8 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey,
-            VALUE newValue, KEY newSplitter )
+    void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue, KEY newSplitter,
+            long stableGeneration, long unstableGeneration )
     {
         int keyCountAfterInsert = leftKeyCount + 1;
         int middlePos = middle( keyCountAfterInsert );
@@ -371,7 +371,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
             // insert _,_,_,X,_,_,_,_,_,_,_
             // middle           ^
             copyKeysAndValues( leftCursor, middlePos - 1, rightCursor, 0, rightKeyCount );
-            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, middlePos - 1 );
+            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, middlePos - 1, stableGeneration, unstableGeneration );
         }
         else
         {
@@ -386,7 +386,7 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
                 // first copy
                 copyKeysAndValues( leftCursor, middlePos, rightCursor, 0, countBeforePos );
             }
-            insertKeyValueAt( rightCursor, newKey, newValue, countBeforePos, countBeforePos );
+            insertKeyValueAt( rightCursor, newKey, newValue, countBeforePos, countBeforePos, stableGeneration, unstableGeneration );
             int countAfterPos = leftKeyCount - insertPos;
             if ( countAfterPos > 0 )
             {
