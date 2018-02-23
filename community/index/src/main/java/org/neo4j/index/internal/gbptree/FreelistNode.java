@@ -40,7 +40,7 @@ import static org.neo4j.index.internal.gbptree.PageCursorUtil.put6BLong;
 class FreelistNode
 {
     private static final int PAGE_ID_SIZE = GenerationSafePointer.POINTER_SIZE;
-    private static final int BYTE_POS_NEXT = TreeNode.BYTE_POS_NODE_TYPE + Byte.BYTES;
+    private static final int BYTE_POS_NEXT = TreeNode.BYTE_POS_PAGE_TYPE + TreeNode.SIZE_PAGE_TYPE;
     private static final int HEADER_LENGTH = BYTE_POS_NEXT + PAGE_ID_SIZE;
     private static final int ENTRY_SIZE = GenerationSafePointer.GENERATION_SIZE + PAGE_ID_SIZE;
     static final long NO_PAGE_ID = TreeNode.NO_NODE_FLAG;
@@ -54,7 +54,7 @@ class FreelistNode
 
     static void initialize( PageCursor cursor )
     {
-        cursor.putByte( TreeNode.BYTE_POS_NODE_TYPE, TreeNode.NODE_TYPE_FREE_LIST_NODE );
+        cursor.putByte( TreeNode.BYTE_POS_PAGE_TYPE, TreeNode.PAGE_TYPE_FREE_LIST );
     }
 
     void write( PageCursor cursor, long unstableGeneration, long pageId, int pos )

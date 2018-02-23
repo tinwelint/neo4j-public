@@ -46,13 +46,16 @@ abstract class TreeNode<KEY,VALUE>
         NO_NEED_DEFRAG
     }
 
-    // Shared between all node types: TreeNode and FreelistNode
-    static final int BYTE_POS_NODE_TYPE = 0;
-    static final byte NODE_TYPE_TREE_NODE = 1;
-    static final byte NODE_TYPE_FREE_LIST_NODE = 2;
+    // Shared between all page types: TreeNode and FreelistNode, Offload and OffloadFreelistNode
+    static final int SIZE_PAGE_TYPE = Byte.BYTES;
+    static final int BYTE_POS_PAGE_TYPE = 0;
+    static final byte PAGE_TYPE_TREE_NODE = 1;
+    static final byte PAGE_TYPE_FREE_LIST = 2;
+    static final byte PAGE_TYPE_OFFLOAD = 3;
+    static final byte PAGE_TYPE_OFFLOAD_FREE_LIST = 4;
 
     static final int SIZE_PAGE_REFERENCE = GenerationSafePointerPair.SIZE;
-    static final int BYTE_POS_TYPE = BYTE_POS_NODE_TYPE + Byte.BYTES;
+    static final int BYTE_POS_TYPE = BYTE_POS_PAGE_TYPE + SIZE_PAGE_TYPE;
     static final int BYTE_POS_GENERATION = BYTE_POS_TYPE + Byte.BYTES;
     static final int BYTE_POS_KEYCOUNT = BYTE_POS_GENERATION + Integer.BYTES;
     static final int BYTE_POS_RIGHTSIBLING = BYTE_POS_KEYCOUNT + Integer.BYTES;
@@ -75,12 +78,12 @@ abstract class TreeNode<KEY,VALUE>
 
     static byte nodeType( PageCursor cursor )
     {
-        return cursor.getByte( BYTE_POS_NODE_TYPE );
+        return cursor.getByte( BYTE_POS_PAGE_TYPE );
     }
 
     private static void writeBaseHeader( PageCursor cursor, byte type, long stableGeneration, long unstableGeneration )
     {
-        cursor.putByte( BYTE_POS_NODE_TYPE, NODE_TYPE_TREE_NODE );
+        cursor.putByte( BYTE_POS_PAGE_TYPE, PAGE_TYPE_TREE_NODE );
         cursor.putByte( BYTE_POS_TYPE, type );
         setGeneration( cursor, unstableGeneration );
         setKeyCount( cursor, 0 );

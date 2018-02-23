@@ -42,6 +42,8 @@ interface OffloadIdProvider
      */
     long allocate( long stableGeneration, long unstableGeneration, int length ) throws IOException;
 
+    void release( long stableGeneration, long unstableGeneration, long recordId ) throws IOException;
+
     /**
      * @return max number of bytes that can be written into an offload record.
      */

@@ -271,7 +271,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
     /**
      * Set within should retry loop.
      * <p>
-     * Is node a {@link TreeNode#NODE_TYPE_TREE_NODE} or something else?
+     * Is node a {@link TreeNode#PAGE_TYPE_TREE_NODE} or something else?
      */
 
     private byte nodeType;
@@ -791,7 +791,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
     private boolean readHeader()
     {
         nodeType = TreeNode.nodeType( cursor );
-        if ( nodeType != TreeNode.NODE_TYPE_TREE_NODE )
+        if ( nodeType != TreeNode.PAGE_TYPE_TREE_NODE )
         {
             // If this node doesn't even look like a tree node then anything we read from it
             // will be just random data when looking at it as if it were a tree node.
@@ -814,7 +814,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
 
     private boolean endedUpOnExpectedNode()
     {
-        return nodeType == TreeNode.NODE_TYPE_TREE_NODE && verifyNodeGenerationInvariants();
+        return nodeType == TreeNode.PAGE_TYPE_TREE_NODE && verifyNodeGenerationInvariants();
     }
 
     /**
@@ -918,7 +918,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
         {
             scout.next();
             nodeType = TreeNode.nodeType( scout );
-            if ( nodeType == TreeNode.NODE_TYPE_TREE_NODE )
+            if ( nodeType == TreeNode.PAGE_TYPE_TREE_NODE )
             {
                 keyCount = TreeNode.keyCount( scout );
                 if ( keyCountIsSane( keyCount ) )
@@ -939,7 +939,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
             }
             checkOutOfBounds( this.cursor );
         }
-        return !(nodeType != TreeNode.NODE_TYPE_TREE_NODE || !keyCountIsSane( keyCount ));
+        return !(nodeType != TreeNode.PAGE_TYPE_TREE_NODE || !keyCountIsSane( keyCount ));
     }
 
     /**

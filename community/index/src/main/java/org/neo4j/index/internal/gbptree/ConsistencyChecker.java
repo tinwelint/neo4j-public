@@ -213,7 +213,7 @@ class ConsistencyChecker<KEY>
         }
         while ( cursor.shouldRetry() );
 
-        if ( nodeType != TreeNode.NODE_TYPE_TREE_NODE )
+        if ( nodeType != TreeNode.PAGE_TYPE_TREE_NODE )
         {
             throw new IllegalArgumentException( "Cursor is not pinned to a tree node page. pageId:" +
                     cursor.getCurrentPageId() );

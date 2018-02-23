@@ -353,7 +353,10 @@ class PageAwareByteArrayCursor extends PageCursor
         {
             result = linkedCursor.checkAndClearBoundsFlag();
         }
-        result |= current.checkAndClearBoundsFlag();
+        if ( current != null )
+        {
+            result |= current.checkAndClearBoundsFlag();
+        }
         return result;
     }
 

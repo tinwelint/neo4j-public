@@ -45,7 +45,7 @@ public class FreelistNodeTest
         byte nodeType = TreeNode.nodeType( cursor );
 
         // THEN
-        assertEquals( TreeNode.NODE_TYPE_FREE_LIST_NODE, nodeType );
+        assertEquals( TreeNode.PAGE_TYPE_FREE_LIST, nodeType );
     }
 
     @Test
@@ -54,7 +54,7 @@ public class FreelistNodeTest
         // GIVEN
         FreelistNode.initialize( cursor );
         byte nodeType = TreeNode.nodeType( cursor );
-        assertEquals( TreeNode.NODE_TYPE_FREE_LIST_NODE, nodeType );
+        assertEquals( TreeNode.PAGE_TYPE_FREE_LIST, nodeType );
 
         // WHEN
         long someId = 1234;
@@ -62,7 +62,7 @@ public class FreelistNodeTest
 
         // THEN
         nodeType = TreeNode.nodeType( cursor );
-        assertEquals( TreeNode.NODE_TYPE_FREE_LIST_NODE, nodeType );
+        assertEquals( TreeNode.PAGE_TYPE_FREE_LIST, nodeType );
     }
 
     @Test

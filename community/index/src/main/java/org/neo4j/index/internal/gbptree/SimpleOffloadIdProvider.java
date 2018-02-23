@@ -19,6 +19,8 @@
  */
 package org.neo4j.index.internal.gbptree;
 
+import java.io.IOException;
+
 import org.neo4j.io.pagecache.PageCursor;
 
 /**
@@ -36,6 +38,12 @@ class SimpleOffloadIdProvider implements OffloadIdProvider
 
     @Override
     public long allocate( long stableGeneration, long unstableGeneration, int length )
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void release( long stableGeneration, long unstableGeneration, long recordId ) throws IOException
     {
         throw new UnsupportedOperationException();
     }

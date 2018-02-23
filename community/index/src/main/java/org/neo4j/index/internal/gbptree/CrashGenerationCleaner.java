@@ -158,7 +158,7 @@ class CrashGenerationCleaner
         int keyCount;
         do
         {
-            isTreeNode = TreeNode.nodeType( cursor ) == TreeNode.NODE_TYPE_TREE_NODE;
+            isTreeNode = TreeNode.nodeType( cursor ) == TreeNode.PAGE_TYPE_TREE_NODE;
             keyCount = TreeNode.keyCount( cursor );
         }
         while ( cursor.shouldRetry() );

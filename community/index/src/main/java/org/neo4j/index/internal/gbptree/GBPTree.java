@@ -1062,7 +1062,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
             {
                 cursor.next();
                 byte nodeType = TreeNode.nodeType( cursor );
-                if ( nodeType == TreeNode.NODE_TYPE_TREE_NODE )
+                if ( nodeType == TreeNode.PAGE_TYPE_TREE_NODE )
                 {
                     bTreeNode.printNode( cursor, false, true, stableGeneration( generation ), unstableGeneration( generation ) );
                 }

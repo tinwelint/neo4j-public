@@ -92,7 +92,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
         node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
 
         // THEN
-        assertEquals( TreeNode.NODE_TYPE_TREE_NODE, TreeNode.nodeType( cursor ) );
+        assertEquals( TreeNode.PAGE_TYPE_TREE_NODE, TreeNode.nodeType( cursor ) );
         assertTrue( TreeNode.isLeaf( cursor ) );
         assertFalse( TreeNode.isInternal( cursor ) );
         assertEquals( UNSTABLE_GENERATION, TreeNode.generation( cursor ) );
@@ -110,7 +110,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
         node.initializeInternal( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
 
         // THEN
-        assertEquals( TreeNode.NODE_TYPE_TREE_NODE, TreeNode.nodeType( cursor ) );
+        assertEquals( TreeNode.PAGE_TYPE_TREE_NODE, TreeNode.nodeType( cursor ) );
         assertFalse( TreeNode.isLeaf( cursor ) );
         assertTrue( TreeNode.isInternal( cursor ) );
         assertEquals( UNSTABLE_GENERATION, TreeNode.generation( cursor ) );
