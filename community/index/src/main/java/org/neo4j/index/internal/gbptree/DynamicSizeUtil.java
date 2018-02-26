@@ -48,25 +48,34 @@ import static org.neo4j.index.internal.gbptree.PageCursorUtil.putUnsignedShort;
  * If {@code V} is set the next byte contains the higher order bits of the value size.
  * This first value size byte can fit value size < 128 and with the second byte we can fit value size < 32768.
  *
- * So in total key/value size has six different looks (not including tombstone being set or not set):
+ * So in total key/value size has a couple of different looks (not including tombstone being set or not set):
  * <pre>
- * One byte key, no value
+ * One byte key, no value, discrete entry size
  * [0,0,0,k,k,k,k,k]
  *
- * One byte key, one byte value
+ * One byte key, one byte value, discrete entry size
  * [0,0,1,k,k,k,k,k][0,v,v,v,v,v,v,v]
  *
- * One byte key, two byte value
+ * One byte key, two byte value, discrete entry size
  * [0,0,1,k,k,k,k,k][1,v,v,v,v,v,v,v][v,v,v,v,v,v,v,v]
  *
- * Two byte key, no value
- * [0,1,0,k,k,k,k,k][k,k,k,k,k,k,k,k]
+ * One byte key, value size doesn't matter, large entry size (i.e. key size + value size > large threshold)
+ * [0,1,0,k,k,k,k,k][1,0,0,0,0,0,0,0][OFFLOAD HEADER]
  *
- * Two byte key, one byte value
- * [0,1,1,k,k,k,k,k][k,k,k,k,k,k,k,k][0,v,v,v,v,v,v,v]
+ * Two byte key, no value, discrete entry size
+ * [0,1,0,k,k,k,k,k][0,k,k,k,k,k,k,k]
  *
- * Two byte key, two byte value
- * [0,1,1,k,k,k,k,k][k,k,k,k,k,k,k,k][1,v,v,v,v,v,v,v][v,v,v,v,v,v,v,v]
+ * Two byte key, value size doesn't matter, large entry size (i.e. key size + value size > large threshold)
+ * [0,1,0,k,k,k,k,k][1,k,k,k,k,k,k,k][OFFLOAD HEADER]
+ *
+ * Two byte key, one byte value, discrete entry size
+ * [0,1,1,k,k,k,k,k][0,k,k,k,k,k,k,k][0,v,v,v,v,v,v,v]
+ *
+ * Two byte key, two byte value, discrete entry size
+ * [0,1,1,k,k,k,k,k][0,k,k,k,k,k,k,k][1,v,v,v,v,v,v,v][v,v,v,v,v,v,v,v]
+ *
+ * OFFLOAD HEADER:
+ * TODO what does it look like?
  * </pre>
  * This key/value size format is used, both for leaves and internal nodes even though internal nodes can never have values.
  *
@@ -75,6 +84,10 @@ import static org.neo4j.index.internal.gbptree.PageCursorUtil.putUnsignedShort;
  * can be read.
  * key entry - [keyValueSize 1B-2B|actualKey]
  * key_value entry - [keyValueSize 1B-4B|actualKey|actualValue]
+ *
+ * The reason the discrete/large entry size bit lives in the second two-byte key is so that a one-byte header can cover
+ * a bit larger discrete key sizes. The special case for this is a one-byte key and large value which will require the second
+ * byte for the key simply to be able to specify that bit. A decent trade-off.
  *
  * Tombstone
  * First bit in keyValueSize is used as a tombstone, set to 1 if key is dead.
@@ -89,6 +102,8 @@ class DynamicSizeUtil
 
     private static final int FLAG_FIRST_BYTE_TOMBSTONE = 0x80;
     private static final long FLAG_READ_TOMBSTONE = 0x80000000_00000000L;
+    private static final long FLAG_READ_HAS_OFFLOAD = 0x40000000_00000000L;
+    private static final long FLAG_READ_ALL = FLAG_READ_TOMBSTONE | FLAG_READ_HAS_OFFLOAD;
     static final int MASK_ONE_BYTE_KEY_SIZE = 0x1F;
     static final int MASK_ONE_BYTE_VALUE_SIZE = 0x7F;
     private static final int FLAG_HAS_VALUE_SIZE = 0x20;
@@ -101,7 +116,7 @@ class DynamicSizeUtil
     // Size in bytes of a size of data to be read from offload storage
     private static final int SIZE_OFFLOAD_SIZE = Integer.SIZE;
     // Total size (overhead as it's meta data for an entry) of an offload reference
-    private static final int SIZE_OFFLOAD_REFERENCE_OVERHEAD = SIZE_OFFLOAD_POINTER + SIZE_OFFLOAD_SIZE;
+    static final int SIZE_OFFLOAD_REFERENCE_OVERHEAD = SIZE_OFFLOAD_POINTER + SIZE_OFFLOAD_SIZE /*key*/ + SIZE_OFFLOAD_SIZE /*value*/;
 
     static void putKeyOffset( PageCursor cursor, int keyOffset )
     {
@@ -129,6 +144,8 @@ class DynamicSizeUtil
      */
     static void putKeyValueHeader( PageCursor cursor, int keySize, int valueSize, int offloadSize, long offloadRecordReference )
     {
+        // TODO consider offload size/reference
+
         boolean hasAdditionalKeySize = keySize > MASK_ONE_BYTE_KEY_SIZE;
         boolean hasValueSize = valueSize > 0;
 
@@ -173,8 +190,14 @@ class DynamicSizeUtil
         }
     }
 
+    /**
+     * Reads entry header regarding key/value size and flags. If there's offload storage associated with this entry then that reference
+     * will have to be read after calling this method. The caller should look at {@link #extractHasOffload(long)} for that decision.
+     */
     static long readKeyValueSize( PageCursor cursor )
     {
+        // TODO consider offload size/reference
+
         byte firstByte = cursor.getByte();
         boolean hasTombstone = hasTombstone( firstByte );
         boolean hasAdditionalKeySize = (firstByte & FLAG_ADDITIONAL_KEY_SIZE) != 0;
@@ -222,30 +245,40 @@ class DynamicSizeUtil
 
     static int extractKeySize( long keyValueSize )
     {
-        return (int) ((keyValueSize & ~FLAG_READ_TOMBSTONE) >>> Integer.SIZE);
+        return (int) ((keyValueSize & ~FLAG_READ_ALL) >>> Integer.SIZE);
     }
 
-    static int getOverhead( int keySize, int valueSize, int maxTreeNodeEntrySize )
+    static boolean extractHasOffload( long keyValueSize )
     {
-        int result = 1; // 1 byte is always needed
+        return (keyValueSize & FLAG_READ_HAS_OFFLOAD) != 0;
+    }
+
+    /**
+     * Entry overhead, i.e. not including offset pointer to the actual entry.
+     */
+    static int getEntryOverhead( int keySize, int valueSize, int maxTreeNodeEntrySize )
+    {
+        int overhead = 1; // 1 byte is always needed
         if ( keySize > MASK_ONE_BYTE_KEY_SIZE )
         {
             // One more byte is needed for this key
-            result++;
+            overhead++;
         }
         if ( valueSize > 0 )
         {
             // There's a value so one or two bytes is needed for it
-            result += valueSize > MASK_ONE_BYTE_VALUE_SIZE ? 2 : 1;
+            overhead += valueSize > MASK_ONE_BYTE_VALUE_SIZE ? 2 : 1;
         }
 
-        if ( result > maxTreeNodeEntrySize )
+        if ( overhead + keySize + valueSize > maxTreeNodeEntrySize )
         {
-            // This result doesn't fit entirely inside the tree node, so this requires an additional pointer to offload storage
-            result += SIZE_OFFLOAD_REFERENCE_OVERHEAD;
+            // The 2B here is the equivalent of two-byte key, no value header
+            // Added to that is the offload overhead
+            return 2 + SIZE_OFFLOAD_REFERENCE_OVERHEAD;
         }
 
-        return result;
+        // The entry will fit inside the tree node
+        return overhead;
     }
 
     static boolean extractTombstone( long keyValueSize )
