@@ -120,6 +120,12 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         }
     }
 
+    // Accessible for testing
+    int getKeyValueSizeCap()
+    {
+        return keyValueSizeCap;
+    }
+
     @Override
     void writeAdditionalHeader( PageCursor cursor )
     {
@@ -253,6 +259,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
                 int length = min( bytesLeftOnCurrentOffloadRecord, min( offloadValueSize, maxDataInOffloadRecord ) );
                 layout.writeValue( cursor, value, length, valueOffset );
+                offloadValueSize -= length;
             }
 
             goTo( cursor, "Back to tree node from offload", currentTreeNodeId );
@@ -356,6 +363,11 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     @Override
     VALUE valueAt( PageCursor cursor, VALUE into, int pos )
     {
+        // TODO ideally we'd like to avoid a naked call to valueAt because of the overhead it brings for large entries, i.e. entries
+        //      that have offload storage. At the time of writing this the remaining calls are (1) overwrite and (2) remove.
+        //      Those call sites could be changed, together with TreeNode perhaps, to instead get key and value at the same time,
+        //      or to allow for state carried over from keyAt to valueAt, or some such. Consider this as an optimization reminder.
+
         placeCursorAtActualKey( cursor, pos, LEAF );
 
         // Read value

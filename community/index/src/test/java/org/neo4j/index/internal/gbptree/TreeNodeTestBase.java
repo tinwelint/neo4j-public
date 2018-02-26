@@ -38,6 +38,7 @@ import static org.junit.Assert.fail;
 import static org.neo4j.index.internal.gbptree.GBPTreeTestUtil.contains;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.pointer;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.resultIsFromSlotA;
+import static org.neo4j.index.internal.gbptree.SimpleOffloadIdProvider.offloadFreelist;
 import static org.neo4j.index.internal.gbptree.TreeNode.NO_NODE_FLAG;
 import static org.neo4j.index.internal.gbptree.TreeNode.Overflow.NO_NEED_DEFRAG;
 import static org.neo4j.index.internal.gbptree.TreeNode.Overflow.YES;
@@ -46,16 +47,16 @@ import static org.neo4j.index.internal.gbptree.TreeNode.Type.LEAF;
 
 public abstract class TreeNodeTestBase<KEY,VALUE>
 {
+    static final int PAGE_SIZE = 512;
     static final int STABLE_GENERATION = 1;
     static final int UNSTABLE_GENERATION = 3;
     private static final int HIGH_GENERATION = 4;
 
-    static final int PAGE_SIZE = 512;
-    PageCursor cursor;
-
     private TestLayout<KEY,VALUE> layout;
+    private TreeNode<KEY,VALUE> node;
+
+    PageAwareByteArrayCursor cursor;
     OffloadIdProvider offloadIdProvider;
-    TreeNode<KEY,VALUE> node;
 
     @Rule
     public final RandomRule random = new RandomRule();
@@ -66,6 +67,7 @@ public abstract class TreeNodeTestBase<KEY,VALUE>
         cursor = new PageAwareByteArrayCursor( PAGE_SIZE );
         cursor.next();
         layout = getLayout();
+        offloadIdProvider = offloadFreelist( cursor, PAGE_SIZE, new SimpleIdProvider( () -> cursor ) );
         node = getNode( PAGE_SIZE, layout, offloadIdProvider );
     }
 

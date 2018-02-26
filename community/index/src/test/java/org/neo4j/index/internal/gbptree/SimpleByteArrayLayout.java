@@ -70,13 +70,13 @@ public class SimpleByteArrayLayout extends TestLayout<RawBytes,RawBytes>
     @Override
     public void writeKey( PageCursor cursor, RawBytes rawBytes, int offset, int length )
     {
-        cursor.putBytes( rawBytes.bytes );
+        cursor.putBytes( rawBytes.bytes, offset, length );
     }
 
     @Override
     public void writeValue( PageCursor cursor, RawBytes rawBytes, int offset, int length )
     {
-        cursor.putBytes( rawBytes.bytes );
+        cursor.putBytes( rawBytes.bytes, offset, length );
     }
 
     @Override

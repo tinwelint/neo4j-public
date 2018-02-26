@@ -25,7 +25,9 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.index.internal.gbptree.TreeNode.Type.LEAF;
 
 public class TreeNodeDynamicSizeTest extends TreeNodeTestBase<RawBytes,RawBytes>
 {
@@ -70,6 +72,46 @@ public class TreeNodeDynamicSizeTest extends TreeNodeTestBase<RawBytes,RawBytes>
         verifyOverhead( node, oneByteKeyMax + 1, oneByteValueMax, 3 );
         verifyOverhead( node, oneByteKeyMax + 1, oneByteValueMax +  1, 4 );
     }
+
+    @Test
+    public void shouldStoreRemainderOfLargeKeyAndWholeValueOnOffload() throws IOException
+    {
+        // given
+        TreeNodeDynamicSize<RawBytes,RawBytes> node = getNode( PAGE_SIZE, layout, offloadIdProvider );
+        int keySize = node.getKeyValueSizeCap() * 5;
+        int valueSize = Long.BYTES;
+        cursor.zapPage();
+        node.initializeLeaf( cursor, STABLE_GENERATION, UNSTABLE_GENERATION );
+
+        // when
+        RawBytes key = initializedToRandomBytes( layout.newKey(), keySize );
+        RawBytes value = initializedToRandomBytes( layout.newValue(), valueSize );
+        node.insertKeyValueAt( cursor, key, value, 0, 0, STABLE_GENERATION, UNSTABLE_GENERATION );
+
+        // then
+        // read together
+        RawBytes readKey = layout.newKey();
+        RawBytes readValue = layout.newValue();
+        node.keyValueAt( cursor, readKey, readValue, 0 );
+        assertArrayEquals( key.bytes, readKey.bytes );
+        assertArrayEquals( value.bytes, readValue.bytes );
+
+        // read separately
+        node.keyAt( cursor, readKey, 0, LEAF );
+        node.valueAt( cursor, readValue, 0 );
+        assertArrayEquals( key.bytes, readKey.bytes );
+        assertArrayEquals( value.bytes, readValue.bytes );
+    }
+
+    private RawBytes initializedToRandomBytes( RawBytes rawBytes, int size )
+    {
+        rawBytes.bytes = new byte[size];
+        random.nextBytes( rawBytes.bytes );
+        return rawBytes;
+    }
+
+    // TODO shouldStoreWholeValueInOffloadIfAnyOffloadNeededForKeyAndValue
+    // TODO shouldLoadFullKeyIfRequested
 
     private void verifyOverhead( TreeNodeDynamicSize<RawBytes,RawBytes> node, int keySize, int valueSize, int expectedOverhead ) throws IOException
     {

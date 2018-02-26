@@ -28,7 +28,6 @@ import java.io.IOException;
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveLongList;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.test.rule.RandomRule;
 
 import static java.lang.Integer.min;
@@ -37,12 +36,9 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.neo4j.index.internal.gbptree.FreelistOffloadIdProvider.asRecordId;
 import static org.neo4j.index.internal.gbptree.IdSpace.MIN_TREE_NODE_ID;
+import static org.neo4j.index.internal.gbptree.SimpleOffloadIdProvider.offloadFreelist;
 import static org.neo4j.index.internal.gbptree.TreeNode.NO_NODE_FLAG;
 
 public class FreelistOffloadIdProviderTest
@@ -52,9 +48,8 @@ public class FreelistOffloadIdProviderTest
     private long unstableGeneration = 2;
 
     private PageAwareByteArrayCursor cursor;
-    private final PagedFile pagedFile = mock( PagedFile.class );
     private final SimpleIdProvider idProvider = new SimpleIdProvider( () -> cursor );
-    private final FreelistOffloadIdProvider freelist = new FreelistOffloadIdProvider( pagedFile, PAGE_SIZE, idProvider );
+    private FreelistOffloadIdProvider freelist;
 
     @Rule
     public final RandomRule random = new RandomRule();
@@ -63,8 +58,7 @@ public class FreelistOffloadIdProviderTest
     public void setUpPagedFile() throws IOException
     {
         cursor = new PageAwareByteArrayCursor( PAGE_SIZE );
-        when( pagedFile.io( anyLong(), anyInt() ) ).thenAnswer(
-                invocation -> cursor.duplicate( invocation.getArgument( 0 ) ) );
+        freelist = offloadFreelist( cursor, PAGE_SIZE, idProvider );
         freelist.initializeAfterCreation( stableGeneration, unstableGeneration );
     }
 

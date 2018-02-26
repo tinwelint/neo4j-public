@@ -40,7 +40,6 @@ import static org.neo4j.graphdb.config.Configuration.EMPTY;
 import static org.neo4j.index.internal.gbptree.ConsistencyChecker.assertOnTreeNode;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.pointer;
 import static org.neo4j.index.internal.gbptree.TreeNode.Type.INTERNAL;
-import static org.neo4j.index.internal.gbptree.TreeNode.Type.LEAF;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 /**
@@ -195,13 +194,13 @@ public class TreePrinter<KEY, VALUE>
             long child = -1;
             do
             {
-                node.keyAt( cursor, key, i, isLeaf ? LEAF : INTERNAL );
                 if ( isLeaf )
                 {
-                    node.valueAt( cursor, value, i );
+                    node.keyValueAt( cursor, key, value, i );
                 }
                 else
                 {
+                    node.keyAt( cursor, key, i, INTERNAL );
                     child = pointer( node.childAt( cursor, i, stableGeneration, unstableGeneration ) );
                 }
             }

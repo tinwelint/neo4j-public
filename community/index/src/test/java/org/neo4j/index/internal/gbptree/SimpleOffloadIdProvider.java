@@ -21,42 +21,23 @@ package org.neo4j.index.internal.gbptree;
 
 import java.io.IOException;
 
-import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PagedFile;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Disclaimer: This id provider doesn't work exactly like the real one does (at the time of writing the real one doesn't exist tho).
  * This one focuses on simplicity and may skip features like having multiple records per page a.s.o.
  */
-class SimpleOffloadIdProvider implements OffloadIdProvider
+class SimpleOffloadIdProvider
 {
-    private final int pageSize;
-
-    SimpleOffloadIdProvider( int pageSize )
+    static FreelistOffloadIdProvider offloadFreelist( PageAwareByteArrayCursor cursor, int pageSize, IdProvider idProvider ) throws IOException
     {
-        this.pageSize = pageSize;
-    }
-
-    @Override
-    public long allocate( long stableGeneration, long unstableGeneration, int length )
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void release( long stableGeneration, long unstableGeneration, long recordId ) throws IOException
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int maxDataInRecord()
-    {
-        return pageSize - Long.BYTES;
-    }
-
-    @Override
-    public long placeAt( PageCursor cursor, long recordId )
-    {
-        throw new UnsupportedOperationException();
+        PagedFile pagedFile = mock( PagedFile.class );
+        when( pagedFile.io( anyLong(), anyInt() ) ).thenAnswer( invocation -> cursor.duplicate( invocation.getArgument( 0 ) ) );
+        return new FreelistOffloadIdProvider( pagedFile, pageSize, idProvider );
     }
 }

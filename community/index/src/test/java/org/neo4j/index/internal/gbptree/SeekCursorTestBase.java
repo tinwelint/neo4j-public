@@ -44,6 +44,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.index.internal.gbptree.GenerationSafePointerPair.pointer;
+import static org.neo4j.index.internal.gbptree.SimpleOffloadIdProvider.offloadFreelist;
 import static org.neo4j.index.internal.gbptree.TreeNode.Type.INTERNAL;
 import static org.neo4j.index.internal.gbptree.TreeNode.Type.LEAF;
 import static org.neo4j.index.internal.gbptree.ValueMergers.overwrite;
@@ -76,7 +77,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
     private PageAwareByteArrayCursor cursor;
     private PageAwareByteArrayCursor utilCursor;
     private SimpleIdProvider id;
-    private SimpleOffloadIdProvider offloadId;
+    private OffloadIdProvider offloadId;
 
     private static long stableGeneration = GenerationSafePointer.MIN_GENERATION;
     private static long unstableGeneration = stableGeneration + 1;
@@ -90,6 +91,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
         cursor = new PageAwareByteArrayCursor( PAGE_SIZE );
         utilCursor = cursor.duplicate();
         id = new SimpleIdProvider( cursor::duplicate );
+        offloadId = offloadFreelist( cursor, PAGE_SIZE, id );
 
         layout = getLayout();
         node = getTreeNode( PAGE_SIZE, layout, offloadId );

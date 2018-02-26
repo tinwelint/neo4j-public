@@ -67,7 +67,7 @@ public abstract class InternalTreeLogicTestBase<KEY,VALUE>
     private InternalTreeLogic<KEY,VALUE> treeLogic;
     private VALUE dontCare;
     private StructurePropagation<KEY> structurePropagation;
-    private SimpleOffloadIdProvider offloadIdProvider;
+    private OffloadIdProvider offloadIdProvider;
 
     private static long stableGeneration = GenerationSafePointer.MIN_GENERATION;
     private static long unstableGeneration = stableGeneration + 1;
