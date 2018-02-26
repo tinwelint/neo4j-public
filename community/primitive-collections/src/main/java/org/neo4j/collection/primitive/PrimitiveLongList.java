@@ -21,6 +21,8 @@ package org.neo4j.collection.primitive;
 
 import java.util.Arrays;
 
+import static org.neo4j.collection.primitive.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
+
 /**
  * List implementation that holds primitive longs in array that grows on demand.
  */
@@ -29,6 +31,7 @@ public class PrimitiveLongList implements PrimitiveLongCollection
     private static final int DEFAULT_SIZE = 8;
 
     private long[] elements;
+    private final int initialSize;
     private int size;
 
     PrimitiveLongList()
@@ -38,7 +41,8 @@ public class PrimitiveLongList implements PrimitiveLongCollection
 
     PrimitiveLongList( int size )
     {
-        elements = new long[size];
+        initialSize = size;
+        clear();
     }
 
     public void add( long element )
@@ -52,11 +56,28 @@ public class PrimitiveLongList implements PrimitiveLongCollection
 
     public long get( int position )
     {
+        validatePosition( position );
+        return elements[position];
+    }
+
+    private void validatePosition( int position )
+    {
         if ( position >= size )
         {
             throw new IndexOutOfBoundsException( "Requested element: " + position + ", list size: " + size );
         }
-        return elements[position];
+    }
+
+    public long remove( int position )
+    {
+        validatePosition( position );
+        long result = elements[position];
+        if ( position < size - 1 )
+        {
+            System.arraycopy( elements, position + 1, elements, position, size - (position + 1) );
+        }
+        size--;
+        return result;
     }
 
     @Override
@@ -69,7 +90,7 @@ public class PrimitiveLongList implements PrimitiveLongCollection
     public void clear()
     {
         size = 0;
-        elements = PrimitiveLongCollections.EMPTY_LONG_ARRAY;
+        elements = new long[initialSize];
     }
 
     @Override
@@ -81,7 +102,8 @@ public class PrimitiveLongList implements PrimitiveLongCollection
     @Override
     public void close()
     {
-        clear();
+        size = 0;
+        elements = EMPTY_LONG_ARRAY;
     }
 
     @Override

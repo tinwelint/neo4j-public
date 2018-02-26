@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 
 public class PrimitiveLongListTest
 {
-
     @Test
     public void newListIsEmpty()
     {
@@ -151,6 +150,104 @@ public class PrimitiveLongListTest
         for ( int i = 0; i < size; i++ )
         {
             assertEquals( i, longList.get( i ) );
+        }
+    }
+
+    @Test
+    public void removeLastElement()
+    {
+        // given
+        PrimitiveLongList list = new PrimitiveLongList();
+        int count = 10;
+        for ( int i = 0; i < count; i++ )
+        {
+            list.add( i );
+        }
+
+        // when
+        long removed = list.remove( count - 1 );
+
+        // then
+        assertEquals( count - 1, removed );
+        assertEquals( count - 1, list.size() );
+        for ( int i = 0; i < list.size(); i++ )
+        {
+            assertEquals( i, list.get( i ) );
+        }
+    }
+
+    @Test
+    public void removeFirstElement()
+    {
+        // given
+        PrimitiveLongList list = new PrimitiveLongList();
+        int count = 10;
+        for ( int i = 0; i < count; i++ )
+        {
+            list.add( i );
+        }
+
+        // when
+        long removed = list.remove( 0 );
+
+        // then
+        assertEquals( 0, removed );
+        assertEquals( count - 1, list.size() );
+        for ( int i = 0; i < list.size(); i++ )
+        {
+            assertEquals( i + 1, list.get( i ) );
+        }
+    }
+
+    @Test
+    public void removeElementSomewhereInTheMiddle()
+    {
+        // given
+        PrimitiveLongList list = new PrimitiveLongList();
+        int count = 10;
+        for ( int i = 0; i < count; i++ )
+        {
+            list.add( i );
+        }
+
+        // when
+        long removed = list.remove( 3 );
+
+        // then
+        assertEquals( 3, removed );
+        assertEquals( count - 1, list.size() );
+        for ( int i = 0; i < 3; i++ )
+        {
+            assertEquals( i, list.get( i ) );
+        }
+        for ( int i = 3; i < list.size(); i++ )
+        {
+            assertEquals( i + 1, list.get( i ) );
+        }
+    }
+
+    @Test
+    public void addAfterClear()
+    {
+        // given
+        PrimitiveLongList list = new PrimitiveLongList();
+        for ( int i = 0; i < 10; i++ )
+        {
+            list.add( i );
+        }
+
+        // when
+        list.clear();
+        for ( int i = 0; i < 3; i++ )
+        {
+            list.add( 100 + i );
+        }
+
+        // then
+        assertEquals( 3, list.size() );
+        for ( int i = 0; i < list.size(); i++ )
+        {
+            assertEquals( 100 + i, list.get( i ) );
         }
     }
 }
