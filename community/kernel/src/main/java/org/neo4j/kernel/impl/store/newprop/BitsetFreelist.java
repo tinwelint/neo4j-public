@@ -27,6 +27,7 @@ import org.neo4j.io.pagecache.CursorException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
+import static org.neo4j.kernel.impl.store.newprop.Freelist.NULL_MARKER;
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_REUSE_IDS;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.EFFECTIVE_UNITS_PER_PAGE;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.PAGE_SIZE;
@@ -42,7 +43,7 @@ import static org.neo4j.kernel.impl.store.newprop.Utils.debug;
  * This way we could optimize the scan for scenarios where there are very little calls to free(). Quick calculation: for a 1TiB store,
  * where the freelist will occupy 2GiB then such a high-level bitset will occupy 32k memory
  */
-class BitsetFreelist implements Closeable
+class BitsetFreelist implements Freelist
 {
     private static final int BITS_PER_PAGE = PAGE_SIZE * Byte.SIZE;
     private static final int BEHAVIOUR_NUMBER_OF_PAGES_TO_SEARCH = 5;
@@ -80,30 +81,31 @@ class BitsetFreelist implements Closeable
         }
     }
 
-    synchronized long allocate( int units ) throws IOException
+    @Override
+    public synchronized long allocate( int slots ) throws IOException
     {
-        if ( units > EFFECTIVE_UNITS_PER_PAGE )
+        if ( slots > EFFECTIVE_UNITS_PER_PAGE )
         {
             throw new UnsupportedOperationException( "TODO implement support for records spanning multiple pages" );
         }
 
         if ( BEHAVIOUR_REUSE_IDS )
         {
-            long startId = getCachedSlot( units );
+            long startId = getCachedSlot( slots );
             if ( startId == NO_ID  && cacheSomeMore() )
             {
-                startId = getCachedSlot( units );
+                startId = getCachedSlot( slots );
             }
             if ( startId != NO_ID )
             {
                 System.out.println( "reusing startId = " + startId );
-                assert debug( "CACHE: Found cached slot id %d matching units %d", startId, units );
+                assert debug( "CACHE: Found cached slot id %d matching units %d", startId, slots );
                 return startId;
             }
         }
 
         long startId = highId;
-        long pageIdForEnd = pageIdForRecord( startId + units - 1 );
+        long pageIdForEnd = pageIdForRecord( startId + slots - 1 );
         if ( pageIdForRecord( startId ) != pageIdForEnd )
         {
             // Would have crossed page boundary, go to the next page
@@ -111,7 +113,7 @@ class BitsetFreelist implements Closeable
             highId = pageIdForEnd * EFFECTIVE_UNITS_PER_PAGE;
         }
         startId = highId;
-        highId += units;
+        highId += slots;
 
         // Don't mark the unit as used right here, the caller will handle that.
         return startId;
@@ -278,9 +280,17 @@ class BitsetFreelist implements Closeable
         return Integer.numberOfTrailingZeros( high == slotSize ? high : high << 1 );
     }
 
-    Marker marker() throws IOException
+    @Override
+    public Marker commitMarker() throws IOException
     {
-        return new Marker( pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) );
+        return new TheMarker( pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) );
+    }
+
+    @Override
+    public Marker reuseMarker()
+    {
+        // This only results in this free-list not playing nice with reuse
+        return NULL_MARKER;
     }
 
     @Override
@@ -334,16 +344,17 @@ class BitsetFreelist implements Closeable
         }
     }
 
-    class Marker implements AutoCloseable
+    class TheMarker implements Freelist.Marker
     {
         private final PageCursor cursor;
 
-        Marker( PageCursor cursor )
+        TheMarker( PageCursor cursor )
         {
             this.cursor = cursor;
         }
 
-        void mark( long id, int slotSize, boolean inUse ) throws IOException
+        @Override
+        public void mark( long id, int slotSize, boolean inUse ) throws IOException
         {
             long pageId = id / BITS_PER_PAGE;
             int bitOffset = (int) (id % BITS_PER_PAGE);
