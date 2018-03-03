@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.impl.api.state;
 
-public class GraphState extends PropertyContainerStateImpl
+public class GraphState extends PropertyContainerStateImpl implements org.neo4j.storageengine.api.txstate.GraphState
 {
     GraphState()
     {

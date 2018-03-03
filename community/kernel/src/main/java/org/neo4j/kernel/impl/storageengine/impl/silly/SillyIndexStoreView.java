@@ -25,7 +25,6 @@ import java.util.function.IntPredicate;
 
 import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.labelscan.NodeLabelUpdate;
 import org.neo4j.kernel.impl.api.index.IndexStoreView;
@@ -50,7 +49,7 @@ class SillyIndexStoreView implements IndexStoreView
     }
 
     @Override
-    public Value getPropertyValue( long nodeId, int propertyKeyId ) throws EntityNotFoundException
+    public Value getPropertyValue( long nodeId, int propertyKeyId )
     {
         NodeData node = data.nodes.get( nodeId );
         if ( node != null )
