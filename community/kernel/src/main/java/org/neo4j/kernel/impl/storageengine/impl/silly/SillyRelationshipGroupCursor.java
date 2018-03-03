@@ -64,7 +64,13 @@ class SillyRelationshipGroupCursor implements RelationshipGroupCursor
     }
 
     @Override
-    public int relationshipLabel()
+    public boolean seek( int relationshipLabel )
+    {
+        return false;
+    }
+
+    @Override
+    public int type()
     {
         return 0;
     }
@@ -83,6 +89,12 @@ class SillyRelationshipGroupCursor implements RelationshipGroupCursor
 
     @Override
     public int loopCount()
+    {
+        return 0;
+    }
+
+    @Override
+    public int totalCount()
     {
         return 0;
     }

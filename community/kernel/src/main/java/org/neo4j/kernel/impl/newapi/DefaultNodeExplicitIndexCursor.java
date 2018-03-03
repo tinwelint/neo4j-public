@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.newapi;
 
 import org.neo4j.internal.kernel.api.NodeCursor;
+import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.IndexProgressor.ExplicitClient;
 
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
@@ -41,9 +42,9 @@ class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor
     }
 
     @Override
-    public void initialize( ExplicitIndexProgressor progressor, int expectedSize )
+    public void initialize( IndexProgressor progressor, int expectedSize )
     {
-        super.initialize( progressor );
+        super.initialize( (ExplicitIndexProgressor) progressor );
         this.expectedSize = expectedSize;
     }
 

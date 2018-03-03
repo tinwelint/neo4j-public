@@ -68,8 +68,6 @@ import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
-import org.neo4j.kernel.api.index.SchemaIndexProvider.Descriptor;
-import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
@@ -1042,6 +1040,12 @@ public class SillyStorageEngine implements
     public boolean nodeExists( long id )
     {
         return data.nodes.containsKey( id );
+    }
+
+    @Override
+    public boolean relationshipExists( long id )
+    {
+        return data.relationships.containsKey( id );
     }
 
     @Override

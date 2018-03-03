@@ -77,11 +77,11 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         this.pool = pool;
     }
 
-    void initNode( long nodeReference, long reference, CursorsClient cursors, AssertOpen assertOpen )
+    void initNode( long nodeReference, long reference, CursorsClient cursors )
     {
         assert nodeReference != NO_ID;
 
-        init( reference, cursors, assertOpen );
+        init( reference, cursors );
 
         // Transaction state
         if ( cursors.hasTxStateWithChanges() )
@@ -91,11 +91,11 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    void initRelationship( long relationshipReference, long reference, CursorsClient cursors, AssertOpen assertOpen )
+    void initRelationship( long relationshipReference, long reference, CursorsClient cursors )
     {
         assert relationshipReference != NO_ID;
 
-        init( reference, cursors, assertOpen );
+        init( reference, cursors );
 
         // Transaction state
         if ( cursors.hasTxStateWithChanges() )
@@ -105,9 +105,9 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    void initGraph( long reference, CursorsClient cursors, AssertOpen assertOpen )
+    void initGraph( long reference, CursorsClient cursors )
     {
-        init( reference, cursors, assertOpen );
+        init( reference, cursors );
 
         // Transaction state
         if ( cursors.hasTxStateWithChanges() )
@@ -120,7 +120,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    private void init( long reference, CursorsClient cursors, AssertOpen assertOpen )
+    private void init( long reference, CursorsClient cursors )
     {
         this.propertyStore = cursors.propertyStore();
         this.next = reference;

@@ -661,7 +661,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public GraphState getGraphState( )
+    public org.neo4j.storageengine.api.txstate.GraphState getGraphState( )
     {
         return graphState;
     }

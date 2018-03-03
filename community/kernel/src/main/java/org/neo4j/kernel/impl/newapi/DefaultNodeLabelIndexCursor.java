@@ -52,9 +52,9 @@ class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgres
     }
 
     @Override
-    public void scan( LabelScanValueIndexProgressor progressor, boolean providesLabels, int label )
+    public void scan( IndexProgressor progressor, boolean providesLabels, int label )
     {
-        super.initialize( progressor );
+        super.initialize( (LabelScanValueIndexProgressor) progressor );
         if ( read.hasTxStateWithChanges() )
         {
             ReadableDiffSets<Long> changes =

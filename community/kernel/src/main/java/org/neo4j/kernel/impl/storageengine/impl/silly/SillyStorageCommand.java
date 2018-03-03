@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
-import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
+import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.core.RelationshipTypeToken;
 import org.neo4j.storageengine.api.Direction;
