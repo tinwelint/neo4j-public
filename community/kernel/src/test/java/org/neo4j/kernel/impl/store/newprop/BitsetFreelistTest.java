@@ -27,13 +27,11 @@ import org.junit.Test;
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.store.newprop.BitsetFreelist.Marker;
+import org.neo4j.kernel.impl.store.newprop.Freelist.Marker;
 import org.neo4j.test.rule.PageCacheAndDependenciesRule;
 
-import static org.junit.Assert.assertEquals;
-
 import static java.nio.file.StandardOpenOption.CREATE;
-
+import static org.junit.Assert.assertEquals;
 import static org.neo4j.test.rule.PageCacheAndDependenciesRule.pageCacheAndDependencies;
 import static org.neo4j.test.rule.PageCacheRule.config;
 
@@ -74,13 +72,13 @@ public class BitsetFreelistTest
         // given
         int units = 1;
         long id = freelist.allocate( units );
-        try ( Marker marker = freelist.marker() )
+        try ( Marker marker = freelist.commitMarker() )
         {
             marker.mark( id, units, true );
         }
 
         // when
-        try ( Marker marker = freelist.marker() )
+        try ( Marker marker = freelist.commitMarker() )
         {
             marker.mark( id, units, false );
         }
@@ -97,7 +95,7 @@ public class BitsetFreelistTest
         int count = 10_000;
         long[] ids = new long[count];
         int slotSize = 2;
-        try ( Marker marker = freelist.marker() )
+        try ( Marker marker = freelist.commitMarker() )
         {
             for ( int i = 0; i < count; i++ )
             {
@@ -107,7 +105,7 @@ public class BitsetFreelistTest
         }
 
         // when
-        try ( Marker marker = freelist.marker() )
+        try ( Marker marker = freelist.commitMarker() )
         {
             for ( int i = 0; i < count; i += 2 )
             {

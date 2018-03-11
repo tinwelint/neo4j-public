@@ -22,15 +22,15 @@ package org.neo4j.kernel.impl.store.newprop;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
-import org.neo4j.kernel.impl.store.newprop.BitsetFreelist.Marker;
+import org.neo4j.kernel.impl.store.newprop.Freelist.Marker;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
-
 import static org.neo4j.kernel.impl.store.newprop.ProposedFormat.BEHAVIOUR_REUSE_IDS;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.offsetForId;
 import static org.neo4j.kernel.impl.store.newprop.UnitCalculation.pageIdForRecord;
@@ -94,7 +94,7 @@ class Store implements Closeable
     {
         if ( BEHAVIOUR_REUSE_IDS )
         {
-            try ( Marker marker = freelist.marker() )
+            try ( Marker marker = freelist.commitMarker() )
             {
                 marker.mark( id, units, true );
             }
@@ -115,7 +115,7 @@ class Store implements Closeable
     {
         if ( BEHAVIOUR_REUSE_IDS )
         {
-            try ( Marker marker = freelist.marker() )
+            try ( Marker marker = freelist.commitMarker() )
             {
                 marker.mark( id, units, false );
             }

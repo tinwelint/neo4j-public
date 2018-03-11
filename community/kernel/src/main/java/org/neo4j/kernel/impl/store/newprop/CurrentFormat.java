@@ -26,6 +26,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.store.StorePropertyCursor;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -76,7 +77,7 @@ public class CurrentFormat implements SimplePropertyStoreAbstraction
     public CurrentFormat( PageCache pageCache, FileSystemAbstraction fs, File directory, PageCursorTracerSupplier tracerSupplier )
     {
         StoreFactory storeFactory = new StoreFactory( directory, Config.defaults(), new DefaultIdGeneratorFactory( fs ),
-                pageCache, fs, NullLogProvider.getInstance() );
+                pageCache, fs, NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
         neoStores = storeFactory.openNeoStores( true,
                 StoreType.PROPERTY_KEY_TOKEN_NAME, StoreType.PROPERTY_KEY_TOKEN,
                 StoreType.PROPERTY_ARRAY, StoreType.PROPERTY_STRING, StoreType.PROPERTY );
