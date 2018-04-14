@@ -257,6 +257,12 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
     private boolean concurrentWriteHappened;
 
     /**
+     * Set if things are generally fine, but the header for the current leaf needs to be read. Typically this is for the
+     * first read when visiting a new leaf, such as first read from traversing down tree or moving over to next sibling.
+     */
+    private boolean leafHeaderUpToDate;
+
+    /**
      * {@link TreeNode#generation(PageCursor) generation} of the current leaf node, read every call to {@link #next()}.
      */
     private long currentNodeGeneration;
@@ -522,7 +528,6 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
                 //   to validate. This is why keys/values are read in batches of N entries. The validations
                 //   are made only once per batch instead of once per key/value.
                 // - (FAST) there are keys/values read and validated and ready to simply be returned to the user.
-
                 if ( cachedIndex + 1 < cachedLength && !closed && !(concurrentWriteHappened = cursor.shouldRetry()) )
                 {   // FAST, key/value is readily available
                     cachedIndex++;
@@ -562,6 +567,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
                     {
                         if ( goToNextSibling() )
                         {
+                            leafHeaderUpToDate = true;
                             continue; // in the read loop above so that we can continue reading from next sibling
                         }
                     }
@@ -596,9 +602,15 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
             resultOnTrack = false;
 
             // Where we are
-            if ( !readHeader() || isInternal )
+            if ( !leafHeaderUpToDate || concurrentWriteHappened )
             {
-                continue;
+                // Header is out of date
+                if ( !readHeader() || isInternal )
+                {
+                    // This node we ended up on isn't even remotely resembling something we can read from
+                    // Likely due to a concurrent leaf tree node deletion/reuse or similar.
+                    continue;
+                }
             }
 
             if ( verifyExpectedFirstAfterGoToNext )
@@ -659,6 +671,7 @@ class SeekCursor<KEY,VALUE> implements RawCursor<Hit<KEY,VALUE>,IOException>, Hi
         while ( concurrentWriteHappened = cursor.shouldRetry() );
         checkOutOfBoundsAndClosed();
         cursor.checkAndClearCursorException();
+        leafHeaderUpToDate = false;
 
         // Act
         if ( !endedUpOnExpectedNode() || isInternal )

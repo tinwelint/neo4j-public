@@ -1653,6 +1653,7 @@ public abstract class SeekCursorTestBase<KEY, VALUE>
 
             // and corrupt successor pointer
             corruptGSPP( duplicate, TreeNode.BYTE_POS_SUCCESSOR );
+            duplicate.forceRetry();
 
             // then
             try
