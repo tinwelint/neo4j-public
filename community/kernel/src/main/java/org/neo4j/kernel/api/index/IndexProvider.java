@@ -118,7 +118,7 @@ public abstract class IndexProvider extends LifecycleAdapter implements Comparab
     }
 
     public static final IndexProvider EMPTY =
-            new IndexProvider( new Descriptor( "no-index-provider", "1.0" ), -1, IndexDirectoryStructure.NONE )
+            new IndexProvider( new IndexProviderDescriptor( "no-index-provider", "1.0" ), -1, IndexDirectoryStructure.NONE )
             {
                 private final IndexAccessor singleWriter = IndexAccessor.EMPTY;
                 private final IndexPopulator singlePopulator = IndexPopulator.EMPTY;

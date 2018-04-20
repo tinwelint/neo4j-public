@@ -32,6 +32,7 @@ import java.util.List;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.impl.index.schema.NumberIndexProvider;
@@ -68,7 +69,7 @@ import static org.neo4j.kernel.impl.index.schema.fusion.FusionVersion.v20;
 @RunWith( Parameterized.class )
 public class FusionIndexProviderTest
 {
-    private static final IndexProvider.Descriptor DESCRIPTOR = new IndexProvider.Descriptor( "test-fusion", "1" );
+    private static final IndexProviderDescriptor DESCRIPTOR = new IndexProviderDescriptor( "test-fusion", "1" );
 
     private IndexProvider[] providers;
     private IndexProvider[] aliveProviders;
@@ -324,7 +325,7 @@ public class FusionIndexProviderTest
     private IndexProvider mockProvider( Class<? extends IndexProvider> providerClass, String name )
     {
         IndexProvider mock = mock( providerClass );
-        when( mock.getProviderDescriptor() ).thenReturn( new IndexProvider.Descriptor( name, "1" ) );
+        when( mock.getProviderDescriptor() ).thenReturn( new IndexProviderDescriptor( name, "1" ) );
         return mock;
     }
 

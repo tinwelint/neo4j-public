@@ -26,13 +26,47 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.AutoCloseablePlus;
-import org.neo4j.internal.kernel.api.CursorFactory;
+import org.neo4j.internal.kernel.api.NodeCursor;
+import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
+import org.neo4j.internal.kernel.api.PropertyCursor;
+import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
+import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.api.AssertOpen;
+import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
+import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
+import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.NodeStore;
+import org.neo4j.kernel.impl.store.PropertyStore;
+import org.neo4j.kernel.impl.store.RecordCursor;
+import org.neo4j.kernel.impl.store.RelationshipGroupStore;
+import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.kernel.impl.store.record.DynamicRecord;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
+import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
+import org.neo4j.kernel.impl.store.record.RelationshipRecord;
+import org.neo4j.storageengine.api.CursorBootstrap;
+import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.kernel.api.RelationshipDirection.INCOMING;
+import static org.neo4j.internal.kernel.api.RelationshipDirection.LOOP;
+import static org.neo4j.internal.kernel.api.RelationshipDirection.OUTGOING;
+import static org.neo4j.kernel.impl.newapi.GroupReferenceEncoding.isRelationship;
+import static org.neo4j.kernel.impl.newapi.References.clearEncoding;
+import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 import static org.neo4j.util.FeatureToggles.flag;
 
-public class DefaultCursors implements CursorFactory
+public class DefaultCursors implements CursorBootstrap
 {
+    private final NeoStores neoStores;
     private DefaultNodeCursor nodeCursor;
     private DefaultRelationshipScanCursor relationshipScanCursor;
     private DefaultRelationshipTraversalCursor relationshipTraversalCursor;
@@ -45,6 +79,11 @@ public class DefaultCursors implements CursorFactory
 
     private static final boolean DEBUG_CLOSING = flag( DefaultCursors.class, "trackCursors", false );
     private List<CloseableStacktrace> closeables = new ArrayList<>();
+
+    public DefaultCursors( NeoStores neoStores )
+    {
+        this.neoStores = neoStores;
+    }
 
     @Override
     public DefaultNodeCursor allocateNodeCursor()
@@ -289,6 +328,7 @@ public class DefaultCursors implements CursorFactory
         relationshipExplicitIndexCursor = cursor;
     }
 
+    @Override
     public void release()
     {
         if ( nodeCursor != null )
@@ -348,7 +388,8 @@ public class DefaultCursors implements CursorFactory
         return closeable;
     }
 
-    void assertClosed()
+    @Override
+    public void assertClosed()
     {
         if ( DEBUG_CLOSING )
         {
@@ -385,6 +426,293 @@ public class DefaultCursors implements CursorFactory
                 printStream.println();
                 throw new IllegalStateException( format( "Closeable %s was not closed!\n%s", c, out.toString() ) );
             }
+        }
+    }
+
+    @Override
+    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext )
+    {
+        return new DefaultClient( txStateHolder, assertOpen, securityContext, neoStores );
+    }
+
+    public static class DefaultClient implements Client
+    {
+        private final TxStateHolder txStateHolder;
+        private final AssertOpen assertOpen;
+        private final SecurityContext securityContext;
+        private final NodeStore nodes;
+        private final RelationshipStore relationships;
+        private final RelationshipGroupStore groups;
+        private final PropertyStore properties;
+
+        @Override
+        public TransactionState txState()
+        {
+            return txStateHolder.txState();
+        }
+
+        @Override
+        public ExplicitIndexTransactionState explicitIndexTxState()
+        {
+            return txStateHolder.explicitIndexTxState();
+        }
+
+        @Override
+        public boolean hasTxStateWithChanges()
+        {
+            return txStateHolder.hasTxStateWithChanges();
+        }
+
+        @Override
+        public SecurityContext securityContext()
+        {
+            return securityContext;
+        }
+
+        @Override
+        public void assertOpen()
+        {
+            assertOpen.assertOpen();
+        }
+
+        DefaultClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext, NeoStores neoStores )
+        {
+            this.txStateHolder = txStateHolder;
+            this.assertOpen = assertOpen;
+            this.securityContext = securityContext;
+            this.nodes = neoStores.getNodeStore();
+            this.relationships = neoStores.getRelationshipStore();
+            this.groups = neoStores.getRelationshipGroupStore();
+            this.properties = neoStores.getPropertyStore();
+        }
+
+        @Override
+        public void allNodesScan( NodeCursor cursor )
+        {
+            ((DefaultNodeCursor)cursor).scan( this );
+        }
+
+        @Override
+        public void singleNode( long reference, NodeCursor cursor )
+        {
+            ((DefaultNodeCursor)cursor).single( reference, this );
+        }
+
+        @Override
+        public long nodeHighMark()
+        {
+            return nodes.getHighId();
+        }
+
+        @Override
+        public long relationshipHighMark()
+        {
+            return relationships.getHighId();
+        }
+
+        @Override
+        public void singleRelationship( long reference, RelationshipScanCursor cursor )
+        {
+            ((DefaultRelationshipScanCursor) cursor).single( reference, this );
+        }
+
+        @Override
+        public void nodeProperties( long nodeReference, long reference, PropertyCursor cursor )
+        {
+            ((DefaultPropertyCursor) cursor).initNode( nodeReference, reference, this );
+        }
+
+        @Override
+        public void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor )
+        {
+            ((DefaultPropertyCursor) cursor).initRelationship( relationshipReference, reference, this );
+        }
+
+        @Override
+        public void graphProperties( long reference, PropertyCursor cursor )
+        {
+            ((DefaultPropertyCursor) cursor).initGraph( reference, this );
+        }
+
+        @Override
+        public IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor )
+        {
+            DefaultNodeValueIndexCursor indexCursor = (DefaultNodeValueIndexCursor) cursor;
+            indexCursor.setRead( this, null );
+            return indexCursor;
+        }
+
+        @Override
+        public IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor )
+        {
+            DefaultNodeLabelIndexCursor indexCursor = (DefaultNodeLabelIndexCursor) cursor;
+            indexCursor.setRead( this );
+            return indexCursor;
+        }
+
+        @Override
+        public IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor )
+        {
+            DefaultNodeExplicitIndexCursor indexCursor = (DefaultNodeExplicitIndexCursor) cursor;
+            indexCursor.setRead( this );
+            return indexCursor;
+        }
+
+        @Override
+        public IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor )
+        {
+            DefaultRelationshipExplicitIndexCursor indexCursor = (DefaultRelationshipExplicitIndexCursor) cursor;
+            indexCursor.setRead( this );
+            return indexCursor;
+        }
+
+        @Override
+        public void allRelationshipsScan( RelationshipScanCursor cursor )
+        {
+            ((DefaultRelationshipScanCursor) cursor).scan( -1/*include all types*/, this );
+        }
+
+        @Override
+        public void relationshipLabelScan( int label, RelationshipScanCursor cursor )
+        {
+            ((DefaultRelationshipScanCursor) cursor).scan( label, this );
+        }
+
+        @Override
+        public void relationships( long nodeReference, long reference, RelationshipTraversalCursor cursor )
+        {
+            /* There are 5 different ways a relationship traversal cursor can be initialized:
+             *
+             * 1. From a batched group in a detached way. This happens when the user manually retrieves the relationships
+             *    references from the group cursor and passes it to this method and if the group cursor was based on having
+             *    batched all the different types in the single (mixed) chain of relationships.
+             *    In this case we should pass a reference marked with some flag to the first relationship in the chain that
+             *    has the type of the current group in the group cursor. The traversal cursor then needs to read the type
+             *    from that first record and use that type as a filter for when reading the rest of the chain.
+             *    - NOTE: we probably have to do the same sort of filtering for direction - so we need a flag for that too.
+             *
+             * 2. From a batched group in a DIRECT way. This happens when the traversal cursor is initialized directly from
+             *    the group cursor, in this case we can simply initialize the traversal cursor with the buffered state from
+             *    the group cursor, so this method here does not have to be involved, and things become pretty simple.
+             *
+             * 3. Traversing all relationships - regardless of type - of a node that has grouped relationships. In this case
+             *    the traversal cursor needs to traverse through the group records in order to get to the actual
+             *    relationships. The initialization of the cursor (through this here method) should be with a FLAGGED
+             *    reference to the (first) group record.
+             *
+             * 4. Traversing a single chain - this is what happens in the cases when
+             *    a) Traversing all relationships of a node without grouped relationships.
+             *    b) Traversing the relationships of a particular group of a node with grouped relationships.
+             *
+             * 5. There are no relationships - i.e. passing in NO_ID to this method.
+             *
+             * This means that we need reference encodings (flags) for cases: 1, 3, 4, 5
+             */
+            int relationshipType;
+            RelationshipReferenceEncoding encoding = RelationshipReferenceEncoding.parseEncoding( reference );
+            DefaultRelationshipTraversalCursor internalCursor = (DefaultRelationshipTraversalCursor)cursor;
+
+            switch ( encoding )
+            {
+            case NONE: // this is a normal relationship reference
+                internalCursor.chain( nodeReference, reference, this );
+                break;
+
+            case FILTER: // this relationship chain needs to be filtered
+                internalCursor.filtered( nodeReference, clearEncoding( reference ), this, true );
+                break;
+
+            case FILTER_TX_STATE: // tx-state changes should be filtered by the head of this chain
+                internalCursor.filtered( nodeReference, clearEncoding( reference ), this, false );
+                break;
+
+            case GROUP: // this reference is actually to a group record
+                internalCursor.groups( nodeReference, clearEncoding( reference ), this );
+                break;
+
+            case NO_OUTGOING_OF_TYPE: // nothing in store, but proceed to check tx-state changes
+                relationshipType = (int) clearEncoding( reference );
+                internalCursor.filteredTxState( nodeReference, this, relationshipType, OUTGOING );
+                break;
+
+            case NO_INCOMING_OF_TYPE: // nothing in store, but proceed to check tx-state changes
+                relationshipType = (int) clearEncoding( reference );
+                internalCursor.filteredTxState( nodeReference, this, relationshipType, INCOMING );
+                break;
+
+            case NO_LOOP_OF_TYPE: // nothing in store, but proceed to check tx-state changes
+                relationshipType = (int) clearEncoding( reference );
+                internalCursor.filteredTxState( nodeReference, this, relationshipType, LOOP );
+                break;
+
+            default:
+                throw new IllegalStateException( "Unknown encoding " + encoding );
+            }
+        }
+
+        @Override
+        public void relationshipGroups( long nodeReference, long reference, RelationshipGroupCursor cursor )
+        {
+            // the relationships for this node are not grouped in the store
+            if ( reference != NO_ID && isRelationship( reference ) )
+            {
+                ((DefaultRelationshipGroupCursor) cursor).buffer( nodeReference, clearEncoding( reference ), this );
+            }
+            else // this is a normal group reference.
+            {
+                ((DefaultRelationshipGroupCursor) cursor).direct( nodeReference, reference, this );
+            }
+        }
+
+        void relationshipFull( RelationshipRecord record, long reference, PageCursor pageCursor )
+        {
+            // We need to load forcefully for relationship chain traversal since otherwise we cannot
+            // traverse over relationship records which have been concurrently deleted
+            // (flagged as inUse = false).
+            // see
+            //      org.neo4j.kernel.impl.store.RelationshipChainPointerChasingTest
+            //      org.neo4j.kernel.impl.locking.RelationshipCreateDeleteIT
+            relationships.getRecordByCursor( reference, record, RecordLoad.FORCE, pageCursor );
+        }
+
+        PageCursor nodePage( long reference )
+        {
+            return nodes.openPageCursorForReading( reference );
+        }
+
+        PageCursor relationshipPage( long reference )
+        {
+            return relationships.openPageCursorForReading( reference );
+        }
+
+        PageCursor groupPage( long reference )
+        {
+            return groups.openPageCursorForReading( reference );
+        }
+
+        PropertyStore propertyStore()
+        {
+            return properties;
+        }
+
+        RecordCursor<DynamicRecord> labelCursor()
+        {
+            return nodes.newLabelCursor();
+        }
+
+        void node( NodeRecord record, long reference, PageCursor pageCursor )
+        {
+            nodes.getRecordByCursor( reference, record, RecordLoad.CHECK, pageCursor );
+        }
+
+        void relationship( RelationshipRecord record, long reference, PageCursor pageCursor )
+        {
+            relationships.getRecordByCursor( reference, record, RecordLoad.CHECK, pageCursor );
+        }
+
+        void group( RelationshipGroupRecord record, long reference, PageCursor page )
+        {
+            groups.getRecordByCursor( reference, record, RecordLoad.NORMAL, page );
         }
     }
 }

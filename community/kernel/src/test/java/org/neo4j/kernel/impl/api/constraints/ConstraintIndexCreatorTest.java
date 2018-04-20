@@ -41,7 +41,7 @@ import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
@@ -85,7 +85,7 @@ public class ConstraintIndexCreatorTest
     private final SchemaIndexDescriptor index = SchemaIndexDescriptorFactory.uniqueForLabel( 123, 456 );
     private final CapableIndexReference indexReference =
             new DefaultCapableIndexReference( true, IndexCapability.NO_CAPABILITY,
-                    new IndexProvider.Descriptor( "foo", "1.872" ), LABEL_ID, PROPERTY_KEY_ID );
+                    new IndexProviderDescriptor( "foo", "1.872" ), LABEL_ID, PROPERTY_KEY_ID );
     private final SchemaRead schemaRead = schemaRead();
     private final TokenRead tokenRead = mock( TokenRead.class );
 

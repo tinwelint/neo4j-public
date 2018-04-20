@@ -111,6 +111,16 @@ public class StubCursorFactory implements CursorFactory
         return poll( relationshipExplicitIndexCursors );
     }
 
+    @Override
+    public void assertClosed()
+    {
+    }
+
+    @Override
+    public void release()
+    {
+    }
+
     public StubCursorFactory withGroupCursors( RelationshipGroupCursor...cursors )
     {
         groupCursors.addAll( Arrays.asList( cursors ) );

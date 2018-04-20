@@ -115,7 +115,7 @@ public class OperationsLockTest
         when( transaction.txState() ).thenReturn( txState );
         when( transaction.securityContext() ).thenReturn( SecurityContext.AUTH_DISABLED );
 
-        Cursors cursors = spy( new Cursors( mock( NeoStores.class ) ) );
+        DefaultCursors cursors = spy( new DefaultCursors( mock( NeoStores.class ) ) );
         nodeCursor = mock( DefaultNodeCursor.class );
         propertyCursor = mock( DefaultPropertyCursor.class );
         relationshipCursor = mock( DefaultRelationshipScanCursor.class );

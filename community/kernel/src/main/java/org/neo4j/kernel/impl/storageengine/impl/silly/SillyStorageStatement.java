@@ -27,7 +27,7 @@ import org.neo4j.graphdb.Lock;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.api.IndexReaderFactory;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.util.Cursors;
@@ -178,7 +178,7 @@ class SillyStorageStatement implements StorageStatement, LabelScanReader
     }
 
     @Override
-    public IndexReader getIndexReader( IndexDescriptor index ) throws IndexNotFoundKernelException
+    public IndexReader getIndexReader( SchemaIndexDescriptor index ) throws IndexNotFoundKernelException
     {
         return indexReaders().newReader( index );
     }
@@ -193,7 +193,7 @@ class SillyStorageStatement implements StorageStatement, LabelScanReader
     }
 
     @Override
-    public IndexReader getFreshIndexReader( IndexDescriptor index ) throws IndexNotFoundKernelException
+    public IndexReader getFreshIndexReader( SchemaIndexDescriptor index ) throws IndexNotFoundKernelException
     {
         return indexReaders().newUnCachedReader( index );
     }
@@ -208,5 +208,11 @@ class SillyStorageStatement implements StorageStatement, LabelScanReader
     public long reserveRelationship()
     {
         return data.nextRelationshipId.getAndIncrement();
+    }
+
+    @Override
+    public long getGraphPropertyReference()
+    {
+        return 0;
     }
 }

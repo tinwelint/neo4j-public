@@ -35,6 +35,7 @@ import org.neo4j.internal.kernel.api.ExplicitIndexWrite;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.Locks;
+import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.PropertyCursor;
@@ -98,8 +99,8 @@ import static java.lang.Math.min;
 import static org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException.Phase.VALIDATION;
 import static org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException.OperationContext.CONSTRAINT_CREATION;
 import static org.neo4j.internal.kernel.api.schema.SchemaDescriptorPredicates.hasProperty;
-import static org.neo4j.kernel.api.Constants.NO_SUCH_NODE;
-import static org.neo4j.kernel.api.Constants.NO_SUCH_PROPERTY_KEY;
+import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
+import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_PROPERTY_KEY;
 import static org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor.Type.UNIQUE;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.INDEX_ENTRY;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.indexEntryResourceId;
@@ -844,17 +845,17 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
         return allStoreHolder;
     }
 
-    public DefaultNodeCursor nodeCursor()
+    public NodeCursor nodeCursor()
     {
         return nodeCursor;
     }
 
-    public DefaultRelationshipScanCursor relationshipCursor()
+    public RelationshipScanCursor relationshipCursor()
     {
         return relationshipCursor;
     }
 
-    public DefaultPropertyCursor propertyCursor()
+    public PropertyCursor propertyCursor()
     {
         return propertyCursor;
     }

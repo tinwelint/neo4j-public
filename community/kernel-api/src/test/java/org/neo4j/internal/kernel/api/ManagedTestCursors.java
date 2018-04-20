@@ -119,4 +119,14 @@ public class ManagedTestCursors implements CursorFactory
         allCursors.add( n );
         return n;
     }
+
+    @Override
+    public void assertClosed()
+    {
+    }
+
+    @Override
+    public void release()
+    {
+    }
 }

@@ -22,7 +22,7 @@ package org.neo4j.kernel.impl.api.cursor;
 import java.util.function.Consumer;
 
 import org.neo4j.cursor.Cursor;
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.storageengine.api.RelationshipItem;
 
@@ -31,7 +31,7 @@ import org.neo4j.storageengine.api.RelationshipItem;
  */
 public class TxSingleRelationshipCursor extends TxAbstractRelationshipCursor
 {
-    private long nextId = Constants.NO_SUCH_RELATIONSHIP;
+    private long nextId = StatementConstants.NO_SUCH_RELATIONSHIP;
 
     public TxSingleRelationshipCursor( TransactionState state, Consumer<TxSingleRelationshipCursor> instanceCache )
     {
@@ -50,9 +50,9 @@ public class TxSingleRelationshipCursor extends TxAbstractRelationshipCursor
     {
         if ( state.relationshipIsDeletedInThisTx( nextId ) )
         {
-            visit( Constants.NO_SUCH_RELATIONSHIP, Constants.NO_SUCH_RELATIONSHIP_TYPE,
-                    Constants.NO_SUCH_NODE, Constants.NO_SUCH_NODE );
-            nextId = Constants.NO_SUCH_RELATIONSHIP;
+            visit( StatementConstants.NO_SUCH_RELATIONSHIP, StatementConstants.NO_SUCH_RELATIONSHIP_TYPE,
+                    StatementConstants.NO_SUCH_NODE, StatementConstants.NO_SUCH_NODE );
+            nextId = StatementConstants.NO_SUCH_RELATIONSHIP;
             return false;
         }
 
@@ -75,10 +75,10 @@ public class TxSingleRelationshipCursor extends TxAbstractRelationshipCursor
         }
         else
         {
-            visit( Constants.NO_SUCH_RELATIONSHIP, Constants.NO_SUCH_RELATIONSHIP_TYPE,
-                    Constants.NO_SUCH_NODE, Constants.NO_SUCH_NODE );
+            visit( StatementConstants.NO_SUCH_RELATIONSHIP, StatementConstants.NO_SUCH_RELATIONSHIP_TYPE,
+                    StatementConstants.NO_SUCH_NODE, StatementConstants.NO_SUCH_NODE );
             relationshipState = null;
-            nextId = Constants.NO_SUCH_RELATIONSHIP;
+            nextId = StatementConstants.NO_SUCH_RELATIONSHIP;
             return false;
         }
     }

@@ -23,7 +23,7 @@ import org.apache.lucene.document.Document;
 
 import java.io.IOException;
 
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.impl.schema.LuceneDocumentStructure;
@@ -36,7 +36,7 @@ public class CompositeDuplicateCheckingCollector extends DuplicateCheckingCollec
 
     CompositeDuplicateCheckingCollector( PropertyAccessor accessor, int[] propertyKeyIds )
     {
-        super( accessor, Constants.NO_SUCH_PROPERTY_KEY );
+        super( accessor, StatementConstants.NO_SUCH_PROPERTY_KEY );
         this.propertyKeyIds = propertyKeyIds;
     }
 

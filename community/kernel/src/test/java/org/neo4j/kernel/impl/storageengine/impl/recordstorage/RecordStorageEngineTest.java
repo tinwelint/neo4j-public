@@ -184,7 +184,7 @@ public class RecordStorageEngineTest
     }
 
     @Test
-    public void shouldListAllStoreFiles()
+    public void shouldListAllStoreFiles() throws IOException
     {
         RecordStorageEngine engine = buildRecordStorageEngine();
 

@@ -27,9 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.neo4j.collection.primitive.PrimitiveIntSet;
-import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
+import org.neo4j.internal.kernel.api.schema.SchemaDescriptorSupplier;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
-import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.impl.core.RelationshipTypeToken;
 import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -48,9 +48,9 @@ abstract class SillyStorageCommand implements StorageCommand
 
     static class DropIndex extends SillyStorageCommand
     {
-        private final IndexDescriptor index;
+        private final SchemaIndexDescriptor index;
 
-        DropIndex( IndexDescriptor index )
+        DropIndex( SchemaIndexDescriptor index )
         {
             this.index = index;
         }
@@ -58,10 +58,10 @@ abstract class SillyStorageCommand implements StorageCommand
         @Override
         void applyTo( SillyData data )
         {
-            Iterator<Entry<Long,SchemaDescriptor.Supplier>> entries = data.schema.entrySet().iterator();
+            Iterator<Entry<Long,SchemaDescriptorSupplier>> entries = data.schema.entrySet().iterator();
             while ( entries.hasNext() )
             {
-                Entry<Long,SchemaDescriptor.Supplier> entry = entries.next();
+                Entry<Long,SchemaDescriptorSupplier> entry = entries.next();
                 if ( entry.getValue().equals( index ) )
                 {
                     data.schema.remove( entry.getKey() );
@@ -83,10 +83,10 @@ abstract class SillyStorageCommand implements StorageCommand
         @Override
         void applyTo( SillyData data )
         {
-            Iterator<Entry<Long,SchemaDescriptor.Supplier>> entries = data.schema.entrySet().iterator();
+            Iterator<Entry<Long,SchemaDescriptorSupplier>> entries = data.schema.entrySet().iterator();
             while ( entries.hasNext() )
             {
-                Entry<Long,SchemaDescriptor.Supplier> entry = entries.next();
+                Entry<Long,SchemaDescriptorSupplier> entry = entries.next();
                 if ( entry.getValue().equals( constraint ) )
                 {
                     data.schema.remove( entry.getKey() );
@@ -99,9 +99,9 @@ abstract class SillyStorageCommand implements StorageCommand
     static class CreateIndex extends SillyStorageCommand
     {
         private final long id;
-        private final IndexDescriptor index;
+        private final SchemaIndexDescriptor index;
 
-        CreateIndex( long id, IndexDescriptor index )
+        CreateIndex( long id, SchemaIndexDescriptor index )
         {
             this.id = id;
             this.index = index;

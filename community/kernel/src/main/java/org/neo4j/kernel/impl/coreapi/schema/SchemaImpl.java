@@ -343,7 +343,7 @@ public class SchemaImpl implements Schema
         CapableIndexReference reference = schemaRead.index( labelId, propertyKeyIds );
         if ( reference == CapableIndexReference.NO_INDEX )
         {
-            throw new SchemaRuleNotFoundException( SchemaRule.Kind.INDEX_RULE, forLabel( labelId, propertyKeyIds ) );
+            throw new SchemaRuleNotFoundException( SchemaRule.Kind.INDEX_RULE.name(), forLabel( labelId, propertyKeyIds ) );
         }
 
         return reference;

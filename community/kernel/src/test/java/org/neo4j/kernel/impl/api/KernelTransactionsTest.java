@@ -56,7 +56,7 @@ import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocksFactory;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
-import org.neo4j.kernel.impl.newapi.Cursors;
+import org.neo4j.kernel.impl.newapi.DefaultCursors;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.TransactionId;
@@ -570,7 +570,7 @@ public class KernelTransactionsTest
 
         StatementOperationParts statementOperations = mock( StatementOperationParts.class );
         KernelTransactions transactions;
-        when( storageEngine.cursors() ).thenReturn( new Cursors( mock( NeoStores.class ) ) );
+        when( storageEngine.cursors() ).thenReturn( new DefaultCursors( mock( NeoStores.class ) ) );
         if ( testKernelTransactions )
         {
             transactions = createTestTransactions( storageEngine, commitProcess, transactionIdStore, tracers,

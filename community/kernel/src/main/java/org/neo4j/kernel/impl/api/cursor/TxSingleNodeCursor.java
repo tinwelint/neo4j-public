@@ -24,7 +24,7 @@ import java.util.function.Consumer;
 import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Lock;
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.storageengine.api.NodeItem;
 import org.neo4j.storageengine.api.txstate.NodeState;
@@ -42,7 +42,7 @@ public class TxSingleNodeCursor implements Cursor<NodeItem>, NodeItem
     private final TransactionState state;
     private final Consumer<TxSingleNodeCursor> cache;
 
-    private long id = Constants.NO_SUCH_NODE;
+    private long id = StatementConstants.NO_SUCH_NODE;
     private Cursor<NodeItem> cursor;
     private NodeState nodeState;
     private boolean nodeIsAddedInThisTx;
@@ -64,7 +64,7 @@ public class TxSingleNodeCursor implements Cursor<NodeItem>, NodeItem
     @Override
     public NodeItem get()
     {
-        if ( id == Constants.NO_SUCH_NODE )
+        if ( id == StatementConstants.NO_SUCH_NODE )
         {
             throw new IllegalStateException();
         }
@@ -75,14 +75,14 @@ public class TxSingleNodeCursor implements Cursor<NodeItem>, NodeItem
     @Override
     public boolean next()
     {
-        if ( id == Constants.NO_SUCH_NODE )
+        if ( id == StatementConstants.NO_SUCH_NODE )
         {
             return false;
         }
 
         if ( state.nodeIsDeletedInThisTx( id ) )
         {
-            this.id = Constants.NO_SUCH_NODE;
+            this.id = StatementConstants.NO_SUCH_NODE;
             return false;
         }
 
@@ -95,7 +95,7 @@ public class TxSingleNodeCursor implements Cursor<NodeItem>, NodeItem
         }
         else
         {
-            this.id = Constants.NO_SUCH_NODE;
+            this.id = StatementConstants.NO_SUCH_NODE;
             this.nodeState = null;
             return false;
         }

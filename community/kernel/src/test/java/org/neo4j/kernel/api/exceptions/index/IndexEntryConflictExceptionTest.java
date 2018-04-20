@@ -23,7 +23,7 @@ import org.junit.Test;
 
 import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaUtil;
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueTuple;
@@ -51,7 +51,7 @@ public class IndexEntryConflictExceptionTest
     public void shouldMakeEntryConflictsForOneNode()
     {
         LabelSchemaDescriptor schema = SchemaDescriptorFactory.forLabel( labelId, 2 );
-        IndexEntryConflictException e = new IndexEntryConflictException( 0L, Constants.NO_SUCH_NODE, value );
+        IndexEntryConflictException e = new IndexEntryConflictException( 0L, StatementConstants.NO_SUCH_NODE, value );
 
         assertThat( e.evidenceMessage( SchemaUtil.idTokenNameLookup, schema ),
                 equalTo( "Node(0) already exists with label `label[1]` and property `property[2]` = 'hi'" ) );

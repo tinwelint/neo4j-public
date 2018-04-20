@@ -21,16 +21,22 @@ package org.neo4j.storageengine.api;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.NodeCursor;
+import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
+import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
+import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 public interface CursorBootstrap extends CursorFactory
 {
-    Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen );
+    Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext );
 
     /**
      * Bootstraps cursors at specified references.
@@ -38,8 +44,10 @@ public interface CursorBootstrap extends CursorFactory
      * then this interface could be collapsed into a simpler interface, but now the tx state etc. leak into this interface
      * because the cursors need to implement that themselves.
      */
-    public interface Client extends TxStateHolder, AssertOpen
+    interface Client extends TxStateHolder, AssertOpen
     {
+        SecurityContext securityContext();
+
         long nodeHighMark();
 
         long relationshipHighMark();
@@ -63,5 +71,13 @@ public interface CursorBootstrap extends CursorFactory
         void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor );
 
         void graphProperties( long reference, PropertyCursor cursor );
+
+        IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor );
+
+        IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor );
+
+        IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor );
+
+        IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor );
     }
 }

@@ -29,7 +29,7 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
+import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.kernel.impl.newapi.DefaultRelationshipTraversalCursor.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
@@ -44,7 +44,7 @@ import static org.neo4j.kernel.impl.newapi.RelationshipReferenceEncoding.encodeN
 
 class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements RelationshipGroupCursor
 {
-    private CursorsClient cursors;
+    private DefaultClient cursors;
     private final RelationshipRecord edge = new RelationshipRecord( NO_ID );
     private final DefaultCursors pool;
 
@@ -61,7 +61,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         this.pool = pool;
     }
 
-    void buffer( long nodeReference, long relationshipReference, CursorsClient cursors )
+    void buffer( long nodeReference, long relationshipReference, DefaultClient cursors )
     {
         setOwningNode( nodeReference );
         setId( NO_ID );
@@ -73,7 +73,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
             BufferedGroup current = null;
             while ( relationshipReference != NO_ID )
             {
-                current.relationshipFull( edge, relationshipReference, edgePage );
+                cursors.relationshipFull( edge, relationshipReference, edgePage );
                 // find the group
                 BufferedGroup group = buffer.get( edge.getType() );
                 if ( group == null )
@@ -111,7 +111,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         }
     }
 
-    void direct( long nodeReference, long reference, CursorsClient cursors )
+    void direct( long nodeReference, long reference, DefaultClient cursors )
     {
         bufferedGroup = null;
         clear();

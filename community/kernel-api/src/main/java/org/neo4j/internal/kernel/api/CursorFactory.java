@@ -52,4 +52,8 @@ public interface CursorFactory
     NodeExplicitIndexCursor allocateNodeExplicitIndexCursor();
 
     RelationshipExplicitIndexCursor allocateRelationshipExplicitIndexCursor();
+
+    void assertClosed();
+
+    void release();
 }

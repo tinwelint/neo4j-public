@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.graphdb.Lock;
 import org.neo4j.kernel.api.AssertOpen;
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.impl.store.RecordCursors;
 
 /**
@@ -31,7 +31,7 @@ import org.neo4j.kernel.impl.store.RecordCursors;
  */
 public class StoreSinglePropertyCursor extends StorePropertyCursor
 {
-    private int propertyKeyId = Constants.NO_SUCH_PROPERTY_KEY;
+    private int propertyKeyId = StatementConstants.NO_SUCH_PROPERTY_KEY;
 
     public StoreSinglePropertyCursor( RecordCursors cursors, Consumer<StoreSinglePropertyCursor> instanceCache )
     {
@@ -50,7 +50,7 @@ public class StoreSinglePropertyCursor extends StorePropertyCursor
     {
         try
         {
-            if ( propertyKeyId != Constants.NO_SUCH_PROPERTY_KEY )
+            if ( propertyKeyId != StatementConstants.NO_SUCH_PROPERTY_KEY )
             {
                 while ( super.next() )
                 {
@@ -65,7 +65,7 @@ public class StoreSinglePropertyCursor extends StorePropertyCursor
         }
         finally
         {
-            this.propertyKeyId = Constants.NO_SUCH_PROPERTY_KEY;
+            this.propertyKeyId = StatementConstants.NO_SUCH_PROPERTY_KEY;
         }
     }
 }

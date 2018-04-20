@@ -77,7 +77,7 @@ import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.index.labelscan.NativeLabelScanStore;
 import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.locking.LockService;
-import org.neo4j.kernel.impl.newapi.Cursors;
+import org.neo4j.kernel.impl.newapi.DefaultCursors;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -98,6 +98,7 @@ import org.neo4j.kernel.impl.transaction.state.IntegrityValidator;
 import org.neo4j.kernel.impl.transaction.state.TransactionRecordState;
 import org.neo4j.kernel.impl.transaction.state.storeview.DynamicIndexStoreView;
 import org.neo4j.kernel.impl.transaction.state.storeview.NeoStoreIndexStoreView;
+import org.neo4j.kernel.impl.util.Cursors;
 import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.impl.util.IdOrderingQueue;
 import org.neo4j.kernel.info.DiagnosticsManager;
@@ -162,7 +163,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final IdController idController;
     private final int denseNodeThreshold;
     private final int recordIdBatchSize;
-    private final Cursors cursors;
+    private final DefaultCursors cursors;
     private final DiagnosticsManager diagnosticsManager;
     private final IOLimiter ioLimiter;
 
@@ -207,6 +208,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         this.explicitIndexTransactionOrdering = explicitIndexTransactionOrdering;
         this.idController = idController;
         this.diagnosticsManager = diagnosticsManager;
+        this.ioLimiter = ioLimiter;
         StoreFactory factory = new StoreFactory( storeDir, config, idGeneratorFactory, pageCache, fs, logProvider,
                 versionContextSupplier );
         neoStores = factory.openAllNeoStores( true );
@@ -250,7 +252,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             denseNodeThreshold = config.get( GraphDatabaseSettings.dense_node_threshold );
             recordIdBatchSize = config.get( GraphDatabaseSettings.record_id_batch_size );
 
-            cursors = new Cursors( neoStores );
+            cursors = new DefaultCursors( neoStores );
         }
         catch ( Throwable failure )
         {
