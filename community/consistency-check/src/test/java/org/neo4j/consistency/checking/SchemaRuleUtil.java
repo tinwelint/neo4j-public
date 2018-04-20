@@ -19,7 +19,7 @@
  */
 package org.neo4j.consistency.checking;
 
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.impl.store.record.ConstraintRule;
@@ -49,21 +49,21 @@ public class SchemaRuleUtil
                 ConstraintDescriptorFactory.existsForRelType( labelId, propertyId ) );
     }
 
-    public static IndexRule indexRule( long ruleId, int labelId, int propertyId, IndexProvider.Descriptor
+    public static IndexRule indexRule( long ruleId, int labelId, int propertyId, IndexProviderDescriptor
             descriptor )
     {
         return IndexRule.indexRule( ruleId, SchemaIndexDescriptorFactory.forLabel( labelId, propertyId ), descriptor );
     }
 
     public static IndexRule constraintIndexRule( long ruleId, int labelId, int propertyId,
-                                                 IndexProvider.Descriptor descriptor, long constraintId )
+                                                 IndexProviderDescriptor descriptor, long constraintId )
     {
         return IndexRule.constraintIndexRule( ruleId, SchemaIndexDescriptorFactory.uniqueForLabel( labelId, propertyId ),
                 descriptor, constraintId );
     }
 
     public static IndexRule constraintIndexRule( long ruleId, int labelId, int propertyId,
-            IndexProvider.Descriptor descriptor )
+            IndexProviderDescriptor descriptor )
     {
         return IndexRule.indexRule( ruleId, SchemaIndexDescriptorFactory.uniqueForLabel( labelId, propertyId ),
                 descriptor );

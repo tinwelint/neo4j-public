@@ -83,6 +83,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.kernel.api.security.AccessMode.Static.FULL;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -126,7 +128,7 @@ public class KernelTransactionTestBase
                     anyLong() );
         CursorBootstrap cursors = mock( CursorBootstrap.class );
         CursorBootstrap.Client client = mock( CursorBootstrap.Client.class );
-        when( cursors.newClient( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).thenReturn( client );
+        when( cursors.newClient( any( TxStateHolder.class ), any( AssertOpen.class ), new SecurityContext( ANONYMOUS, FULL ) ) ).thenReturn( client );
         when( storageEngine.cursors() ).thenReturn( cursors );
     }
 

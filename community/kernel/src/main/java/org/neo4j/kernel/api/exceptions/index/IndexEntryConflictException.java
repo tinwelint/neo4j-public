@@ -28,7 +28,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueTuple;
 
 import static java.lang.String.format;
-import static org.neo4j.kernel.api.Constants.NO_SUCH_NODE;
+import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
 
 /**
  * TODO why isn't this a {@link KernelException}?

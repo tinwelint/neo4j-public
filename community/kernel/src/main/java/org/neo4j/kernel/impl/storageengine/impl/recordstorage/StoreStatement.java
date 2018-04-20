@@ -283,4 +283,10 @@ public class StoreStatement implements StorageStatement
     {
         return commandCreationContext.nextId( StoreType.RELATIONSHIP );
     }
+
+    @Override
+    public long getGraphPropertyReference()
+    {
+        return neoStores.getMetaDataStore().getGraphNextProp();
+    }
 }

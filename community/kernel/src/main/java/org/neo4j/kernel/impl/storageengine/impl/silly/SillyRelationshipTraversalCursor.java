@@ -37,7 +37,7 @@ class SillyRelationshipTraversalCursor implements RelationshipTraversalCursor
     }
 
     @Override
-    public int label()
+    public int type()
     {
         return 0;
     }
@@ -94,12 +94,6 @@ class SillyRelationshipTraversalCursor implements RelationshipTraversalCursor
 
     @Override
     public boolean next()
-    {
-        return false;
-    }
-
-    @Override
-    public boolean shouldRetry()
     {
         return false;
     }

@@ -38,6 +38,7 @@ import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
@@ -76,7 +77,7 @@ public abstract class IndexPopulationStressTest
     {
         File storeDir = rules.directory().graphDbDir();
         IndexDirectoryStructure.Factory directory =
-                directoriesBySubProvider( directoriesByProvider( storeDir ).forProvider( new IndexProvider.Descriptor( "provider", "1.0" ) ) );
+                directoriesBySubProvider( directoriesByProvider( storeDir ).forProvider( new IndexProviderDescriptor( "provider", "1.0" ) ) );
 
         IndexProvider indexProvider = newProvider( directory );
 

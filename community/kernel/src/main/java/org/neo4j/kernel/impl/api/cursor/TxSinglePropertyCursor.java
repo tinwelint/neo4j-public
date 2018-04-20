@@ -22,7 +22,7 @@ package org.neo4j.kernel.impl.api.cursor;
 import java.util.function.Consumer;
 
 import org.neo4j.cursor.Cursor;
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.properties.PropertyKeyValue;
 import org.neo4j.storageengine.api.PropertyItem;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -53,7 +53,7 @@ public class TxSinglePropertyCursor extends TxAbstractPropertyCursor
     @Override
     public boolean next()
     {
-        if ( propertyKeyId == Constants.NO_SUCH_PROPERTY_KEY )
+        if ( propertyKeyId == StatementConstants.NO_SUCH_PROPERTY_KEY )
         {
             return false;
         }
@@ -94,7 +94,7 @@ public class TxSinglePropertyCursor extends TxAbstractPropertyCursor
         }
         finally
         {
-            propertyKeyId = Constants.NO_SUCH_PROPERTY_KEY;
+            propertyKeyId = StatementConstants.NO_SUCH_PROPERTY_KEY;
         }
     }
 

@@ -50,7 +50,7 @@ import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory20;
-import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.KernelStatement;
@@ -257,7 +257,7 @@ public class StartOldDbOn3_4AndCreateFusionIndexIT
         }
     }
 
-    private void verifyExpectedProvider( GraphDatabaseAPI db, Label label, IndexProvider.Descriptor expectedDescriptor ) throws TransactionFailureException
+    private void verifyExpectedProvider( GraphDatabaseAPI db, Label label, IndexProviderDescriptor expectedDescriptor ) throws TransactionFailureException
     {
         try ( Transaction tx = db.beginTx();
               KernelTransaction kernelTransaction =
@@ -278,7 +278,7 @@ public class StartOldDbOn3_4AndCreateFusionIndexIT
         }
     }
 
-    private void assertIndexHasExpectedProvider( IndexProvider.Descriptor expectedDescriptor, CapableIndexReference index )
+    private void assertIndexHasExpectedProvider( IndexProviderDescriptor expectedDescriptor, CapableIndexReference index )
     {
         assertEquals( "same key", expectedDescriptor.getKey(), index.providerKey() );
         assertEquals( "same version", expectedDescriptor.getVersion(), index.providerVersion() );

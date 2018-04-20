@@ -43,12 +43,6 @@ class SillyNodeValueIndexCursor implements NodeValueIndexCursor
     }
 
     @Override
-    public boolean shouldRetry()
-    {
-        return false;
-    }
-
-    @Override
     public void close()
     {
     }

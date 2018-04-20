@@ -37,7 +37,7 @@ import org.neo4j.jmx.StoreSize;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexProvider;
-import org.neo4j.kernel.api.index.IndexProvider.Descriptor;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
@@ -125,7 +125,7 @@ public class StoreSizeBeanTest
     private IndexProvider mockedIndexProvider( String name )
     {
         IndexProvider provider = mock( IndexProvider.class );
-        when( provider.getProviderDescriptor() ).thenReturn( new Descriptor( name, "1" ) );
+        when( provider.getProviderDescriptor() ).thenReturn( new IndexProviderDescriptor( name, "1" ) );
         return provider;
     }
 

@@ -51,12 +51,6 @@ class SillyPropertyCursor implements PropertyCursor
     }
 
     @Override
-    public boolean shouldRetry()
-    {
-        return false;
-    }
-
-    @Override
     public void close()
     {
         properties = null;

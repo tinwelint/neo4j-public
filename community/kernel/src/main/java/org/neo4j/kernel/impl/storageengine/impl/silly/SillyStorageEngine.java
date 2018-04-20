@@ -43,7 +43,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.internal.kernel.api.IndexCapability;
+import org.neo4j.internal.kernel.api.CapableIndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
@@ -58,18 +58,19 @@ import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexProviderDescriptor;
-import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
@@ -78,9 +79,9 @@ import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.SchemaState;
+import org.neo4j.kernel.impl.api.index.IndexProviderMap;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.IndexingServiceFactory;
-import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -123,6 +124,7 @@ import org.neo4j.storageengine.api.StoreReadLayer;
 import org.neo4j.storageengine.api.Token;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
+import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.PopulationProgress;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
@@ -146,7 +148,7 @@ public class SillyStorageEngine implements
 {
     private final SillyData data;
     private final SchemaCache schemaCache;
-    private final SchemaIndexProviderMap schemaIndexProviderMap;
+    private final IndexProviderMap schemaIndexProviderMap;
     private final IndexingService indexService;
     private final PropertyKeyTokenHolder propertyKeyTokenHolder;
     private final LabelTokenHolder labelTokens;
@@ -168,7 +170,7 @@ public class SillyStorageEngine implements
             ConstraintSemantics constraintSemantics,
             JobScheduler scheduler,
             TokenNameLookup tokenNameLookup,
-            SchemaIndexProviderMap indexProviderMap,
+            IndexProviderMap indexProviderMap,
             IndexingService.Monitor indexingServiceMonitor,
             DatabaseHealth databaseHealth,
             ExplicitIndexProviderLookup explicitIndexProviderLookup,
@@ -234,7 +236,7 @@ public class SillyStorageEngine implements
         state.accept( new TxStateVisitor()
         {
             @Override
-            public void visitRemovedIndex( IndexDescriptor element )
+            public void visitRemovedIndex( SchemaIndexDescriptor element )
             {
                 target.add( new SillyStorageCommand.DropIndex( element ) );
             }
@@ -348,7 +350,7 @@ public class SillyStorageEngine implements
             }
 
             @Override
-            public void visitAddedIndex( IndexDescriptor element )
+            public void visitAddedIndex( SchemaIndexDescriptor element )
             {
                 target.add( new SillyStorageCommand.CreateIndex( data.nextSchemaId.getAndIncrement(), element ) );
             }
@@ -503,20 +505,32 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
+    public void assertClosed()
     {
-        return new SillyCursorClient( txStateHolder, assertOpen );
+    }
+
+    @Override
+    public void release()
+    {
+    }
+
+    @Override
+    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext )
+    {
+        return new SillyCursorClient( txStateHolder, assertOpen, securityContext );
     }
 
     class SillyCursorClient implements Client
     {
         private final TxStateHolder txStateHolder;
         private final AssertOpen assertOpen;
+        private final SecurityContext securityContext;
 
-        SillyCursorClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
+        SillyCursorClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext )
         {
             this.txStateHolder = txStateHolder;
             this.assertOpen = assertOpen;
+            this.securityContext = securityContext;
         }
 
         @Override
@@ -529,6 +543,12 @@ public class SillyStorageEngine implements
         public TransactionState txState()
         {
             return txStateHolder.txState();
+        }
+
+        @Override
+        public SecurityContext securityContext()
+        {
+            return securityContext;
         }
 
         @Override
@@ -607,6 +627,30 @@ public class SillyStorageEngine implements
         }
 
         @Override
+        public IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
         public void allRelationshipsScan( RelationshipScanCursor cursor )
         {
             throw new UnsupportedOperationException();
@@ -628,25 +672,25 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public Iterator<IndexDescriptor> indexesGetForLabel( int labelId )
+    public Iterator<SchemaIndexDescriptor> indexesGetForLabel( int labelId )
     {
         return schemaCache.indexDescriptorsForLabel( labelId );
     }
 
     @Override
-    public Iterator<IndexDescriptor> indexesGetAll()
+    public Iterator<SchemaIndexDescriptor> indexesGetAll()
     {
         return map( IndexRule::getIndexDescriptor, schemaCache.indexRules() ).iterator();
     }
 
     @Override
-    public Iterator<IndexDescriptor> indexesGetRelatedToProperty( int propertyId )
+    public Iterator<SchemaIndexDescriptor> indexesGetRelatedToProperty( int propertyId )
     {
         return schemaCache.indexesByProperty( propertyId );
     }
 
     @Override
-    public Long indexGetOwningUniquenessConstraintId( IndexDescriptor index )
+    public Long indexGetOwningUniquenessConstraintId( SchemaIndexDescriptor index )
     {
         IndexRule rule = indexRule( index );
         if ( rule != null )
@@ -656,7 +700,7 @@ public class SillyStorageEngine implements
         return null;
     }
 
-    private IndexRule indexRule( IndexDescriptor index )
+    private IndexRule indexRule( SchemaIndexDescriptor index )
     {
         for ( IndexRule rule : schemaCache.indexRules() )
         {
@@ -669,7 +713,7 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public long indexGetCommittedId( IndexDescriptor index ) throws SchemaRuleNotFoundException
+    public long indexGetCommittedId( SchemaIndexDescriptor index ) throws SchemaRuleNotFoundException
     {
         IndexRule rule = indexRule( index );
         if ( rule == null )
@@ -756,37 +800,37 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public IndexDescriptor indexGetForSchema( LabelSchemaDescriptor descriptor )
+    public SchemaIndexDescriptor indexGetForSchema( SchemaDescriptor descriptor )
     {
         return schemaCache.indexDescriptor( descriptor );
     }
 
     @Override
-    public InternalIndexState indexGetState( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public InternalIndexState indexGetState( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexService.getIndexProxy( descriptor.schema() ).getState();
     }
 
     @Override
-    public IndexProviderDescriptor indexGetProviderDescriptor( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public IndexProviderDescriptor indexGetProviderDescriptor( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexService.getIndexProxy( descriptor.schema() ).getProviderDescriptor();
     }
 
     @Override
-    public IndexCapability indexGetCapability( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public CapableIndexReference indexReference( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
-        return indexService.getIndexProxy( descriptor.schema() ).getIndexCapability();
+        return null;
     }
 
     @Override
-    public PopulationProgress indexGetPopulationProgress( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
+    public PopulationProgress indexGetPopulationProgress( SchemaDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexService.getIndexProxy( descriptor ).getIndexPopulationProgress();
     }
 
     @Override
-    public String indexGetFailure( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
+    public String indexGetFailure( SchemaDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexService.getIndexProxy( descriptor ).getPopulationFailure().asString();
     }
@@ -982,13 +1026,13 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public long indexSize( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
+    public long indexSize( SchemaDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return 0;
     }
 
     @Override
-    public double indexUniqueValuesPercentage( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
+    public double indexUniqueValuesPercentage( SchemaDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return 0;
     }
@@ -1024,14 +1068,14 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public DoubleLongRegister indexUpdatesAndSize( LabelSchemaDescriptor descriptor, DoubleLongRegister target )
+    public DoubleLongRegister indexUpdatesAndSize( SchemaDescriptor descriptor, DoubleLongRegister target )
             throws IndexNotFoundKernelException
     {
         return newDoubleLongRegister();
     }
 
     @Override
-    public DoubleLongRegister indexSample( LabelSchemaDescriptor descriptor, DoubleLongRegister target ) throws IndexNotFoundKernelException
+    public DoubleLongRegister indexSample( SchemaDescriptor descriptor, DoubleLongRegister target ) throws IndexNotFoundKernelException
     {
         return newDoubleLongRegister();
     }

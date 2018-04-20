@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.RecordCursors;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
@@ -33,7 +33,7 @@ import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
 public class StoreSingleRelationshipCursor extends StoreAbstractRelationshipCursor
 {
     private final InstanceCache<StoreSingleRelationshipCursor> instanceCache;
-    private long relationshipId = Constants.NO_SUCH_RELATIONSHIP;
+    private long relationshipId = StatementConstants.NO_SUCH_RELATIONSHIP;
 
     public StoreSingleRelationshipCursor( RelationshipRecord relationshipRecord,
             InstanceCache<StoreSingleRelationshipCursor> instanceCache, RecordCursors cursors, LockService lockService )
@@ -51,7 +51,7 @@ public class StoreSingleRelationshipCursor extends StoreAbstractRelationshipCurs
     @Override
     public boolean next()
     {
-        if ( relationshipId != Constants.NO_SUCH_RELATIONSHIP )
+        if ( relationshipId != StatementConstants.NO_SUCH_RELATIONSHIP )
         {
             try
             {
@@ -59,7 +59,7 @@ public class StoreSingleRelationshipCursor extends StoreAbstractRelationshipCurs
             }
             finally
             {
-                relationshipId = Constants.NO_SUCH_RELATIONSHIP;
+                relationshipId = StatementConstants.NO_SUCH_RELATIONSHIP;
             }
         }
 

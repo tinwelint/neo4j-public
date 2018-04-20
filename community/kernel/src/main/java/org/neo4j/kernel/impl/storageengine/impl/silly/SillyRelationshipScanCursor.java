@@ -54,7 +54,7 @@ class SillyRelationshipScanCursor implements RelationshipScanCursor
     }
 
     @Override
-    public int label()
+    public int type()
     {
         return current.type();
     }
@@ -111,12 +111,6 @@ class SillyRelationshipScanCursor implements RelationshipScanCursor
 
         current = relationships.get( next );
         return current != null;
-    }
-
-    @Override
-    public boolean shouldRetry()
-    {
-        return false;
     }
 
     @Override

@@ -60,7 +60,7 @@ import static org.neo4j.test.rule.PageCacheRule.config;
 
 public abstract class RecordStoreConsistentReadTest<R extends AbstractBaseRecord, S extends RecordStore<R>>
 {
-    // Constants for the contents of the existing record
+    // StatementConstants for the contents of the existing record
     protected static final int ID = 1;
 
     @ClassRule
@@ -219,7 +219,7 @@ public abstract class RecordStoreConsistentReadTest<R extends AbstractBaseRecord
 
     public static class RelationshipStoreConsistentReadTest extends RecordStoreConsistentReadTest<RelationshipRecord, RelationshipStore>
     {
-        // Constants for the contents of the existing record
+        // StatementConstants for the contents of the existing record
         private static final int FIRST_NODE = 2;
         private static final int SECOND_NODE = 3;
         private static final int TYPE = 4;

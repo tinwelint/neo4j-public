@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Lock;
-import org.neo4j.kernel.api.Constants;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.storageengine.api.RelationshipItem;
@@ -43,7 +43,7 @@ public abstract class TxAbstractRelationshipCursor
 
     protected Cursor<RelationshipItem> cursor;
 
-    private long id = Constants.NO_SUCH_RELATIONSHIP;
+    private long id = StatementConstants.NO_SUCH_RELATIONSHIP;
     private int type;
     private long startNodeId;
     private long endNodeId;
@@ -66,7 +66,7 @@ public abstract class TxAbstractRelationshipCursor
     @Override
     public RelationshipItem get()
     {
-        if ( id == Constants.NO_SUCH_RELATIONSHIP )
+        if ( id == StatementConstants.NO_SUCH_RELATIONSHIP )
         {
             throw new IllegalStateException();
         }

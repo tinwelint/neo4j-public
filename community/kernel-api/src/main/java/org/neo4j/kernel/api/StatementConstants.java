@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.api;
 
-public final class Constants
+public final class StatementConstants
 {
     public static final int NO_SUCH_RELATIONSHIP_TYPE = -1;
     public static final int NO_SUCH_LABEL = -1;
@@ -29,7 +29,7 @@ public final class Constants
     public static final int ANY_LABEL = -1;
     public static final int ANY_RELATIONSHIP_TYPE = -1;
 
-    private Constants()
+    private StatementConstants()
     {
         throw new UnsupportedOperationException();
     }

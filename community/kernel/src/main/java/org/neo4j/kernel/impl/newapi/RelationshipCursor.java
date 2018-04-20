@@ -23,12 +23,12 @@ import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipDataAccessor;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
+import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 abstract class RelationshipCursor extends RelationshipRecord implements RelationshipDataAccessor, RelationshipVisitor<RuntimeException>
 {
-    CursorsClient cursors;
+    DefaultClient cursors;
     private boolean hasChanges;
     private boolean checkHasChanges;
 
@@ -37,7 +37,7 @@ abstract class RelationshipCursor extends RelationshipRecord implements Relation
         super( NO_ID );
     }
 
-    protected void init( CursorsClient cursors )
+    protected void init( DefaultClient cursors )
     {
         this.cursors = cursors;
         this.checkHasChanges = true;

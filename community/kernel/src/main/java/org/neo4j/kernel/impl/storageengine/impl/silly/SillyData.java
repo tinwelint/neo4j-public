@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
+import org.neo4j.internal.kernel.api.schema.SchemaDescriptorSupplier;
 import org.neo4j.kernel.impl.core.LabelTokenHolder;
 import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
 import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
@@ -44,7 +45,7 @@ class SillyData
 
     final ConcurrentMap<Long,NodeData> nodes = new ConcurrentHashMap<>();
     final ConcurrentMap<Long,RelationshipData> relationships = new ConcurrentHashMap<>();
-    final ConcurrentMap<Long,SchemaDescriptor.Supplier> schema = new ConcurrentHashMap<>();
+    final ConcurrentMap<Long,SchemaDescriptorSupplier> schema = new ConcurrentHashMap<>();
     final ConcurrentMap<Integer,PropertyData> graphProperties = new ConcurrentHashMap<>();
 
     final AtomicLong nextNodeId = new AtomicLong();

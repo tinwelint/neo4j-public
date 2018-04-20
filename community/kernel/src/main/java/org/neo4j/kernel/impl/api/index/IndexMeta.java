@@ -44,6 +44,11 @@ public class IndexMeta
         return ruleId;
     }
 
+    public SchemaIndexDescriptor indexDescriptor()
+    {
+        return schemaIndexDescriptor;
+    }
+
     public IndexProviderDescriptor providerDescriptor()
     {
         return providerDescriptor;

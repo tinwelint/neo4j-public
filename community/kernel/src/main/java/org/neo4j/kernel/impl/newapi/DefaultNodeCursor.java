@@ -30,7 +30,7 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.impl.newapi.Cursors.CursorsClient;
+import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
@@ -40,7 +40,7 @@ import static java.util.Collections.emptySet;
 
 class DefaultNodeCursor extends NodeRecord implements NodeCursor
 {
-    private CursorsClient cursors;
+    private DefaultClient cursors;
     private RecordCursor<DynamicRecord> labelCursor;
     private PageCursor pageCursor;
     private long next;
@@ -56,7 +56,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.pool = pool;
     }
 
-    void scan( CursorsClient cursors )
+    void scan( DefaultClient cursors )
     {
         if ( getId() != NO_ID )
         {
@@ -73,7 +73,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.cursors = cursors;
     }
 
-    void single( long reference, CursorsClient cursors )
+    void single( long reference, DefaultClient cursors )
     {
         if ( getId() != NO_ID )
         {

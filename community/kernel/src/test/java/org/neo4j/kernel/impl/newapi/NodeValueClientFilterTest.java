@@ -47,10 +47,10 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 public class NodeValueClientFilterTest implements IndexProgressor, NodeValueClient
 {
+    private final DefaultCursors cursors = new DefaultCursors( mockedStore() );
     @Rule
-    public final MockStore store = new MockStore( new Cursors( mockedStore() ) );
+    public final MockStore store = new MockStore( cursors );
     private final List<Event> events = new ArrayList<>();
-    private final DefaultCursors cursors = new DefaultCursors();
 
     @Test
     public void shouldAcceptAllNodesOnNoFilters()

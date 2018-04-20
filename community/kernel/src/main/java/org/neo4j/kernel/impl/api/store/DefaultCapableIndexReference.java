@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.IndexValueCapability;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.index.IndexProvider;
+import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.values.storable.ValueCategory;
 
@@ -36,11 +37,11 @@ public class DefaultCapableIndexReference implements CapableIndexReference
     private final int label;
     private final int[] properties;
     private final boolean unique;
-    private final IndexProvider.Descriptor providerDescriptor;
+    private final IndexProviderDescriptor providerDescriptor;
     private final IndexCapability capability;
 
     public DefaultCapableIndexReference( boolean unique, IndexCapability indexCapability,
-                IndexProvider.Descriptor providerDescriptor, int label, int... properties )
+                IndexProviderDescriptor providerDescriptor, int label, int... properties )
     {
         this.unique = unique;
         this.capability = indexCapability;

@@ -43,7 +43,7 @@ import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.NoOpClient;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocks;
 import org.neo4j.kernel.impl.locking.StatementLocks;
-import org.neo4j.kernel.impl.newapi.Cursors;
+import org.neo4j.kernel.impl.newapi.DefaultCursors;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
@@ -94,7 +94,7 @@ public class KernelTransactionFactory
         StorageStatement storageStatement = mock( StorageStatement.class );
         when( storeReadLayer.newStatement() ).thenReturn( storageStatement );
         when( storageEngine.storeReadLayer() ).thenReturn( storeReadLayer );
-        when( storageEngine.cursors() ).thenReturn( new Cursors( mock( NeoStores.class ) ) );
+        when( storageEngine.cursors() ).thenReturn( new DefaultCursors( mock( NeoStores.class ) ) );
 
         KernelTransactionImplementation transaction = new KernelTransactionImplementation(
                 mock( StatementOperationParts.class ),

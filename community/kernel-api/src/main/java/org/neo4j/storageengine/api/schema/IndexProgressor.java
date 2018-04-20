@@ -21,6 +21,7 @@ package org.neo4j.storageengine.api.schema;
 
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.LabelSet;
+import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.values.storable.Value;
 
 /**
