@@ -122,7 +122,24 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
 
     private void init( long reference, DefaultCursors cursors )
     {
+        if ( getId() != NO_ID )
+        {
+            clear();
+        }
+
+        this.cursors = cursors;
+        //Set to high value to force a read
+        this.block = Integer.MAX_VALUE;
         this.propertyStore = cursors.propertyStore();
+        if ( reference != NO_ID )
+        {
+            if ( page == null )
+            {
+                page = propertyStore.openPageCursorForReading( reference );
+            }
+        }
+
+        // Store state
         this.next = reference;
     }
 
