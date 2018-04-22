@@ -10,25 +10,22 @@ import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
-import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 public class SillyCursorFactory implements CursorFactory
 {
     private final SillyData data;
-    private final TxStateHolder txStateHolder;
-    private final AssertOpen assertOpen;
+    private final TransactionalCursorDependencies dependencies;
     private SecurityContext securityContext;
 
-    public SillyCursorFactory( SillyData data, TxStateHolder txStateHolder, AssertOpen assertOpen )
+    public SillyCursorFactory( SillyData data, TransactionalCursorDependencies dependencies )
     {
         this.data = data;
-        this.txStateHolder = txStateHolder;
-        this.assertOpen = assertOpen;
+        this.dependencies = dependencies;
     }
 
     @Override
@@ -95,36 +92,24 @@ public class SillyCursorFactory implements CursorFactory
     {
     }
 
-    @Override
-    public void initialize( SecurityContext securityContext )
-    {
-        this.securityContext = securityContext;
-    }
-
     public void assertOpen()
     {
-        assertOpen.assertOpen();
+        dependencies.assertOpen();
     }
 
     public TransactionState txState()
     {
-        return txStateHolder.txState();
-    }
-
-    @Override
-    public SecurityContext securityContext()
-    {
-        return securityContext;
+        return dependencies.txState();
     }
 
     public boolean hasTxStateWithChanges()
     {
-        return txStateHolder.hasTxStateWithChanges();
+        return dependencies.hasTxStateWithChanges();
     }
 
     public ExplicitIndexTransactionState explicitIndexTxState()
     {
-        return txStateHolder.explicitIndexTxState();
+        return dependencies.explicitIndexTxState();
     }
 
     @Override

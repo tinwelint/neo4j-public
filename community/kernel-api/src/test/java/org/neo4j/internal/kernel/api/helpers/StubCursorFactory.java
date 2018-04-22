@@ -33,7 +33,6 @@ import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
-import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 public class StubCursorFactory implements CursorFactory
@@ -207,18 +206,6 @@ public class StubCursorFactory implements CursorFactory
     public long relationshipHighMark()
     {
         return 0;
-    }
-
-    @Override
-    public void initialize( SecurityContext securityContext )
-    {
-
-    }
-
-    @Override
-    public SecurityContext securityContext()
-    {
-        return null;
     }
 
     @Override

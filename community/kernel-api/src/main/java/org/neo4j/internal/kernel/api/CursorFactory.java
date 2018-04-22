@@ -19,7 +19,6 @@
  */
 package org.neo4j.internal.kernel.api;
 
-import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 /**
@@ -95,10 +94,6 @@ public interface CursorFactory
     long relationshipHighMark();
 
     // === LIFECYCLE ===
-
-    void initialize( SecurityContext securityContext );
-
-    SecurityContext securityContext();
 
     void assertClosed();
 

@@ -33,14 +33,13 @@ import org.neo4j.collection.primitive.PrimitiveLongSet;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Transaction.Type;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
@@ -125,7 +124,7 @@ public class KernelTransactionTestBase
                     any( StorageStatement.class ), any( ResourceLocker.class ),
                     anyLong() );
         CursorFactory cursors = mock( CursorFactory.class );
-        when( storageEngine.cursors( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).thenReturn( cursors );
+        when( storageEngine.cursors( any( TransactionalCursorDependencies.class ) ) ).thenReturn( cursors );
     }
 
     public KernelTransactionImplementation newTransaction( long transactionTimeoutMillis )

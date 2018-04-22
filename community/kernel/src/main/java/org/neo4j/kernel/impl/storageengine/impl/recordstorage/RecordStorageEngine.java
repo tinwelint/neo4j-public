@@ -34,20 +34,19 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.TransactionApplyKernelException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.labelscan.LabelScanWriter;
 import org.neo4j.kernel.api.labelscan.LoggingMonitor;
 import org.neo4j.kernel.api.txstate.TransactionCountingStateVisitor;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.BatchTransactionApplier;
 import org.neo4j.kernel.impl.api.BatchTransactionApplierFacade;
@@ -274,9 +273,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public CursorFactory cursors( TxStateHolder txStateHolder, AssertOpen assertOpen )
+    public CursorFactory cursors( TransactionalCursorDependencies dependencies )
     {
-        return new DefaultCursors( neoStores, txStateHolder, assertOpen );
+        return new DefaultCursors( neoStores, dependencies );
     }
 
     @Override

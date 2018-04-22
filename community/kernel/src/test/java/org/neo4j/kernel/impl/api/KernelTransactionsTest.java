@@ -35,18 +35,17 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.security.AuthorizationExpiredException;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.AvailabilityGuard;
-import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -590,8 +589,8 @@ public class KernelTransactionsTest
 
         StatementOperationParts statementOperations = mock( StatementOperationParts.class );
         KernelTransactions transactions;
-        when( storageEngine.cursors( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).then(
-                invocation -> new DefaultCursors( mock( NeoStores.class ), invocation.getArgument( 0 ), invocation.getArgument( 1 ) ) );
+        when( storageEngine.cursors( any( TransactionalCursorDependencies.class ) ) ).then(
+                invocation -> new DefaultCursors( mock( NeoStores.class ), invocation.getArgument( 0 ) ) );
         if ( testKernelTransactions )
         {
             transactions = createTestTransactions( storageEngine, commitProcess, transactionIdStore, tracers,

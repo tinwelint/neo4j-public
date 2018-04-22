@@ -36,11 +36,10 @@ import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
-import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
+import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -65,15 +64,12 @@ import static org.neo4j.util.FeatureToggles.flag;
 
 public class DefaultCursors implements CursorFactory
 {
-    private final NeoStores neoStores;
     private final NodeStore nodes;
     private final RelationshipStore relationships;
     private final RelationshipGroupStore groups;
     private final PropertyStore properties;
-    private final TxStateHolder txStateHolder;
-    private final AssertOpen assertOpen;
+    private final TransactionalCursorDependencies transactionalDependencies;
 
-    private SecurityContext securityContext;
     private DefaultNodeCursor nodeCursor;
     private DefaultRelationshipScanCursor relationshipScanCursor;
     private DefaultRelationshipTraversalCursor relationshipTraversalCursor;
@@ -87,15 +83,13 @@ public class DefaultCursors implements CursorFactory
     private static final boolean DEBUG_CLOSING = flag( DefaultCursors.class, "trackCursors", false );
     private List<CloseableStacktrace> closeables = new ArrayList<>();
 
-    public DefaultCursors( NeoStores neoStores, TxStateHolder txStateHolder, AssertOpen assertOpen )
+    public DefaultCursors( NeoStores neoStores, TransactionalCursorDependencies transactionalDependencies )
     {
-        this.neoStores = neoStores;
         this.nodes = neoStores.getNodeStore();
         this.relationships = neoStores.getRelationshipStore();
         this.groups = neoStores.getRelationshipGroupStore();
         this.properties = neoStores.getPropertyStore();
-        this.txStateHolder = txStateHolder;
-        this.assertOpen = assertOpen;
+        this.transactionalDependencies = transactionalDependencies;
     }
 
     @Override
@@ -416,29 +410,17 @@ public class DefaultCursors implements CursorFactory
 
     public TransactionState txState()
     {
-        return txStateHolder.txState();
+        return transactionalDependencies.txState();
     }
 
     public boolean hasTxStateWithChanges()
     {
-        return txStateHolder.hasTxStateWithChanges();
+        return transactionalDependencies.hasTxStateWithChanges();
     }
 
     public void assertOpen()
     {
-        assertOpen.assertOpen();
-    }
-
-    @Override
-    public void initialize( SecurityContext securityContext )
-    {
-        this.securityContext = securityContext;
-    }
-
-    @Override
-    public SecurityContext securityContext()
-    {
-        return securityContext;
+        transactionalDependencies.assertOpen();
     }
 
     @Override
@@ -668,6 +650,11 @@ public class DefaultCursors implements CursorFactory
     void group( RelationshipGroupRecord record, long reference, PageCursor page )
     {
         groups.getRecordByCursor( reference, record, RecordLoad.NORMAL, page );
+    }
+
+    public AccessMode accessMode()
+    {
+        return transactionalDependencies.accessMode();
     }
 
     static class CloseableStacktrace
