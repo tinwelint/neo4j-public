@@ -43,9 +43,10 @@ import static org.neo4j.kernel.impl.newapi.RelationshipReferenceEncoding.encodeN
 
 class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements RelationshipGroupCursor
 {
-    private DefaultCursors cursors;
+    private final DefaultCursors cursors;
+    private final boolean pool;
+    private boolean closed;
     private final RelationshipRecord edge = new RelationshipRecord( NO_ID );
-    private final DefaultCursors pool;
 
     private BufferedGroup bufferedGroup;
     private PageCursor page;
@@ -54,13 +55,14 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
     private final PrimitiveIntSet txTypes = Primitive.intSet();
     private PrimitiveIntIterator txTypeIterator;
 
-    DefaultRelationshipGroupCursor( DefaultCursors pool )
+    DefaultRelationshipGroupCursor( DefaultCursors cursors, boolean pool )
     {
         super( NO_ID );
+        this.cursors = cursors;
         this.pool = pool;
     }
 
-    void buffer( long nodeReference, long relationshipReference, DefaultCursors cursors )
+    void buffer( long nodeReference, long relationshipReference )
     {
         setOwningNode( nodeReference );
         setId( NO_ID );
@@ -106,11 +108,11 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
             this.txTypeIterator = null;
             this.hasCheckedTxState = false;
             this.bufferedGroup = new BufferedGroup( edge, current ); // we need a dummy before the first to denote the initial pos
-            this.cursors = cursors;
+            this.closed = false;
         }
     }
 
-    void direct( long nodeReference, long reference, DefaultCursors cursors )
+    void direct( long nodeReference, long reference )
     {
         bufferedGroup = null;
         clear();
@@ -123,7 +125,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         {
             page = cursors.groupPage( reference );
         }
-        this.cursors = cursors;
+        this.closed = false;
     }
 
     @Override
@@ -239,14 +241,14 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         if ( !isClosed() )
         {
             bufferedGroup = null;
-            cursors = null;
             setId( NO_ID );
             clear();
 
-            if ( pool != null )
+            if ( pool )
             {
-                pool.accept( this );
+                cursors.accept( this );
             }
+            closed = true;
         }
     }
 
@@ -337,7 +339,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         if ( isBuffered() )
         {
             ((DefaultRelationshipTraversalCursor) cursor).buffered(
-                    getOwningNode(), bufferedGroup.outgoing, RelationshipDirection.OUTGOING, bufferedGroup.label, cursors );
+                    getOwningNode(), bufferedGroup.outgoing, RelationshipDirection.OUTGOING, bufferedGroup.label );
         }
         else
         {
@@ -351,7 +353,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         if ( isBuffered() )
         {
             ((DefaultRelationshipTraversalCursor) cursor).buffered(
-                    getOwningNode(), bufferedGroup.incoming, RelationshipDirection.INCOMING, bufferedGroup.label, cursors );
+                    getOwningNode(), bufferedGroup.incoming, RelationshipDirection.INCOMING, bufferedGroup.label );
         }
         else
         {
@@ -365,7 +367,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         if ( isBuffered() )
         {
             ((DefaultRelationshipTraversalCursor) cursor).buffered(
-                    getOwningNode(), bufferedGroup.loops, RelationshipDirection.LOOP, bufferedGroup.label, cursors );
+                    getOwningNode(), bufferedGroup.loops, RelationshipDirection.LOOP, bufferedGroup.label );
         }
         else
         {
@@ -397,7 +399,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
     @Override
     public boolean isClosed()
     {
-        return cursors == null && bufferedGroup == null;
+        return closed && bufferedGroup == null;
     }
 
     @Override

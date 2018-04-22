@@ -39,7 +39,8 @@ import static java.util.Collections.emptySet;
 
 class DefaultNodeCursor extends NodeRecord implements NodeCursor
 {
-    private DefaultCursors cursors;
+    private final DefaultCursors cursors;
+    private boolean closed;
     private RecordCursor<DynamicRecord> labelCursor;
     private PageCursor pageCursor;
     private long next;
@@ -47,15 +48,13 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     private HasChanges hasChanges = HasChanges.MAYBE;
     private Set<Long> addedNodes;
 
-    private final DefaultCursors pool;
-
-    DefaultNodeCursor( DefaultCursors pool )
+    DefaultNodeCursor( DefaultCursors cursors )
     {
         super( NO_ID );
-        this.pool = pool;
+        this.cursors = cursors;
     }
 
-    void scan( DefaultCursors cursors )
+    void scan()
     {
         if ( getId() != NO_ID )
         {
@@ -69,10 +68,10 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.highMark = cursors.nodeHighMark();
         this.hasChanges = HasChanges.MAYBE;
         this.addedNodes = emptySet();
-        this.cursors = cursors;
+        this.closed = false;
     }
 
-    void single( long reference, DefaultCursors cursors )
+    void single( long reference )
     {
         if ( getId() != NO_ID )
         {
@@ -87,7 +86,7 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
         this.highMark = NO_ID;
         this.hasChanges = HasChanges.MAYBE;
         this.addedNodes = emptySet();
-        this.cursors = cursors;
+        this.closed = false;
     }
 
     @Override
@@ -240,19 +239,19 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     {
         if ( !isClosed() )
         {
-            cursors = null;
             hasChanges = HasChanges.MAYBE;
             addedNodes = emptySet();
             reset();
 
-            pool.accept( this );
+            cursors.accept( this );
+            closed = true;
         }
     }
 
     @Override
     public boolean isClosed()
     {
-        return cursors == null;
+        return closed;
     }
 
     /**

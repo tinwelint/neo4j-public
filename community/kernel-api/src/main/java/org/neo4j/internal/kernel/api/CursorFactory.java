@@ -22,8 +22,11 @@ package org.neo4j.internal.kernel.api;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 /**
- * Allocates Cursors. To read data from the Kernel, Cursors are needed. A Cursor factory let's the Kernel consumer
- * allocate all types of cursors, which can then be reused for multiple read operations.
+ * Allocates various types of {@link Cursor cursors} for reading data from a database.
+ * Allocated cursors can and should be reused for reading multiple data items.
+ * Cursors can be positioned and primed by any of the positioning methods, like {@link #singleNode(long, NodeCursor)},
+ * {@link #relationships(long, long, RelationshipTraversalCursor)} etc.
+ * A {@link CursorFactory} instance is considered to be tied to one transaction, not necessarily one thread, at a time.
  */
 public interface CursorFactory
 {

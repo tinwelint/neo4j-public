@@ -30,19 +30,17 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 class DefaultRelationshipExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor>
         implements RelationshipExplicitIndexCursor, ExplicitClient
 {
-    private DefaultCursors read;
+    private DefaultCursors cursors;
     private int expectedSize;
     private long relationship;
     private float score;
     private final DefaultRelationshipScanCursor scanCursor;
 
-    private final DefaultCursors pool;
-
     DefaultRelationshipExplicitIndexCursor( DefaultRelationshipScanCursor scanCursor,
-            DefaultCursors pool )
+            DefaultCursors cursors )
     {
         this.scanCursor = scanCursor;
-        this.pool = pool;
+        this.cursors = cursors;
     }
 
     @Override
@@ -56,7 +54,7 @@ class DefaultRelationshipExplicitIndexCursor extends IndexCursor<ExplicitIndexPr
     public boolean acceptEntity( long reference, float score )
     {
         this.relationship = reference;
-        read.singleRelationship( reference, scanCursor );
+        cursors.singleRelationship( reference, scanCursor );
         this.score = score;
         return true;
     }
@@ -65,11 +63,6 @@ class DefaultRelationshipExplicitIndexCursor extends IndexCursor<ExplicitIndexPr
     public boolean next()
     {
         return innerNext();
-    }
-
-    public void setRead( DefaultCursors read )
-    {
-        this.read = read;
     }
 
     @Override
@@ -87,19 +80,19 @@ class DefaultRelationshipExplicitIndexCursor extends IndexCursor<ExplicitIndexPr
     @Override
     public void relationship( RelationshipScanCursor cursor )
     {
-        read.singleRelationship( relationship, cursor );
+        cursors.singleRelationship( relationship, cursor );
     }
 
     @Override
     public void sourceNode( NodeCursor cursor )
     {
-        read.singleNode( sourceNodeReference(), cursor );
+        cursors.singleNode( sourceNodeReference(), cursor );
     }
 
     @Override
     public void targetNode( NodeCursor cursor )
     {
-        read.singleNode( targetNodeReference(), cursor );
+        cursors.singleNode( targetNodeReference(), cursor );
     }
 
     @Override
@@ -135,9 +128,8 @@ class DefaultRelationshipExplicitIndexCursor extends IndexCursor<ExplicitIndexPr
             relationship = NO_ID;
             score = 0;
             expectedSize = 0;
-            read = null;
 
-            pool.accept( this );
+            cursors.accept( this );
         }
     }
 

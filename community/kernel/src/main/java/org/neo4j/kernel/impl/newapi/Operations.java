@@ -119,7 +119,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite
     private final KernelToken token;
     private final StorageStatement statement;
     private final AutoIndexing autoIndexing;
-    private org.neo4j.internal.kernel.api.NodeCursor nodeCursor;
+    private NodeCursor nodeCursor;
     private final IndexTxStateUpdater updater;
     private PropertyCursor propertyCursor;
     private RelationshipScanCursor relationshipCursor;

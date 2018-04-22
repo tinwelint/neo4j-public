@@ -27,19 +27,21 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 abstract class RelationshipCursor extends RelationshipRecord implements RelationshipDataAccessor, RelationshipVisitor<RuntimeException>
 {
-    DefaultCursors cursors;
+    final DefaultCursors cursors;
+    boolean closed;
     private boolean hasChanges;
     private boolean checkHasChanges;
 
-    RelationshipCursor()
+    RelationshipCursor( DefaultCursors cursors )
     {
         super( NO_ID );
+        this.cursors = cursors;
     }
 
-    protected void init( DefaultCursors cursors )
+    protected void init()
     {
-        this.cursors = cursors;
         this.checkHasChanges = true;
+        this.closed = false;
     }
 
     @Override
