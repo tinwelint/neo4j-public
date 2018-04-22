@@ -675,5 +675,4 @@ abstract class Read implements TxStateHolder,
             }
         }
     }
-
 }

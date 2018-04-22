@@ -28,16 +28,14 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor>
         implements org.neo4j.internal.kernel.api.NodeExplicitIndexCursor, ExplicitClient
 {
-    private DefaultCursors read;
+    private final DefaultCursors cursors;
     private int expectedSize;
     private long node;
     private float score;
 
-    private final DefaultCursors pool;
-
-    DefaultNodeExplicitIndexCursor( DefaultCursors pool )
+    DefaultNodeExplicitIndexCursor( DefaultCursors cursors )
     {
-        this.pool = pool;
+        this.cursors = cursors;
         node = NO_ID;
     }
 
@@ -62,11 +60,6 @@ class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor
         return innerNext();
     }
 
-    public void setRead( DefaultCursors read )
-    {
-        this.read = read;
-    }
-
     @Override
     public int expectedTotalNumberOfResults()
     {
@@ -82,7 +75,7 @@ class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor
     @Override
     public void node( NodeCursor cursor )
     {
-        read.singleNode( node, cursor );
+        cursors.singleNode( node, cursor );
     }
 
     @Override
@@ -100,9 +93,8 @@ class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor
             node = NO_ID;
             score = 0;
             expectedSize = 0;
-            read = null;
 
-            pool.accept( this );
+            cursors.accept( this );
         }
     }
 

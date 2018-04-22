@@ -29,20 +29,20 @@ import static java.util.Collections.emptySet;
 
 class DefaultRelationshipScanCursor extends RelationshipCursor implements RelationshipScanCursor
 {
+    private final boolean pool;
     private int type;
     private long next;
     private long highMark;
     private PageCursor pageCursor;
     private Set<Long> addedRelationships;
 
-    private final DefaultCursors pool;
-
-    DefaultRelationshipScanCursor( DefaultCursors pool )
+    DefaultRelationshipScanCursor( DefaultCursors cursors, boolean pool )
     {
+        super( cursors );
         this.pool = pool;
     }
 
-    void scan( int type, DefaultCursors cursors )
+    void scan( int type )
     {
         if ( getId() != NO_ID )
         {
@@ -55,11 +55,11 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         next = 0;
         this.type = type;
         highMark = cursors.relationshipHighMark();
-        init( cursors );
+        init();
         this.addedRelationships = emptySet();
     }
 
-    void single( long reference, DefaultCursors cursors )
+    void single( long reference )
     {
         if ( getId() != NO_ID )
         {
@@ -72,7 +72,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         next = reference;
         type = -1;
         highMark = NO_ID;
-        init( cursors );
+        init();
         this.addedRelationships = emptySet();
     }
 
@@ -144,10 +144,13 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
     {
         if ( !isClosed() )
         {
-            cursors = null;
             reset();
 
-            pool.accept( this );
+            if ( pool )
+            {
+                cursors.accept( this );
+            }
+            closed = true;
         }
     }
 
@@ -159,7 +162,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
     @Override
     public boolean isClosed()
     {
-        return cursors == null;
+        return closed;
     }
 
     @Override

@@ -58,8 +58,8 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
     private static final int MAX_BYTES_IN_SHORT_STRING_OR_SHORT_ARRAY = 32;
     private static final int INITIAL_POSITION = -1;
 
-    private DefaultCursors cursors;
-    private final DefaultCursors pool;
+    private final DefaultCursors cursors;
+    private boolean closed;
     private long next;
     private int block;
     ByteBuffer buffer;
@@ -71,17 +71,17 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
     private StorageProperty txStateValue;
     private PropertyStore propertyStore;
 
-    public DefaultPropertyCursor( DefaultCursors pool )
+    public DefaultPropertyCursor( DefaultCursors cursors )
     {
         super( NO_ID );
-        this.pool = pool;
+        this.cursors = cursors;
     }
 
-    void initNode( long nodeReference, long reference, DefaultCursors cursors )
+    void initNode( long nodeReference, long reference )
     {
         assert nodeReference != NO_ID;
 
-        init( reference, cursors );
+        init( reference );
 
         // Transaction state
         if ( cursors.hasTxStateWithChanges() )
@@ -91,11 +91,11 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    void initRelationship( long relationshipReference, long reference, DefaultCursors cursors )
+    void initRelationship( long relationshipReference, long reference )
     {
         assert relationshipReference != NO_ID;
 
-        init( reference, cursors );
+        init( reference );
 
         // Transaction state
         if ( cursors.hasTxStateWithChanges() )
@@ -105,9 +105,9 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    void initGraph( long reference, DefaultCursors cursors )
+    void initGraph( long reference )
     {
-        init( reference, cursors );
+        init( reference );
 
         // Transaction state
         if ( cursors.hasTxStateWithChanges() )
@@ -120,14 +120,14 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    private void init( long reference, DefaultCursors cursors )
+    private void init( long reference )
     {
         if ( getId() != NO_ID )
         {
             clear();
         }
 
-        this.cursors = cursors;
+        this.closed = false;
         //Set to high value to force a read
         this.block = Integer.MAX_VALUE;
         this.propertyStore = cursors.propertyStore();
@@ -238,10 +238,10 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
             propertiesState = null;
             txStateChangedProperties = null;
             txStateValue = null;
-            cursors = null;
+            closed = true;
             clear();
 
-            pool.accept( this );
+            cursors.accept( this );
         }
     }
 

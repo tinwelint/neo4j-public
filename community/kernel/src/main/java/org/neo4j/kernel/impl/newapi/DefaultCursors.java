@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.neo4j.graphdb.Resource;
 import org.neo4j.internal.kernel.api.AutoCloseablePlus;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -124,7 +125,7 @@ public class DefaultCursors implements CursorFactory
     {
         if ( relationshipScanCursor == null )
         {
-            return trace( new DefaultRelationshipScanCursor( this ) );
+            return trace( new DefaultRelationshipScanCursor( this, true ) );
         }
 
         try
@@ -151,7 +152,7 @@ public class DefaultCursors implements CursorFactory
     {
         if ( relationshipTraversalCursor == null )
         {
-            return trace( new DefaultRelationshipTraversalCursor( new DefaultRelationshipGroupCursor( null ), this ) );
+            return trace( new DefaultRelationshipTraversalCursor( new DefaultRelationshipGroupCursor( this, false ), this ) );
         }
 
         try
@@ -205,7 +206,7 @@ public class DefaultCursors implements CursorFactory
     {
         if ( relationshipGroupCursor == null )
         {
-            return trace( new DefaultRelationshipGroupCursor( this ) );
+            return trace( new DefaultRelationshipGroupCursor( this, true ) );
         }
 
         try
@@ -313,7 +314,7 @@ public class DefaultCursors implements CursorFactory
     {
         if ( relationshipExplicitIndexCursor == null )
         {
-            return trace( new DefaultRelationshipExplicitIndexCursor( new DefaultRelationshipScanCursor( null ), this ) );
+            return trace( new DefaultRelationshipExplicitIndexCursor( new DefaultRelationshipScanCursor( this, false ), this ) );
         }
 
         try
@@ -426,13 +427,13 @@ public class DefaultCursors implements CursorFactory
     @Override
     public void allNodesScan( NodeCursor cursor )
     {
-        ((DefaultNodeCursor)cursor).scan( this );
+        ((DefaultNodeCursor)cursor).scan();
     }
 
     @Override
     public void singleNode( long reference, NodeCursor cursor )
     {
-        ((DefaultNodeCursor)cursor).single( reference, this );
+        ((DefaultNodeCursor)cursor).single( reference );
     }
 
     @Override
@@ -450,32 +451,32 @@ public class DefaultCursors implements CursorFactory
     @Override
     public void singleRelationship( long reference, RelationshipScanCursor cursor )
     {
-        ((DefaultRelationshipScanCursor) cursor).single( reference, this );
+        ((DefaultRelationshipScanCursor) cursor).single( reference );
     }
 
     @Override
     public void nodeProperties( long nodeReference, long reference, PropertyCursor cursor )
     {
-        ((DefaultPropertyCursor) cursor).initNode( nodeReference, reference, this );
+        ((DefaultPropertyCursor) cursor).initNode( nodeReference, reference );
     }
 
     @Override
     public void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor )
     {
-        ((DefaultPropertyCursor) cursor).initRelationship( relationshipReference, reference, this );
+        ((DefaultPropertyCursor) cursor).initRelationship( relationshipReference, reference );
     }
 
     @Override
     public void graphProperties( long reference, PropertyCursor cursor )
     {
-        ((DefaultPropertyCursor) cursor).initGraph( reference, this );
+        ((DefaultPropertyCursor) cursor).initGraph( reference );
     }
 
     @Override
     public IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor )
     {
         DefaultNodeValueIndexCursor indexCursor = (DefaultNodeValueIndexCursor) cursor;
-        indexCursor.setRead( this, null );
+        indexCursor.initialize( (Resource) null );
         return indexCursor;
     }
 
@@ -483,7 +484,6 @@ public class DefaultCursors implements CursorFactory
     public IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor )
     {
         DefaultNodeLabelIndexCursor indexCursor = (DefaultNodeLabelIndexCursor) cursor;
-        indexCursor.setRead( this );
         return indexCursor;
     }
 
@@ -491,7 +491,6 @@ public class DefaultCursors implements CursorFactory
     public IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor )
     {
         DefaultNodeExplicitIndexCursor indexCursor = (DefaultNodeExplicitIndexCursor) cursor;
-        indexCursor.setRead( this );
         return indexCursor;
     }
 
@@ -499,20 +498,19 @@ public class DefaultCursors implements CursorFactory
     public IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor )
     {
         DefaultRelationshipExplicitIndexCursor indexCursor = (DefaultRelationshipExplicitIndexCursor) cursor;
-        indexCursor.setRead( this );
         return indexCursor;
     }
 
     @Override
     public void allRelationshipsScan( RelationshipScanCursor cursor )
     {
-        ((DefaultRelationshipScanCursor) cursor).scan( -1/*include all types*/, this );
+        ((DefaultRelationshipScanCursor) cursor).scan( -1/*include all types*/ );
     }
 
     @Override
     public void relationshipLabelScan( int label, RelationshipScanCursor cursor )
     {
-        ((DefaultRelationshipScanCursor) cursor).scan( label, this );
+        ((DefaultRelationshipScanCursor) cursor).scan( label );
     }
 
     @Override
@@ -552,34 +550,34 @@ public class DefaultCursors implements CursorFactory
         switch ( encoding )
         {
         case NONE: // this is a normal relationship reference
-            internalCursor.chain( nodeReference, reference, this );
+            internalCursor.chain( nodeReference, reference );
             break;
 
         case FILTER: // this relationship chain needs to be filtered
-            internalCursor.filtered( nodeReference, clearEncoding( reference ), this, true );
+            internalCursor.filtered( nodeReference, clearEncoding( reference ), true );
             break;
 
         case FILTER_TX_STATE: // tx-state changes should be filtered by the head of this chain
-            internalCursor.filtered( nodeReference, clearEncoding( reference ), this, false );
+            internalCursor.filtered( nodeReference, clearEncoding( reference ), false );
             break;
 
         case GROUP: // this reference is actually to a group record
-            internalCursor.groups( nodeReference, clearEncoding( reference ), this );
+            internalCursor.groups( nodeReference, clearEncoding( reference ) );
             break;
 
         case NO_OUTGOING_OF_TYPE: // nothing in store, but proceed to check tx-state changes
             relationshipType = (int) clearEncoding( reference );
-            internalCursor.filteredTxState( nodeReference, this, relationshipType, OUTGOING );
+            internalCursor.filteredTxState( nodeReference, relationshipType, OUTGOING );
             break;
 
         case NO_INCOMING_OF_TYPE: // nothing in store, but proceed to check tx-state changes
             relationshipType = (int) clearEncoding( reference );
-            internalCursor.filteredTxState( nodeReference, this, relationshipType, INCOMING );
+            internalCursor.filteredTxState( nodeReference, relationshipType, INCOMING );
             break;
 
         case NO_LOOP_OF_TYPE: // nothing in store, but proceed to check tx-state changes
             relationshipType = (int) clearEncoding( reference );
-            internalCursor.filteredTxState( nodeReference, this, relationshipType, LOOP );
+            internalCursor.filteredTxState( nodeReference, relationshipType, LOOP );
             break;
 
         default:
@@ -593,11 +591,11 @@ public class DefaultCursors implements CursorFactory
         // the relationships for this node are not grouped in the store
         if ( reference != NO_ID && isRelationship( reference ) )
         {
-            ((DefaultRelationshipGroupCursor) cursor).buffer( nodeReference, clearEncoding( reference ), this );
+            ((DefaultRelationshipGroupCursor) cursor).buffer( nodeReference, clearEncoding( reference ) );
         }
         else // this is a normal group reference.
         {
-            ((DefaultRelationshipGroupCursor) cursor).direct( nodeReference, reference, this );
+            ((DefaultRelationshipGroupCursor) cursor).direct( nodeReference, reference );
         }
     }
 

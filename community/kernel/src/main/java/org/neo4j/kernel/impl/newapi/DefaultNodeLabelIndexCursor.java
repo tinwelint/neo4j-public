@@ -37,17 +37,15 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgressor>
         implements NodeLabelIndexCursor, NodeLabelClient
 {
-    private DefaultCursors read;
+    private final DefaultCursors cursors;
     private long node;
     private LabelSet labels;
     private PrimitiveLongIterator added;
     private Set<Long> removed;
 
-    private final DefaultCursors pool;
-
-    DefaultNodeLabelIndexCursor( DefaultCursors pool )
+    DefaultNodeLabelIndexCursor( DefaultCursors cursors )
     {
-        this.pool = pool;
+        this.cursors = cursors;
         node = NO_ID;
     }
 
@@ -55,12 +53,12 @@ class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgres
     public void scan( IndexProgressor progressor, boolean providesLabels, int label )
     {
         super.initialize( (LabelScanValueIndexProgressor) progressor );
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
             ReadableDiffSets<Long> changes =
-                    read.txState().nodesWithLabelChanged( label );
+                    cursors.txState().nodesWithLabelChanged( label );
             added = changes.augment( PrimitiveLongCollections.emptyIterator() );
-            removed = new HashSet<>( read.txState().addedAndRemovedNodes().getRemoved() );
+            removed = new HashSet<>( cursors.txState().addedAndRemovedNodes().getRemoved() );
             removed.addAll( changes.getRemoved() );
         }
     }
@@ -117,15 +115,10 @@ class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgres
         }
     }
 
-    public void setRead( DefaultCursors read )
-    {
-        this.read = read;
-    }
-
     @Override
     public void node( NodeCursor cursor )
     {
-        read.singleNode( node, cursor );
+        cursors.singleNode( node, cursor );
     }
 
     @Override
@@ -148,10 +141,9 @@ class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgres
             super.close();
             node = NO_ID;
             labels = null;
-            read = null;
             removed = null;
 
-            pool.accept( this );
+            cursors.accept( this );
         }
     }
 

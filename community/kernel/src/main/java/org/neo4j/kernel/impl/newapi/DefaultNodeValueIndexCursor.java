@@ -46,7 +46,7 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         implements NodeValueIndexCursor, NodeValueClient
 {
-    private DefaultCursors read;
+    private final DefaultCursors cursors;
     private Resource resource;
     private long node;
     private IndexQuery[] query;
@@ -54,11 +54,10 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     private PrimitiveLongIterator added = emptyIterator();
     private PrimitiveLongSet removed = emptySet();
     private boolean needsValues;
-    private final DefaultCursors pool;
 
-    DefaultNodeValueIndexCursor( DefaultCursors pool )
+    DefaultNodeValueIndexCursor( DefaultCursors cursors )
     {
-        this.pool = pool;
+        this.cursors = cursors;
         node = NO_ID;
     }
 
@@ -143,16 +142,15 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         }
     }
 
-    public void setRead( DefaultCursors read, Resource resource )
+    public void initialize( Resource resource )
     {
-        this.read = read;
         this.resource = resource;
     }
 
     @Override
     public void node( NodeCursor cursor )
     {
-        read.singleNode( node, cursor );
+        cursors.singleNode( node, cursor );
     }
 
     @Override
@@ -194,7 +192,6 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
             this.node = NO_ID;
             this.query = null;
             this.values = null;
-            this.read = null;
             this.added = emptyIterator();
             this.removed = PrimitiveLongCollections.emptySet();
 
@@ -208,7 +205,7 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
             }
             finally
             {
-                pool.accept( this );
+                cursors.accept( this );
             }
         }
     }
@@ -238,9 +235,9 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     private void prefixQuery( SchemaIndexDescriptor descriptor, IndexQuery.StringPrefixPredicate predicate )
     {
         needsValues = true;
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            TransactionState txState = read.txState();
+            TransactionState txState = cursors.txState();
             PrimitiveLongReadableDiffSets changes = txState
                     .indexUpdatesForRangeSeekByPrefix( descriptor, predicate.prefix() );
             added = changes.augment( emptyIterator() );
@@ -253,9 +250,9 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         ValueGroup valueGroup = predicate.valueGroup();
         ValueCategory category = valueGroup.category();
         this.needsValues = category == ValueCategory.TEXT || category == ValueCategory.NUMBER || category == ValueCategory.TEMPORAL;
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            TransactionState txState = read.txState();
+            TransactionState txState = cursors.txState();
             PrimitiveLongReadableDiffSets changes = txState.indexUpdatesForRangeSeek(
                     descriptor, valueGroup,
                     predicate.fromValue(), predicate.fromInclusive(),
@@ -268,9 +265,9 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     private void scanQuery( SchemaIndexDescriptor descriptor )
     {
         needsValues = true;
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            TransactionState txState = read.txState();
+            TransactionState txState = cursors.txState();
             PrimitiveLongReadableDiffSets changes = txState.indexUpdatesForScan( descriptor );
             added = changes.augment( emptyIterator() );
             removed = removed( txState, changes );
@@ -280,9 +277,9 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     private void suffixOrContainsQuery( SchemaIndexDescriptor descriptor, IndexQuery query )
     {
         needsValues = true;
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            TransactionState txState = read.txState();
+            TransactionState txState = cursors.txState();
             PrimitiveLongReadableDiffSets changes = txState.indexUpdatesForSuffixOrContains( descriptor, query );
             added = changes.augment( emptyIterator() );
             removed = removed( txState, changes );
@@ -293,10 +290,10 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     {
         needsValues = false;
         IndexQuery.ExactPredicate[] exactPreds = assertOnlyExactPredicates( query );
-        if ( read.hasTxStateWithChanges() )
+        if ( cursors.hasTxStateWithChanges() )
         {
-            TransactionState txState = read.txState();
-            PrimitiveLongReadableDiffSets changes = read.txState()
+            TransactionState txState = cursors.txState();
+            PrimitiveLongReadableDiffSets changes = cursors.txState()
                     .indexUpdatesForSeek( descriptor, IndexQuery.asValueTuple( exactPreds ) );
             added = changes.augment( emptyIterator() );
             removed = removed( txState, changes );

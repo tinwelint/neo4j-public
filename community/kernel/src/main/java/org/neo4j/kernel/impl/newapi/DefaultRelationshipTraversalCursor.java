@@ -123,7 +123,6 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
     private Record buffer;
     private PageCursor pageCursor;
     private final DefaultRelationshipGroupCursor group;
-    private final DefaultCursors pool;
     private GroupState groupState;
     private FilterState filterState;
     private boolean filterStore;
@@ -131,31 +130,31 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
 
     private PrimitiveLongIterator addedRelationships;
 
-    DefaultRelationshipTraversalCursor( DefaultRelationshipGroupCursor group, DefaultCursors pool )
+    DefaultRelationshipTraversalCursor( DefaultRelationshipGroupCursor group, DefaultCursors cursors )
     {
+        super( cursors );
         this.group = group;
-        this.pool = pool;
     }
 
     /*
      * Cursor being called as a group, use the buffered records in Record
      * instead. These are guaranteed to all have the same type and direction.
      */
-    void buffered( long nodeReference, Record record, RelationshipDirection direction, int type, DefaultCursors cursors )
+    void buffered( long nodeReference, Record record, RelationshipDirection direction, int type )
     {
         this.originNodeReference = nodeReference;
         this.buffer = Record.initialize( record );
         this.groupState = GroupState.NONE;
         this.filterState = FilterState.fromRelationshipDirection( direction );
         this.filterType = type;
-        init( cursors );
+        init();
         this.addedRelationships = PrimitiveLongCollections.emptyIterator();
     }
 
     /*
      * Normal traversal. Traversal returns mixed types and directions.
      */
-    void chain( long nodeReference, long reference, DefaultCursors cursors )
+    void chain( long nodeReference, long reference )
     {
         if ( pageCursor == null )
         {
@@ -167,14 +166,14 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
         this.filterType = NO_ID;
         this.originNodeReference = nodeReference;
         this.next = reference;
-        init( cursors );
+        init();
         this.addedRelationships = PrimitiveLongCollections.emptyIterator();
     }
 
     /*
      * Reference to a group record. Traversal returns mixed types and directions.
      */
-    void groups( long nodeReference, long groupReference, DefaultCursors cursors )
+    void groups( long nodeReference, long groupReference )
     {
         setId( NO_ID );
         this.next = NO_ID;
@@ -183,7 +182,7 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
         this.filterType = NO_ID;
         this.originNodeReference = nodeReference;
         cursors.relationshipGroups( nodeReference, groupReference, group );
-        init( cursors );
+        init();
         this.addedRelationships = PrimitiveLongCollections.emptyIterator();
     }
 
@@ -191,7 +190,7 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
      * Grouped traversal of non-dense node. Same type and direction as first read relationship. Store relationships are
      * all assumed to be of wanted relationship type and direction iff filterStore == false.
      */
-    void filtered( long nodeReference, long reference, DefaultCursors cursors, boolean filterStore )
+    void filtered( long nodeReference, long reference, boolean filterStore )
     {
         if ( pageCursor == null )
         {
@@ -203,14 +202,14 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
         this.filterStore = filterStore;
         this.originNodeReference = nodeReference;
         this.next = reference;
-        init( cursors );
+        init();
         this.addedRelationships = PrimitiveLongCollections.emptyIterator();
     }
 
     /*
      * Empty chain in store. Return from tx-state with provided relationship type and direction.
      */
-    void filteredTxState( long nodeReference, DefaultCursors cursors, int filterType, RelationshipDirection direction )
+    void filteredTxState( long nodeReference, int filterType, RelationshipDirection direction )
     {
         setId( NO_ID );
         this.groupState = GroupState.NONE;
@@ -219,7 +218,7 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
         this.filterStore = false;
         this.originNodeReference = nodeReference;
         this.next = NO_ID;
-        init( cursors );
+        init();
         this.addedRelationships = PrimitiveLongCollections.emptyIterator();
     }
 
@@ -485,11 +484,11 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
     {
         if ( !isClosed() )
         {
-            cursors = null;
             buffer = null;
             reset();
 
-            pool.accept( this );
+            cursors.accept( this );
+            closed = true;
         }
     }
 
@@ -526,7 +525,7 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
     @Override
     public boolean isClosed()
     {
-        return cursors == null && !hasBufferedData();
+        return closed && !hasBufferedData();
     }
 
     public void release()
