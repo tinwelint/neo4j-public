@@ -44,16 +44,8 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.internal.kernel.api.CapableIndexReference;
+import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.InternalIndexState;
-import org.neo4j.internal.kernel.api.NodeCursor;
-import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
-import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
-import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
-import org.neo4j.internal.kernel.api.PropertyCursor;
-import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
-import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
@@ -63,7 +55,6 @@ import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationExcep
 import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
-import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
@@ -71,8 +62,6 @@ import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
-import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
-import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.DegreeVisitor;
@@ -102,6 +91,7 @@ import org.neo4j.kernel.impl.util.Cursors;
 import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.impl.util.IdOrderingQueue;
 import org.neo4j.kernel.internal.DatabaseHealth;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.register.Register.DoubleLongRegister;
@@ -110,7 +100,6 @@ import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandReader;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.CommandsToApply;
-import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.NodeItem;
 import org.neo4j.storageengine.api.PropertyItem;
@@ -124,7 +113,6 @@ import org.neo4j.storageengine.api.StoreReadLayer;
 import org.neo4j.storageengine.api.Token;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
-import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.PopulationProgress;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
@@ -143,8 +131,8 @@ import static org.neo4j.register.Registers.newDoubleLongRegister;
  * Purely in-memory storage just to see where other code makes assumptions about the current record storage engine
  * or one or more of its internals.
  */
-public class SillyStorageEngine implements
-        StorageEngine, StoreReadLayer, CursorBootstrap, CommandCreationContext, CommandReaderFactory, Visitor<StorageCommand,IOException>
+public class SillyStorageEngine extends LifecycleAdapter implements
+        StorageEngine, StoreReadLayer, CommandCreationContext, CommandReaderFactory, Visitor<StorageCommand,IOException>
 {
     private final SillyData data;
     private final SchemaCache schemaCache;
@@ -217,9 +205,9 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public CursorBootstrap cursors()
+    public CursorFactory cursors( TxStateHolder txStateHolder, AssertOpen assertOpen )
     {
-        return this;
+        return new SillyCursorFactory( data, txStateHolder, assertOpen );
     }
 
     @Override
@@ -446,226 +434,6 @@ public class SillyStorageEngine implements
     public void loadSchemaCache()
     {
 //        schemaCache.load( data.indexRules.values() );
-    }
-
-    /////////////////////////////////////////////////////// CursorBootstrap ///////////////////////////////////////////////////
-
-    @Override
-    public NodeCursor allocateNodeCursor()
-    {
-        return new SillyNodeCursor( data.nodes );
-    }
-
-    @Override
-    public RelationshipScanCursor allocateRelationshipScanCursor()
-    {
-        return new SillyRelationshipScanCursor( data.relationships );
-    }
-
-    @Override
-    public RelationshipTraversalCursor allocateRelationshipTraversalCursor()
-    {
-        return new SillyRelationshipTraversalCursor();
-    }
-
-    @Override
-    public PropertyCursor allocatePropertyCursor()
-    {
-        return new SillyPropertyCursor();
-    }
-
-    @Override
-    public RelationshipGroupCursor allocateRelationshipGroupCursor()
-    {
-        return new SillyRelationshipGroupCursor();
-    }
-
-    @Override
-    public NodeValueIndexCursor allocateNodeValueIndexCursor()
-    {
-        return new SillyNodeValueIndexCursor();
-    }
-
-    @Override
-    public NodeLabelIndexCursor allocateNodeLabelIndexCursor()
-    {
-        return new SillyNodeLabelIndexCursor();
-    }
-
-    @Override
-    public NodeExplicitIndexCursor allocateNodeExplicitIndexCursor()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public RelationshipExplicitIndexCursor allocateRelationshipExplicitIndexCursor()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void assertClosed()
-    {
-    }
-
-    @Override
-    public void release()
-    {
-    }
-
-    @Override
-    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
-    {
-        return new SillyCursorClient( txStateHolder, assertOpen );
-    }
-
-    class SillyCursorClient implements Client
-    {
-        private final TxStateHolder txStateHolder;
-        private final AssertOpen assertOpen;
-        private SecurityContext securityContext;
-
-        SillyCursorClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
-        {
-            this.txStateHolder = txStateHolder;
-            this.assertOpen = assertOpen;
-        }
-
-        @Override
-        public void initialize( SecurityContext securityContext )
-        {
-            this.securityContext = securityContext;
-        }
-
-        @Override
-        public void assertOpen()
-        {
-            assertOpen.assertOpen();
-        }
-
-        @Override
-        public TransactionState txState()
-        {
-            return txStateHolder.txState();
-        }
-
-        @Override
-        public SecurityContext securityContext()
-        {
-            return securityContext;
-        }
-
-        @Override
-        public boolean hasTxStateWithChanges()
-        {
-            return txStateHolder.hasTxStateWithChanges();
-        }
-
-        @Override
-        public ExplicitIndexTransactionState explicitIndexTxState()
-        {
-            return txStateHolder.explicitIndexTxState();
-        }
-
-        @Override
-        public void singleRelationship( long reference, RelationshipScanCursor cursor )
-        {
-            ((SillyRelationshipScanCursor)cursor).single( this, reference );
-        }
-
-        @Override
-        public void singleNode( long reference, NodeCursor cursor )
-        {
-            ((SillyNodeCursor)cursor).single( this, reference );
-        }
-
-        @Override
-        public void relationships( long nodeReference, long reference, RelationshipTraversalCursor cursor )
-        {
-            NodeData node = data.nodes.get( nodeReference );
-            ((SillyRelationshipTraversalCursor)cursor).init( node.relationships() );
-        }
-
-        @Override
-        public void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor )
-        {
-            RelationshipData relationship = data.relationships.get( relationshipReference );
-            ((SillyPropertyCursor)cursor).init( relationship.properties() );
-        }
-
-        @Override
-        public void relationshipLabelScan( int label, RelationshipScanCursor cursor )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long relationshipHighMark()
-        {
-            return data.nextRelationshipId.get();
-        }
-
-        @Override
-        public void relationshipGroups( long relationshipReference, long reference, RelationshipGroupCursor group )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void nodeProperties( long nodeReference, long reference, PropertyCursor cursor )
-        {
-            NodeData node = data.nodes.get( nodeReference );
-            ((SillyPropertyCursor)cursor).init( node.properties() );
-        }
-
-        @Override
-        public long nodeHighMark()
-        {
-            return data.nextNodeId.get();
-        }
-
-        @Override
-        public void graphProperties( long reference, PropertyCursor cursor )
-        {
-            ((SillyPropertyCursor)cursor).init( data.graphProperties );
-        }
-
-        @Override
-        public IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
-
-        @Override
-        public IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
-
-        @Override
-        public IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
-
-        @Override
-        public IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
-
-        @Override
-        public void allRelationshipsScan( RelationshipScanCursor cursor )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void allNodesScan( NodeCursor cursor )
-        {
-            throw new UnsupportedOperationException();
-        }
     }
 
     /////////////////////////////////////////////////////// StoreReadLayer ///////////////////////////////////////////////////

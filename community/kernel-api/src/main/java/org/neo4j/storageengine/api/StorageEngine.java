@@ -24,32 +24,38 @@ import java.util.Collection;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
+import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.util.DependencySatisfier;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 
 /**
  * A StorageEngine provides the functionality to durably store data, and read it back.
  */
-public interface StorageEngine
+public interface StorageEngine extends Lifecycle
 {
     /**
      * @return an interface for accessing data previously
      * {@link #apply(CommandsToApply, TransactionApplicationMode) applied} to this storage.
-     * @deprecated in favor of {@link #cursors()} which is used in a new kernel API, see {@link Kernel}.
+     * @deprecated in favor of {@link #cursors(TxStateHolder, AssertOpen)} which is used in a new kernel API, see {@link Kernel}.
      */
     @Deprecated
     StoreReadLayer storeReadLayer();
 
     /**
      * @return a factory for cursors able to access data.
+     * @param txStateHolder
+     * @param assertOpen
      */
-    CursorBootstrap cursors();
+    CursorFactory cursors( TxStateHolder txStateHolder, AssertOpen assertOpen );
 
     /**
      * @return a new {@link CommandCreationContext} meant to be kept for multiple calls to

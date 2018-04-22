@@ -81,7 +81,6 @@ import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
-import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.format.RecordFormatPropertyConfigurator;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -589,7 +588,8 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
         // true it's not entirely true for the time being. As long as we need this call below, which
         // makes available one or more internal things to the outside world, there are leaks to plug.
         storageEngine.satisfyDependencies( dependencies );
-        return storageEngine;
+
+        return life.add( storageEngine );
     }
 
     private NeoStoreTransactionLogModule buildTransactionLogs( LogFiles logFiles, Config config,

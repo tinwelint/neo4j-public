@@ -27,6 +27,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
@@ -55,6 +56,7 @@ import org.neo4j.storageengine.api.StorageStatement;
 import org.neo4j.storageengine.api.StoreReadLayer;
 import org.neo4j.time.Clocks;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.transaction.tracing.TransactionTracer.NULL;
@@ -94,7 +96,8 @@ public class KernelTransactionFactory
         StorageStatement storageStatement = mock( StorageStatement.class );
         when( storeReadLayer.newStatement() ).thenReturn( storageStatement );
         when( storageEngine.storeReadLayer() ).thenReturn( storeReadLayer );
-        when( storageEngine.cursors() ).thenReturn( new DefaultCursors( mock( NeoStores.class ) ) );
+        when( storageEngine.cursors( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).then(
+                invocation -> new DefaultCursors( mock( NeoStores.class ), invocation.getArgument( 0 ), invocation.getArgument( 1 ) ) );
 
         KernelTransactionImplementation transaction = new KernelTransactionImplementation(
                 mock( StatementOperationParts.class ),

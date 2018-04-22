@@ -24,9 +24,10 @@ import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import org.neo4j.internal.kernel.api.PropertyCursor;
+import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.api.store.PropertyUtil;
-import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.kernel.impl.store.GeometryType;
 import org.neo4j.kernel.impl.store.LongerShortString;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -59,7 +60,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
     private static final int MAX_BYTES_IN_SHORT_STRING_OR_SHORT_ARRAY = 32;
     private static final int INITIAL_POSITION = -1;
 
-    private DefaultClient cursors;
+    private DefaultCursors cursors;
     private final DefaultCursors pool;
     private long next;
     private int block;
@@ -78,7 +79,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         this.pool = pool;
     }
 
-    void initNode( long nodeReference, long reference, DefaultClient cursors )
+    void initNode( long nodeReference, long reference, DefaultCursors cursors )
     {
         assert nodeReference != NO_ID;
 
@@ -92,7 +93,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    void initRelationship( long relationshipReference, long reference, DefaultClient cursors )
+    void initRelationship( long relationshipReference, long reference, DefaultCursors cursors )
     {
         assert relationshipReference != NO_ID;
 
@@ -106,7 +107,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    void initGraph( long reference, DefaultClient cursors )
+    void initGraph( long reference, DefaultCursors cursors )
     {
         init( reference, cursors );
 
@@ -121,7 +122,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
         }
     }
 
-    private void init( long reference, DefaultClient cursors )
+    private void init( long reference, DefaultCursors cursors )
     {
         this.propertyStore = cursors.propertyStore();
         this.next = reference;
@@ -140,7 +141,9 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
 
     private boolean allowed( int propertyKey )
     {
-        return cursors.securityContext().mode().allowsPropertyReads( propertyKey );
+        SecurityContext securityContext = cursors.securityContext();
+        AccessMode mode = securityContext.mode();
+        return mode.allowsPropertyReads( propertyKey );
     }
 
     private boolean innerNext()

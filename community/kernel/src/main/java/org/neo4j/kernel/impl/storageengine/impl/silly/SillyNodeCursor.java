@@ -26,9 +26,9 @@ import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
-import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine.SillyCursorClient;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.NodeState;
+
 import static org.neo4j.helpers.collection.Iterators.loop;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 
@@ -37,7 +37,7 @@ class SillyNodeCursor implements NodeCursor
     private final ConcurrentMap<Long,NodeData> nodes;
     private long next = NO_ID;
     private NodeData current;
-    private SillyCursorClient cursors;
+    private SillyCursorFactory cursors;
 
     SillyNodeCursor( ConcurrentMap<Long,NodeData> nodes )
     {
@@ -101,7 +101,7 @@ class SillyNodeCursor implements NodeCursor
         return false;
     }
 
-    void single( SillyCursorClient cursors, long nodeId )
+    void single( SillyCursorFactory cursors, long nodeId )
     {
         this.cursors = cursors;
         next = nodeId;

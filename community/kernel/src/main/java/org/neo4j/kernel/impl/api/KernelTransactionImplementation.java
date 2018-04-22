@@ -52,6 +52,7 @@ import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
+import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -63,7 +64,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
@@ -95,7 +95,6 @@ import org.neo4j.kernel.impl.util.collection.CollectionsFactory;
 import org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
-import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
@@ -145,6 +144,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private final ClockContext clocks;
     private final AccessCapability accessCapability;
     private final AllStoreHolder allStoreHolder;
+    private final CursorFactory cursors;
 
     // State that needs to be reset between uses. Most of these should be cleared or released in #release(),
     // whereas others, such as timestamp or txId when transaction starts, even locks, needs to be set in #initialize().
@@ -219,8 +219,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.accessCapability = accessCapability;
         this.statistics = new Statistics( this, cpuClockRef, heapAllocationRef );
         this.userMetaData = new HashMap<>();
-
-        CursorBootstrap cursors = storageEngine.cursors();
+        this.cursors = storageEngine.cursors( this, this );
 
         this.allStoreHolder =
                 new AllStoreHolder( storageEngine, storageStatement, this, cursors, explicitIndexStore,
@@ -246,7 +245,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.userTransactionId = userTransactionId;
         this.terminationReason = null;
         this.closing = false;
-        this. closed = false;
+        this.closed = false;
         this.beforeHookInvoked = false;
         this.failure = false;
         this.success = false;
@@ -263,7 +262,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         PageCursorTracer pageCursorTracer = cursorTracerSupplier.get();
         this.statistics.init( Thread.currentThread().getId(), pageCursorTracer );
         this.currentStatement.initialize( statementLocks, pageCursorTracer );
-        this.allStoreHolder.initialize( securityContext );
+        this.cursors.initialize( securityContext );
         this.operations.initialize();
         return this;
     }

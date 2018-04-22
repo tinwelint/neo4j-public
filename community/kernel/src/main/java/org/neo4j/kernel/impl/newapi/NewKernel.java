@@ -19,12 +19,10 @@
  */
 package org.neo4j.kernel.impl.newapi;
 
-import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.Modes;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.InwardKernel;
-import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
 
@@ -38,7 +36,6 @@ public class NewKernel implements Kernel, Modes
     private final InwardKernel kernel;
 
     private StorageStatement statement;
-    private CursorBootstrap cursors;
 
     private volatile boolean isRunning;
 
@@ -65,7 +62,6 @@ public class NewKernel implements Kernel, Modes
     public void start()
     {
         statement = engine.storeReadLayer().newStatement();
-        this.cursors = engine.cursors();
         isRunning = true;
     }
 

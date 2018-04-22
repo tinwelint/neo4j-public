@@ -31,6 +31,7 @@ import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Transaction.Type;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -66,7 +67,6 @@ import org.neo4j.kernel.impl.util.diffsets.PrimitiveLongDiffSets;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
-import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
@@ -83,8 +83,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.internal.kernel.api.security.AccessMode.Static.FULL;
-import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -125,10 +123,8 @@ public class KernelTransactionTestBase
                     any( ReadableTransactionState.class ),
                     any( StorageStatement.class ), any( ResourceLocker.class ),
                     anyLong() );
-        CursorBootstrap cursors = mock( CursorBootstrap.class );
-        CursorBootstrap.Client client = mock( CursorBootstrap.Client.class );
-        when( cursors.newClient( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).thenReturn( client );
-        when( storageEngine.cursors() ).thenReturn( cursors );
+        CursorFactory cursors = mock( CursorFactory.class );
+        when( storageEngine.cursors( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).thenReturn( cursors );
     }
 
     public KernelTransactionImplementation newTransaction( long transactionTimeoutMillis )

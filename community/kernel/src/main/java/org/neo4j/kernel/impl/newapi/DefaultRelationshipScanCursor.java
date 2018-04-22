@@ -24,7 +24,6 @@ import java.util.Set;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 
 import static java.util.Collections.emptySet;
 
@@ -43,7 +42,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         this.pool = pool;
     }
 
-    void scan( int type, DefaultClient cursors )
+    void scan( int type, DefaultCursors cursors )
     {
         if ( getId() != NO_ID )
         {
@@ -60,7 +59,7 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
         this.addedRelationships = emptySet();
     }
 
-    void single( long reference, DefaultClient cursors )
+    void single( long reference, DefaultCursors cursors )
     {
         if ( getId() != NO_ID )
         {

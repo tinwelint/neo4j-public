@@ -46,7 +46,7 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         implements NodeValueIndexCursor, NodeValueClient
 {
-    private DefaultCursors.DefaultClient read;
+    private DefaultCursors read;
     private Resource resource;
     private long node;
     private IndexQuery[] query;
@@ -143,7 +143,7 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         }
     }
 
-    public void setRead( DefaultCursors.DefaultClient read, Resource resource )
+    public void setRead( DefaultCursors read, Resource resource )
     {
         this.read = read;
         this.resource = resource;
