@@ -515,21 +515,26 @@ public class SillyStorageEngine implements
     }
 
     @Override
-    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext )
+    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
     {
-        return new SillyCursorClient( txStateHolder, assertOpen, securityContext );
+        return new SillyCursorClient( txStateHolder, assertOpen );
     }
 
     class SillyCursorClient implements Client
     {
         private final TxStateHolder txStateHolder;
         private final AssertOpen assertOpen;
-        private final SecurityContext securityContext;
+        private SecurityContext securityContext;
 
-        SillyCursorClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext )
+        SillyCursorClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
         {
             this.txStateHolder = txStateHolder;
             this.assertOpen = assertOpen;
+        }
+
+        @Override
+        public void initialize( SecurityContext securityContext )
+        {
             this.securityContext = securityContext;
         }
 

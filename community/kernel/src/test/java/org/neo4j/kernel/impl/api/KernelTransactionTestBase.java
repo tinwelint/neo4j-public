@@ -128,7 +128,7 @@ public class KernelTransactionTestBase
                     anyLong() );
         CursorBootstrap cursors = mock( CursorBootstrap.class );
         CursorBootstrap.Client client = mock( CursorBootstrap.Client.class );
-        when( cursors.newClient( any( TxStateHolder.class ), any( AssertOpen.class ), new SecurityContext( ANONYMOUS, FULL ) ) ).thenReturn( client );
+        when( cursors.newClient( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).thenReturn( client );
         when( storageEngine.cursors() ).thenReturn( cursors );
     }
 

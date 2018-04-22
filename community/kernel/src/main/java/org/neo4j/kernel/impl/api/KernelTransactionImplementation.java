@@ -144,6 +144,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private final StoreReadLayer storeLayer;
     private final ClockContext clocks;
     private final AccessCapability accessCapability;
+    private final AllStoreHolder allStoreHolder;
 
     // State that needs to be reset between uses. Most of these should be cleared or released in #release(),
     // whereas others, such as timestamp or txId when transaction starts, even locks, needs to be set in #initialize().
@@ -221,7 +222,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
 
         CursorBootstrap cursors = storageEngine.cursors();
 
-        AllStoreHolder allStoreHolder =
+        this.allStoreHolder =
                 new AllStoreHolder( storageEngine, storageStatement, this, cursors, explicitIndexStore,
                         procedures, schemaState );
         this.operations =
@@ -262,6 +263,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         PageCursorTracer pageCursorTracer = cursorTracerSupplier.get();
         this.statistics.init( Thread.currentThread().getId(), pageCursorTracer );
         this.currentStatement.initialize( statementLocks, pageCursorTracer );
+        this.allStoreHolder.initialize( securityContext );
         this.operations.initialize();
         return this;
     }

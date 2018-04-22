@@ -430,20 +430,26 @@ public class DefaultCursors implements CursorBootstrap
     }
 
     @Override
-    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext )
+    public Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen )
     {
-        return new DefaultClient( txStateHolder, assertOpen, securityContext, neoStores );
+        return new DefaultClient( txStateHolder, assertOpen, neoStores );
     }
 
     public static class DefaultClient implements Client
     {
         private final TxStateHolder txStateHolder;
         private final AssertOpen assertOpen;
-        private final SecurityContext securityContext;
+        private SecurityContext securityContext;
         private final NodeStore nodes;
         private final RelationshipStore relationships;
         private final RelationshipGroupStore groups;
         private final PropertyStore properties;
+
+        @Override
+        public void initialize( SecurityContext securityContext )
+        {
+            this.securityContext = securityContext;
+        }
 
         @Override
         public TransactionState txState()
@@ -475,7 +481,7 @@ public class DefaultCursors implements CursorBootstrap
             assertOpen.assertOpen();
         }
 
-        DefaultClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext, NeoStores neoStores )
+        DefaultClient( TxStateHolder txStateHolder, AssertOpen assertOpen, NeoStores neoStores )
         {
             this.txStateHolder = txStateHolder;
             this.assertOpen = assertOpen;
