@@ -47,6 +47,7 @@ import org.neo4j.internal.kernel.api.CapableIndexReference;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
@@ -62,7 +63,6 @@ import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexProviderDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
@@ -205,9 +205,9 @@ public class SillyStorageEngine extends LifecycleAdapter implements
     }
 
     @Override
-    public CursorFactory cursors( TxStateHolder txStateHolder, AssertOpen assertOpen )
+    public CursorFactory cursors( TransactionalCursorDependencies dependencies )
     {
-        return new SillyCursorFactory( data, txStateHolder, assertOpen );
+        return new SillyCursorFactory( data, dependencies );
     }
 
     @Override

@@ -23,11 +23,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.neo4j.collection.pool.Pool;
+import org.neo4j.internal.kernel.api.TransactionalCursorDependencies;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
@@ -96,8 +96,8 @@ public class KernelTransactionFactory
         StorageStatement storageStatement = mock( StorageStatement.class );
         when( storeReadLayer.newStatement() ).thenReturn( storageStatement );
         when( storageEngine.storeReadLayer() ).thenReturn( storeReadLayer );
-        when( storageEngine.cursors( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).then(
-                invocation -> new DefaultCursors( mock( NeoStores.class ), invocation.getArgument( 0 ), invocation.getArgument( 1 ) ) );
+        when( storageEngine.cursors( any( TransactionalCursorDependencies.class ) ) ).then(
+                invocation -> new DefaultCursors( mock( NeoStores.class ), invocation.getArgument( 0 ) ) );
 
         KernelTransactionImplementation transaction = new KernelTransactionImplementation(
                 mock( StatementOperationParts.class ),

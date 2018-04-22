@@ -24,8 +24,6 @@ import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import org.neo4j.internal.kernel.api.PropertyCursor;
-import org.neo4j.internal.kernel.api.security.AccessMode;
-import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.api.store.PropertyUtil;
 import org.neo4j.kernel.impl.store.GeometryType;
@@ -141,9 +139,7 @@ public class DefaultPropertyCursor extends PropertyRecord implements PropertyCur
 
     private boolean allowed( int propertyKey )
     {
-        SecurityContext securityContext = cursors.securityContext();
-        AccessMode mode = securityContext.mode();
-        return mode.allowsPropertyReads( propertyKey );
+        return cursors.accessMode().allowsPropertyReads( propertyKey );
     }
 
     private boolean innerNext()

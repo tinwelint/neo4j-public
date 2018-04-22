@@ -22,7 +22,6 @@ package org.neo4j.internal.kernel.api;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 import static org.junit.Assert.fail;
@@ -217,18 +216,6 @@ public class ManagedTestCursors implements CursorFactory
     public long relationshipHighMark()
     {
         return 0;
-    }
-
-    @Override
-    public void initialize( SecurityContext securityContext )
-    {
-
-    }
-
-    @Override
-    public SecurityContext securityContext()
-    {
-        return null;
     }
 
     @Override
