@@ -32,6 +32,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
@@ -39,12 +40,14 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.TransactionApplyKernelException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.labelscan.LabelScanWriter;
 import org.neo4j.kernel.api.labelscan.LoggingMonitor;
 import org.neo4j.kernel.api.txstate.TransactionCountingStateVisitor;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.BatchTransactionApplier;
 import org.neo4j.kernel.impl.api.BatchTransactionApplierFacade;
@@ -98,7 +101,6 @@ import org.neo4j.kernel.impl.transaction.state.IntegrityValidator;
 import org.neo4j.kernel.impl.transaction.state.TransactionRecordState;
 import org.neo4j.kernel.impl.transaction.state.storeview.DynamicIndexStoreView;
 import org.neo4j.kernel.impl.transaction.state.storeview.NeoStoreIndexStoreView;
-import org.neo4j.kernel.impl.util.Cursors;
 import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.impl.util.IdOrderingQueue;
 import org.neo4j.kernel.info.DiagnosticsManager;
@@ -110,7 +112,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.CommandsToApply;
-import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
@@ -123,7 +124,6 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.util.FeatureToggles;
 
 import static java.util.stream.Collectors.toCollection;
-
 import static org.neo4j.helpers.collection.Iterators.resourceIterator;
 import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.RECOVERY;
@@ -163,7 +163,6 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final IdController idController;
     private final int denseNodeThreshold;
     private final int recordIdBatchSize;
-    private final DefaultCursors cursors;
     private final DiagnosticsManager diagnosticsManager;
     private final IOLimiter ioLimiter;
 
@@ -251,8 +250,6 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
             denseNodeThreshold = config.get( GraphDatabaseSettings.dense_node_threshold );
             recordIdBatchSize = config.get( GraphDatabaseSettings.record_id_batch_size );
-
-            cursors = new DefaultCursors( neoStores );
         }
         catch ( Throwable failure )
         {
@@ -277,9 +274,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public CursorBootstrap cursors()
+    public CursorFactory cursors( TxStateHolder txStateHolder, AssertOpen assertOpen )
     {
-        return cursors;
+        return new DefaultCursors( neoStores, txStateHolder, assertOpen );
     }
 
     @Override

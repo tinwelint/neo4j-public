@@ -40,6 +40,7 @@ import org.neo4j.internal.kernel.api.helpers.TestRelationshipChain;
 import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.explicitindex.AutoIndexOperations;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
@@ -49,6 +50,7 @@ import org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
@@ -115,7 +117,7 @@ public class OperationsLockTest
         when( transaction.txState() ).thenReturn( txState );
         when( transaction.securityContext() ).thenReturn( SecurityContext.AUTH_DISABLED );
 
-        DefaultCursors cursors = spy( new DefaultCursors( mock( NeoStores.class ) ) );
+        DefaultCursors cursors = spy( new DefaultCursors( mock( NeoStores.class ), mock( TxStateHolder.class ), mock( AssertOpen.class ) ) );
         nodeCursor = mock( DefaultNodeCursor.class );
         propertyCursor = mock( DefaultPropertyCursor.class );
         relationshipCursor = mock( DefaultRelationshipScanCursor.class );
@@ -137,7 +139,7 @@ public class OperationsLockTest
                 ExplicitIndexStore.class ), mock( Procedures.class ), mock( SchemaState.class ) );
         constraintIndexCreator = mock( ConstraintIndexCreator.class );
 
-        when( engine.cursors() ).thenReturn( cursors );
+        when( engine.cursors( any( TxStateHolder.class ), any( AssertOpen.class ) ) ).thenReturn( cursors );
         operations = new Operations( allStoreHolder, mock( IndexTxStateUpdater.class ),
                 storageStatement, transaction, new KernelToken( storeReadLayer, transaction ), cursors, autoindexing,
                 constraintIndexCreator, mock( ConstraintSemantics.class ) );

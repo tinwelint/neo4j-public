@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine.SillyCursorClient;
 
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 
@@ -33,14 +32,14 @@ class SillyRelationshipScanCursor implements RelationshipScanCursor
     private final ConcurrentMap<Long,RelationshipData> relationships;
     private long next = NO_ID;
     private RelationshipData current;
-    private SillyCursorClient cursors;
+    private SillyCursorFactory cursors;
 
     SillyRelationshipScanCursor( ConcurrentMap<Long,RelationshipData> relationships )
     {
         this.relationships = relationships;
     }
 
-    void single( SillyCursorClient cursors, long reference )
+    void single( SillyCursorFactory cursors, long reference )
     {
         this.cursors = cursors;
         current = null;

@@ -28,7 +28,6 @@ import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.kernel.impl.index.labelscan.LabelScanValueIndexProgressor;
-import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.IndexProgressor.NodeLabelClient;
 import org.neo4j.storageengine.api.txstate.ReadableDiffSets;
@@ -38,7 +37,7 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgressor>
         implements NodeLabelIndexCursor, NodeLabelClient
 {
-    private DefaultClient read;
+    private DefaultCursors read;
     private long node;
     private LabelSet labels;
     private PrimitiveLongIterator added;
@@ -118,7 +117,7 @@ class DefaultNodeLabelIndexCursor extends IndexCursor<LabelScanValueIndexProgres
         }
     }
 
-    public void setRead( DefaultClient read )
+    public void setRead( DefaultCursors read )
     {
         this.read = read;
     }

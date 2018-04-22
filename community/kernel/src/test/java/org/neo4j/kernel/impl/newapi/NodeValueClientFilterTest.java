@@ -28,8 +28,10 @@ import java.util.List;
 
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
@@ -47,7 +49,7 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 public class NodeValueClientFilterTest implements IndexProgressor, NodeValueClient
 {
-    private final DefaultCursors cursors = new DefaultCursors( mockedStore() );
+    private final DefaultCursors cursors = new DefaultCursors( mockedStore(), mock( TxStateHolder.class ), mock( AssertOpen.class ) );
     @Rule
     public final MockStore store = new MockStore( cursors );
     private final List<Event> events = new ArrayList<>();

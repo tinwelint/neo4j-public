@@ -27,6 +27,7 @@ import java.util.function.Function;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.kernel.api.CapableIndexReference;
+import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
@@ -70,7 +71,6 @@ import org.neo4j.kernel.impl.index.IndexEntityType;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.register.Register;
-import org.neo4j.storageengine.api.CursorBootstrap;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageStatement;
 import org.neo4j.storageengine.api.StoreReadLayer;
@@ -102,7 +102,7 @@ public class AllStoreHolder extends Read
     public AllStoreHolder( StorageEngine engine,
             StorageStatement statement,
             KernelTransactionImplementation ktx,
-            CursorBootstrap cursors,
+            CursorFactory cursors,
             ExplicitIndexStore explicitIndexStore,
             Procedures procedures,
             SchemaState schemaState )
@@ -639,13 +639,13 @@ public class AllStoreHolder extends Read
     @Override
     long nodeHighMark()
     {
-        return cursorBootstrap.nodeHighMark();
+        return cursors.nodeHighMark();
     }
 
     @Override
     long relationshipHighMark()
     {
-        return cursorBootstrap.relationshipHighMark();
+        return cursors.relationshipHighMark();
     }
 
     boolean nodeExistsInStore( long id )

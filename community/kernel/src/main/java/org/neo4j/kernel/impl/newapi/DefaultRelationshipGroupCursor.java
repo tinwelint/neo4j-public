@@ -29,7 +29,6 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.kernel.impl.newapi.DefaultRelationshipTraversalCursor.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
@@ -44,7 +43,7 @@ import static org.neo4j.kernel.impl.newapi.RelationshipReferenceEncoding.encodeN
 
 class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements RelationshipGroupCursor
 {
-    private DefaultClient cursors;
+    private DefaultCursors cursors;
     private final RelationshipRecord edge = new RelationshipRecord( NO_ID );
     private final DefaultCursors pool;
 
@@ -61,7 +60,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         this.pool = pool;
     }
 
-    void buffer( long nodeReference, long relationshipReference, DefaultClient cursors )
+    void buffer( long nodeReference, long relationshipReference, DefaultCursors cursors )
     {
         setOwningNode( nodeReference );
         setId( NO_ID );
@@ -111,7 +110,7 @@ class DefaultRelationshipGroupCursor extends RelationshipGroupRecord implements 
         }
     }
 
-    void direct( long nodeReference, long reference, DefaultClient cursors )
+    void direct( long nodeReference, long reference, DefaultCursors cursors )
     {
         bufferedGroup = null;
         clear();

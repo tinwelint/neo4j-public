@@ -20,7 +20,6 @@
 package org.neo4j.kernel.impl.newapi;
 
 import org.neo4j.internal.kernel.api.NodeCursor;
-import org.neo4j.kernel.impl.newapi.DefaultCursors.DefaultClient;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.IndexProgressor.ExplicitClient;
 
@@ -29,7 +28,7 @@ import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor>
         implements org.neo4j.internal.kernel.api.NodeExplicitIndexCursor, ExplicitClient
 {
-    private DefaultClient read;
+    private DefaultCursors read;
     private int expectedSize;
     private long node;
     private float score;
@@ -63,7 +62,7 @@ class DefaultNodeExplicitIndexCursor extends IndexCursor<ExplicitIndexProgressor
         return innerNext();
     }
 
-    public void setRead( DefaultClient read )
+    public void setRead( DefaultCursors read )
     {
         this.read = read;
     }

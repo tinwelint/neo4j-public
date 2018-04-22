@@ -22,6 +22,9 @@ package org.neo4j.internal.kernel.api;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.storageengine.api.schema.IndexProgressor;
+
 import static org.junit.Assert.fail;
 
 public class ManagedTestCursors implements CursorFactory
@@ -118,6 +121,114 @@ public class ManagedTestCursors implements CursorFactory
         RelationshipExplicitIndexCursor n = cursors.allocateRelationshipExplicitIndexCursor();
         allCursors.add( n );
         return n;
+    }
+
+    @Override
+    public void allNodesScan( NodeCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void singleNode( long reference, NodeCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void singleRelationship( long reference, RelationshipScanCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void allRelationshipsScan( RelationshipScanCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationshipLabelScan( int label, RelationshipScanCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationships( long nodeReference, long reference, RelationshipTraversalCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationshipGroups( long nodeReference, long reference, RelationshipGroupCursor group )
+    {
+
+    }
+
+    @Override
+    public void nodeProperties( long nodeReference, long reference, PropertyCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void graphProperties( long reference, PropertyCursor cursor )
+    {
+
+    }
+
+    @Override
+    public IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public long nodeHighMark()
+    {
+        return 0;
+    }
+
+    @Override
+    public long relationshipHighMark()
+    {
+        return 0;
+    }
+
+    @Override
+    public void initialize( SecurityContext securityContext )
+    {
+
+    }
+
+    @Override
+    public SecurityContext securityContext()
+    {
+        return null;
     }
 
     @Override

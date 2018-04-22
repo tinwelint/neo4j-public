@@ -33,19 +33,21 @@ import org.neo4j.internal.kernel.api.RelationshipExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 public class StubCursorFactory implements CursorFactory
 {
     private final boolean continueWithLastItem;
-    private Queue<NodeCursor> nodeCursors = new LinkedList<>(  );
-    private Queue<RelationshipScanCursor> relationshipScanCursors = new LinkedList<>(  );
-    private Queue<RelationshipTraversalCursor> relationshiTraversalCursors = new LinkedList<>(  );
-    private Queue<PropertyCursor> propertyCursors = new LinkedList<>(  );
-    private Queue<RelationshipGroupCursor> groupCursors = new LinkedList<>(  );
-    private Queue<NodeValueIndexCursor> nodeValueIndexCursors = new LinkedList<>(  );
-    private Queue<NodeLabelIndexCursor> nodeLabelIndexCursors = new LinkedList<>(  );
-    private Queue<NodeExplicitIndexCursor> nodeExplicitIndexCursors = new LinkedList<>(  );
-    private Queue<RelationshipExplicitIndexCursor> relationshipExplicitIndexCursors = new LinkedList<>(  );
+    private Queue<NodeCursor> nodeCursors = new LinkedList<>();
+    private Queue<RelationshipScanCursor> relationshipScanCursors = new LinkedList<>();
+    private Queue<RelationshipTraversalCursor> relationshiTraversalCursors = new LinkedList<>();
+    private Queue<PropertyCursor> propertyCursors = new LinkedList<>();
+    private Queue<RelationshipGroupCursor> groupCursors = new LinkedList<>();
+    private Queue<NodeValueIndexCursor> nodeValueIndexCursors = new LinkedList<>();
+    private Queue<NodeLabelIndexCursor> nodeLabelIndexCursors = new LinkedList<>();
+    private Queue<NodeExplicitIndexCursor> nodeExplicitIndexCursors = new LinkedList<>();
+    private Queue<RelationshipExplicitIndexCursor> relationshipExplicitIndexCursors = new LinkedList<>();
 
     public StubCursorFactory()
     {
@@ -109,6 +111,114 @@ public class StubCursorFactory implements CursorFactory
     public RelationshipExplicitIndexCursor allocateRelationshipExplicitIndexCursor()
     {
         return poll( relationshipExplicitIndexCursors );
+    }
+
+    @Override
+    public void allNodesScan( NodeCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void singleNode( long reference, NodeCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void singleRelationship( long reference, RelationshipScanCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void allRelationshipsScan( RelationshipScanCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationshipLabelScan( int label, RelationshipScanCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationships( long nodeReference, long reference, RelationshipTraversalCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationshipGroups( long nodeReference, long reference, RelationshipGroupCursor group )
+    {
+
+    }
+
+    @Override
+    public void nodeProperties( long nodeReference, long reference, PropertyCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void relationshipProperties( long relationshipReference, long reference, PropertyCursor cursor )
+    {
+
+    }
+
+    @Override
+    public void graphProperties( long reference, PropertyCursor cursor )
+    {
+
+    }
+
+    @Override
+    public IndexProgressor.NodeValueClient indexSeek( NodeValueIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public IndexProgressor.NodeLabelClient labelSeek( NodeLabelIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public IndexProgressor.ExplicitClient explicitIndexSeek( NodeExplicitIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public IndexProgressor.ExplicitClient explicitIndexSeek( RelationshipExplicitIndexCursor cursor )
+    {
+        return null;
+    }
+
+    @Override
+    public long nodeHighMark()
+    {
+        return 0;
+    }
+
+    @Override
+    public long relationshipHighMark()
+    {
+        return 0;
+    }
+
+    @Override
+    public void initialize( SecurityContext securityContext )
+    {
+
+    }
+
+    @Override
+    public SecurityContext securityContext()
+    {
+        return null;
     }
 
     @Override
