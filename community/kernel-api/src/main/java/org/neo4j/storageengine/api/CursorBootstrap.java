@@ -36,7 +36,7 @@ import org.neo4j.storageengine.api.schema.IndexProgressor;
 
 public interface CursorBootstrap extends CursorFactory
 {
-    Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen, SecurityContext securityContext );
+    Client newClient( TxStateHolder txStateHolder, AssertOpen assertOpen );
 
     /**
      * Bootstraps cursors at specified references.
@@ -46,6 +46,8 @@ public interface CursorBootstrap extends CursorFactory
      */
     interface Client extends TxStateHolder, AssertOpen
     {
+        void initialize( SecurityContext securityContext );
+
         SecurityContext securityContext();
 
         long nodeHighMark();

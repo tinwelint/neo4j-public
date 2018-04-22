@@ -66,6 +66,7 @@ public class NewKernel implements Kernel, Modes
     {
         statement = engine.storeReadLayer().newStatement();
         this.cursors = engine.cursors();
+        isRunning = true;
     }
 
     public void stop()

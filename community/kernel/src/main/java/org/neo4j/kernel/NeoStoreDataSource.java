@@ -81,6 +81,7 @@ import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
+import org.neo4j.kernel.impl.storageengine.impl.silly.SillyStorageEngine;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.format.RecordFormatPropertyConfigurator;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -570,7 +571,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
             SchemaState schemaState, SynchronizedArrayIdOrderingQueue explicitIndexTransactionOrdering,
             OperationalMode operationalMode, VersionContextSupplier versionContextSupplier )
     {
-        RecordStorageEngine storageEngine =
+        StorageEngine storageEngine =
                 new RecordStorageEngine( storeDir, config, pageCache, fs, logProvider, propertyKeyTokenHolder,
                         labelTokens, relationshipTypeTokens, schemaState, constraintSemantics, scheduler,
                         tokenNameLookup, lockService, indexProviderMap, indexingServiceMonitor, databaseHealth,
@@ -579,6 +580,10 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
                         diagnosticsManager, ioLimiter,
                         recoveryCleanupWorkCollector,
                         operationalMode, versionContextSupplier );
+
+//                new SillyStorageEngine( storeDir, config, logProvider, propertyKeyTokenHolder, labelTokens, relationshipTypeTokens, schemaState,
+//                        constraintSemantics, scheduler, tokenNameLookup, indexProviderMap, indexingServiceMonitor, databaseHealth, explicitIndexProviderLookup,
+//                        indexConfigStore, explicitIndexTransactionOrdering, idGeneratorFactory, monitors, operationalMode );
 
         // We pretend that the storage engine abstract hides all details within it. Whereas that's mostly
         // true it's not entirely true for the time being. As long as we need this call below, which

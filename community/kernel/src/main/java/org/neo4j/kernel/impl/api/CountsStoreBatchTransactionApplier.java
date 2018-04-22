@@ -43,7 +43,7 @@ public class CountsStoreBatchTransactionApplier extends BatchTransactionApplier.
     {
         Optional<CountsAccessor.Updater> result = countsTracker.apply( transaction.transactionId() );
         result.ifPresent( updater -> this.countsUpdater = updater );
-        assert this.countsUpdater != null || mode == TransactionApplicationMode.RECOVERY;
+        assert this.countsUpdater != null || mode == TransactionApplicationMode.RECOVERY : countsUpdater + " " + mode + " " + transaction.transactionId();
 
         return new CountsStoreTransactionApplier( mode, countsUpdater );
     }

@@ -39,6 +39,7 @@ import org.neo4j.internal.kernel.api.Scan;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.ExplicitIndex;
 import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
@@ -81,8 +82,13 @@ abstract class Read implements TxStateHolder,
     Read( CursorBootstrap cursors, KernelTransactionImplementation ktx )
     {
         this.cursors = cursors;
-        this.cursorBootstrap = cursors.newClient( ktx, ktx, ktx.securityContext() );
+        this.cursorBootstrap = cursors.newClient( ktx, ktx );
         this.ktx = ktx;
+    }
+
+    public void initialize( SecurityContext securityContext )
+    {
+        cursorBootstrap.initialize( securityContext );
     }
 
     @Override
