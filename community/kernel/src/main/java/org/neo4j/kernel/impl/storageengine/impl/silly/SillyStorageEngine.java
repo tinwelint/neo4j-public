@@ -193,9 +193,9 @@ public class SillyStorageEngine extends LifecycleAdapter implements
     private static void createTokenIdGenerator( File storeDir, IdGeneratorFactory idGeneratorFactory, StoreType storeType, IdType idType )
     {
         File file = new File( storeDir, storeType.getStoreFile().fileName( ID ) );
-        long highId = 1 << 32;
-        idGeneratorFactory.create( file, highId, true );
-        idGeneratorFactory.open( file, idType, () -> 0, highId );
+        long maxId = 1L << 32;
+        idGeneratorFactory.create( file, 0, true );
+        idGeneratorFactory.open( file, idType, () -> 0, maxId );
     }
 
     @Override

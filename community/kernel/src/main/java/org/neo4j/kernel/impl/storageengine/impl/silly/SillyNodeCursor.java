@@ -57,9 +57,9 @@ class SillyNodeCursor implements NodeCursor
         if ( cursors.hasTxStateWithChanges() )
         {
             NodeState nodeState = cursors.txState().getNodeState( next );
+            current = current != null ? current.copy() : new NodeData( next );
             if ( !nodeState.labelDiffSets().isEmpty() || nodeState.hasPropertyChanges() )
             {
-                current = current != null ? current.copy() : new NodeData( next );
                 if ( !nodeState.labelDiffSets().isEmpty() )
                 {
                     for ( int labelId : nodeState.labelDiffSets().getRemoved() )
