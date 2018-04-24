@@ -24,17 +24,25 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.RelationshipItem;
+import org.neo4j.storageengine.api.txstate.RelationshipState;
 
 import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK;
 
-class RelationshipData implements RelationshipItem
+class RelationshipData implements RelationshipItem, RelationshipVisitor<RuntimeException>
 {
     private final ConcurrentMap<Integer,PropertyData> properties = new ConcurrentHashMap<>();
     private final long id;
-    private final int type;
-    private final long startNode;
-    private final long endNode;
+    private int type;
+    private long startNode;
+    private long endNode;
+
+    RelationshipData( long id, RelationshipState txState )
+    {
+        this.id = id;
+        txState.accept( this );
+    }
 
     RelationshipData( long id, int type, long startNode, long endNode )
     {
@@ -42,6 +50,14 @@ class RelationshipData implements RelationshipItem
         this.type = type;
         this.startNode = startNode;
         this.endNode = endNode;
+    }
+
+    @Override
+    public void visit( long relationshipId, int typeId, long startNodeId, long endNodeId ) throws RuntimeException
+    {
+        this.type = typeId;
+        this.startNode = startNodeId;
+        this.endNode = endNodeId;
     }
 
     ConcurrentMap<Integer,PropertyData> properties()
@@ -102,5 +118,25 @@ class RelationshipData implements RelationshipItem
     public Lock lock()
     {
         return NO_LOCK;
+    }
+
+    public RelationshipData copy()
+    {
+        RelationshipData copy = new RelationshipData( id, type, startNode, endNode );
+        copy.properties.putAll( properties );
+        return copy;
+    }
+
+    Direction directionFor( long nodeId )
+    {
+        if ( nodeId == startNode )
+        {
+            return nodeId == endNode ? Direction.BOTH : Direction.OUTGOING;
+        }
+        else if ( nodeId == endNode )
+        {
+            return Direction.INCOMING;
+        }
+        throw new IllegalArgumentException( nodeId + " for rel " + id + " w/ " + startNode + " and " + endNode );
     }
 }

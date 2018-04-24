@@ -19,33 +19,48 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.storageengine.api.Direction;
 
+import static java.util.Collections.emptyIterator;
+
 class SillyRelationshipTraversalCursor implements RelationshipTraversalCursor
 {
     private ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> relationships;
+    private Iterator<Map.Entry<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>>> typeIterator;
+    private Iterator<Map.Entry<Direction,ConcurrentMap<Long,RelationshipData>>> directionIterator;
+    private Map.Entry<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> currentType;
+    private Map.Entry<Direction,ConcurrentMap<Long,RelationshipData>> currentDirection;
+    private Iterator<RelationshipData> relationshipIterator;
+    private RelationshipData current;
+    private IntPredicate typeFilter;
+    private Predicate<Direction> directionFilter;
 
     @Override
     public long relationshipReference()
     {
-        return 0;
+        return current.id();
     }
 
     @Override
     public int type()
     {
-        return 0;
+        return currentType.getKey();
     }
 
     @Override
     public boolean hasProperties()
     {
-        return false;
+        return !current.properties().isEmpty();
     }
 
     @Override
@@ -66,13 +81,13 @@ class SillyRelationshipTraversalCursor implements RelationshipTraversalCursor
     @Override
     public long sourceNodeReference()
     {
-        return 0;
+        return current.startNode();
     }
 
     @Override
     public long targetNodeReference()
     {
-        return 0;
+        return current.endNode();
     }
 
     @Override
@@ -95,6 +110,32 @@ class SillyRelationshipTraversalCursor implements RelationshipTraversalCursor
     @Override
     public boolean next()
     {
+        while ( typeIterator.hasNext() || directionIterator.hasNext() || relationshipIterator.hasNext() )
+        {
+            if ( relationshipIterator.hasNext() )
+            {
+                current = relationshipIterator.next();
+                return true;
+            }
+            else if ( directionIterator.hasNext() )
+            {
+                Map.Entry<Direction,ConcurrentMap<Long,RelationshipData>> candidate = directionIterator.next();
+                if ( directionFilter.test( candidate.getKey() ) )
+                {
+                    currentDirection = candidate;
+                    relationshipIterator = currentDirection.getValue().values().iterator();
+                }
+            }
+            else if ( typeIterator.hasNext() )
+            {
+                Map.Entry<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> candidate = typeIterator.next();
+                if ( typeFilter.test( candidate.getKey() ) )
+                {
+                    currentType = candidate;
+                    directionIterator = currentType.getValue().entrySet().iterator();
+                }
+            }
+        }
         return false;
     }
 
@@ -126,8 +167,14 @@ class SillyRelationshipTraversalCursor implements RelationshipTraversalCursor
         return 0;
     }
 
-    void init( ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> relationships )
+    void init( ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> relationships, IntPredicate typeFilter,
+            Predicate<Direction> directionFilter )
     {
         this.relationships = relationships;
+        this.typeFilter = typeFilter;
+        this.directionFilter = directionFilter;
+        this.typeIterator = relationships.entrySet().iterator();
+        this.directionIterator = emptyIterator();
+        this.relationshipIterator = emptyIterator();
     }
 }

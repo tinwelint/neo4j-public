@@ -19,18 +19,29 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import com.sun.xml.internal.bind.v2.model.core.ID;
+
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
+import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.api.txstate.NodeState;
+import org.neo4j.storageengine.api.txstate.RelationshipState;
 
+import static org.neo4j.helpers.collection.Iterators.iterator;
+import static org.neo4j.helpers.collection.Iterators.loop;
+import static org.neo4j.kernel.impl.storageengine.impl.silly.SillyData.mergeProperties;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 
 class SillyRelationshipScanCursor implements RelationshipScanCursor
 {
     private final ConcurrentMap<Long,RelationshipData> relationships;
-    private long next = NO_ID;
+    private Iterator<RelationshipData> iterator;
     private RelationshipData current;
     private SillyCursorFactory cursors;
 
@@ -43,7 +54,27 @@ class SillyRelationshipScanCursor implements RelationshipScanCursor
     {
         this.cursors = cursors;
         current = null;
-        next = reference;
+        RelationshipData relationship = relationships.get( reference );
+        relationship = decorateRelationship( relationship, reference );
+        iterator = iterator( relationship );
+    }
+
+    void scan( SillyCursorFactory cursors )
+    {
+        this.cursors = cursors;
+        current = null;
+        iterator = relationships.values().iterator();
+    }
+
+    private RelationshipData decorateRelationship( RelationshipData relationship, long relationshipId )
+    {
+        if ( cursors.hasTxStateWithChanges() )
+        {
+            RelationshipState txState = cursors.txState().getRelationshipState( relationshipId );
+            relationship = relationship != null ? relationship.copy() : new RelationshipData( relationshipId, txState );
+            mergeProperties( relationship.properties(), txState );
+        }
+        return relationship;
     }
 
     @Override
@@ -103,13 +134,13 @@ class SillyRelationshipScanCursor implements RelationshipScanCursor
     @Override
     public boolean next()
     {
-        if ( next == NO_ID )
+        if ( !iterator.hasNext() )
         {
             return false;
         }
 
-        current = relationships.get( next );
-        return current != null;
+        current = iterator.next();
+        return true;
     }
 
     @Override

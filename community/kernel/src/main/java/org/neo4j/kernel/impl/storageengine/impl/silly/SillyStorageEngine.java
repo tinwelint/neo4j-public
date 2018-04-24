@@ -142,6 +142,7 @@ public class SillyStorageEngine extends LifecycleAdapter implements
     private final LabelTokenHolder labelTokens;
     private final RelationshipTypeTokenHolder relationshipTypeTokens;
     private final DatabaseHealth databaseHealth;
+    private final IdGeneratorFactory idGeneratorFactory;
     private final SimpleTransactionIdStore txIdStore;
     private final SimpleLogVersionRepository logVersionRepo;
     private final SillyIndexStoreView indexStoreView;
@@ -172,6 +173,7 @@ public class SillyStorageEngine extends LifecycleAdapter implements
         this.labelTokens = labelTokens;
         this.relationshipTypeTokens = relationshipTypeTokens;
         this.databaseHealth = databaseHealth;
+        this.idGeneratorFactory = idGeneratorFactory;
         this.data = new SillyData( labelTokens, propertyKeyTokenHolder, relationshipTypeTokens );
         this.indexStoreView = new SillyIndexStoreView( data );
         this.schemaCache = new SchemaCache( constraintSemantics, Collections.emptyList() );
@@ -374,6 +376,14 @@ public class SillyStorageEngine extends LifecycleAdapter implements
             databaseHealth.panic( t );
             throw t;
         }
+    }
+
+    @Override
+    public void stop() throws Throwable
+    {
+        idGeneratorFactory.get( IdType.LABEL_TOKEN ).close();
+        idGeneratorFactory.get( IdType.PROPERTY_KEY_TOKEN ).close();
+        idGeneratorFactory.get( IdType.RELATIONSHIP_TYPE_TOKEN ).close();
     }
 
     @Override

@@ -19,23 +19,28 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.NodeState;
 
+import static org.neo4j.helpers.collection.Iterators.iterator;
 import static org.neo4j.helpers.collection.Iterators.loop;
-import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
+import static org.neo4j.kernel.impl.storageengine.impl.silly.SillyData.mergeProperties;
 
 class SillyNodeCursor implements NodeCursor
 {
     private final ConcurrentMap<Long,NodeData> nodes;
-    private long next = NO_ID;
+    private Iterator<NodeData> iterator;
     private NodeData current;
     private SillyCursorFactory cursors;
 
@@ -47,46 +52,12 @@ class SillyNodeCursor implements NodeCursor
     @Override
     public boolean next()
     {
-        if ( next == NO_ID )
+        if ( !iterator.hasNext() )
         {
             return false;
         }
 
-        current = nodes.get( next );
-        // Do a silly and horrible eager merge with tx state for simplicity
-        if ( cursors.hasTxStateWithChanges() )
-        {
-            NodeState nodeState = cursors.txState().getNodeState( next );
-            current = current != null ? current.copy() : new NodeData( next );
-            if ( !nodeState.labelDiffSets().isEmpty() || nodeState.hasPropertyChanges() )
-            {
-                if ( !nodeState.labelDiffSets().isEmpty() )
-                {
-                    for ( int labelId : nodeState.labelDiffSets().getRemoved() )
-                    {
-                        current.labels().remove( labelId );
-                    }
-                    for ( int labelId : nodeState.labelDiffSets().getAdded() )
-                    {
-                        current.labels().add( labelId );
-                    }
-                }
-
-                if ( nodeState.hasPropertyChanges() )
-                {
-                    for ( int key : loop( nodeState.removedProperties() ) )
-                    {
-                        current.properties().remove( key );
-                    }
-                    for ( StorageProperty property : loop( nodeState.addedProperties() ) )
-                    {
-                        current.properties().put( property.propertyKeyId(), new PropertyData( property.propertyKeyId(), property.value() ) );
-                    }
-                }
-
-                // relationship tx changes aren't plugged in yet
-            }
-        }
+        current = iterator.next();
         return current != null;
     }
 
@@ -104,7 +75,43 @@ class SillyNodeCursor implements NodeCursor
     void single( SillyCursorFactory cursors, long nodeId )
     {
         this.cursors = cursors;
-        next = nodeId;
+        current = null;
+        NodeData nodeData = nodes.get( nodeId );
+        // Do a silly and horrible eager merge with tx state for simplicity
+        nodeData = decorateNode( nodeData, nodeId );
+        iterator = iterator( nodeData );
+    }
+
+    void scan( SillyCursorFactory cursors )
+    {
+        this.cursors = cursors;
+        current = null;
+        iterator = nodes.values().iterator();
+    }
+
+    private NodeData decorateNode( NodeData node, long nodeId )
+    {
+        if ( cursors.hasTxStateWithChanges() )
+        {
+            NodeState nodeState = cursors.txState().getNodeState( nodeId );
+            node = node != null ? node.copy() : new NodeData( nodeId );
+            if ( !nodeState.labelDiffSets().isEmpty() || nodeState.hasPropertyChanges() )
+            {
+                if ( !nodeState.labelDiffSets().isEmpty() )
+                {
+                    for ( int labelId : nodeState.labelDiffSets().getRemoved() )
+                    {
+                        node.labels().remove( labelId );
+                    }
+                    for ( int labelId : nodeState.labelDiffSets().getAdded() )
+                    {
+                        node.labels().add( labelId );
+                    }
+                }
+                mergeProperties( node.properties(), nodeState );
+            }
+        }
+        return node;
     }
 
     @Override
@@ -128,13 +135,57 @@ class SillyNodeCursor implements NodeCursor
     @Override
     public void relationships( RelationshipGroupCursor cursor )
     {
-        ((SillyRelationshipGroupCursor)cursor).init( current.relationships() );
+        ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> rels = current.relationships();
+        if ( cursors.hasTxStateWithChanges() )
+        {
+            NodeState nodeState = cursors.txState().getNodeState( current.id() );
+            rels = mergeRelationships( rels, nodeState );
+        }
+
+        ((SillyRelationshipGroupCursor)cursor).init( rels );
+    }
+
+    private ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> mergeRelationships(
+            ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> rels, NodeState nodeState )
+    {
+        // Deep-copy w/ removals from tx state
+        ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> merged = new ConcurrentHashMap<>();
+        rels.forEach( ( type, level1 ) ->
+        {
+            ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>> copy1 = new ConcurrentHashMap<>();
+            merged.put( type, copy1 );
+            level1.forEach( ( direction, level2 ) ->
+            {
+                ConcurrentMap<Long,RelationshipData> copy2 = new ConcurrentHashMap<>();
+                copy1.put( direction, copy2 );
+                level2.forEach( ( id, level3 ) ->
+                {
+                    if ( !cursors.txState().relationshipIsDeletedInThisTx( id ) )
+                    {
+                        copy2.put( id, new RelationshipData( id, cursors.txState().getRelationshipState( id ) ) );
+                    }
+                } );
+            } );
+        } );
+
+        // Add the added relationships
+        PrimitiveLongIterator added = nodeState.getAddedRelationships();
+        while ( added.hasNext() )
+        {
+            long id = added.next();
+            RelationshipData relationshipData = new RelationshipData( id, cursors.txState().getRelationshipState( id ) );
+            Direction direction = relationshipData.directionFor( current.id() );
+            merged.computeIfAbsent( relationshipData.type(), type -> new ConcurrentHashMap<>() ).computeIfAbsent( direction,
+                    dir -> new ConcurrentHashMap<>() ).put( id, relationshipData );
+        }
+
+        return merged;
     }
 
     @Override
     public void allRelationships( RelationshipTraversalCursor cursor )
     {
-        ((SillyRelationshipTraversalCursor)cursor).init( current.relationships() );
+        ((SillyRelationshipTraversalCursor)cursor).init( current.relationships(), type -> true, dir -> true );
     }
 
     @Override
