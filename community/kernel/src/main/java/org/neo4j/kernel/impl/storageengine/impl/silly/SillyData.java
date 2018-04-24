@@ -28,6 +28,10 @@ import org.neo4j.internal.kernel.api.schema.SchemaDescriptorSupplier;
 import org.neo4j.kernel.impl.core.LabelTokenHolder;
 import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
 import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.api.txstate.PropertyContainerState;
+
+import static org.neo4j.helpers.collection.Iterators.loop;
 
 class SillyData
 {
@@ -51,4 +55,19 @@ class SillyData
     final AtomicLong nextNodeId = new AtomicLong();
     final AtomicLong nextRelationshipId = new AtomicLong();
     final AtomicLong nextSchemaId = new AtomicLong();
+
+    static void mergeProperties( ConcurrentMap<Integer,PropertyData> properties, PropertyContainerState txState )
+    {
+        if ( txState.hasPropertyChanges() )
+        {
+            for ( int key : loop( txState.removedProperties() ) )
+            {
+                properties.remove( key );
+            }
+            for ( StorageProperty property : loop( txState.addedProperties() ) )
+            {
+                properties.put( property.propertyKeyId(), new PropertyData( property.propertyKeyId(), property.value() ) );
+            }
+        }
+    }
 }

@@ -128,7 +128,7 @@ public class SillyCursorFactory implements CursorFactory
     public void relationships( long nodeReference, long reference, RelationshipTraversalCursor cursor )
     {
         NodeData node = data.nodes.get( nodeReference );
-        ((SillyRelationshipTraversalCursor)cursor).init( node.relationships() );
+        ((SillyRelationshipTraversalCursor)cursor).init( node.relationships(), type -> true, dir -> true );
     }
 
     @Override
@@ -202,12 +202,12 @@ public class SillyCursorFactory implements CursorFactory
     @Override
     public void allRelationshipsScan( RelationshipScanCursor cursor )
     {
-        throw new UnsupportedOperationException();
+        ((SillyRelationshipScanCursor) cursor).scan( this );
     }
 
     @Override
     public void allNodesScan( NodeCursor cursor )
     {
-        throw new UnsupportedOperationException();
+        ((SillyNodeCursor) cursor).scan( this );
     }
 }

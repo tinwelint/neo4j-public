@@ -19,15 +19,22 @@
  */
 package org.neo4j.kernel.impl.storageengine.impl.silly;
 
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.kernel.impl.api.ExplicitIndexApplierLookup;
 import org.neo4j.storageengine.api.Direction;
 
 class SillyRelationshipGroupCursor implements RelationshipGroupCursor
 {
     private ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> relationships;
+    private Iterator<Map.Entry<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>>> iterator;
+    private Map.Entry<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> current;
 
     @Override
     public Position suspend()
@@ -43,6 +50,11 @@ class SillyRelationshipGroupCursor implements RelationshipGroupCursor
     @Override
     public boolean next()
     {
+        if ( iterator.hasNext() )
+        {
+            current = iterator.next();
+            return true;
+        }
         return false;
     }
 
@@ -66,46 +78,59 @@ class SillyRelationshipGroupCursor implements RelationshipGroupCursor
     @Override
     public int type()
     {
-        return 0;
+        return current.getKey();
+    }
+
+    private int countOf( ConcurrentMap<Long,RelationshipData> relationships )
+    {
+        return relationships != null ? relationships.size() : 0;
     }
 
     @Override
     public int outgoingCount()
     {
-        return 0;
+        return countOf( current.getValue().get( Direction.OUTGOING ) );
     }
 
     @Override
     public int incomingCount()
     {
-        return 0;
+        return countOf( current.getValue().get( Direction.INCOMING ) );
     }
 
     @Override
     public int loopCount()
     {
-        return 0;
+        return countOf( current.getValue().get( Direction.BOTH ) );
     }
 
     @Override
     public int totalCount()
     {
-        return 0;
+        return countOf( current.getValue().get( Direction.OUTGOING ) ) +
+                countOf( current.getValue().get( Direction.INCOMING ) ) +
+                countOf( current.getValue().get( Direction.BOTH ) );
     }
 
     @Override
     public void outgoing( RelationshipTraversalCursor cursor )
     {
+        int theType = current.getKey();
+        ((SillyRelationshipTraversalCursor) cursor).init( relationships, type -> type == theType, dir -> dir == Direction.OUTGOING );
     }
 
     @Override
     public void incoming( RelationshipTraversalCursor cursor )
     {
+        int theType = current.getKey();
+        ((SillyRelationshipTraversalCursor) cursor).init( relationships, type -> type == theType, dir -> dir == Direction.INCOMING );
     }
 
     @Override
     public void loops( RelationshipTraversalCursor cursor )
     {
+        int theType = current.getKey();
+        ((SillyRelationshipTraversalCursor) cursor).init( relationships, type -> type == theType, dir -> dir == Direction.BOTH );
     }
 
     @Override
@@ -129,5 +154,6 @@ class SillyRelationshipGroupCursor implements RelationshipGroupCursor
     void init( ConcurrentMap<Integer,ConcurrentMap<Direction,ConcurrentMap<Long,RelationshipData>>> relationships )
     {
         this.relationships = relationships;
+        this.iterator = relationships.entrySet().iterator();
     }
 }
