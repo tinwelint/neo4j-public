@@ -51,6 +51,11 @@ public class PageCacheAndDependenciesRule implements TestRule
         this( new Builder() );
     }
 
+    public PageCacheAndDependenciesRule( Supplier<FileSystemRule<? extends FileSystemAbstraction>> fsSupplier, Class<?> testClass )
+    {
+        this( new Builder().fs( fsSupplier ).testClass( testClass ) );
+    }
+
     private PageCacheAndDependenciesRule( Builder builder )
     {
         this.fs = builder.fsSupplier.get();
