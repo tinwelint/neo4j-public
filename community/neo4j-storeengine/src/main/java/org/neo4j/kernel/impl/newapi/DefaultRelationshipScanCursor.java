@@ -1,0 +1,203 @@
+/*
+ * Copyright (c) 2002-2018 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.neo4j.kernel.impl.newapi;
+
+import java.util.Set;
+
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.api.txstate.TransactionState;
+
+import static java.util.Collections.emptySet;
+
+class DefaultRelationshipScanCursor extends RelationshipCursor implements RelationshipScanCursor
+{
+    private final boolean pool;
+    private int type;
+    private long next;
+    private long highMark;
+    private PageCursor pageCursor;
+    private Set<Long> addedRelationships;
+
+    DefaultRelationshipScanCursor( DefaultCursors cursors, boolean pool )
+    {
+        super( cursors );
+        this.pool = pool;
+    }
+
+    void scan( int type )
+    {
+        if ( getId() != NO_ID )
+        {
+            reset();
+        }
+        if ( pageCursor == null )
+        {
+            pageCursor = cursors.relationshipPage( 0 );
+        }
+        next = 0;
+        this.type = type;
+        highMark = cursors.relationshipHighMark();
+        init();
+        this.addedRelationships = emptySet();
+    }
+
+    void single( long reference )
+    {
+        if ( getId() != NO_ID )
+        {
+            reset();
+        }
+        if ( pageCursor == null )
+        {
+            pageCursor = cursors.relationshipPage( reference );
+        }
+        next = reference;
+        type = -1;
+        highMark = NO_ID;
+        init();
+        this.addedRelationships = emptySet();
+    }
+
+    @Override
+    public boolean next()
+    {
+        if ( next == NO_ID )
+        {
+            reset();
+            return false;
+        }
+
+        // Check tx state
+        boolean hasChanges = hasChanges();
+        TransactionState txs = hasChanges ? cursors.txState() : null;
+
+        do
+        {
+            if ( hasChanges && containsRelationship( txs ) )
+            {
+                loadFromTxState( next++ );
+                setInUse( true );
+            }
+            else if ( hasChanges && txs.relationshipIsDeletedInThisTx( next ) )
+            {
+                next++;
+                setInUse( false );
+            }
+            else
+            {
+                cursors.relationship( this, next++, pageCursor );
+            }
+
+            if ( next > highMark )
+            {
+                if ( isSingle() )
+                {
+                    next = NO_ID;
+                    return isWantedTypeAndInUse();
+                }
+                else
+                {
+                    highMark = cursors.relationshipHighMark();
+                    if ( next > highMark )
+                    {
+                        next = NO_ID;
+                        return isWantedTypeAndInUse();
+                    }
+                }
+            }
+        }
+        while ( !isWantedTypeAndInUse() );
+
+        return true;
+    }
+
+    private boolean isWantedTypeAndInUse()
+    {
+        return (type == -1 || type() == type) && inUse();
+    }
+
+    private boolean containsRelationship( TransactionState txs )
+    {
+        return isSingle() ? txs.relationshipIsAddedInThisTx( next ) : addedRelationships.contains( next );
+    }
+
+    @Override
+    public void close()
+    {
+        if ( !isClosed() )
+        {
+            reset();
+
+            if ( pool )
+            {
+                cursors.accept( this );
+            }
+            closed = true;
+        }
+    }
+
+    private void reset()
+    {
+        setId( next = NO_ID );
+    }
+
+    @Override
+    public boolean isClosed()
+    {
+        return closed;
+    }
+
+    @Override
+    public String toString()
+    {
+        if ( isClosed() )
+        {
+            return "RelationshipScanCursor[closed state]";
+        }
+        else
+        {
+            return "RelationshipScanCursor[id=" + getId() + ", open state with: highMark=" + highMark + ", next=" + next + ", type=" + type +
+                    ", underlying record=" + super.toString() + " ]";
+        }
+    }
+
+    private boolean isSingle()
+    {
+        return highMark == NO_ID;
+    }
+
+    protected void collectAddedTxStateSnapshot()
+    {
+        if ( !isSingle() )
+        {
+            addedRelationships = cursors.txState().addedAndRemovedRelationships().getAddedSnapshot();
+        }
+    }
+
+    public void release()
+    {
+        if ( pageCursor != null )
+        {
+            pageCursor.close();
+            pageCursor = null;
+        }
+    }
+}

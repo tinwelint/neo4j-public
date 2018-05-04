@@ -313,5 +313,10 @@
       <version>20090211</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+    	<groupId>org.neo4j</groupId>
+    	<artifactId>neo4j-store-api</artifactId>
+    	<version>3.4.0-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 </project>

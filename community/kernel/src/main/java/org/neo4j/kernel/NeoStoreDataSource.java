@@ -570,7 +570,7 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
             SchemaState schemaState, SynchronizedArrayIdOrderingQueue explicitIndexTransactionOrdering,
             OperationalMode operationalMode, VersionContextSupplier versionContextSupplier )
     {
-        StorageEngine storageEngine =
+        RecordStorageEngine storageEngine =
                 new RecordStorageEngine( storeDir, config, pageCache, fs, logProvider, propertyKeyTokenHolder,
                         labelTokens, relationshipTypeTokens, schemaState, constraintSemantics, scheduler,
                         tokenNameLookup, lockService, indexProviderMap, indexingServiceMonitor, databaseHealth,
