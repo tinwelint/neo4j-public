@@ -132,8 +132,9 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
 
     private LongIterator addedRelationships;
 
-    DefaultRelationshipTraversalCursor( DefaultRelationshipGroupCursor group, DefaultCursors pool )
+    DefaultRelationshipTraversalCursor( DefaultRelationshipGroupCursor group, DefaultCursors pool, boolean txStateAware )
     {
+        super( txStateAware );
         this.group = group;
         this.pool = pool;
     }
@@ -490,7 +491,10 @@ class DefaultRelationshipTraversalCursor extends RelationshipCursor
             buffer = null;
             reset();
 
-            pool.accept( this );
+            if ( pool != null )
+            {
+                pool.accept( this );
+            }
         }
     }
 

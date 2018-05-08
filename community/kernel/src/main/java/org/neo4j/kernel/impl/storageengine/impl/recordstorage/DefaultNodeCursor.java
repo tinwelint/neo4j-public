@@ -51,11 +51,13 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
     private Set<Long> addedNodes;
 
     private final DefaultCursors pool;
+    private final boolean txStateAware;
 
-    DefaultNodeCursor( DefaultCursors pool )
+    DefaultNodeCursor( DefaultCursors pool, boolean txStateAware )
     {
         super( NO_ID );
         this.pool = pool;
+        this.txStateAware = txStateAware;
     }
 
     void scan( RecordStorageReader read )
@@ -279,7 +281,10 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
             addedNodes = emptySet();
             reset();
 
-            pool.accept( this );
+            if ( pool != null )
+            {
+                pool.accept( this );
+            }
         }
     }
 
@@ -295,6 +300,11 @@ class DefaultNodeCursor extends NodeRecord implements NodeCursor
      */
     private boolean hasChanges()
     {
+        if ( !txStateAware )
+        {
+            return false;
+        }
+
         switch ( hasChanges )
         {
         case MAYBE:

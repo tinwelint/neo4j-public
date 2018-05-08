@@ -37,8 +37,9 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
 
     private final DefaultCursors pool;
 
-    DefaultRelationshipScanCursor( DefaultCursors pool )
+    DefaultRelationshipScanCursor( DefaultCursors pool, boolean txStateAware )
     {
+        super( txStateAware );
         this.pool = pool;
     }
 
@@ -147,7 +148,10 @@ class DefaultRelationshipScanCursor extends RelationshipCursor implements Relati
             read = null;
             reset();
 
-            pool.accept( this );
+            if ( pool != null )
+            {
+                pool.accept( this );
+            }
         }
     }
 
