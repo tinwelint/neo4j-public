@@ -88,7 +88,6 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RecordCursor;
-import org.neo4j.kernel.impl.store.RecordCursors;
 import org.neo4j.kernel.impl.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
@@ -105,7 +104,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.transaction.state.PropertyLoader;
 import org.neo4j.register.Register;
 import org.neo4j.register.Register.DoubleLongRegister;
-import org.neo4j.storageengine.api.Direction;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
@@ -127,7 +125,6 @@ import static org.neo4j.kernel.impl.api.store.DefaultIndexReference.toDescriptor
 import static org.neo4j.kernel.impl.newapi.RelationshipDirection.INCOMING;
 import static org.neo4j.kernel.impl.newapi.RelationshipDirection.LOOP;
 import static org.neo4j.kernel.impl.newapi.RelationshipDirection.OUTGOING;
-import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.DegreeCounter.countRelationshipsInGroup;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.GroupReferenceEncoding.isRelationship;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.References.clearEncoding;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
@@ -158,9 +155,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     private final CountsTracker counts;
     private final PropertyLoader propertyLoader;
     private final SchemaCache schemaCache;
-
-    // State from the old StoreStatement
-    private final RecordCursors recordCursors;
 
     private final Supplier<IndexReaderFactory> indexReaderFactorySupplier;
     private final Supplier<LabelScanReader> labelScanReaderSupplier;
@@ -196,7 +190,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
         this.indexReaderFactorySupplier = indexReaderFactory;
         this.labelScanReaderSupplier = labelScanReaderSupplier;
         this.commandCreationContext = commandCreationContext;
-        this.recordCursors = new RecordCursors( neoStores );
     }
 
     /**
@@ -607,16 +600,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     }
 
     @Override
-    public int degreeRelationshipsInGroup( long nodeId, long groupId,
-            Direction direction, Integer relType )
-    {
-        RelationshipRecord relationshipRecord = relationshipStore.newRecord();
-        RelationshipGroupRecord relationshipGroupRecord = relationshipGroupStore.newRecord();
-        return countRelationshipsInGroup( groupId, direction, relType, nodeId, relationshipRecord,
-                relationshipGroupRecord, recordCursors() );
-    }
-
-    @Override
     public <T> T getOrCreateSchemaDependantState( Class<T> type, Function<StorageReader,T> factory )
     {
         return schemaCache.getOrCreateDependantState( type, factory, this );
@@ -665,7 +648,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
         assert !closed;
         assert !acquired;
         closeSchemaResources();
-        recordCursors.close(); // the old cursors
         commandCreationContext.close();
         closed = true;
     }
@@ -684,8 +666,7 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
         }
     }
 
-    @Override
-    public LabelScanReader getLabelScanReader()
+    LabelScanReader getLabelScanReader()
     {
         return labelScanReader != null ?
                labelScanReader : (labelScanReader = labelScanReaderSupplier.get());
@@ -697,22 +678,14 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
                indexReaderFactory : (indexReaderFactory = indexReaderFactorySupplier.get());
     }
 
-    @Override
-    public IndexReader getIndexReader( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    private IndexReader getIndexReader( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexReaderFactory().newReader( descriptor );
     }
 
-    @Override
-    public IndexReader getFreshIndexReader( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    private IndexReader getFreshIndexReader( SchemaIndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return indexReaderFactory().newUnCachedReader( descriptor );
-    }
-
-    @Override
-    public RecordCursors recordCursors()
-    {
-        return recordCursors;
     }
 
     public RecordStorageCommandCreationContext getCommandCreationContext()
