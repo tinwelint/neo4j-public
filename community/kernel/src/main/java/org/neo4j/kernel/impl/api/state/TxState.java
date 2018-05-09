@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api.state;
 
-import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableObjectLongMap;
@@ -30,14 +29,11 @@ import org.eclipse.collections.impl.map.mutable.primitive.ObjectLongHashMap;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Consumer;
 
-import org.neo4j.cursor.Cursor;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
@@ -50,22 +46,12 @@ import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.txstate.RelationshipChangeVisitorAdapter;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.api.cursor.TxAllPropertyCursor;
-import org.neo4j.kernel.impl.api.cursor.TxIteratorRelationshipCursor;
-import org.neo4j.kernel.impl.api.cursor.TxSingleNodeCursor;
-import org.neo4j.kernel.impl.api.cursor.TxSinglePropertyCursor;
-import org.neo4j.kernel.impl.api.cursor.TxSingleRelationshipCursor;
-import org.neo4j.kernel.impl.api.store.RelationshipIterator;
-import org.neo4j.kernel.impl.util.InstanceCache;
 import org.neo4j.kernel.impl.util.collection.CollectionsFactory;
 import org.neo4j.kernel.impl.util.collection.OnHeapCollectionsFactory;
 import org.neo4j.kernel.impl.util.diffsets.DiffSets;
 import org.neo4j.kernel.impl.util.diffsets.PrimitiveLongDiffSets;
 import org.neo4j.kernel.impl.util.diffsets.RelationshipDiffSets;
 import org.neo4j.storageengine.api.Direction;
-import org.neo4j.storageengine.api.NodeItem;
-import org.neo4j.storageengine.api.PropertyItem;
-import org.neo4j.storageengine.api.RelationshipItem;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.DiffSetsVisitor;
 import org.neo4j.storageengine.api.txstate.NodeState;
@@ -82,7 +68,6 @@ import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.ValueTuple;
 import org.neo4j.values.storable.Values;
 
-import static org.neo4j.collection.PrimitiveLongCollections.toPrimitiveIterator;
 import static org.neo4j.helpers.collection.Iterables.map;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
@@ -123,12 +108,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
 
     private Map<SchemaDescriptor,Map<ValueTuple,PrimitiveLongDiffSets>> indexUpdates;
 
-    private InstanceCache<TxSingleNodeCursor> singleNodeCursor;
-    private InstanceCache<TxIteratorRelationshipCursor> iteratorRelationshipCursor;
-    private InstanceCache<TxSingleRelationshipCursor> singleRelationshipCursor;
-    private InstanceCache<TxAllPropertyCursor> propertyCursor;
-    private InstanceCache<TxSinglePropertyCursor> singlePropertyCursor;
-
     private boolean hasChanges;
     private boolean hasDataChanges;
 
@@ -140,47 +119,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     public TxState( CollectionsFactory collectionsFactory )
     {
         this.collectionsFactory = collectionsFactory;
-        singleNodeCursor = new InstanceCache<TxSingleNodeCursor>()
-        {
-            @Override
-            protected TxSingleNodeCursor create()
-            {
-                return new TxSingleNodeCursor( TxState.this, this );
-            }
-        };
-        propertyCursor = new InstanceCache<TxAllPropertyCursor>()
-        {
-            @Override
-            protected TxAllPropertyCursor create()
-            {
-                return new TxAllPropertyCursor( (Consumer) this );
-            }
-        };
-        singlePropertyCursor = new InstanceCache<TxSinglePropertyCursor>()
-        {
-            @Override
-            protected TxSinglePropertyCursor create()
-            {
-                return new TxSinglePropertyCursor( (Consumer) this );
-            }
-        };
-        singleRelationshipCursor = new InstanceCache<TxSingleRelationshipCursor>()
-        {
-            @Override
-            protected TxSingleRelationshipCursor create()
-            {
-                return new TxSingleRelationshipCursor( TxState.this, this );
-            }
-        };
-
-        iteratorRelationshipCursor = new InstanceCache<TxIteratorRelationshipCursor>()
-        {
-            @Override
-            protected TxIteratorRelationshipCursor create()
-            {
-                return new TxIteratorRelationshipCursor( TxState.this, this );
-            }
-        };
     }
 
     @Override
@@ -395,16 +333,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public Iterator<StorageProperty> augmentGraphProperties( Iterator<StorageProperty> original )
-    {
-        if ( graphState != null )
-        {
-            return graphState.augmentProperties( original );
-        }
-        return original;
-    }
-
-    @Override
     public boolean nodeIsAddedInThisTx( long nodeId )
     {
         return nodes != null && nodes.isAdded( nodeId );
@@ -480,12 +408,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     public boolean nodeIsDeletedInThisTx( long nodeId )
     {
         return nodes != null && nodes.wasRemoved( nodeId );
-    }
-
-    @Override
-    public boolean nodeModifiedInThisTx( long nodeId )
-    {
-        return nodeIsAddedInThisTx( nodeId ) || nodeIsDeletedInThisTx( nodeId ) || hasNodeState( nodeId );
     }
 
     @Override
@@ -670,28 +592,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public Cursor<NodeItem> augmentSingleNodeCursor( Cursor<NodeItem> cursor, long nodeId )
-    {
-        return hasChanges ? singleNodeCursor.get().init( cursor, nodeId ) : cursor;
-    }
-
-    @Override
-    public Cursor<PropertyItem> augmentPropertyCursor( Cursor<PropertyItem> cursor,
-            PropertyContainerState propertyContainerState )
-    {
-        return propertyContainerState.hasPropertyChanges() ?
-                propertyCursor.get().init( cursor, propertyContainerState ) : cursor;
-    }
-
-    @Override
-    public Cursor<PropertyItem> augmentSinglePropertyCursor( Cursor<PropertyItem> cursor,
-            PropertyContainerState propertyContainerState, int propertyKeyId )
-    {
-        return propertyContainerState.hasPropertyChanges() ?
-                singlePropertyCursor.get().init( cursor, propertyContainerState, propertyKeyId ) : cursor;
-    }
-
-    @Override
     public MutableIntSet augmentLabels( MutableIntSet labels, NodeState nodeState )
     {
         ReadableDiffSets<Integer> labelDiffSets = nodeState.labelDiffSets();
@@ -704,69 +604,9 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public Cursor<RelationshipItem> augmentSingleRelationshipCursor( Cursor<RelationshipItem> cursor,
-            long relationshipId )
-    {
-        return hasChanges ? singleRelationshipCursor.get().init( cursor, relationshipId ) : cursor;
-    }
-
-    @Override
-    public Cursor<RelationshipItem> augmentNodeRelationshipCursor( Cursor<RelationshipItem> cursor,
-            NodeState nodeState,
-            Direction direction )
-    {
-        return nodeState.hasRelationshipChanges()
-               ? iteratorRelationshipCursor.get().init( cursor, nodeState.getAddedRelationships( direction ) )
-               : cursor;
-    }
-
-    @Override
-    public Cursor<RelationshipItem> augmentNodeRelationshipCursor( Cursor<RelationshipItem> cursor,
-            NodeState nodeState,
-            Direction direction,
-            int[] relTypes )
-    {
-        return nodeState.hasRelationshipChanges()
-               ? iteratorRelationshipCursor.get().init( cursor, nodeState.getAddedRelationships( direction, relTypes ) )
-               : cursor;
-    }
-
-    @Override
-    public Cursor<RelationshipItem> augmentRelationshipsGetAllCursor( Cursor<RelationshipItem> cursor )
-    {
-        return hasChanges && relationships != null && !relationships.isEmpty()
-               ? iteratorRelationshipCursor.get().init( cursor, toPrimitiveIterator( relationships.getAdded().iterator() ) )
-               : cursor;
-    }
-
-    @Override
     public ReadableDiffSets<Long> nodesWithLabelChanged( int label )
     {
         return getLabelStateNodeDiffSets( label );
-    }
-
-    @Override
-    public ReadableDiffSets<Long> nodesWithAnyOfLabelsChanged( int... labels )
-    {
-        //It is enough that one of the labels is added
-        //It is necessary for all the labels are removed
-        Set<Long> added = new HashSet<>();
-        Set<Long> removed = new HashSet<>();
-        for ( int i = 0; i < labels.length; i++ )
-        {
-            ReadableDiffSets<Long> nodeDiffSets = getLabelStateNodeDiffSets( labels[i] );
-            if ( i == 0 )
-            {
-                removed.addAll( nodeDiffSets.getRemoved() );
-            }
-            else
-            {
-                removed.retainAll( nodeDiffSets.getRemoved() );
-            }
-            added.addAll( nodeDiffSets.getAdded() );
-        }
-
-        return new DiffSets<>( added, removed );
     }
 
     @Override
@@ -1248,23 +1088,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     private SchemaIndexDescriptor getIndexForIndexBackedConstraint( IndexBackedConstraintDescriptor constraint )
     {
         return constraint.ownedIndexDescriptor();
-    }
-
-    private boolean hasNodeState( long nodeId )
-    {
-        return nodeStatesMap != null && nodeStatesMap.containsKey( nodeId );
-    }
-
-    @Override
-    public LongIterator augmentNodesGetAll( LongIterator committed )
-    {
-        return addedAndRemovedNodes().augment( committed );
-    }
-
-    @Override
-    public RelationshipIterator augmentRelationshipsGetAll( RelationshipIterator committed )
-    {
-        return addedAndRemovedRelationships().augment( committed );
     }
 
     @Override
