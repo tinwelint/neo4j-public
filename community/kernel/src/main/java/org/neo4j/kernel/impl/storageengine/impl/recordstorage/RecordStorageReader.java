@@ -43,7 +43,6 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.Scan;
-import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
@@ -67,7 +66,6 @@ import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.IndexReaderFactory;
-import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.store.DefaultCapableIndexReference;
@@ -98,7 +96,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.register.Register;
 import org.neo4j.register.Register.DoubleLongRegister;
-import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.Token;
 import org.neo4j.storageengine.api.TransactionalDependencies;
@@ -121,7 +118,6 @@ import static org.neo4j.kernel.impl.newapi.RelationshipDirection.OUTGOING;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.GroupReferenceEncoding.isRelationship;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.References.clearEncoding;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
-import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 import static org.neo4j.values.storable.ValueGroup.GEOMETRY;
 import static org.neo4j.values.storable.ValueGroup.NUMBER;
@@ -359,19 +355,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     public int relationshipTypeGetOrCreateForName( String relationshipTypeName )
     {
         return relationshipTokenHolder.getOrCreateId( relationshipTypeName );
-    }
-
-    @Override
-    public <EXCEPTION extends Exception> void relationshipVisit( long relationshipId,
-            RelationshipVisitor<EXCEPTION> relationshipVisitor ) throws EntityNotFoundException, EXCEPTION
-    {
-        // TODO Please don't create a record for this, it's ridiculous
-        RelationshipRecord record = relationshipStore.getRecord( relationshipId, relationshipStore.newRecord(), CHECK );
-        if ( !record.inUse() )
-        {
-            throw new EntityNotFoundException( EntityType.RELATIONSHIP, relationshipId );
-        }
-        relationshipVisitor.visit( relationshipId, record.getType(), record.getFirstNode(), record.getSecondNode() );
     }
 
     @Override

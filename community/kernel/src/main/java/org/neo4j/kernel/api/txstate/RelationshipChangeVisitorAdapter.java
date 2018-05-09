@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.api.txstate;
 
-import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.storageengine.api.StorageReader;
@@ -40,10 +39,9 @@ import static java.util.Objects.requireNonNull;
  * if any action is to be taken for added relationships.
  *
  * By invoking a constructor that takes a {@linkplain StorageReader store layer} parameter, the default
- * implementation of {@link #visitRemovedRelationship(long)} will retrieve the details of the visited relationship and
- * supply that information to the {@link #visitRemovedRelationship(long, int, long, long)}-method. If no details can be
- * found, the transaction state is inconsistent with the store, and an exception will be thrown. If no such details are
- * required it is recommended to use one of the other constructors, and override
+ * implementation of {@link #visitRemovedRelationship(long)} will retrieve the details of the visited relationship.
+ * If no details can be found, the transaction state is inconsistent with the store, and an exception will be thrown.
+ * If no such details are required it is recommended to use one of the other constructors, and override
  * {@link #visitRemovedRelationship(long)} if any action is to be taken for removed relationships.
  */
 public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisitor<Long>
@@ -78,10 +76,6 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
 
     protected void visitAddedRelationship( long relationshipId, int type, long startNode, long endNode )
             throws ConstraintValidationException
-    {
-    }
-
-    protected void visitRemovedRelationship( long relationshipId, int type, long startNode, long endNode )
     {
     }
 
@@ -125,31 +119,6 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
                     throws ConstraintValidationException
             {
                 visitAddedRelationship( relId, type, startNode, endNode );
-            }
-        };
-    }
-
-    DetailVisitor removed( final StorageReader store )
-    {
-        return new DetailVisitor()
-        {
-            @Override
-            void visit( long relationshipId ) throws ConstraintValidationException
-            {
-                try
-                {
-                    store.relationshipVisit( relationshipId, this );
-                }
-                catch ( EntityNotFoundException e )
-                {
-                    throw new IllegalStateException( "No RelationshipState for removed relationship!", e );
-                }
-            }
-
-            @Override
-            public void visit( long relId, int type, long startNode, long endNode )
-            {
-                visitRemovedRelationship( relId, type, startNode, endNode );
             }
         };
     }

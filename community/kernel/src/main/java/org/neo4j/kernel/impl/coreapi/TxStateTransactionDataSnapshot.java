@@ -38,7 +38,6 @@ import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.internal.kernel.api.helpers.Nodes;
@@ -104,13 +103,13 @@ public class TxStateTransactionDataSnapshot implements TransactionData
     @Override
     public Iterable<Relationship> createdRelationships()
     {
-        return map2Rels( state.addedAndRemovedRelationships().getAdded() );
+        return map2Rels( state.addedAndRemovedRelationships().getAdded(), store.allocateRelationshipScanCursor() );
     }
 
     @Override
     public Iterable<Relationship> deletedRelationships()
     {
-        return map2Rels( state.addedAndRemovedRelationships().getRemoved() );
+        return map2Rels( state.addedAndRemovedRelationships().getRemoved(), store.allocateRelationshipScanCursorCommitted() );
     }
 
     @Override
@@ -226,7 +225,7 @@ public class TxStateTransactionDataSnapshot implements TransactionData
             }
             for ( long relId : state.addedAndRemovedRelationships().getRemoved() )
             {
-                Relationship relationshipProxy = relationship( relId );
+                Relationship relationshipProxy = relationship( relId, relationshipCursor );
                 store.singleRelationship( relId, relationshipCursor );
                 if ( relationshipCursor.next() )
                 {
@@ -269,7 +268,7 @@ public class TxStateTransactionDataSnapshot implements TransactionData
             }
             for ( RelationshipState relState : state.modifiedRelationships() )
             {
-                Relationship relationship = relationship( relState.getId() );
+                Relationship relationship = relationship( relState.getId(), relationshipCursor );
                 Iterator<StorageProperty> added = relState.addedAndChangedProperties();
                 while ( added.hasNext() )
                 {
@@ -294,27 +293,27 @@ public class TxStateTransactionDataSnapshot implements TransactionData
         }
     }
 
-    private Relationship relationship( long relId )
+    private Relationship relationship( long relId, RelationshipScanCursor relationshipCursor )
     {
-        RelationshipProxy relationship = proxySpi.newRelationshipProxy( relId );
-        if ( !state.relationshipVisit( relId, relationship ) )
-        {   // This relationship has been created or changed in this transaction
-            RelationshipProxy cached = relationshipsReadFromStore.get( relId );
-            if ( cached != null )
+        RelationshipProxy relationship = relationshipsReadFromStore.get( relId );
+        if ( relationship == null )
+        {
+            if ( state.relationshipIsAddedInThisTx( relId ) )
             {
-                return cached;
+                relationship = proxySpi.newRelationshipProxy( relId );
+                state.relationshipVisit( relId, relationship );
             }
-
-            try
-            {   // Get this relationship data from the store
-                store.relationshipVisit( relId, relationship );
-                relationshipsReadFromStore.put( relId, relationship );
-            }
-            catch ( EntityNotFoundException e )
+            else
             {
-                throw new IllegalStateException(
-                        "Getting deleted relationship data should have been covered by the tx state" );
+                store.singleRelationship( relId, relationshipCursor );
+                if ( !relationshipCursor.next() )
+                {
+                    throw new IllegalStateException( "Getting deleted relationship data should have been covered by the tx state" );
+                }
+                relationship = proxySpi.newRelationshipProxy( relId, relationshipCursor.sourceNodeReference(), relationshipCursor.type(),
+                        relationshipCursor.targetNodeReference() );
             }
+            relationshipsReadFromStore.put( relId, relationship );
         }
         return relationship;
     }
@@ -331,14 +330,14 @@ public class TxStateTransactionDataSnapshot implements TransactionData
         };
     }
 
-    private Iterable<Relationship> map2Rels( Iterable<Long> ids )
+    private Iterable<Relationship> map2Rels( Iterable<Long> ids, RelationshipScanCursor relationshipCursor )
     {
         return new IterableWrapper<Relationship, Long>( ids )
         {
             @Override
             protected Relationship underlyingObjectToObject( Long id )
             {
-                return relationship( id );
+                return relationship( id, relationshipCursor );
             }
         };
     }

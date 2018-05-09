@@ -175,8 +175,7 @@ public class ReadOperations implements TxStateHolder,
             try
             {
                 TransactionState txState = ktx.txState();
-                txState.accept( new TransactionCountingStateVisitor( EMPTY, storageReader,
-                        txState, counts ) );
+                txState.accept( new TransactionCountingStateVisitor( EMPTY, storageReader, counts ) );
                 if ( counts.hasChanges() )
                 {
                     count += counts.nodeCount( labelId, newDoubleLongRegister() ).readSecond();
@@ -206,8 +205,7 @@ public class ReadOperations implements TxStateHolder,
             try
             {
                 TransactionState txState = ktx.txState();
-                txState.accept( new TransactionCountingStateVisitor( EMPTY, storageReader,
-                        txState, counts ) );
+                txState.accept( new TransactionCountingStateVisitor( EMPTY, storageReader, counts ) );
                 if ( counts.hasChanges() )
                 {
                     count += counts.relationshipCount( startLabelId, typeId, endLabelId, newDoubleLongRegister() )
