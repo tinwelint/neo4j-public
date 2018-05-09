@@ -21,16 +21,12 @@ package org.neo4j.kernel.impl.storageengine.impl.recordstorage;
 
 import org.eclipse.collections.api.iterator.IntIterator;
 import org.eclipse.collections.api.iterator.LongIterator;
-import org.eclipse.collections.api.set.primitive.IntSet;
-import org.eclipse.collections.api.set.primitive.MutableIntSet;
-import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 
 import org.neo4j.collection.PrimitiveLongResourceIterator;
@@ -77,7 +73,6 @@ import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
-import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.IndexReaderFactory;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
@@ -94,7 +89,6 @@ import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.index.IndexEntityType;
 import org.neo4j.kernel.impl.locking.Lock;
 import org.neo4j.kernel.impl.locking.LockService;
-import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -138,27 +132,26 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.Values;
 
-import static org.neo4j.function.Predicates.ALWAYS_TRUE_INT;
 import static org.neo4j.kernel.impl.api.store.DefaultIndexReference.toDescriptor;
 import static org.neo4j.kernel.impl.newapi.RelationshipDirection.INCOMING;
 import static org.neo4j.kernel.impl.newapi.RelationshipDirection.LOOP;
 import static org.neo4j.kernel.impl.newapi.RelationshipDirection.OUTGOING;
-import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.DegreeCounter.countByFirstPrevPointer;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.DegreeCounter.countRelationshipsInGroup;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.GroupReferenceEncoding.isRelationship;
 import static org.neo4j.kernel.impl.storageengine.impl.recordstorage.References.clearEncoding;
 import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
-import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
-import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 import static org.neo4j.values.storable.ValueGroup.GEOMETRY;
 import static org.neo4j.values.storable.ValueGroup.NUMBER;
 
 /**
  * Default implementation of StorageReader. Delegates to NeoStores and indexes.
+ *
+ * TODO Public due to a usage in BatchInserter, which hasn't been ported yet to use the RecordStorageEngine as a whole
+ * It's a small price to pay for not having to rewrite a lot of that code right now.
  */
-class RecordStorageReader extends DefaultCursors implements StorageReader, TxStateHolder
+public class RecordStorageReader extends DefaultCursors implements StorageReader, TxStateHolder
 {
     // These token holders should perhaps move to the cache layer.. not really any reason to have them here?
     private final PropertyKeyTokenHolder propertyKeyTokenHolder;
@@ -177,7 +170,6 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
 
     // State from the old StoreStatement
     private final InstanceCache<StoreIteratorRelationshipCursor> iteratorRelationshipCursor;
-    private final InstanceCache<StoreNodeRelationshipCursor> nodeRelationshipsCursor;
     private final InstanceCache<StoreSinglePropertyCursor> singlePropertyCursorCache;
     private final InstanceCache<StorePropertyCursor> propertyCursorCache;
 
@@ -193,7 +185,7 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
     private boolean closed;
     private TransactionalDependencies transactionalDependencies = TransactionalDependencies.EMPTY;
 
-    RecordStorageReader( PropertyKeyTokenHolder propertyKeyTokenHolder, LabelTokenHolder labelTokenHolder,
+    public RecordStorageReader( PropertyKeyTokenHolder propertyKeyTokenHolder, LabelTokenHolder labelTokenHolder,
             RelationshipTypeTokenHolder relationshipTokenHolder, SchemaStorage schemaStorage, NeoStores neoStores,
             IndexingService indexService, SchemaCache schemaCache,
             Supplier<IndexReaderFactory> indexReaderFactory,
@@ -225,15 +217,6 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
             {
                 return new StoreIteratorRelationshipCursor( relationshipStore.newRecord(), this, recordCursors,
                         lockService );
-            }
-        };
-        this.nodeRelationshipsCursor = new InstanceCache<StoreNodeRelationshipCursor>()
-        {
-            @Override
-            protected StoreNodeRelationshipCursor create()
-            {
-                return new StoreNodeRelationshipCursor( relationshipStore.newRecord(),
-                        relationshipGroupStore.newRecord(), this, recordCursors, lockService );
             }
         };
 
@@ -537,21 +520,6 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
     }
 
     @Override
-    public Cursor<RelationshipItem> nodeGetRelationships( NodeItem nodeItem,
-            Direction direction )
-    {
-        return nodeGetRelationships( nodeItem, direction, ALWAYS_TRUE_INT );
-    }
-
-    @Override
-    public Cursor<RelationshipItem> nodeGetRelationships( NodeItem node,
-            Direction direction, IntPredicate relTypes )
-    {
-        return acquireNodeRelationshipCursor( node.isDense(), node.id(), node.nextRelationshipId(), direction,
-                relTypes );
-    }
-
-    @Override
     public Cursor<PropertyItem> nodeGetProperties( NodeItem node, AssertOpen assertOpen )
     {
         Lock lock = node.lock(); // lock before reading the property id, since we might need to reload the record
@@ -695,43 +663,6 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
         return relationshipStore.isInUse( id );
     }
 
-    @Override
-    public IntSet relationshipTypes( NodeItem node )
-    {
-        final MutableIntSet set = new IntHashSet();
-        if ( node.isDense() )
-        {
-            RelationshipGroupRecord groupRecord = relationshipGroupStore.newRecord();
-            RecordCursor<RelationshipGroupRecord> cursor = recordCursors().relationshipGroup();
-            for ( long id = node.nextGroupId(); id != NO_NEXT_RELATIONSHIP.intValue(); id = groupRecord.getNext() )
-            {
-                if ( cursor.next( id, groupRecord, FORCE ) )
-                {
-                    set.add( groupRecord.getType() );
-                }
-            }
-        }
-        else
-        {
-            nodeGetRelationships( node, Direction.BOTH )
-                    .forAll( relationship -> set.add( relationship.type() ) );
-        }
-        return set;
-    }
-
-    @Override
-    public void degrees( NodeItem nodeItem, DegreeVisitor visitor )
-    {
-        if ( nodeItem.isDense() )
-        {
-            visitDenseNode( nodeItem, visitor );
-        }
-        else
-        {
-            visitNode( nodeItem, visitor );
-        }
-    }
-
     private IndexRule indexRule( SchemaIndexDescriptor index )
     {
         for ( IndexRule rule : schemaCache.indexRules() )
@@ -759,79 +690,6 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
     public <T> T getOrCreateSchemaDependantState( Class<T> type, Function<StorageReader,T> factory )
     {
         return schemaCache.getOrCreateDependantState( type, factory, this );
-    }
-
-    private void visitNode( NodeItem nodeItem, DegreeVisitor visitor )
-    {
-        try ( Cursor<RelationshipItem> relationships = nodeGetRelationships( nodeItem, Direction.BOTH ) )
-        {
-            while ( relationships.next() )
-            {
-                RelationshipItem rel = relationships.get();
-                int type = rel.type();
-                switch ( directionOf( nodeItem.id(), rel.id(), rel.startNode(), rel.endNode() ) )
-                {
-                case OUTGOING:
-                    visitor.visitDegree( type, 1, 0 );
-                    break;
-                case INCOMING:
-                    visitor.visitDegree( type, 0, 1 );
-                    break;
-                case BOTH:
-                    visitor.visitDegree( type, 1, 1 );
-                    break;
-                default:
-                    throw new IllegalStateException( "You found the missing direction!" );
-                }
-            }
-        }
-    }
-
-    private void visitDenseNode( NodeItem nodeItem, DegreeVisitor visitor )
-    {
-        RelationshipGroupRecord relationshipGroupRecord = relationshipGroupStore.newRecord();
-        RecordCursor<RelationshipGroupRecord> relationshipGroupCursor = recordCursors().relationshipGroup();
-        RelationshipRecord relationshipRecord = relationshipStore.newRecord();
-        RecordCursor<RelationshipRecord> relationshipCursor = recordCursors().relationship();
-
-        long groupId = nodeItem.nextGroupId();
-        while ( groupId != NO_NEXT_RELATIONSHIP.longValue() )
-        {
-            relationshipGroupCursor.next( groupId, relationshipGroupRecord, FORCE );
-            if ( relationshipGroupRecord.inUse() )
-            {
-                int type = relationshipGroupRecord.getType();
-
-                long firstLoop = relationshipGroupRecord.getFirstLoop();
-                long firstOut = relationshipGroupRecord.getFirstOut();
-                long firstIn = relationshipGroupRecord.getFirstIn();
-
-                long loop = countByFirstPrevPointer( firstLoop, relationshipCursor, nodeItem.id(), relationshipRecord );
-                long outgoing =
-                        countByFirstPrevPointer( firstOut, relationshipCursor, nodeItem.id(), relationshipRecord ) +
-                                loop;
-                long incoming =
-                        countByFirstPrevPointer( firstIn, relationshipCursor, nodeItem.id(), relationshipRecord ) +
-                                loop;
-                visitor.visitDegree( type, outgoing, incoming );
-            }
-            groupId = relationshipGroupRecord.getNext();
-        }
-    }
-
-    private Direction directionOf( long nodeId, long relationshipId, long startNode, long endNode )
-    {
-        if ( startNode == nodeId )
-        {
-            return endNode == nodeId ? Direction.BOTH : Direction.OUTGOING;
-        }
-        if ( endNode == nodeId )
-        {
-            return Direction.INCOMING;
-        }
-        throw new InvalidRecordException(
-                "Node " + nodeId + " neither start nor end node of relationship " + relationshipId +
-                        " with startNode:" + startNode + " and endNode:" + endNode );
     }
 
     private static Iterator<SchemaIndexDescriptor> toIndexDescriptors( Iterable<IndexRule> rules )
@@ -880,14 +738,6 @@ class RecordStorageReader extends DefaultCursors implements StorageReader, TxSta
         recordCursors.close(); // the old cursors
         commandCreationContext.close();
         closed = true;
-    }
-
-    @Override
-    public Cursor<RelationshipItem> acquireNodeRelationshipCursor( boolean isDense, long nodeId, long relationshipId,
-            Direction direction, IntPredicate relTypeFilter )
-    {
-        neoStores.assertOpen();
-        return nodeRelationshipsCursor.get().init( isDense, relationshipId, nodeId, direction, relTypeFilter );
     }
 
     @Override
