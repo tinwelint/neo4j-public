@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -38,6 +37,7 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
@@ -47,9 +47,6 @@ import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.core.RelationshipProxy;
-import org.neo4j.kernel.impl.locking.Lock;
-import org.neo4j.storageengine.api.PropertyItem;
-import org.neo4j.storageengine.api.RelationshipItem;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.txstate.NodeState;
@@ -58,8 +55,6 @@ import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.RelationshipState;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
-
-import static org.neo4j.kernel.api.AssertOpen.ALWAYS_OPEN;
 
 /**
  * Transform for {@link org.neo4j.storageengine.api.txstate.ReadableTransactionState} to make it accessible as {@link TransactionData}.
@@ -200,7 +195,8 @@ public class TxStateTransactionDataSnapshot implements TransactionData
     private void takeSnapshot()
     {
         try ( NodeCursor nodeCursor = store.allocateNodeCursorCommitted();
-              PropertyCursor propertyCursor = store.allocatePropertyCursorCommitted() )
+              PropertyCursor propertyCursor = store.allocatePropertyCursorCommitted();
+              RelationshipScanCursor relationshipCursor = store.allocateRelationshipScanCursorCommitted() )
         {
             for ( long nodeId : state.addedAndRemovedNodes().getRemoved() )
             {
@@ -231,22 +227,15 @@ public class TxStateTransactionDataSnapshot implements TransactionData
             for ( long relId : state.addedAndRemovedRelationships().getRemoved() )
             {
                 Relationship relationshipProxy = relationship( relId );
-                try ( Cursor<RelationshipItem> relationship = store.acquireSingleRelationshipCursor( relId ) )
+                store.singleRelationship( relId, relationshipCursor );
+                if ( relationshipCursor.next() )
                 {
-                    if ( relationship.next() )
+                    relationshipCursor.properties( propertyCursor );
+                    while ( propertyCursor.next() )
                     {
-                        Lock lock = relationship.get().lock();
-                        try ( Cursor<PropertyItem> properties = store
-                                .acquirePropertyCursor( relationship.get().nextPropertyId(), lock, ALWAYS_OPEN ) )
-                        {
-                            while ( properties.next() )
-                            {
-                                removedRelationshipProperties.add( new RelationshipPropertyEntryView( relationshipProxy,
-                                        store.propertyKeyGetName( properties.get().propertyKeyId() ), null,
-                                        properties.get().value() ) );
-                            }
-                        }
-
+                        removedRelationshipProperties.add( new RelationshipPropertyEntryView( relationshipProxy,
+                                store.propertyKeyGetName( propertyCursor.propertyKey() ), null,
+                                propertyCursor.propertyValue() ) );
                     }
                 }
             }
@@ -287,7 +276,7 @@ public class TxStateTransactionDataSnapshot implements TransactionData
                     StorageProperty property = added.next();
                     assignedRelationshipProperties.add( new RelationshipPropertyEntryView( relationship,
                             store.propertyKeyGetName( property.propertyKeyId() ), property.value(),
-                            committedValue( relState, property.propertyKeyId() ) ) );
+                            committedValue( relState.getId(), property.propertyKeyId(), relationshipCursor, propertyCursor ) ) );
                 }
                 Iterator<Integer> removed = relState.removedProperties();
                 while ( removed.hasNext() )
@@ -295,7 +284,7 @@ public class TxStateTransactionDataSnapshot implements TransactionData
                     Integer property = removed.next();
                     removedRelationshipProperties.add( new RelationshipPropertyEntryView( relationship,
                             store.propertyKeyGetName( property ), null,
-                            committedValue( relState, property ) ) );
+                            committedValue( relState.getId(), property, relationshipCursor, propertyCursor ) ) );
                 }
             }
         }
@@ -368,44 +357,36 @@ public class TxStateTransactionDataSnapshot implements TransactionData
         }
 
         nodeCursor.properties( propertyCursor );
+        return findProperty( propertyCursor, property );
+    }
+
+    private Value findProperty( PropertyCursor propertyCursor, int propertyKeyId )
+    {
         while ( propertyCursor.next() )
         {
-            if ( propertyCursor.propertyKey() == property )
+            if ( propertyCursor.propertyKey() == propertyKeyId )
             {
                 return propertyCursor.propertyValue();
             }
         }
-
         return Values.NO_VALUE;
     }
 
-    private Value committedValue( RelationshipState relState, int property )
+    private Value committedValue( long relationshipId, int property, RelationshipScanCursor relationshipCursor, PropertyCursor propertyCursor )
     {
-        if ( state.relationshipIsAddedInThisTx( relState.getId() ) )
+        if ( state.relationshipIsAddedInThisTx( relationshipId ) )
         {
             return Values.NO_VALUE;
         }
 
-        try ( Cursor<RelationshipItem> relationship = store.acquireSingleRelationshipCursor(
-                relState.getId() ) )
+        store.singleRelationship( relationshipId, relationshipCursor );
+        if ( !relationshipCursor.next() )
         {
-            if ( !relationship.next() )
-            {
-                return Values.NO_VALUE;
-            }
-
-            Lock lock = relationship.get().lock();
-            try ( Cursor<PropertyItem> properties = store
-                    .acquireSinglePropertyCursor( relationship.get().nextPropertyId(), property, lock, ALWAYS_OPEN ) )
-            {
-                if ( properties.next() )
-                {
-                    return properties.get().value();
-                }
-            }
+            return Values.NO_VALUE;
         }
 
-        return Values.NO_VALUE;
+        relationshipCursor.properties( propertyCursor );
+        return findProperty( propertyCursor, property );
     }
 
     private class NodePropertyEntryView implements PropertyEntry<Node>
