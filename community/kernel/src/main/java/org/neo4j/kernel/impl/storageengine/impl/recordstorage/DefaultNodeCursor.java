@@ -40,7 +40,7 @@ import org.neo4j.storageengine.api.txstate.ReadableDiffSets;
 
 import static java.util.Collections.emptySet;
 
-class DefaultNodeCursor extends NodeRecord implements NodeCursor
+public class DefaultNodeCursor extends NodeRecord implements NodeCursor
 {
     private RecordStorageReader read;
     private RecordCursor<DynamicRecord> labelCursor;
