@@ -37,7 +37,6 @@ import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
-import org.neo4j.storageengine.api.Token;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 
 import static java.util.Collections.singletonList;
@@ -56,9 +55,9 @@ public class ReplicatedTokenStateMachineTest
     public void shouldCreateTokenId()
     {
         // given
-        TokenRegistry<Token> registry = new TokenRegistry<>( "Label" );
-        ReplicatedTokenStateMachine<Token> stateMachine = new ReplicatedTokenStateMachine<>( registry,
-                new Token.Factory(), NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+        TokenRegistry registry = new TokenRegistry( "Label" );
+        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
+                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
         stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
 
         // when
@@ -73,9 +72,9 @@ public class ReplicatedTokenStateMachineTest
     public void shouldAllocateTokenIdToFirstReplicateRequest()
     {
         // given
-        TokenRegistry<Token> registry = new TokenRegistry<>( "Label" );
-        ReplicatedTokenStateMachine<Token> stateMachine = new ReplicatedTokenStateMachine<>( registry,
-                new Token.Factory(), NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+        TokenRegistry registry = new TokenRegistry( "Label" );
+        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
+                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
 
         stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
 
@@ -99,9 +98,8 @@ public class ReplicatedTokenStateMachineTest
         int logIndex = 1;
 
         StubTransactionCommitProcess commitProcess = new StubTransactionCommitProcess( null, null );
-        ReplicatedTokenStateMachine<Token> stateMachine = new ReplicatedTokenStateMachine<>(
-                new TokenRegistry<>( "Token" ), new Token.Factory(),
-                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine(
+                new TokenRegistry( "Token" ), NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when

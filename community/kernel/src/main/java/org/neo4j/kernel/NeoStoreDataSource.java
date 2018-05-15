@@ -66,10 +66,8 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.operations.QueryRegistrationOperations;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.StartupStatisticsProvider;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.impl.factory.OperationalMode;
@@ -234,9 +232,9 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
     private final LogProvider logProvider;
     private final DependencyResolver dependencyResolver;
     private final TokenNameLookup tokenNameLookup;
-    private final PropertyKeyTokenHolder propertyKeyTokenHolder;
-    private final LabelTokenHolder labelTokens;
-    private final RelationshipTypeTokenHolder relationshipTypeTokens;
+    private final TokenHolder propertyKeyTokenHolder;
+    private final TokenHolder labelTokens;
+    private final TokenHolder relationshipTypeTokens;
     private final StatementLocksFactory statementLocksFactory;
     private final SchemaWriteGuard schemaWriteGuard;
     private final TransactionEventHandlers transactionEventHandlers;
@@ -280,8 +278,8 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
 
     public NeoStoreDataSource( File storeDir, Config config, IdGeneratorFactory idGeneratorFactory,
             LogService logService, JobScheduler scheduler, TokenNameLookup tokenNameLookup,
-            DependencyResolver dependencyResolver, PropertyKeyTokenHolder propertyKeyTokens,
-            LabelTokenHolder labelTokens, RelationshipTypeTokenHolder relationshipTypeTokens,
+            DependencyResolver dependencyResolver, TokenHolder propertyKeyTokens,
+            TokenHolder labelTokens, TokenHolder relationshipTypeTokens,
             StatementLocksFactory statementLocksFactory, SchemaWriteGuard schemaWriteGuard,
             TransactionEventHandlers transactionEventHandlers, IndexingService.Monitor indexingServiceMonitor,
             FileSystemAbstraction fs, TransactionMonitor transactionMonitor, DatabaseHealth databaseHealth,
@@ -561,8 +559,8 @@ public class NeoStoreDataSource implements Lifecycle, IndexProviders
     }
 
     private StorageEngine buildStorageEngine(
-            PropertyKeyTokenHolder propertyKeyTokenHolder, LabelTokenHolder labelTokens,
-            RelationshipTypeTokenHolder relationshipTypeTokens,
+            TokenHolder propertyKeyTokenHolder, TokenHolder labelTokens,
+            TokenHolder relationshipTypeTokens,
             ExplicitIndexProviderLookup explicitIndexProviderLookup, IndexConfigStore indexConfigStore,
             SchemaState schemaState, SynchronizedArrayIdOrderingQueue explicitIndexTransactionOrdering,
             OperationalMode operationalMode, VersionContextSupplier versionContextSupplier )

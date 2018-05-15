@@ -129,12 +129,11 @@ import org.neo4j.kernel.ha.transaction.TransactionPropagator;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
-import org.neo4j.kernel.impl.core.DelegatingLabelTokenHolder;
-import org.neo4j.kernel.impl.core.DelegatingPropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.DelegatingRelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.LastTxIdGetter;
 import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
 import org.neo4j.kernel.impl.core.TokenCreator;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -181,6 +180,9 @@ import org.neo4j.udc.UsageData;
 import org.neo4j.udc.UsageDataKeys;
 
 import static java.lang.reflect.Proxy.newProxyInstance;
+import static org.neo4j.kernel.impl.core.TokenHolder.LABELS;
+import static org.neo4j.kernel.impl.core.TokenHolder.PROPERTY_KEYS;
+import static org.neo4j.kernel.impl.core.TokenHolder.RELATIONSHIP_TYPES;
 import static org.neo4j.kernel.impl.transaction.log.TransactionMetadataCache.TransactionMetadata;
 
 /**
@@ -497,15 +499,15 @@ public class HighlyAvailableEditionModule
 
         statementLocksFactory = createStatementLocksFactory( componentSwitcherContainer, config, logging );
 
-        propertyKeyTokenHolder = dependencies.satisfyDependency( new DelegatingPropertyKeyTokenHolder(
+        propertyKeyTokenHolder = new DelegatingTokenHolder(
                 createPropertyKeyCreator( config, componentSwitcherContainer,
-                        masterDelegateInvocationHandler, requestContextFactory, kernelProvider ) ) );
-        labelTokenHolder = dependencies.satisfyDependency( new DelegatingLabelTokenHolder( createLabelIdCreator( config,
+                        masterDelegateInvocationHandler, requestContextFactory, kernelProvider ), PROPERTY_KEYS );
+        labelTokenHolder = dependencies.satisfyDependency( new DelegatingTokenHolder( createLabelIdCreator( config,
                 componentSwitcherContainer, masterDelegateInvocationHandler, requestContextFactory,
-                kernelProvider ) ) );
-        relationshipTypeTokenHolder = dependencies.satisfyDependency( new DelegatingRelationshipTypeTokenHolder(
+                kernelProvider ), LABELS ) );
+        relationshipTypeTokenHolder = dependencies.satisfyDependency( new DelegatingTokenHolder(
                 createRelationshipTypeCreator( config, componentSwitcherContainer,
-                        masterDelegateInvocationHandler, requestContextFactory, kernelProvider ) ) );
+                        masterDelegateInvocationHandler, requestContextFactory, kernelProvider ), RELATIONSHIP_TYPES ) );
 
         dependencies.satisfyDependency(
                 createKernelData( config, platformModule.graphDatabaseFacade, members, fs, platformModule.pageCache,

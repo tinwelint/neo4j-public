@@ -35,9 +35,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory.Configuration;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -95,9 +93,9 @@ public abstract class EditionModule
     public IdGeneratorFactory idGeneratorFactory;
     public IdTypeConfigurationProvider idTypeConfigurationProvider;
 
-    public LabelTokenHolder labelTokenHolder;
+    public TokenHolder labelTokenHolder;
 
-    public PropertyKeyTokenHolder propertyKeyTokenHolder;
+    public TokenHolder propertyKeyTokenHolder;
 
     public Locks lockManager;
 
@@ -107,7 +105,7 @@ public abstract class EditionModule
 
     public long transactionStartTimeout;
 
-    public RelationshipTypeTokenHolder relationshipTypeTokenHolder;
+    public TokenHolder relationshipTypeTokenHolder;
 
     public TransactionHeaderInformationFactory headerInformationFactory;
 

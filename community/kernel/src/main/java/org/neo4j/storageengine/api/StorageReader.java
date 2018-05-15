@@ -24,6 +24,7 @@ import java.util.function.Function;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.ExplicitIndexRead;
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
@@ -128,17 +129,17 @@ public interface StorageReader extends AutoCloseable, Read, ExplicitIndexRead, S
     /**
      * @return all stored property key tokens.
      */
-    Iterator<Token> propertyKeyGetAllTokens();
+    Iterator<NamedToken> propertyKeyGetAllTokens();
 
     /**
      * @return all stored label tokens.
      */
-    Iterator<Token> labelsGetAllTokens();
+    Iterator<NamedToken> labelsGetAllTokens();
 
     /**
      * @return all stored relationship type tokens.
      */
-    Iterator<Token> relationshipTypeGetAllTokens();
+    Iterator<NamedToken> relationshipTypeGetAllTokens();
 
     /**
      * @param relationshipTypeName name of relationship type.

@@ -24,7 +24,7 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.storageengine.api.Token;
+import org.neo4j.internal.kernel.api.NamedToken;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -37,14 +37,7 @@ public class TokenHolderTest
     {
         // GIVEN
         TokenCreator creator = mock( TokenCreator.class );
-        TokenHolder<Token> holder = new DelegatingTokenHolder<Token>( creator, new Token.Factory() )
-        {
-            @Override
-            protected String tokenType()
-            {
-                return "Dummy";
-            }
-        };
+        TokenHolder holder = new DelegatingTokenHolder( creator, "Dummy" );
         holder.setInitialTokens(
                 asList( token( "one", 1 ),
                         token( "two", 2 ) ));
@@ -65,23 +58,23 @@ public class TokenHolderTest
                 token( "four", 4 ) );
     }
 
-    private void assertTokens( Iterable<Token> allTokens, Token... expectedTokens )
+    private void assertTokens( Iterable<NamedToken> allTokens, NamedToken... expectedTokens )
     {
-        Map<String,Token> existing = new HashMap<>();
-        for ( Token token : allTokens )
+        Map<String,NamedToken> existing = new HashMap<>();
+        for ( NamedToken token : allTokens )
         {
             existing.put( token.name(), token );
         }
-        Map<String,Token> expected = new HashMap<>();
-        for ( Token token : expectedTokens )
+        Map<String,NamedToken> expected = new HashMap<>();
+        for ( NamedToken token : expectedTokens )
         {
             expected.put( token.name(), token );
         }
         assertEquals( expected, existing );
     }
 
-    private Token token( String name, int id )
+    private NamedToken token( String name, int id )
     {
-        return new Token( name, id );
+        return new NamedToken( name, id );
     }
 }

@@ -19,12 +19,9 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
-import org.neo4j.storageengine.api.Token;
 
 import static java.lang.String.format;
 
@@ -34,13 +31,13 @@ import static java.lang.String.format;
  */
 public class NonTransactionalTokenNameLookup implements TokenNameLookup
 {
-    private final LabelTokenHolder labelTokenHolder;
-    private final RelationshipTypeTokenHolder relationshipTypeTokenHolder;
-    private final PropertyKeyTokenHolder propertyKeyTokenHolder;
+    private final TokenHolder labelTokenHolder;
+    private final TokenHolder relationshipTypeTokenHolder;
+    private final TokenHolder propertyKeyTokenHolder;
 
-    public NonTransactionalTokenNameLookup( LabelTokenHolder labelTokenHolder,
-            RelationshipTypeTokenHolder relationshipTypeTokenHolder,
-            PropertyKeyTokenHolder propertyKeyTokenHolder )
+    public NonTransactionalTokenNameLookup( TokenHolder labelTokenHolder,
+            TokenHolder relationshipTypeTokenHolder,
+            TokenHolder propertyKeyTokenHolder )
     {
         this.labelTokenHolder = labelTokenHolder;
         this.relationshipTypeTokenHolder = relationshipTypeTokenHolder;
@@ -69,7 +66,7 @@ public class NonTransactionalTokenNameLookup implements TokenNameLookup
     {
         try
         {
-            Token token = tokenHolder.getTokenByIdOrNull( tokenId );
+            NamedToken token = tokenHolder.getTokenByIdOrNull( tokenId );
             if ( token != null )
             {
                 return token.name();

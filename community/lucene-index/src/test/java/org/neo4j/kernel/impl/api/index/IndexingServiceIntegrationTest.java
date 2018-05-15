@@ -40,6 +40,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.impl.schema.LuceneIndexProviderFactory;
 import org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10;
@@ -49,8 +50,7 @@ import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaStore;
@@ -124,10 +124,8 @@ public class IndexingServiceIntegrationTest
         IndexingService indexingService = getIndexingService( database );
         SchemaStore schemaStore = getSchemaStore( database );
 
-        LabelTokenHolder labelTokenHolder = getLabelTokenHolder( database );
-        PropertyKeyTokenHolder propertyKeyTokenHolder = getPropertyKeyTokenHolder( database );
-        int foodId = labelTokenHolder.getIdByName( FOOD_LABEL );
-        int propertyId = propertyKeyTokenHolder.getIdByName( PROPERTY_NAME );
+        int foodId = getLabelId( FOOD_LABEL );
+        int propertyId = getPropertyKeyId( PROPERTY_NAME );
 
         IndexRule rule = IndexRule.indexRule(
                 schemaStore.nextId(), SchemaIndexDescriptorFactory.forLabel( foodId, propertyId ), indexDescriptor );
@@ -138,6 +136,26 @@ public class IndexingServiceIntegrationTest
         assertEquals( InternalIndexState.ONLINE, indexProxy.getState() );
         PopulationProgress progress = indexProxy.getIndexPopulationProgress();
         assertEquals( progress.getCompleted(), progress.getTotal() );
+    }
+
+    private int getPropertyKeyId( String name )
+    {
+        try ( Transaction tx = database.beginTx() )
+        {
+            KernelTransaction transaction = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency(
+                    ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( true );
+            return transaction.tokenRead().propertyKey( name );
+        }
+    }
+
+    private int getLabelId( String name )
+    {
+        try ( Transaction tx = database.beginTx() )
+        {
+            KernelTransaction transaction = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency(
+                    ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( true );
+            return transaction.tokenRead().nodeLabel( name );
+        }
     }
 
     @Test
@@ -157,11 +175,9 @@ public class IndexingServiceIntegrationTest
         }
 
         IndexingService indexingService = getIndexingService( database );
-        LabelTokenHolder labelTokenHolder = getLabelTokenHolder( database );
-        PropertyKeyTokenHolder propertyKeyTokenHolder = getPropertyKeyTokenHolder( database );
-        int clothedLabelId = labelTokenHolder.getIdByName( CLOTHES_LABEL );
-        int weatherLabelId = labelTokenHolder.getIdByName( WEATHER_LABEL );
-        int propertyId = propertyKeyTokenHolder.getIdByName( PROPERTY_NAME );
+        int clothedLabelId = getLabelId( CLOTHES_LABEL );
+        int weatherLabelId = getLabelId( WEATHER_LABEL );
+        int propertyId = getPropertyKeyId( PROPERTY_NAME );
 
         IndexProxy clothesIndex =
                 indexingService.getIndexProxy( SchemaDescriptorFactory.forLabel( clothedLabelId, propertyId ) );
@@ -196,11 +212,8 @@ public class IndexingServiceIntegrationTest
 
         IndexingService indexingService = getIndexingService( database );
 
-        LabelTokenHolder labelTokenHolder = getLabelTokenHolder( database );
-        PropertyKeyTokenHolder propertyKeyTokenHolder = getPropertyKeyTokenHolder( database );
-
-        int indexLabel7 = labelTokenHolder.getIdByName( indexLabelPrefix + 7 );
-        int indexProperty7 = propertyKeyTokenHolder.getIdByName( indexPropertyPrefix + 7 );
+        int indexLabel7 = getLabelId( indexLabelPrefix + 7 );
+        int indexProperty7 = getPropertyKeyId( indexPropertyPrefix + 7 );
 
         IndexProxy index = indexingService.getIndexProxy( SchemaIndexDescriptorFactory
                 .forLabel( indexLabel7, indexProperty7).schema() );
@@ -210,11 +223,6 @@ public class IndexingServiceIntegrationTest
         expectedException.expect( UnderlyingStorageException.class );
         expectedException.expectMessage( "Unable to force" );
         indexingService.forceAll( IOLimiter.unlimited() );
-    }
-
-    private PropertyKeyTokenHolder getPropertyKeyTokenHolder( GraphDatabaseService database )
-    {
-        return getDependencyResolver( database ).resolveDependency( PropertyKeyTokenHolder.class );
     }
 
     private void waitIndexOnline( IndexProxy indexProxy ) throws InterruptedException
@@ -235,11 +243,6 @@ public class IndexingServiceIntegrationTest
     private IndexingService getIndexingService( GraphDatabaseService database )
     {
         return getDependencyResolver(database).resolveDependency( IndexingService.class );
-    }
-
-    private LabelTokenHolder getLabelTokenHolder( GraphDatabaseService database )
-    {
-        return getDependencyResolver( database ).resolveDependency( LabelTokenHolder.class );
     }
 
     private DependencyResolver getDependencyResolver( GraphDatabaseService database )

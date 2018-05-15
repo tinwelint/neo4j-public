@@ -42,9 +42,7 @@ import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.core.DefaultLabelIdCreator;
 import org.neo4j.kernel.impl.core.DefaultPropertyTokenCreator;
 import org.neo4j.kernel.impl.core.DefaultRelationshipTypeCreator;
-import org.neo4j.kernel.impl.core.DelegatingLabelTokenHolder;
-import org.neo4j.kernel.impl.core.DelegatingPropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.DelegatingRelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
 import org.neo4j.kernel.impl.core.TokenCreator;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
@@ -112,12 +110,12 @@ public class CommunityEditionModule extends EditionModule
         dependencies.satisfyDependency( idGeneratorFactory );
         dependencies.satisfyDependency( idController );
 
-        propertyKeyTokenHolder = life.add( dependencies.satisfyDependency( new DelegatingPropertyKeyTokenHolder(
-                createPropertyKeyCreator( config, dataSourceManager, idGeneratorFactory ) ) ) );
-        labelTokenHolder = life.add( dependencies.satisfyDependency(new DelegatingLabelTokenHolder( createLabelIdCreator( config,
-                dataSourceManager, idGeneratorFactory ) ) ));
-        relationshipTypeTokenHolder = life.add( dependencies.satisfyDependency(new DelegatingRelationshipTypeTokenHolder(
-                createRelationshipTypeCreator( config, dataSourceManager, idGeneratorFactory ) ) ));
+        propertyKeyTokenHolder = life.add( new DelegatingTokenHolder(
+                createPropertyKeyCreator( config, dataSourceManager, idGeneratorFactory ), "property key" ) );
+        labelTokenHolder = life.add( new DelegatingTokenHolder(
+                createLabelIdCreator( config, dataSourceManager, idGeneratorFactory ), "label" ) );
+        relationshipTypeTokenHolder = life.add( new DelegatingTokenHolder(
+                createRelationshipTypeCreator( config, dataSourceManager, idGeneratorFactory ), "relationship type" ) );
 
         dependencies.satisfyDependency(
                 createKernelData( fileSystem, pageCache, storeDir, config, graphDatabaseFacade, life ) );

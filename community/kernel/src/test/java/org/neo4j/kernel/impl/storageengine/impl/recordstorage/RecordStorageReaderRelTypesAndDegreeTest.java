@@ -34,10 +34,11 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
+import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.helpers.Nodes;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
-import org.neo4j.kernel.impl.core.TokenNotFoundException;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -566,8 +567,13 @@ public class RecordStorageReaderRelTypesAndDegreeTest extends RecordStorageReade
     private int relTypeId( TestRelType type )
     {
         DependencyResolver resolver = db.getDependencyResolver();
-        RelationshipTypeTokenHolder relTypeHolder = resolver.resolveDependency( RelationshipTypeTokenHolder.class );
-        int id = relTypeHolder.getIdByName( type.name() );
+        int id;
+        try ( Transaction tx = db.beginTx() )
+        {
+            KernelTransaction transaction = resolver.resolveDependency( ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( true );
+            id = transaction.tokenRead().relationshipType( type.name() );
+        }
+
         assertNotEquals( NO_ID, id );
         return id;
     }
@@ -600,13 +606,13 @@ public class RecordStorageReaderRelTypesAndDegreeTest extends RecordStorageReade
     private TestRelType relTypeForId( int id )
     {
         DependencyResolver resolver = db.getDependencyResolver();
-        RelationshipTypeTokenHolder relTypeHolder = resolver.resolveDependency( RelationshipTypeTokenHolder.class );
-        try
+        try ( Transaction tx = db.beginTx() )
         {
-            String typeName = relTypeHolder.getTokenById( id ).name();
+            KernelTransaction transaction = resolver.resolveDependency( ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( true );
+            String typeName = transaction.tokenRead().relationshipTypeName( id );
             return TestRelType.valueOf( typeName );
         }
-        catch ( TokenNotFoundException e )
+        catch ( KernelException e )
         {
             throw new RuntimeException( e );
         }

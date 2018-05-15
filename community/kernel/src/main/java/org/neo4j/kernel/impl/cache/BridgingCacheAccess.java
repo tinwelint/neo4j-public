@@ -19,28 +19,25 @@
  */
 package org.neo4j.kernel.impl.cache;
 
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeToken;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
-import org.neo4j.storageengine.api.Token;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 
 public class BridgingCacheAccess implements CacheAccessBackDoor
 {
     private final SchemaCache schemaCache;
     private final SchemaState schemaState;
-    private final PropertyKeyTokenHolder propertyKeyTokenHolder;
-    private final RelationshipTypeTokenHolder relationshipTypeTokenHolder;
-    private final LabelTokenHolder labelTokenHolder;
+    private final TokenHolder propertyKeyTokenHolder;
+    private final TokenHolder relationshipTypeTokenHolder;
+    private final TokenHolder labelTokenHolder;
 
     public BridgingCacheAccess( SchemaCache schemaCache, SchemaState schemaState,
-            PropertyKeyTokenHolder propertyKeyTokenHolder,
-            RelationshipTypeTokenHolder relationshipTypeTokenHolder,
-            LabelTokenHolder labelTokenHolder )
+            TokenHolder propertyKeyTokenHolder,
+            TokenHolder relationshipTypeTokenHolder,
+            TokenHolder labelTokenHolder )
     {
         this.schemaCache = schemaCache;
         this.schemaState = schemaState;
@@ -63,20 +60,20 @@ public class BridgingCacheAccess implements CacheAccessBackDoor
     }
 
     @Override
-    public void addRelationshipTypeToken( RelationshipTypeToken type )
+    public void addRelationshipTypeToken( NamedToken token )
     {
-        relationshipTypeTokenHolder.addToken( type );
+        relationshipTypeTokenHolder.addToken( token );
     }
 
     @Override
-    public void addLabelToken( Token label )
+    public void addLabelToken( NamedToken token )
     {
-        labelTokenHolder.addToken( label );
+        labelTokenHolder.addToken( token );
     }
 
     @Override
-    public void addPropertyKeyToken( Token propertyKey )
+    public void addPropertyKeyToken( NamedToken token )
     {
-        propertyKeyTokenHolder.addToken( propertyKey );
+        propertyKeyTokenHolder.addToken( token );
     }
 }

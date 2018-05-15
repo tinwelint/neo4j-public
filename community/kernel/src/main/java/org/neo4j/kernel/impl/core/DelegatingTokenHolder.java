@@ -22,41 +22,36 @@ package org.neo4j.kernel.impl.core;
 import java.util.List;
 
 import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.storageengine.api.Token;
-import org.neo4j.storageengine.api.TokenFactory;
 
 /**
  * Keeps a cache of tokens using {@link InMemoryTokenCache}.
  * When asked for a token that isn't in the cache, delegates to a TokenCreator to create the token,
  * then stores it in the cache.
  */
-public abstract class DelegatingTokenHolder<TOKEN extends Token> extends LifecycleAdapter implements TokenHolder<TOKEN>
+public class DelegatingTokenHolder extends LifecycleAdapter implements TokenHolder
 {
-    protected InMemoryTokenCache<TOKEN> tokenCache = new InMemoryTokenCache<>( tokenType() );
-
-    protected abstract String tokenType();
-
+    private final InMemoryTokenCache tokenCache;
     private final TokenCreator tokenCreator;
-    private final TokenFactory<TOKEN> tokenFactory;
 
-    public DelegatingTokenHolder( TokenCreator tokenCreator, TokenFactory<TOKEN> tokenFactory )
+    public DelegatingTokenHolder( TokenCreator tokenCreator, String tokenType )
     {
         this.tokenCreator = tokenCreator;
-        this.tokenFactory = tokenFactory;
+        this.tokenCache = new InMemoryTokenCache( tokenType );
     }
 
     @Override
-    public void setInitialTokens( List<TOKEN> tokens ) throws NonUniqueTokenException
+    public void setInitialTokens( List<NamedToken> tokens ) throws NonUniqueTokenException
     {
         tokenCache.clear();
         tokenCache.putAll( tokens );
     }
 
     @Override
-    public void addToken( TOKEN token ) throws NonUniqueTokenException
+    public void addToken( NamedToken token ) throws NonUniqueTokenException
     {
         tokenCache.put( token );
     }
@@ -103,7 +98,7 @@ public abstract class DelegatingTokenHolder<TOKEN extends Token> extends Lifecyc
         id = tokenCreator.getOrCreate( name );
         try
         {
-            tokenCache.put( tokenFactory.newToken( name, id ) );
+            tokenCache.put( newToken( name, id ) );
         }
         catch ( NonUniqueTokenException e )
         {
@@ -112,10 +107,15 @@ public abstract class DelegatingTokenHolder<TOKEN extends Token> extends Lifecyc
         return id;
     }
 
-    @Override
-    public TOKEN getTokenById( int id ) throws TokenNotFoundException
+    private NamedToken newToken( String name, int id )
     {
-        TOKEN result = getTokenByIdOrNull( id );
+        return new NamedToken( name, id );
+    }
+
+    @Override
+    public NamedToken getTokenById( int id ) throws TokenNotFoundException
+    {
+        NamedToken result = getTokenByIdOrNull( id );
         if ( result == null )
         {
             throw new TokenNotFoundException( "Token for id " + id );
@@ -124,7 +124,7 @@ public abstract class DelegatingTokenHolder<TOKEN extends Token> extends Lifecyc
     }
 
     @Override
-    public TOKEN getTokenByIdOrNull( int id )
+    public NamedToken getTokenByIdOrNull( int id )
     {
         return tokenCache.getToken( id );
     }
@@ -141,7 +141,7 @@ public abstract class DelegatingTokenHolder<TOKEN extends Token> extends Lifecyc
     }
 
     @Override
-    public Iterable<TOKEN> getAllTokens()
+    public Iterable<NamedToken> getAllTokens()
     {
         return tokenCache.allTokens();
     }

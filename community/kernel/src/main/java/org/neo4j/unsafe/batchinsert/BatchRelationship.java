@@ -20,6 +20,7 @@
 package org.neo4j.unsafe.batchinsert;
 
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.kernel.impl.core.TokenHolder;
 
 /**
  * Simple relationship wrapping start node id, end node id and relationship
@@ -30,15 +31,17 @@ public final class BatchRelationship
     private final long id;
     private final long startNodeId;
     private final long endNodeId;
-    private final RelationshipType type;
+    private final int type;
+    private final TokenHolder relationshipTypeTokenHolder;
 
-    public BatchRelationship( long id, long startNodeId, long endNodeId,
-        RelationshipType type )
+    public BatchRelationship( long id, long startNodeId, long endNodeId, int type,
+            TokenHolder relationshipTypeTokenHolder )
     {
         this.id = id;
         this.startNodeId = startNodeId;
         this.endNodeId = endNodeId;
         this.type = type;
+        this.relationshipTypeTokenHolder = relationshipTypeTokenHolder;
     }
 
     public long getId()
@@ -58,6 +61,6 @@ public final class BatchRelationship
 
     public RelationshipType getType()
     {
-        return type;
+        return RelationshipType.withName( relationshipTypeTokenHolder.getTokenByIdOrNull( type ).name() );
     }
 }

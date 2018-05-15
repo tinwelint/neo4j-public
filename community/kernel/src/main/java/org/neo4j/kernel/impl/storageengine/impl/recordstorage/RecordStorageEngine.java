@@ -65,9 +65,7 @@ import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.cache.BridgingCacheAccess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.index.labelscan.NativeLabelScanStore;
@@ -123,9 +121,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 {
     private final IndexingService indexingService;
     private final NeoStores neoStores;
-    private final PropertyKeyTokenHolder propertyKeyTokenHolder;
-    private final RelationshipTypeTokenHolder relationshipTypeTokenHolder;
-    private final LabelTokenHolder labelTokenHolder;
+    private final TokenHolder propertyKeyTokenHolder;
+    private final TokenHolder relationshipTypeTokenHolder;
+    private final TokenHolder labelTokenHolder;
     private final DatabaseHealth databaseHealth;
     private final IndexConfigStore indexConfigStore;
     private final SchemaCache schemaCache;
@@ -155,9 +153,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             PageCache pageCache,
             FileSystemAbstraction fs,
             LogProvider logProvider,
-            PropertyKeyTokenHolder propertyKeyTokenHolder,
-            LabelTokenHolder labelTokens,
-            RelationshipTypeTokenHolder relationshipTypeTokens,
+            TokenHolder propertyKeyTokenHolder,
+            TokenHolder labelTokens,
+            TokenHolder relationshipTypeTokens,
             SchemaState schemaState,
             ConstraintSemantics constraintSemantics,
             JobScheduler scheduler,

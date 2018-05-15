@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 import org.neo4j.function.Suppliers;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.MultipleFoundException;
@@ -89,8 +90,8 @@ import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.GraphPropertiesProxy;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.core.RelationshipProxy;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.coreapi.AutoIndexerFacade;
 import org.neo4j.kernel.impl.coreapi.IndexManagerImpl;
@@ -139,7 +140,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
     private SPI spi;
     private TransactionalContextFactory contextFactory;
     private Config config;
-    private RelationshipTypeTokenHolder relationshipTypeTokenHolder;
+    private TokenHolder relationshipTypeTokenHolder;
 
     /**
      * This is what you need to implemenent to get your very own {@link GraphDatabaseFacade}. This SPI exists as a thin
@@ -202,7 +203,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
      * Create a new Core API facade, backed by the given SPI and using pre-resolved dependencies
      */
     public void init( EditionModule editionModule, SPI spi, Guard guard, ThreadToStatementContextBridge txBridge, Config config,
-            RelationshipTypeTokenHolder relationshipTypeTokenHolder )
+            TokenHolder relationshipTypeTokenHolder )
     {
         this.editionModule = editionModule;
         this.spi = spi;
@@ -987,7 +988,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI
     {
         try
         {
-            return relationshipTypeTokenHolder.getTokenById( type );
+            return DynamicRelationshipType.withName( relationshipTypeTokenHolder.getTokenById( type ).name() );
         }
         catch ( TokenNotFoundException e )
         {

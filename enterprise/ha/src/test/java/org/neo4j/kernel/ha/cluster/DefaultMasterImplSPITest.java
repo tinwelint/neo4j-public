@@ -29,9 +29,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
@@ -60,8 +58,8 @@ public class DefaultMasterImplSPITest
         when( dataSource.listStoreFiles( anyBoolean() ) ).thenReturn( Iterators.emptyResourceIterator() );
 
         DefaultMasterImplSPI master = new DefaultMasterImplSPI( mock( GraphDatabaseAPI.class, RETURNS_MOCKS ),
-                mock( FileSystemAbstraction.class ), new Monitors(), mock( LabelTokenHolder.class ),
-                mock( PropertyKeyTokenHolder.class ), mock( RelationshipTypeTokenHolder.class ),
+                mock( FileSystemAbstraction.class ), new Monitors(), mock( TokenHolder.class ),
+                mock( TokenHolder.class ), mock( TokenHolder.class ),
                 mock( IdGeneratorFactory.class ), mock( TransactionCommitProcess.class ), checkPointer,
                 mock( TransactionIdStore.class ), mock( LogicalTransactionStore.class ),
                 dataSource, mock( PageCache.class ), new StoreCopyCheckPointMutex(), NullLogProvider.getInstance() );

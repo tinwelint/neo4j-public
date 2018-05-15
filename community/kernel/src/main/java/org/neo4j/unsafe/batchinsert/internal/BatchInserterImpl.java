@@ -49,6 +49,7 @@ import org.neo4j.helpers.collection.IteratorWrapper;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.kernel.api.InternalIndexState;
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
@@ -85,13 +86,8 @@ import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.api.scan.FullStoreChangeStream;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
-import org.neo4j.kernel.impl.core.DelegatingLabelTokenHolder;
-import org.neo4j.kernel.impl.core.DelegatingPropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.DelegatingRelationshipTypeTokenHolder;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeToken;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.coreapi.schema.BaseNodeConstraintCreator;
 import org.neo4j.kernel.impl.coreapi.schema.IndexCreatorImpl;
@@ -164,7 +160,6 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
-import org.neo4j.storageengine.api.Token;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchRelationship;
@@ -187,9 +182,9 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
     private final NeoStores neoStores;
     private final IndexConfigStore indexStore;
     private final File storeDir;
-    private final PropertyKeyTokenHolder propertyKeyTokens;
-    private final RelationshipTypeTokenHolder relationshipTypeTokens;
-    private final LabelTokenHolder labelTokens;
+    private final TokenHolder propertyKeyTokens;
+    private final TokenHolder relationshipTypeTokens;
+    private final TokenHolder labelTokens;
     private final IdGeneratorFactory idGeneratorFactory;
     private final IndexProviderMap schemaIndexProviders;
     private final LabelScanStore labelScanStore;
@@ -292,11 +287,11 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
         schemaStore = neoStores.getSchemaStore();
         labelTokenStore = neoStores.getLabelTokenStore();
 
-        propertyKeyTokens = new DelegatingPropertyKeyTokenHolder( this::createNewPropertyKeyId );
+        propertyKeyTokens = new DelegatingTokenHolder( this::createNewPropertyKeyId, "property key" );
         propertyKeyTokens.setInitialTokens( propertyKeyTokenStore.getTokens( Integer.MAX_VALUE ) );
-        labelTokens = new DelegatingLabelTokenHolder( this::createNewLabelId );
+        labelTokens = new DelegatingTokenHolder( this::createNewLabelId, "label" );
         labelTokens.setInitialTokens( labelTokenStore.getTokens( Integer.MAX_VALUE ) );
-        relationshipTypeTokens = new DelegatingRelationshipTypeTokenHolder( this::createNewRelationshipTypeId );
+        relationshipTypeTokens = new DelegatingTokenHolder( this::createNewRelationshipTypeId, "relationship type" );
         relationshipTypeTokens.setInitialTokens( relationshipTypeTokenStore.getTokens( Integer.MAX_VALUE ) );
         indexStore = life.add( new IndexConfigStore( this.storeDir, fileSystem ) );
         schemaCache = new SchemaCache( new StandardConstraintSemantics(), schemaStore );
@@ -939,7 +934,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
             @Override
             protected BatchRelationship nextFrom( long relId, int type, long startNode, long endNode )
             {
-                return new BatchRelationship( relId, startNode, endNode, relationshipTypeTokens.getTokenByIdOrNull( type ) );
+                return new BatchRelationship( relId, startNode, endNode, type, relationshipTypeTokens );
             }
         };
     }
@@ -948,8 +943,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
     public BatchRelationship getRelationshipById( long relId )
     {
         RelationshipRecord record = getRelationshipRecord( relId ).forReadingData();
-        RelationshipType type = relationshipTypeTokens.getTokenByIdOrNull( record.getType() );
-        return new BatchRelationship( record.getId(), record.getFirstNode(), record.getSecondNode(), type );
+        return new BatchRelationship( record.getId(), record.getFirstNode(), record.getSecondNode(), record.getType(), relationshipTypeTokens );
     }
 
     @Override
@@ -1032,7 +1026,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
         record.setNameId( (int) Iterables.first( keyRecords ).getId() );
         record.addNameRecords( keyRecords );
         propertyKeyTokenStore.updateRecord( record );
-        propertyKeyTokens.addToken( new Token( stringKey, keyId ) );
+        propertyKeyTokens.addToken( new NamedToken( stringKey, keyId ) );
         return keyId;
     }
 
@@ -1047,7 +1041,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
         record.setNameId( (int) Iterables.first( keyRecords ).getId() );
         record.addNameRecords( keyRecords );
         labelTokenStore.updateRecord( record );
-        labelTokens.addToken( new Token( stringKey, keyId ) );
+        labelTokens.addToken( new NamedToken( stringKey, keyId ) );
         return keyId;
     }
 
@@ -1061,7 +1055,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
         record.setNameId( (int) Iterables.first( nameRecords ).getId() );
         record.addNameRecords( nameRecords );
         relationshipTypeTokenStore.updateRecord( record );
-        relationshipTypeTokens.addToken( new RelationshipTypeToken( name, id ) );
+        relationshipTypeTokens.addToken( new NamedToken( name, id ) );
         return id;
     }
 

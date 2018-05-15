@@ -44,7 +44,7 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.state.ExplicitIndexTransactionStateImpl;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.index.ExplicitIndexStore;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
@@ -101,7 +101,7 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
     private final AutoIndexing autoIndexing;
     private final ExplicitIndexStore explicitIndexStore;
     private final IndexingService indexingService;
-    private final PropertyKeyTokenHolder propertyKeyTokenHolder;
+    private final TokenHolder propertyKeyTokenHolder;
     private final CollectionsFactorySupplier collectionsFactorySupplier;
     private final SchemaState schemaState;
 
@@ -150,7 +150,7 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
             ConstraintSemantics constraintSemantics,
             SchemaState schemaState,
             IndexingService indexingService,
-            PropertyKeyTokenHolder propertyKeyTokenHolder )
+            TokenHolder propertyKeyTokenHolder )
     {
         this.statementLocksFactory = statementLocksFactory;
         this.constraintIndexCreator = constraintIndexCreator;

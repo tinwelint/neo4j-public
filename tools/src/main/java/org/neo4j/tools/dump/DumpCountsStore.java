@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -36,7 +37,6 @@ import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CountsVisitor;
-import org.neo4j.kernel.impl.core.RelationshipTypeToken;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -52,7 +52,6 @@ import org.neo4j.kernel.impl.store.record.IndexRule;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.storageengine.api.Token;
 
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 
@@ -121,13 +120,13 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
 
     private final PrintStream out;
     private final Map<Long,SchemaIndexDescriptor> indexes;
-    private final List<Token> labels;
-    private final List<RelationshipTypeToken> relationshipTypes;
-    private final List<Token> propertyKeys;
+    private final List<NamedToken> labels;
+    private final List<NamedToken> relationshipTypes;
+    private final List<NamedToken> propertyKeys;
 
-    private DumpCountsStore( PrintStream out, Map<Long,SchemaIndexDescriptor> indexes, List<Token> labels,
-                             List<RelationshipTypeToken> relationshipTypes,
-                             List<Token> propertyKeys )
+    private DumpCountsStore( PrintStream out, Map<Long,SchemaIndexDescriptor> indexes, List<NamedToken> labels,
+                             List<NamedToken> relationshipTypes,
+                             List<NamedToken> propertyKeys )
     {
         this.out = out;
         this.indexes = indexes;
@@ -217,9 +216,9 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
         return token( new StringBuilder().append( '[' ), relationshipTypes, ":", "type", id ).append( ']' ).toString();
     }
 
-    private static StringBuilder token( StringBuilder result, List<? extends Token> tokens, String pre, String handle, int id )
+    private static StringBuilder token( StringBuilder result, List<NamedToken> tokens, String pre, String handle, int id )
     {
-        Token token = null;
+        NamedToken token = null;
         // search backwards for the token
         for ( int i = (id < tokens.size()) ? id : tokens.size() - 1; i >= 0; i-- )
         {
@@ -247,9 +246,9 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
         return result;
     }
 
-    private static <TOKEN extends Token> List<TOKEN> allTokensFrom( TokenStore<?, TOKEN> store )
+    private static List<NamedToken> allTokensFrom( TokenStore<?> store )
     {
-        try ( TokenStore<?, TOKEN> tokens = store )
+        try ( TokenStore<?> tokens = store )
         {
             return tokens.getTokens( Integer.MAX_VALUE );
         }

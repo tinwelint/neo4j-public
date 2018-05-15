@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -40,9 +41,10 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProvider;
 import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -168,11 +170,13 @@ public class TestRecoveryScenarios
         // -- really the problem was that recovery threw exception, so mostly assert that.
         try ( Transaction tx = db.beginTx() )
         {
-            CountsTracker tracker = db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
+            DependencyResolver resolver = db.getDependencyResolver();
+            CountsTracker tracker = resolver.resolveDependency( RecordStorageEngine.class )
                     .testAccessNeoStores().getCounts();
             assertEquals( 0, tracker.nodeCount( -1, newDoubleLongRegister() ).readSecond() );
-            final LabelTokenHolder holder = db.getDependencyResolver().resolveDependency( LabelTokenHolder.class );
-            int labelId = holder.getIdByName( label.name() );
+            KernelTransaction transaction =
+                    resolver.resolveDependency( ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( true );
+            int labelId = transaction.tokenRead().nodeLabel( label.name() );
             assertEquals( 0, tracker.nodeCount( labelId, newDoubleLongRegister() ).readSecond() );
             tx.success();
         }

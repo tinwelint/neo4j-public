@@ -33,6 +33,7 @@ import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
@@ -70,9 +71,7 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.store.DefaultCapableIndexReference;
 import org.neo4j.kernel.impl.api.store.DefaultIndexReference;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
-import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
-import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.index.IndexEntityType;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -95,7 +94,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.register.Register;
 import org.neo4j.register.Register.DoubleLongRegister;
 import org.neo4j.storageengine.api.StorageReader;
-import org.neo4j.storageengine.api.Token;
 import org.neo4j.storageengine.api.TransactionalDependencies;
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.IndexReader;
@@ -129,9 +127,9 @@ import static org.neo4j.values.storable.ValueGroup.NUMBER;
  */
 public class RecordStorageReader extends DefaultCursors implements StorageReader, TxStateHolder
 {
-    private final PropertyKeyTokenHolder propertyKeyTokenHolder;
-    private final LabelTokenHolder labelTokenHolder;
-    private final RelationshipTypeTokenHolder relationshipTokenHolder;
+    private final TokenHolder propertyKeyTokenHolder;
+    private final TokenHolder labelTokenHolder;
+    private final TokenHolder relationshipTokenHolder;
     private final IndexingService indexService;
     private final NeoStores neoStores;
     private final NodeStore nodeStore;
@@ -154,8 +152,8 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     private TransactionalDependencies transactionalDependencies = TransactionalDependencies.EMPTY;
     private DefaultNodeValueIndexCursor nodeValueIndexCursorForUniquenessCheck;
 
-    public RecordStorageReader( PropertyKeyTokenHolder propertyKeyTokenHolder, LabelTokenHolder labelTokenHolder,
-            RelationshipTypeTokenHolder relationshipTokenHolder, SchemaStorage schemaStorage, NeoStores neoStores,
+    public RecordStorageReader( TokenHolder propertyKeyTokenHolder, TokenHolder labelTokenHolder,
+            TokenHolder relationshipTokenHolder, SchemaStorage schemaStorage, NeoStores neoStores,
             IndexingService indexService, SchemaCache schemaCache,
             Supplier<IndexReaderFactory> indexReaderFactory,
             Supplier<LabelScanReader> labelScanReaderSupplier,
@@ -306,20 +304,20 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     }
 
     @Override
-    public Iterator<Token> propertyKeyGetAllTokens()
+    public Iterator<NamedToken> propertyKeyGetAllTokens()
     {
         return propertyKeyTokenHolder.getAllTokens().iterator();
     }
 
     @Override
-    public Iterator<Token> labelsGetAllTokens()
+    public Iterator<NamedToken> labelsGetAllTokens()
     {
         return labelTokenHolder.getAllTokens().iterator();
     }
 
     @SuppressWarnings( "unchecked" )
     @Override
-    public Iterator<Token> relationshipTypeGetAllTokens()
+    public Iterator<NamedToken> relationshipTypeGetAllTokens()
     {
         return (Iterator) relationshipTokenHolder.getAllTokens().iterator();
     }
