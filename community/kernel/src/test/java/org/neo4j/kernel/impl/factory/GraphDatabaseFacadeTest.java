@@ -36,7 +36,6 @@ import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.TopLevelTransaction;
 
@@ -74,7 +73,7 @@ public class GraphDatabaseFacadeTest
         Config config = Config.defaults();
         when( resolver.resolveDependency( Config.class ) ).thenReturn( config );
 
-        graphDatabaseFacade.init( editionModule, spi, guard, contextBridge, config, mock( TokenHolder.class ) );
+        graphDatabaseFacade.init( editionModule, spi, guard, contextBridge, config );
     }
 
     @Test

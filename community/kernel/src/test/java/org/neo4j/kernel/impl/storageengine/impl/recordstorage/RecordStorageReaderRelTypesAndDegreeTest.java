@@ -37,7 +37,6 @@ import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.helpers.Nodes;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -369,14 +368,7 @@ public class RecordStorageReaderRelTypesAndDegreeTest extends RecordStorageReade
         Set<TestRelType> result = new HashSet<>();
         while ( groupCursor.next() )
         {
-            try
-            {
-                result.add( TestRelType.valueOf( storageReader.relationshipTypeGetName( groupCursor.type() ) ) );
-            }
-            catch ( RelationshipTypeIdNotFoundKernelException e )
-            {
-                throw new RuntimeException( e );
-            }
+            result.add( TestRelType.valueOf( relationshipTypeName( groupCursor.type() ) ) );
         }
         return result;
     }

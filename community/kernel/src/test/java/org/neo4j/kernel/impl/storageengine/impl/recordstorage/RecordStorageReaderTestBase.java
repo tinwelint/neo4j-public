@@ -30,6 +30,9 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.internal.kernel.api.exceptions.schema.IllegalTokenNameException;
+import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.ClockContext;
@@ -103,6 +106,18 @@ public abstract class RecordStorageReaderTestBase
         }
     }
 
+    protected int getOrCreateLabelId( Label label )
+    {
+        try ( Transaction ignored = db.beginTx() )
+        {
+            return ktx().tokenWrite().labelGetOrCreateForName( label.name() );
+        }
+        catch ( TooManyLabelsException | IllegalTokenNameException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
     protected int relationshipTypeId( RelationshipType type )
     {
         try ( Transaction ignored = db.beginTx() )
@@ -111,11 +126,47 @@ public abstract class RecordStorageReaderTestBase
         }
     }
 
+    protected int getOrCreateRelationshipTypeId( RelationshipType type )
+    {
+        try ( Transaction ignored = db.beginTx() )
+        {
+            return ktx().tokenWrite().relationshipTypeGetOrCreateForName( type.name() );
+        }
+        catch ( IllegalTokenNameException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    protected String relationshipTypeName( int typeId )
+    {
+        try ( Transaction ignored = db.beginTx() )
+        {
+            return ktx().tokenRead().relationshipTypeName( typeId );
+        }
+        catch ( KernelException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
     protected int propertyKeyId( String propertyKey )
     {
         try ( Transaction ignored = db.beginTx() )
         {
             return ktx().tokenRead().propertyKey( propertyKey );
+        }
+    }
+
+    protected int getOrCreatePropertyKeyId( String propertyKey )
+    {
+        try ( Transaction ignored = db.beginTx() )
+        {
+            return ktx().tokenWrite().propertyKeyGetOrCreateForName( propertyKey );
+        }
+        catch ( IllegalTokenNameException e )
+        {
+            throw new RuntimeException( e );
         }
     }
 

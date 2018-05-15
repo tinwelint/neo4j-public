@@ -28,11 +28,13 @@ import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.storageengine.api.StorageReader;
 
 import static org.mockito.Mockito.mock;
+import static org.neo4j.test.MockedNeoStores.mockedTokenHolders;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 public class KernelTokenArgumentTest
 {
-    private KernelToken token = new KernelToken( mock( StorageReader.class ), mock( KernelTransactionImplementation.class) );
+    private KernelToken token = new KernelToken( mock( StorageReader.class ), mock( KernelTransactionImplementation.class ),
+            mockedTokenHolders() );
 
     @Test
     public void labelGetOrCreateForName()

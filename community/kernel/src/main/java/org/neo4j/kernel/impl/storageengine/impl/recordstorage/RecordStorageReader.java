@@ -26,14 +26,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.internal.kernel.api.CapableIndexReference;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeExplicitIndexCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
@@ -45,10 +43,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.Scan;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
-import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
-import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.internal.kernel.api.security.AccessMode;
@@ -56,7 +51,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.api.ExplicitIndex;
 import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.StatementConstants;
-import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
@@ -71,8 +65,6 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.store.DefaultCapableIndexReference;
 import org.neo4j.kernel.impl.api.store.DefaultIndexReference;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
-import org.neo4j.kernel.impl.core.TokenHolder;
-import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.index.IndexEntityType;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -82,7 +74,6 @@ import org.neo4j.kernel.impl.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreType;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.IndexRule;
@@ -127,9 +118,6 @@ import static org.neo4j.values.storable.ValueGroup.NUMBER;
  */
 public class RecordStorageReader extends DefaultCursors implements StorageReader, TxStateHolder
 {
-    private final TokenHolder propertyKeyTokenHolder;
-    private final TokenHolder labelTokenHolder;
-    private final TokenHolder relationshipTokenHolder;
     private final IndexingService indexService;
     private final NeoStores neoStores;
     private final NodeStore nodeStore;
@@ -152,19 +140,15 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     private TransactionalDependencies transactionalDependencies = TransactionalDependencies.EMPTY;
     private DefaultNodeValueIndexCursor nodeValueIndexCursorForUniquenessCheck;
 
-    public RecordStorageReader( TokenHolder propertyKeyTokenHolder, TokenHolder labelTokenHolder,
-            TokenHolder relationshipTokenHolder, SchemaStorage schemaStorage, NeoStores neoStores,
+    public RecordStorageReader( SchemaStorage schemaStorage, NeoStores neoStores,
             IndexingService indexService, SchemaCache schemaCache,
             Supplier<IndexReaderFactory> indexReaderFactory,
             Supplier<LabelScanReader> labelScanReaderSupplier,
             RecordStorageCommandCreationContext commandCreationContext )
     {
         this.neoStores = neoStores;
-        this.relationshipTokenHolder = relationshipTokenHolder;
         this.schemaStorage = schemaStorage;
         this.indexService = indexService;
-        this.propertyKeyTokenHolder = propertyKeyTokenHolder;
-        this.labelTokenHolder = labelTokenHolder;
         this.nodeStore = neoStores.getNodeStore();
         this.relationshipStore = neoStores.getRelationshipStore();
         this.relationshipGroupStore = neoStores.getRelationshipGroupStore();
@@ -185,48 +169,7 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
      */
     public static RecordStorageReader neoStoreReader( NeoStores neoStores )
     {
-        return new RecordStorageReader( null, null, null, null, neoStores, null, null, null, null, null );
-    }
-
-    @Override
-    public int labelGetOrCreateForName( String label ) throws TooManyLabelsException
-    {
-        try
-        {
-            return labelTokenHolder.getOrCreateId( label );
-        }
-        catch ( TransactionFailureException e )
-        {
-            // Temporary workaround for the property store based label
-            // implementation. Actual
-            // implementation should not depend on internal kernel exception
-            // messages like this.
-            if ( e.getCause() instanceof UnderlyingStorageException &&
-                    e.getCause().getMessage().equals( "Id capacity exceeded" ) )
-            {
-                throw new TooManyLabelsException( e );
-            }
-            throw e;
-        }
-    }
-
-    @Override
-    public int labelGetForName( String label )
-    {
-        return labelTokenHolder.getIdByName( label );
-    }
-
-    @Override
-    public String labelGetName( long labelId ) throws LabelNotFoundKernelException
-    {
-        try
-        {
-            return labelTokenHolder.getTokenById( toIntExact( labelId ) ).name();
-        }
-        catch ( TokenNotFoundException e )
-        {
-            throw new LabelNotFoundKernelException( labelId, e );
-        }
+        return new RecordStorageReader( null, neoStores, null, null, null, null, null );
     }
 
     @Override
@@ -279,75 +222,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     }
 
     @Override
-    public int propertyKeyGetOrCreateForName( String propertyKey )
-    {
-        return propertyKeyTokenHolder.getOrCreateId( propertyKey );
-    }
-
-    @Override
-    public int propertyKeyGetForName( String propertyKey )
-    {
-        return propertyKeyTokenHolder.getIdByName( propertyKey );
-    }
-
-    @Override
-    public String propertyKeyGetName( int propertyKeyId ) throws PropertyKeyIdNotFoundKernelException
-    {
-        try
-        {
-            return propertyKeyTokenHolder.getTokenById( propertyKeyId ).name();
-        }
-        catch ( TokenNotFoundException e )
-        {
-            throw new PropertyKeyIdNotFoundKernelException( propertyKeyId, e );
-        }
-    }
-
-    @Override
-    public Iterator<NamedToken> propertyKeyGetAllTokens()
-    {
-        return propertyKeyTokenHolder.getAllTokens().iterator();
-    }
-
-    @Override
-    public Iterator<NamedToken> labelsGetAllTokens()
-    {
-        return labelTokenHolder.getAllTokens().iterator();
-    }
-
-    @SuppressWarnings( "unchecked" )
-    @Override
-    public Iterator<NamedToken> relationshipTypeGetAllTokens()
-    {
-        return (Iterator) relationshipTokenHolder.getAllTokens().iterator();
-    }
-
-    @Override
-    public int relationshipTypeGetForName( String relationshipTypeName )
-    {
-        return relationshipTokenHolder.getIdByName( relationshipTypeName );
-    }
-
-    @Override
-    public String relationshipTypeGetName( int relationshipTypeId ) throws RelationshipTypeIdNotFoundKernelException
-    {
-        try
-        {
-            return relationshipTokenHolder.getTokenById( relationshipTypeId ).name();
-        }
-        catch ( TokenNotFoundException e )
-        {
-            throw new RelationshipTypeIdNotFoundKernelException( relationshipTypeId, e );
-        }
-    }
-
-    @Override
-    public int relationshipTypeGetOrCreateForName( String relationshipTypeName )
-    {
-        return relationshipTokenHolder.getOrCreateId( relationshipTypeName );
-    }
-
-    @Override
     public void releaseNode( long id )
     {
         nodeStore.freeId( id );
@@ -397,24 +271,6 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     public long relationshipsGetCount()
     {
         return relationshipStore.getNumberOfIdsInUse();
-    }
-
-    @Override
-    public int labelCount()
-    {
-        return labelTokenHolder.size();
-    }
-
-    @Override
-    public int propertyKeyCount()
-    {
-        return propertyKeyTokenHolder.size();
-    }
-
-    @Override
-    public int relationshipTypeCount()
-    {
-        return relationshipTokenHolder.size();
     }
 
     @Override
@@ -550,6 +406,24 @@ public class RecordStorageReader extends DefaultCursors implements StorageReader
     public long reserveRelationship()
     {
         return commandCreationContext.nextId( StoreType.RELATIONSHIP );
+    }
+
+    @Override
+    public int reserveLabelTokenId()
+    {
+        return toIntExact( neoStores.getLabelTokenStore().nextId() );
+    }
+
+    @Override
+    public int reservePropertyKeyTokenId()
+    {
+        return toIntExact( neoStores.getPropertyKeyTokenStore().nextId() );
+    }
+
+    @Override
+    public int reserveRelationshipTypeTokenId()
+    {
+        return toIntExact( neoStores.getRelationshipTypeTokenStore().nextId() );
     }
 
     @Override

@@ -56,7 +56,7 @@ import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.StartupStatisticsProvider;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.core.TokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.pagecache.PublishPageCacheTracerMetricsAfterStart;
 import org.neo4j.kernel.impl.proc.ProcedureConfig;
@@ -126,7 +126,6 @@ public class DataSourceModule
         DataSourceManager dataSourceManager = platformModule.dataSourceManager;
         LifeSupport life = platformModule.life;
         final GraphDatabaseFacade graphDatabaseFacade = platformModule.graphDatabaseFacade;
-        TokenHolder relationshipTypeTokenHolder = editionModule.relationshipTypeTokenHolder;
         File storeDir = platformModule.storeDir;
         DiagnosticsManager diagnosticsManager = platformModule.diagnosticsManager;
         this.queryExecutor = queryExecutionEngineSupplier;
@@ -165,10 +164,12 @@ public class DataSourceModule
 
         editionModule.setupSecurityModule( platformModule, procedures );
 
-        NonTransactionalTokenNameLookup tokenNameLookup = new NonTransactionalTokenNameLookup(
+        TokenHolders tokenHolders = deps.satisfyDependency( new TokenHolders(
+                editionModule.propertyKeyTokenHolder,
                 editionModule.labelTokenHolder,
-                editionModule.relationshipTypeTokenHolder,
-                editionModule.propertyKeyTokenHolder );
+                editionModule.relationshipTypeTokenHolder ) );
+
+        NonTransactionalTokenNameLookup tokenNameLookup = new NonTransactionalTokenNameLookup( tokenHolders );
 
         final CollectionsFactorySupplier collectionsFactorySupplier = createCollectionsFactorySupplier( config );
         neoStoreDataSource = deps.satisfyDependency( new NeoStoreDataSource(
@@ -179,9 +180,7 @@ public class DataSourceModule
                 platformModule.jobScheduler,
                 tokenNameLookup,
                 deps,
-                editionModule.propertyKeyTokenHolder,
-                editionModule.labelTokenHolder,
-                relationshipTypeTokenHolder,
+                tokenHolders,
                 editionModule.statementLocksFactory,
                 schemaWriteGuard,
                 transactionEventHandlers,
@@ -225,8 +224,7 @@ public class DataSourceModule
         this.storeId = neoStoreDataSource::getStoreId;
         this.kernelAPI = neoStoreDataSource::getKernel;
 
-        ProcedureGDSFactory gdsFactory = new ProcedureGDSFactory( platformModule, editionModule, this, deps,
-                editionModule.coreAPIAvailabilityGuard, editionModule.relationshipTypeTokenHolder );
+        ProcedureGDSFactory gdsFactory = new ProcedureGDSFactory( platformModule, editionModule, this, deps );
         procedures.registerComponent( GraphDatabaseService.class, gdsFactory::apply, true );
     }
 

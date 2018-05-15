@@ -19,22 +19,35 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import java.util.function.Supplier;
-
-import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.kernel.api.Transaction;
-import org.neo4j.internal.kernel.api.exceptions.schema.IllegalTokenNameException;
-
-public class DefaultPropertyTokenCreator extends IsolatedTransactionTokenCreator
+/**
+ * Holds onto all available {@link TokenHolder} for easily passing all those around
+ * and for easily extending available instances in one place.
+ */
+public class TokenHolders
 {
-    public DefaultPropertyTokenCreator( Supplier<Kernel> kernelSupplier )
+    private final TokenHolder propertyKeyTokens;
+    private final TokenHolder labelTokens;
+    private final TokenHolder relationshipTypeTokens;
+
+    public TokenHolders( TokenHolder propertyKeyTokens, TokenHolder labelTokens, TokenHolder relationshipTypeTokens )
     {
-        super( kernelSupplier );
+        this.propertyKeyTokens = propertyKeyTokens;
+        this.labelTokens = labelTokens;
+        this.relationshipTypeTokens = relationshipTypeTokens;
     }
 
-    @Override
-    protected int createKey( Transaction transaction, String name ) throws IllegalTokenNameException
+    public TokenHolder propertyKeyTokens()
     {
-        return transaction.tokenWrite().propertyKeyCreateForName( name );
+        return propertyKeyTokens;
+    }
+
+    public TokenHolder labelTokens()
+    {
+        return labelTokens;
+    }
+
+    public TokenHolder relationshipTypeTokens()
+    {
+        return relationshipTypeTokens;
     }
 }

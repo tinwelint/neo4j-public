@@ -29,7 +29,6 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.proc.Context;
-import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.factory.DataSourceModule;
 import org.neo4j.kernel.impl.factory.EditionModule;
@@ -44,17 +43,14 @@ public class ProcedureGDSFactory implements ThrowingFunction<Context,GraphDataba
     private final DependencyResolver resolver;
     private final CoreAPIAvailabilityGuard availability;
     private final ThrowingFunction<URL, URL, URLAccessValidationError> urlValidator;
-    private final TokenHolder relationshipTypeTokenHolder;
 
-    public ProcedureGDSFactory( PlatformModule platform, EditionModule editionModule, DataSourceModule dataSource, DependencyResolver resolver,
-            CoreAPIAvailabilityGuard coreAPIAvailabilityGuard, TokenHolder relationshipTypeTokenHolder )
+    public ProcedureGDSFactory( PlatformModule platform, EditionModule editionModule, DataSourceModule dataSource, DependencyResolver resolver )
     {
         this.platform = platform;
         this.editionModule = editionModule;
         this.dataSource = dataSource;
         this.resolver = resolver;
-        this.availability = coreAPIAvailabilityGuard;
-        this.relationshipTypeTokenHolder = relationshipTypeTokenHolder;
+        this.availability = editionModule.coreAPIAvailabilityGuard;
         this.urlValidator = url -> platform.urlAccessRule.validate( platform.config, url );
     }
 
@@ -84,8 +80,7 @@ public class ProcedureGDSFactory implements ThrowingFunction<Context,GraphDataba
             ),
             dataSource.guard,
             dataSource.threadToTransactionBridge,
-            platform.config,
-            relationshipTypeTokenHolder
+            platform.config
         );
         return facade;
     }

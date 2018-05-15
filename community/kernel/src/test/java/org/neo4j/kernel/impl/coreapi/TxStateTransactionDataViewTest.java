@@ -31,6 +31,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.helpers.StubNodeCursor;
 import org.neo4j.internal.kernel.api.helpers.StubPropertyCursor;
 import org.neo4j.internal.kernel.api.helpers.StubRelationshipCursor;
@@ -72,6 +73,7 @@ public class TxStateTransactionDataViewTest
     private final Statement stmt = mock( Statement.class );
     private final StorageReader ops = mock( StorageReader.class );
     private final KernelTransaction transaction = mock( KernelTransaction.class );
+    private final TokenRead tokenRead = mock( TokenRead.class );
     private final TransactionState state = new TxState();
 
     private StubNodeCursor nodeCursor;
@@ -81,6 +83,7 @@ public class TxStateTransactionDataViewTest
     @Before
     public void setup()
     {
+        when( transaction.tokenRead() ).thenReturn( tokenRead );
         when( bridge.get() ).thenReturn( stmt );
 
         nodeCursor = new StubNodeCursor();
@@ -116,8 +119,8 @@ public class TxStateTransactionDataViewTest
         nodeCursor.withNode( 1, new long[0] );
         nodeCursor.withNode( 2, new long[]{15}, genericMap( 1, stringValue( "p" ) ) );
 
-        when( ops.propertyKeyGetName( 1 ) ).thenReturn( "key" );
-        when( ops.labelGetName( 15 ) ).thenReturn( "label" );
+        when( tokenRead.propertyKeyName( 1 ) ).thenReturn( "key" );
+        when( tokenRead.nodeLabelName( 15 ) ).thenReturn( "label" );
 
         // When & Then
         TxStateTransactionDataSnapshot snapshot = snapshot();
@@ -147,7 +150,7 @@ public class TxStateTransactionDataViewTest
 
         relationshipCursor.withRelationshipChain( new TestRelationshipChain( 1 ).outgoing( 1, 2, type ) );
         relationshipCursor.withRelationshipChain( new TestRelationshipChain( 2 ).loop( 2, type, genericMap( 1, Values.of( "p" ) ) ) );
-        when( ops.propertyKeyGetName( 1 ) ).thenReturn( "key" );
+        when( tokenRead.propertyKeyName( 1 ) ).thenReturn( "key" );
 
         // When & Then
         TxStateTransactionDataSnapshot snapshot = snapshot();
@@ -189,7 +192,7 @@ public class TxStateTransactionDataViewTest
         int propertyKeyId = 1;
         Value prevValue = Values.of( "prevValue" );
         state.nodeDoChangeProperty( 1L, propertyKeyId, Values.of( "newValue" ) );
-        when( ops.propertyKeyGetName( propertyKeyId ) ).thenReturn( "theKey" );
+        when( tokenRead.propertyKeyName( propertyKeyId ) ).thenReturn( "theKey" );
         nodeCursor.withNode( 1, new long[0], genericMap( propertyKeyId, prevValue ) );
 
         // When
@@ -210,7 +213,7 @@ public class TxStateTransactionDataViewTest
         int propertyKeyId = 1;
         Value prevValue = Values.of( "prevValue" );
         state.nodeDoRemoveProperty( 1L, propertyKeyId );
-        when( ops.propertyKeyGetName( propertyKeyId ) ).thenReturn( "theKey" );
+        when( tokenRead.propertyKeyName( propertyKeyId ) ).thenReturn( "theKey" );
         nodeCursor.withNode( 1, new long[0], genericMap( propertyKeyId, prevValue ) );
 
         // When
@@ -230,7 +233,7 @@ public class TxStateTransactionDataViewTest
         int propertyKeyId = 1;
         Value prevValue = Values.of( "prevValue" );
         state.relationshipDoRemoveProperty( 1L, propertyKeyId );
-        when( ops.propertyKeyGetName( propertyKeyId ) ).thenReturn( "theKey" );
+        when( tokenRead.propertyKeyName( propertyKeyId ) ).thenReturn( "theKey" );
         relationshipCursor.withRelationshipChain( new TestRelationshipChain( 0 ).loop( 1, 0, genericMap( propertyKeyId, prevValue ) ) );
 
         // When
@@ -251,7 +254,7 @@ public class TxStateTransactionDataViewTest
         Value prevValue = Values.of( "prevValue" );
         state.relationshipDoReplaceProperty( 1L, propertyKeyId, prevValue, Values.of( "newValue" ) );
 
-        when( ops.propertyKeyGetName( propertyKeyId ) ).thenReturn( "theKey" );
+        when( tokenRead.propertyKeyName( propertyKeyId ) ).thenReturn( "theKey" );
         relationshipCursor.withRelationshipChain( new TestRelationshipChain( 0 ).loop( 1, 0, genericMap( propertyKeyId, prevValue ) ) );
 
         // When
@@ -270,7 +273,7 @@ public class TxStateTransactionDataViewTest
     {
         // Given
         state.nodeDoAddLabel( 2, 1L );
-        when( ops.labelGetName( 2 ) ).thenReturn( "theLabel" );
+        when( tokenRead.nodeLabelName( 2 ) ).thenReturn( "theLabel" );
         nodeCursor.withNode( 1 );
 
         // When
@@ -287,7 +290,7 @@ public class TxStateTransactionDataViewTest
     {
         // Given
         state.nodeDoRemoveLabel( 2, 1L );
-        when( ops.labelGetName( 2 ) ).thenReturn( "theLabel" );
+        when( tokenRead.nodeLabelName( 2 ) ).thenReturn( "theLabel" );
 
         // When
         Iterable<LabelEntry> labelEntries = snapshot().removedLabels();

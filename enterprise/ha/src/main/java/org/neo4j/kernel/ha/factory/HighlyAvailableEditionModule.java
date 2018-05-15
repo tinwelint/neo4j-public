@@ -133,7 +133,7 @@ import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.LastTxIdGetter;
 import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
 import org.neo4j.kernel.impl.core.TokenCreator;
-import org.neo4j.kernel.impl.core.TokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -425,7 +425,7 @@ public class HighlyAvailableEditionModule
         final Factory<MasterImpl.SPI> masterSPIFactory =
                 () -> new DefaultMasterImplSPI( platformModule.graphDatabaseFacade, platformModule.fileSystem,
                         platformModule.monitors,
-                        labelTokenHolder, propertyKeyTokenHolder, relationshipTypeTokenHolder, this.idGeneratorFactory,
+                        new TokenHolders( labelTokenHolder, propertyKeyTokenHolder, relationshipTypeTokenHolder ), this.idGeneratorFactory,
                         platformModule.dependencies.resolveDependency( TransactionCommitProcess.class ),
                         platformModule.dependencies.resolveDependency( CheckPointer.class ),
                         platformModule.dependencies.resolveDependency( TransactionIdStore.class ),
@@ -719,8 +719,7 @@ public class HighlyAvailableEditionModule
                 new Class[]{TokenCreator.class}, relationshipTypeCreatorDelegate );
 
         RelationshipTypeCreatorSwitcher typeCreatorModeSwitcher = new RelationshipTypeCreatorSwitcher(
-                relationshipTypeCreatorDelegate, masterInvocationHandler, requestContextFactory,
-                kernelProvider, idGeneratorFactory );
+                relationshipTypeCreatorDelegate, masterInvocationHandler, requestContextFactory, kernelProvider );
 
         componentSwitcherContainer.add( typeCreatorModeSwitcher );
         return relationshipTypeCreator;
@@ -741,8 +740,7 @@ public class HighlyAvailableEditionModule
                 new Class[]{TokenCreator.class}, propertyKeyCreatorDelegate );
 
         PropertyKeyCreatorSwitcher propertyKeyCreatorModeSwitcher = new PropertyKeyCreatorSwitcher(
-                propertyKeyCreatorDelegate, masterDelegateInvocationHandler,
-                requestContextFactory, kernelProvider, idGeneratorFactory );
+                propertyKeyCreatorDelegate, masterDelegateInvocationHandler, requestContextFactory, kernelProvider );
 
         componentSwitcherContainer.add( propertyKeyCreatorModeSwitcher );
         return propertyTokenCreator;
@@ -763,8 +761,7 @@ public class HighlyAvailableEditionModule
                 new Class[]{TokenCreator.class}, labelIdCreatorDelegate );
 
         LabelTokenCreatorSwitcher modeSwitcher = new LabelTokenCreatorSwitcher(
-                labelIdCreatorDelegate, masterDelegateInvocationHandler, requestContextFactory, kernelProvider,
-                idGeneratorFactory );
+                labelIdCreatorDelegate, masterDelegateInvocationHandler, requestContextFactory, kernelProvider );
 
         componentSwitcherContainer.add( modeSwitcher );
         return labelIdCreator;

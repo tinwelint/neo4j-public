@@ -23,27 +23,21 @@ import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
-import org.neo4j.kernel.impl.core.TokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 
 public class BridgingCacheAccess implements CacheAccessBackDoor
 {
     private final SchemaCache schemaCache;
     private final SchemaState schemaState;
-    private final TokenHolder propertyKeyTokenHolder;
-    private final TokenHolder relationshipTypeTokenHolder;
-    private final TokenHolder labelTokenHolder;
+    private final TokenHolders tokenHolders;
 
     public BridgingCacheAccess( SchemaCache schemaCache, SchemaState schemaState,
-            TokenHolder propertyKeyTokenHolder,
-            TokenHolder relationshipTypeTokenHolder,
-            TokenHolder labelTokenHolder )
+            TokenHolders tokenHolders )
     {
         this.schemaCache = schemaCache;
         this.schemaState = schemaState;
-        this.propertyKeyTokenHolder = propertyKeyTokenHolder;
-        this.relationshipTypeTokenHolder = relationshipTypeTokenHolder;
-        this.labelTokenHolder = labelTokenHolder;
+        this.tokenHolders = tokenHolders;
     }
 
     @Override
@@ -62,18 +56,18 @@ public class BridgingCacheAccess implements CacheAccessBackDoor
     @Override
     public void addRelationshipTypeToken( NamedToken token )
     {
-        relationshipTypeTokenHolder.addToken( token );
+        tokenHolders.relationshipTypeTokens().addToken( token );
     }
 
     @Override
     public void addLabelToken( NamedToken token )
     {
-        labelTokenHolder.addToken( token );
+        tokenHolders.labelTokens().addToken( token );
     }
 
     @Override
     public void addPropertyKeyToken( NamedToken token )
     {
-        propertyKeyTokenHolder.addToken( token );
+        tokenHolders.propertyKeyTokens().addToken( token );
     }
 }

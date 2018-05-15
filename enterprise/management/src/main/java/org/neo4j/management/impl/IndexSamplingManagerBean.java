@@ -31,10 +31,9 @@ import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.management.IndexSamplingManager;
-import org.neo4j.storageengine.api.StorageEngine;
-import org.neo4j.storageengine.api.StorageReader;
 
 @Service.Implementation( ManagementBeanProvider.class )
 public final class IndexSamplingManagerBean extends ManagementBeanProvider
@@ -91,12 +90,12 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
     {
         private static class State
         {
-            final StorageEngine storageEngine;
+            private final TokenHolders tokenHolders;
             final IndexingService indexingService;
 
-            State( StorageEngine storageEngine, IndexingService indexingService )
+            State( TokenHolders tokenHolders, IndexingService indexingService )
             {
-                this.storageEngine = storageEngine;
+                this.tokenHolders = tokenHolders;
                 this.indexingService = indexingService;
             }
         }
@@ -107,7 +106,7 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
         {
             DependencyResolver dependencyResolver = dataSource.getDependencyResolver();
             state = new State(
-                    dependencyResolver.resolveDependency( StorageEngine.class ),
+                    dependencyResolver.resolveDependency( TokenHolders.class ),
                     dependencyResolver.resolveDependency( IndexingService.class ) );
         }
 
@@ -124,11 +123,8 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
             State state = this.state;
             if ( state != null )
             {
-                try ( StorageReader read = state.storageEngine.newReader() )
-                {
-                    labelKeyId = read.labelGetForName( labelKey );
-                    propertyKeyId = read.propertyKeyGetForName( propertyKey );
-                }
+                labelKeyId = state.tokenHolders.labelTokens().getIdByName( labelKey );
+                propertyKeyId = state.tokenHolders.propertyKeyTokens().getIdByName( propertyKey );
             }
             if ( state == null || labelKeyId == -1 || propertyKeyId == -1 )
             {

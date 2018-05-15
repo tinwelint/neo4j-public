@@ -19,22 +19,16 @@
  */
 package org.neo4j.storageengine.api;
 
-import java.util.Iterator;
 import java.util.function.Function;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.ExplicitIndexRead;
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.SchemaRead;
-import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
-import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
-import org.neo4j.internal.kernel.api.exceptions.schema.TooManyLabelsException;
-import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 
 /**
  * Abstraction for accessing data from a {@link StorageEngine}.
@@ -91,88 +85,11 @@ public interface StorageReader extends AutoCloseable, Read, ExplicitIndexRead, S
      */
     long reserveRelationship();
 
-    /**
-     * @param labelName name of label.
-     * @return token id of label.
-     */
-    int labelGetForName( String labelName );
+    int reserveLabelTokenId();
 
-    /**
-     * @param labelId label id to get name for.
-     * @return label name for given label id.
-     * @throws LabelNotFoundKernelException if no label by {@code labelId} was found.
-     */
-    String labelGetName( long labelId ) throws LabelNotFoundKernelException;
+    int reservePropertyKeyTokenId();
 
-    /**
-     * @param propertyKeyName name of property key.
-     * @return token id of property key.
-     */
-    int propertyKeyGetForName( String propertyKeyName );
-
-    /**
-     * Gets property key token id for the given {@code propertyKeyName}, or creates one if there is no
-     * existing property key with the given name.
-     *
-     * @param propertyKeyName name of property key.
-     * @return property key token id for the given name, created if need be.
-     */
-    int propertyKeyGetOrCreateForName( String propertyKeyName );
-
-    /**
-     * @param propertyKeyId property key to get name for.
-     * @return property key name for given property key id.
-     * @throws PropertyKeyIdNotFoundKernelException if no property key by {@code propertyKeyId} was found.
-     */
-    String propertyKeyGetName( int propertyKeyId ) throws PropertyKeyIdNotFoundKernelException;
-
-    /**
-     * @return all stored property key tokens.
-     */
-    Iterator<NamedToken> propertyKeyGetAllTokens();
-
-    /**
-     * @return all stored label tokens.
-     */
-    Iterator<NamedToken> labelsGetAllTokens();
-
-    /**
-     * @return all stored relationship type tokens.
-     */
-    Iterator<NamedToken> relationshipTypeGetAllTokens();
-
-    /**
-     * @param relationshipTypeName name of relationship type.
-     * @return token id of relationship type.
-     */
-    int relationshipTypeGetForName( String relationshipTypeName );
-
-    /**
-     * @param relationshipTypeId relationship type id to get name for.
-     * @return relationship type name of given relationship type id.
-     * @throws RelationshipTypeIdNotFoundKernelException if no label by {@code labelId} was found.
-     */
-    String relationshipTypeGetName( int relationshipTypeId ) throws RelationshipTypeIdNotFoundKernelException;
-
-    /**
-     * Gets label token id for the given {@code labelName}, or creates one if there is no
-     * existing label with the given name.
-     *
-     * @param labelName name of label.
-     * @return label token id for the given name, created if need be.
-     * @throws TooManyLabelsException if creating this label would have exceeded storage limitations for
-     * number of stored labels.
-     */
-    int labelGetOrCreateForName( String labelName ) throws TooManyLabelsException;
-
-    /**
-     * Gets relationship type token id for the given {@code relationshipTypeName}, or creates one if there is no
-     * existing relationship type with the given name.
-     *
-     * @param relationshipTypeName name of relationship type.
-     * @return relationship type token id for the given name, created if need be.
-     */
-    int relationshipTypeGetOrCreateForName( String relationshipTypeName );
+    int reserveRelationshipTypeTokenId();
 
     /**
      * Releases a previously {@link #reserveNode() reserved} node id if it turns out to not actually being used,
@@ -189,12 +106,6 @@ public interface StorageReader extends AutoCloseable, Read, ExplicitIndexRead, S
      * @param id reserved relationship id to release.
      */
     void releaseRelationship( long id );
-
-    int labelCount();
-
-    int propertyKeyCount();
-
-    int relationshipTypeCount();
 
     <T> T getOrCreateSchemaDependantState( Class<T> type, Function<StorageReader, T> factory );
 

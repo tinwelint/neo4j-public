@@ -228,8 +228,6 @@ public class RelationshipProxyTest extends PropertyContainerProxyTest
     {
         RelationshipProxy proxy = new RelationshipProxy( actions, relationshipId, nodeId1, typeId, nodeId2 );
         assertEquals( relationshipId, proxy.getId() );
-        // our mock above is known to return RelationshipTypeToken
-        assertEquals( typeId, actions.getRelationshipTypeIdByName( proxy.getType().name() ) );
         assertEquals( nodeId1, proxy.getStartNode().getId() );
         assertEquals( nodeId1, proxy.getStartNodeId() );
         assertEquals( nodeId2, proxy.getEndNode().getId() );

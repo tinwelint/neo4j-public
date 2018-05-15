@@ -84,7 +84,7 @@ public class RecordStorageReaderPropertyTest extends RecordStorageReaderTestBase
                 array( 256, double.class ),
         };
 
-        int propKey = storageReader.propertyKeyGetOrCreateForName( "prop" );
+        int propKey = getOrCreatePropertyKeyId( "prop" );
         NodeCursor nodeCursor = storageReader.allocateNodeCursor();
         PropertyCursor propertyCursor = storageReader.allocatePropertyCursor();
 
@@ -110,7 +110,7 @@ public class RecordStorageReaderPropertyTest extends RecordStorageReaderTestBase
     public void should_create_property_key_if_not_exists()
     {
         // WHEN
-        long id = storageReader.propertyKeyGetOrCreateForName( propertyKey );
+        long id = getOrCreatePropertyKeyId( propertyKey );
 
         // THEN
         assertTrue( "Should have created a non-negative id", id >= 0 );
@@ -120,10 +120,10 @@ public class RecordStorageReaderPropertyTest extends RecordStorageReaderTestBase
     public void should_get_previously_created_property_key()
     {
         // GIVEN
-        long id = storageReader.propertyKeyGetOrCreateForName( propertyKey );
+        long id = getOrCreatePropertyKeyId( propertyKey );
 
         // WHEN
-        long secondId = storageReader.propertyKeyGetForName( propertyKey );
+        long secondId = propertyKeyId( propertyKey );
 
         // THEN
         assertEquals( id, secondId );
@@ -133,10 +133,10 @@ public class RecordStorageReaderPropertyTest extends RecordStorageReaderTestBase
     public void should_be_able_to_get_or_create_previously_created_property_key()
     {
         // GIVEN
-        long id = storageReader.propertyKeyGetOrCreateForName( propertyKey );
+        long id = getOrCreatePropertyKeyId( propertyKey );
 
         // WHEN
-        long secondId = storageReader.propertyKeyGetOrCreateForName( propertyKey );
+        long secondId = getOrCreatePropertyKeyId( propertyKey );
 
         // THEN
         assertEquals( id, secondId );
@@ -146,7 +146,7 @@ public class RecordStorageReaderPropertyTest extends RecordStorageReaderTestBase
     public void should_fail_if_get_non_existent_property_key()
     {
         // WHEN
-        int propertyKey = storageReader.propertyKeyGetForName( "non-existent-property-key" );
+        int propertyKey = propertyKeyId( "non-existent-property-key" );
 
         // THEN
         assertEquals( TokenRead.NO_TOKEN, propertyKey );

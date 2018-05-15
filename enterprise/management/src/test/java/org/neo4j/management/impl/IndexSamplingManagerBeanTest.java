@@ -23,18 +23,24 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
-import org.neo4j.storageengine.api.StorageEngine;
-import org.neo4j.storageengine.api.StorageReader;
+import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
+import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
+import org.neo4j.kernel.impl.core.TokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolders;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.impl.core.TokenHolder.LABELS;
+import static org.neo4j.kernel.impl.core.TokenHolder.PROPERTY_KEYS;
+import static org.neo4j.kernel.impl.core.TokenHolder.RELATIONSHIP_TYPES;
 
 public class IndexSamplingManagerBeanTest
 {
@@ -52,17 +58,16 @@ public class IndexSamplingManagerBeanTest
     public void setup()
     {
         dataSource = mock( NeoStoreDataSource.class );
-        StorageEngine storageEngine = mock( StorageEngine.class );
-        StorageReader storageReader = mock( StorageReader.class );
-        when( storageEngine.newReader() ).thenReturn( storageReader );
         indexingService = mock( IndexingService.class );
-        when( storageReader.labelGetForName( EXISTING_LABEL ) ).thenReturn( LABEL_ID );
-        when( storageReader.propertyKeyGetForName( EXISTING_PROPERTY ) ).thenReturn( PROPERTY_ID );
-        when( storageReader.propertyKeyGetForName( NON_EXISTING_PROPERTY ) ).thenReturn( -1 );
-        when( storageReader.labelGetForName( NON_EXISTING_LABEL ) ).thenReturn( -1 );
+        TokenHolder propertyKeyTokens = new DelegatingTokenHolder( new ReadOnlyTokenCreator(), PROPERTY_KEYS );
+        TokenHolder labelTokens = new DelegatingTokenHolder( new ReadOnlyTokenCreator(), LABELS );
+        TokenHolder relationshipTypeTokens = new DelegatingTokenHolder( new ReadOnlyTokenCreator(), RELATIONSHIP_TYPES );
+        TokenHolders tokenHolders = new TokenHolders( propertyKeyTokens, labelTokens, relationshipTypeTokens );
+        labelTokens.addToken( new NamedToken( EXISTING_LABEL, LABEL_ID ) );
+        propertyKeyTokens.addToken( new NamedToken( EXISTING_PROPERTY, PROPERTY_ID ) );
         DependencyResolver resolver = mock( DependencyResolver.class );
         when( resolver.resolveDependency( IndexingService.class ) ).thenReturn( indexingService );
-        when( resolver.resolveDependency( StorageEngine.class ) ).thenReturn( storageEngine );
+        when( resolver.resolveDependency( TokenHolders.class ) ).thenReturn( tokenHolders );
         when( dataSource.getDependencyResolver() ).thenReturn( resolver );
     }
 

@@ -111,11 +111,11 @@ public class CommunityEditionModule extends EditionModule
         dependencies.satisfyDependency( idController );
 
         propertyKeyTokenHolder = life.add( new DelegatingTokenHolder(
-                createPropertyKeyCreator( config, dataSourceManager, idGeneratorFactory ), "property key" ) );
+                createPropertyKeyCreator( config, dataSourceManager ), "property key" ) );
         labelTokenHolder = life.add( new DelegatingTokenHolder(
-                createLabelIdCreator( config, dataSourceManager, idGeneratorFactory ), "label" ) );
+                createLabelIdCreator( config, dataSourceManager ), "label" ) );
         relationshipTypeTokenHolder = life.add( new DelegatingTokenHolder(
-                createRelationshipTypeCreator( config, dataSourceManager, idGeneratorFactory ), "relationship type" ) );
+                createRelationshipTypeCreator( config, dataSourceManager ), "relationship type" ) );
 
         dependencies.satisfyDependency(
                 createKernelData( fileSystem, pageCache, storeDir, config, graphDatabaseFacade, life ) );
@@ -174,8 +174,7 @@ public class CommunityEditionModule extends EditionModule
         return SchemaWriteGuard.ALLOW_ALL_WRITES;
     }
 
-    private TokenCreator createRelationshipTypeCreator( Config config, DataSourceManager dataSourceManager,
-            IdGeneratorFactory idGeneratorFactory )
+    private TokenCreator createRelationshipTypeCreator( Config config, DataSourceManager dataSourceManager )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {
@@ -183,12 +182,11 @@ public class CommunityEditionModule extends EditionModule
         }
         else
         {
-            return new DefaultRelationshipTypeCreator( dataSourceManager, idGeneratorFactory );
+            return new DefaultRelationshipTypeCreator( dataSourceManager );
         }
     }
 
-    private TokenCreator createPropertyKeyCreator( Config config, DataSourceManager dataSourceManager,
-            IdGeneratorFactory idGeneratorFactory )
+    private TokenCreator createPropertyKeyCreator( Config config, DataSourceManager dataSourceManager )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {
@@ -196,12 +194,11 @@ public class CommunityEditionModule extends EditionModule
         }
         else
         {
-            return new DefaultPropertyTokenCreator( dataSourceManager, idGeneratorFactory );
+            return new DefaultPropertyTokenCreator( dataSourceManager );
         }
     }
 
-    private TokenCreator createLabelIdCreator( Config config, DataSourceManager dataSourceManager,
-            IdGeneratorFactory idGeneratorFactory )
+    private TokenCreator createLabelIdCreator( Config config, DataSourceManager dataSourceManager )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {
@@ -209,7 +206,7 @@ public class CommunityEditionModule extends EditionModule
         }
         else
         {
-            return new DefaultLabelIdCreator( dataSourceManager, idGeneratorFactory );
+            return new DefaultLabelIdCreator( dataSourceManager );
         }
     }
 

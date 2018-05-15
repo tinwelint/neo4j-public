@@ -36,7 +36,7 @@ import org.neo4j.kernel.ha.com.master.MasterImpl;
 import org.neo4j.kernel.ha.id.IdAllocation;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
-import org.neo4j.kernel.impl.core.TokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
@@ -61,9 +61,7 @@ public class DefaultMasterImplSPI implements MasterImpl.SPI
     private final GraphDatabaseAPI graphDb;
     private final TransactionChecksumLookup txChecksumLookup;
     private final FileSystemAbstraction fileSystem;
-    private final TokenHolder labels;
-    private final TokenHolder propertyKeyTokenHolder;
-    private final TokenHolder relationshipTypeTokenHolder;
+    private final TokenHolders tokenHolders;
     private final IdGeneratorFactory idGeneratorFactory;
     private final NeoStoreDataSource neoStoreDataSource;
     private final File storeDir;
@@ -78,8 +76,7 @@ public class DefaultMasterImplSPI implements MasterImpl.SPI
     public DefaultMasterImplSPI( final GraphDatabaseAPI graphDb,
                                  FileSystemAbstraction fileSystemAbstraction,
                                  Monitors monitors,
-                                 TokenHolder labels, TokenHolder propertyKeyTokenHolder,
-                                 TokenHolder relationshipTypeTokenHolder,
+                                 TokenHolders tokenHolders,
                                  IdGeneratorFactory idGeneratorFactory,
                                  TransactionCommitProcess transactionCommitProcess,
                                  CheckPointer checkPointer,
@@ -92,9 +89,7 @@ public class DefaultMasterImplSPI implements MasterImpl.SPI
     {
         this.graphDb = graphDb;
         this.fileSystem = fileSystemAbstraction;
-        this.labels = labels;
-        this.propertyKeyTokenHolder = propertyKeyTokenHolder;
-        this.relationshipTypeTokenHolder = relationshipTypeTokenHolder;
+        this.tokenHolders = tokenHolders;
         this.idGeneratorFactory = idGeneratorFactory;
         this.transactionCommitProcess = transactionCommitProcess;
         this.checkPointer = checkPointer;
@@ -119,13 +114,13 @@ public class DefaultMasterImplSPI implements MasterImpl.SPI
     @Override
     public int getOrCreateLabel( String name )
     {
-        return labels.getOrCreateId( name );
+        return tokenHolders.labelTokens().getOrCreateId( name );
     }
 
     @Override
     public int getOrCreateProperty( String name )
     {
-        return propertyKeyTokenHolder.getOrCreateId( name );
+        return tokenHolders.propertyKeyTokens().getOrCreateId( name );
     }
 
     @Override
@@ -153,7 +148,7 @@ public class DefaultMasterImplSPI implements MasterImpl.SPI
     @Override
     public Integer createRelationshipType( String name )
     {
-        return relationshipTypeTokenHolder.getOrCreateId( name );
+        return tokenHolders.relationshipTypeTokens().getOrCreateId( name );
     }
 
     @Override
