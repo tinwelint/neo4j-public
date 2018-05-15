@@ -79,13 +79,13 @@ public abstract class TokenStore<RECORD extends TokenRecord>
         return false;
     }
 
-    public List<NamedToken> getTokens( int maxCount )
+    public List<NamedToken> getTokens()
     {
         LinkedList<NamedToken> records = new LinkedList<>();
         long maxIdInUse = getHighestPossibleIdInUse();
         int found = 0;
         RECORD record = newRecord();
-        for ( int i = 0; i <= maxIdInUse && found < maxCount; i++ )
+        for ( int i = 0; i <= maxIdInUse; i++ )
         {
             if ( !getRecord( i, record, RecordLoad.CHECK ).inUse() )
             {

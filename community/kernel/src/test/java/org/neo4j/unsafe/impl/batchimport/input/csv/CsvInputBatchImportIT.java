@@ -478,7 +478,7 @@ public class CsvInputBatchImportIT
     private Function<String, Integer> translationTable( TokenStore<?> tokenStore, final int anyValue )
     {
         final Map<String, Integer> translationTable = new HashMap<>();
-        for ( NamedToken token : tokenStore.getTokens( Integer.MAX_VALUE ) )
+        for ( NamedToken token : tokenStore.getTokens() )
         {
             translationTable.put( token.name(), token.id() );
         }

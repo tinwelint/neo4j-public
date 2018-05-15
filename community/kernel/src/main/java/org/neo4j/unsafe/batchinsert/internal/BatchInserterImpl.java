@@ -288,11 +288,11 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
         labelTokenStore = neoStores.getLabelTokenStore();
 
         propertyKeyTokens = new DelegatingTokenHolder( this::createNewPropertyKeyId, "property key" );
-        propertyKeyTokens.setInitialTokens( propertyKeyTokenStore.getTokens( Integer.MAX_VALUE ) );
+        propertyKeyTokens.setInitialTokens( propertyKeyTokenStore.getTokens() );
         labelTokens = new DelegatingTokenHolder( this::createNewLabelId, "label" );
-        labelTokens.setInitialTokens( labelTokenStore.getTokens( Integer.MAX_VALUE ) );
+        labelTokens.setInitialTokens( labelTokenStore.getTokens() );
         relationshipTypeTokens = new DelegatingTokenHolder( this::createNewRelationshipTypeId, "relationship type" );
-        relationshipTypeTokens.setInitialTokens( relationshipTypeTokenStore.getTokens( Integer.MAX_VALUE ) );
+        relationshipTypeTokens.setInitialTokens( relationshipTypeTokenStore.getTokens() );
         indexStore = life.add( new IndexConfigStore( this.storeDir, fileSystem ) );
         schemaCache = new SchemaCache( new StandardConstraintSemantics(), schemaStore );
 

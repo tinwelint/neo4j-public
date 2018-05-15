@@ -197,7 +197,7 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             for ( NamedToken token : ((RelationshipTypeTokenStore)
-                    store.getRelationshipTypeTokenStore()).getTokens( Integer.MAX_VALUE ) )
+                    store.getRelationshipTypeTokenStore()).getTokens() )
             {
                 out.println( token );
             }
@@ -211,7 +211,7 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             for ( NamedToken token : ((LabelTokenStore)
-                    store.getLabelTokenStore()).getTokens( Integer.MAX_VALUE ) )
+                    store.getLabelTokenStore()).getTokens() )
             {
                 out.println( token );
             }
@@ -225,7 +225,7 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             for ( NamedToken token : ((PropertyKeyTokenStore)
-                    store.getPropertyKeyTokenStore()).getTokens( Integer.MAX_VALUE ) )
+                    store.getPropertyKeyTokenStore()).getTokens() )
             {
                 out.println( token );
             }

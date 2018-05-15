@@ -46,7 +46,7 @@ public class TokenHolderTest
                 token( "two", 2 ) );
 
         // WHEN
-        holder.setInitialTokens(asList(
+        holder.setInitialTokens( asList(
                 token( "two", 2 ),
                 token( "three", 3 ),
                 token( "four", 4 ) ));

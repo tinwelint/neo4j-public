@@ -391,11 +391,11 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         neoStores.makeStoreOk();
 
         propertyKeyTokenHolder.setInitialTokens(
-                neoStores.getPropertyKeyTokenStore().getTokens( Integer.MAX_VALUE ) );
+                neoStores.getPropertyKeyTokenStore().getTokens() );
         relationshipTypeTokenHolder.setInitialTokens(
-                neoStores.getRelationshipTypeTokenStore().getTokens( Integer.MAX_VALUE ) );
+                neoStores.getRelationshipTypeTokenStore().getTokens() );
         labelTokenHolder.setInitialTokens(
-                neoStores.getLabelTokenStore().getTokens( Integer.MAX_VALUE ) );
+                neoStores.getLabelTokenStore().getTokens() );
 
         neoStores.startCountStore(); // TODO: move this to counts store lifecycle
         loadSchemaCache();

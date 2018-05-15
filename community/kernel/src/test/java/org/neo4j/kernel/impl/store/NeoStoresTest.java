@@ -1196,7 +1196,7 @@ public class NeoStoresTest
         data = rtStore.getToken( relType2 );
         assertEquals( relType2, data.id() );
         assertEquals( "relationshiptype2", data.name() );
-        List<NamedToken> allData = rtStore.getTokens( Integer.MAX_VALUE );
+        List<NamedToken> allData = rtStore.getTokens();
         assertEquals( 2, allData.size() );
         for ( int i = 0; i < 2; i++ )
         {

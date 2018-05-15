@@ -250,7 +250,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
     {
         try ( TokenStore<?> tokens = store )
         {
-            return tokens.getTokens( Integer.MAX_VALUE );
+            return tokens.getTokens();
         }
     }
 

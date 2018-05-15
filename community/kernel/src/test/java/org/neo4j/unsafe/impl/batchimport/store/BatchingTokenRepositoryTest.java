@@ -137,7 +137,7 @@ public class BatchingTokenRepositoryTest
                 }
             }
 
-            List<NamedToken> tokens = tokenStore.getTokens( 100 );
+            List<NamedToken> tokens = tokenStore.getTokens();
             assertEquals( tokensPerRound * rounds, tokens.size() );
             for ( NamedToken token : tokens )
             {

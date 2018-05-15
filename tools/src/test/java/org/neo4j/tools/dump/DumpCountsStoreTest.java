@@ -168,9 +168,9 @@ public class DumpCountsStoreTest
         RelationshipTypeTokenStore typeTokenStore = mock( RelationshipTypeTokenStore.class );
         PropertyKeyTokenStore propertyKeyTokenStore = mock( PropertyKeyTokenStore.class );
 
-        when( labelTokenStore.getTokens( Integer.MAX_VALUE ) ).thenReturn( getLabelTokens() );
-        when( typeTokenStore.getTokens( Integer.MAX_VALUE ) ).thenReturn( getTypeTokes() );
-        when( propertyKeyTokenStore.getTokens( Integer.MAX_VALUE ) ).thenReturn( getPropertyTokens() );
+        when( labelTokenStore.getTokens() ).thenReturn( getLabelTokens() );
+        when( typeTokenStore.getTokens() ).thenReturn( getTypeTokes() );
+        when( propertyKeyTokenStore.getTokens() ).thenReturn( getPropertyTokens() );
 
         when( neoStores.getLabelTokenStore() ).thenReturn( labelTokenStore );
         when( neoStores.getRelationshipTypeTokenStore() ).thenReturn( typeTokenStore );
