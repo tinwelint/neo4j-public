@@ -87,7 +87,7 @@ import static org.neo4j.codegen.TypeReference.typeReference;
 @RunWith( Parameterized.class )
 public class CodeGenerationTest
 {
-    public static final MethodReference RUN = createMethod( Runnable.class, void.class, "run" );
+ /*   public static final MethodReference RUN = createMethod( Runnable.class, void.class, "run" );
 
     @Parameterized.Parameters( name = "{0}" )
     public static Collection<Object[]> generators()
@@ -2003,5 +2003,5 @@ public class CodeGenerationTest
     public static class MySecondException extends RuntimeException
     {
     }
-
+*/
 }

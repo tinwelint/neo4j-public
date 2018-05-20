@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
-import org.neo4j.cypher.NodeStillHasRelationshipsException;
+//import org.neo4j.cypher.NodeStillHasRelationshipsException;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
@@ -514,7 +514,7 @@ public class AppsIT extends AbstractShellIT
         try
         {
             executeCommand( "match (n) delete n;" );
-            fail( "Should have failed with " + NodeStillHasRelationshipsException.class.getName() + " exception" );
+            fail( "Should have failed with ");//+ NodeStillHasRelationshipsException.class.getName() + " exception" );
         }
         catch ( ShellException e )
         {
