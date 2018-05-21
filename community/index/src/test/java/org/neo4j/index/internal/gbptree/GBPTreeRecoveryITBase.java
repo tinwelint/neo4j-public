@@ -19,6 +19,7 @@
  */
 package org.neo4j.index.internal.gbptree;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,6 +28,7 @@ import org.junit.rules.RuleChain;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,6 +40,8 @@ import java.util.stream.Collectors;
 
 import org.neo4j.cursor.RawCursor;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
@@ -181,34 +185,8 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
         File file = directory.file( "index" );
         List<Action> load = generateLoad();
         List<Action> shuffledLoad = randomCausalAwareShuffle( load );
-        int lastCheckPointIndex = indexOfLastCheckpoint( load );
-
-        {
-            // _,_,_,_,_,_,_,c,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,c,_,_,_,_,_,_,_,_,_,_,_
-            //                                                 ^             ^
-            //                                                 |             |------------ crash flush index
-            //                                                 |-------------------------- last checkpoint index
-            //
-
-            PageCache pageCache = createPageCache();
-            GBPTree<KEY,VALUE> index = createIndex( pageCache, file );
-            // Execute all actions up to and including last checkpoint ...
-            execute( shuffledLoad.subList( 0, lastCheckPointIndex + 1 ), index );
-            // ... a random amount of the remaining "unsafe" actions ...
-            int numberOfRemainingActions = shuffledLoad.size() - lastCheckPointIndex - 1;
-            int crashFlushIndex = lastCheckPointIndex + random.nextInt( numberOfRemainingActions ) + 1;
-            execute( shuffledLoad.subList( lastCheckPointIndex + 1, crashFlushIndex ), index );
-            // ... flush ...
-            pageCache.flushAndForce();
-            // ... execute the remaining actions
-            execute( shuffledLoad.subList( crashFlushIndex, shuffledLoad.size() ), index );
-            // ... and finally crash
-            fs.snapshot( throwing( () ->
-            {
-                index.close();
-                pageCache.close();
-            } ) );
-        }
+        int lastCheckPointIndex = indexOfCheckpoint( load, -1 );
+        setUpCrashedTree( file, shuffledLoad, lastCheckPointIndex );
 
         // WHEN doing recovery
         List<Action> recoveryActions;
@@ -218,7 +196,7 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
         }
         else
         {
-            recoveryActions = recoveryActions( load, random.nextInt( lastCheckPointIndex + 1) );
+            recoveryActions = recoveryActions( load, random.nextInt( lastCheckPointIndex + 1 ) );
         }
 
         // first crashing during recovery
@@ -243,20 +221,98 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
             // THEN
             // we should end up with a consistent index containing all the stuff load says
             index.consistencyCheck();
-            long[/*key,value,key,value...*/] aggregate = expectedSortedAggregatedDataFromGeneratedLoad( load );
-            try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor =
-                    index.seek( key( Long.MIN_VALUE ), key( Long.MAX_VALUE ) ) )
-            {
-                for ( int i = 0; i < aggregate.length; )
-                {
-                    assertTrue( cursor.next() );
-                    Hit<KEY,VALUE> hit = cursor.get();
-                    assertEqualsKey( key( aggregate[i++] ), hit.key() );
-                    assertEqualsValue( value( aggregate[i++] ), hit.value() );
-                }
-                assertFalse( cursor.next() );
-            }
+            long[/*key,value,key,value...*/] aggregate = expectedSortedAggregatedDataFromGeneratedLoad( load, -1 /*everything*/ );
+            assertExpectedData( index, aggregate );
         }
+    }
+
+    private void assertExpectedData( GBPTree<KEY,VALUE> index, long[] aggregate ) throws IOException
+    {
+        try ( RawCursor<Hit<KEY,VALUE>,IOException> cursor =
+                index.seek( key( Long.MIN_VALUE ), key( Long.MAX_VALUE ) ) )
+        {
+            for ( int i = 0; i < aggregate.length; )
+            {
+                assertTrue( cursor.next() );
+                Hit<KEY,VALUE> hit = cursor.get();
+                assertEqualsKey( key( aggregate[i++] ), hit.key() );
+                assertEqualsValue( value( aggregate[i++] ), hit.value() );
+            }
+            assertFalse( cursor.next() );
+        }
+    }
+
+    @Test
+    public void shouldRecoverAfterCopiedConcurrentTree() throws Exception
+    {
+        // given a tree which has had random updates and checkpoints in it, load generated with specific seed
+        initializeRecoveryFromAnythingTest( 1_000 );
+        File file = directory.file( "index" );
+        List<Action> load = generateLoad();
+        List<Action> shuffledLoad = randomCausalAwareShuffle( load );
+        setUpCrashedTree( file, shuffledLoad, indexOfCheckpoint( load, -1 ) );
+        int checkpointCount = countNumberOfCheckpoints( load );
+        int checkpointsBack = random.nextInt( checkpointCount );
+
+        // simulate streaming of the file while concurrent writes/flushes with a fixed state page after copy
+        PageCache pageCache = createPageCache();
+        try ( PagedFile pagedFile = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.WRITE );
+              PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) )
+        {
+            Pair<TreeState,TreeState> statePages = TreeStatePair.readStatePages( cursor, IdSpace.STATE_PAGE_A, IdSpace.STATE_PAGE_B );
+            TreeState newest = TreeStatePair.selectNewestValidState( statePages );
+            TreeState.write( cursor, newest.stableGeneration() - checkpointsBack, newest.unstableGeneration(), newest.rootId(), newest.rootGeneration(),
+                    newest.lastId(), newest.freeListWritePageId(), newest.freeListReadPageId(), newest.freeListWritePos(), newest.freeListReadPos(),
+                    newest.isClean() );
+            TreeState oldest = TreeStatePair.selectOldestOrInvalid( statePages );
+            PageCursorUtil.goTo( cursor, "test", oldest.pageId() );
+            cursor.zapPage();
+        }
+
+        // when
+        try ( GBPTree<KEY,VALUE> index = createIndex( pageCache, file ) )
+        {
+            // then the tree should be clean into a consistent state
+            index.consistencyCheck();
+
+            // and contain the expected data after recovery
+            recover( load.subList( indexOfCheckpoint( load, checkpointCount - checkpointsBack ), load.size() ), index );
+            long[] expectedData = expectedSortedAggregatedDataFromGeneratedLoad( load, checkpointCount - checkpointsBack );
+            assertExpectedData( index, expectedData );
+        }
+    }
+
+    private void setUpCrashedTree( File file, List<Action> shuffledLoad, int lastCheckPointIndex ) throws Exception
+    {
+        // _,_,_,_,_,_,_,c,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,c,_,_,_,_,_,_,_,_,_,_,_
+        //                                                 ^             ^
+        //                                                 |             |------------ crash flush index
+        //                                                 |-------------------------- last checkpoint index
+        //
+
+        PageCache pageCache = createPageCache();
+        GBPTree<KEY,VALUE> index = createIndex( pageCache, file );
+        // Execute all actions up to and including last checkpoint ...
+        execute( shuffledLoad.subList( 0, lastCheckPointIndex + 1 ), index );
+        // ... a random amount of the remaining "unsafe" actions ...
+        int numberOfRemainingActions = shuffledLoad.size() - lastCheckPointIndex - 1;
+        int crashFlushIndex = lastCheckPointIndex + random.nextInt( numberOfRemainingActions ) + 1;
+        execute( shuffledLoad.subList( lastCheckPointIndex + 1, crashFlushIndex ), index );
+        // ... flush ...
+        pageCache.flushAndForce();
+        // ... execute the remaining actions
+        execute( shuffledLoad.subList( crashFlushIndex, shuffledLoad.size() ), index );
+        // ... and finally crash
+        fs.snapshot( throwing( () ->
+        {
+            index.close();
+            pageCache.close();
+        } ) );
+    }
+
+    private int countNumberOfCheckpoints( List<Action> load )
+    {
+        return (int) load.stream().filter( Action::isCheckpoint ).count();
     }
 
     /**
@@ -324,11 +380,17 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
         }
     }
 
-    private long[] expectedSortedAggregatedDataFromGeneratedLoad( List<Action> load )
+    private long[] expectedSortedAggregatedDataFromGeneratedLoad( List<Action> load, int upUntilCheckpoint )
     {
+        int checkpoints = 0;
         TreeMap<Long,Long> map = new TreeMap<>();
         for ( Action action : load )
         {
+            if ( upUntilCheckpoint != -1 && checkpoints >= upUntilCheckpoint )
+            {
+                break;
+            }
+
             long[] data = action.data();
             if ( data != null )
             {
@@ -350,6 +412,10 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
                     }
                 }
             }
+            else
+            {
+                checkpoints++;
+            }
         }
 
         @SuppressWarnings( "unchecked" )
@@ -363,15 +429,20 @@ public abstract class GBPTreeRecoveryITBase<KEY,VALUE>
         return result;
     }
 
-    private int indexOfLastCheckpoint( List<Action> actions )
+    private int indexOfCheckpoint( List<Action> actions, int checkpoint )
     {
         int i = 0;
         int lastCheckpoint = -1;
+        int count = 0;
         for ( Action action : actions )
         {
             if ( action.isCheckpoint() )
             {
                 lastCheckpoint = i;
+                if ( checkpoint != -1 && count++ == checkpoint )
+                {
+                    return lastCheckpoint;
+                }
             }
             i++;
         }
