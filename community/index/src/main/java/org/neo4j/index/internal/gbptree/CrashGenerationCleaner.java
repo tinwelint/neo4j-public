@@ -199,7 +199,7 @@ class CrashGenerationCleaner
     {
         cursor.setOffset( offset );
         long generation = GenerationSafePointer.readGeneration( cursor );
-        return generation > stableGeneration && generation < unstableGeneration;
+        return generation > stableGeneration && generation != unstableGeneration;
     }
 
     // === Methods about actually cleaning a discovered crashed tree node ===

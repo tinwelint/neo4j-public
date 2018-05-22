@@ -72,8 +72,9 @@ public class Header
          * The data that can be accessed from the {@code headerBytes} buffer have been consistently
          * read from a {@link PageCursor}.
          *
+         * @param detached whether or not the tree is in a detached state.
          * @param headerBytes {@link ByteBuffer} containing the header data.
          */
-        void read( ByteBuffer headerBytes );
+        void read( boolean detached, ByteBuffer headerBytes );
     }
 }

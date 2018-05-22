@@ -624,7 +624,7 @@ public class GBPTreeTest
         // WHEN
         byte[] readHeader = new byte[expectedHeader.length];
         AtomicInteger length = new AtomicInteger();
-        Header.Reader headerReader = headerData ->
+        Header.Reader headerReader = ( detached, headerData ) ->
         {
             length.set( headerData.limit() );
             headerData.get( readHeader );
@@ -781,7 +781,7 @@ public class GBPTreeTest
         {
             byte[] readHeader = new byte[headerBytes.length];
             AtomicInteger length = new AtomicInteger();
-            Header.Reader headerReader = headerData ->
+            Header.Reader headerReader = ( detached, headerData ) ->
             {
                 length.set( headerData.limit() );
                 headerData.get( readHeader );
@@ -1820,7 +1820,7 @@ public class GBPTreeTest
         private boolean cleanOnStart;
 
         @Override
-        public void startupState( boolean clean )
+        public void startupState( boolean clean, boolean detached )
         {
             if ( called )
             {

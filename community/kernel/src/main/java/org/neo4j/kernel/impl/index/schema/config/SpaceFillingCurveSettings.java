@@ -242,7 +242,7 @@ public class SpaceFillingCurveSettings
 
     public Header.Reader headerReader( Function<ByteBuffer,String> onError )
     {
-        return headerBytes ->
+        return boolean detached, headerBytes ->
         {
             byte state = headerBytes.get();
             if ( state == BYTE_FAILED )

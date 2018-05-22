@@ -32,7 +32,7 @@ class NativeSchemaIndexHeaderReader implements Header.Reader
     String failureMessage;
 
     @Override
-    public void read( ByteBuffer headerData )
+    public void read( boolean detached, ByteBuffer headerData )
     {
         state = headerData.get();
         if ( state == BYTE_FAILED )

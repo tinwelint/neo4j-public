@@ -138,6 +138,11 @@ public class GBPTree<KEY,VALUE> implements Closeable
             }
 
             @Override
+            public void detachedCheckpoint()
+            {   // no-op
+            }
+
+            @Override
             public void noStoreFile()
             {   // no-op
             }
@@ -148,7 +153,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
             }
 
             @Override
-            public void startupState( boolean clean )
+            public void startupState( boolean clean, boolean detached )
             {   // no-op
             }
         }
@@ -158,6 +163,9 @@ public class GBPTree<KEY,VALUE> implements Closeable
          * {@link GBPTree#writer() writers} are re-enabled.
          */
         void checkpointCompleted();
+
+        // TODO javadoc
+        void detachedCheckpoint();
 
         /**
          * Called when the tree was started on no existing store file and so will be created.
@@ -177,8 +185,9 @@ public class GBPTree<KEY,VALUE> implements Closeable
          * Report tree state on startup.
          *
          * @param clean true if tree was clean on startup.
+         * @param detached true if tree is in detached state.
          */
-        void startupState( boolean clean );
+        void startupState( boolean clean, boolean detached );
     }
 
     /**
@@ -189,7 +198,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
     /**
      * No-op header reader.
      */
-    public static final Header.Reader NO_HEADER_READER = headerData ->
+    public static final Header.Reader NO_HEADER_READER = ( detached, headerData ) ->
     {
     };
 
@@ -336,6 +345,9 @@ public class GBPTree<KEY,VALUE> implements Closeable
      */
     private final Consumer<Throwable> exceptionDecorator = this::appendTreeInformation;
 
+    // todo javadoc
+    private volatile boolean detached;
+
     /**
      * Opens an index {@code indexFile} in the {@code pageCache}, creating and initializing it if it doesn't exist.
      * If the index doesn't exist it will be created and the {@link Layout} and {@code pageSize} will
@@ -370,6 +382,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
      * <li>freeListWritePos=0</li>
      * <li>freeListReadPos=0</li>
      * <li>clean=false</li>
+     * <li>detached=false</li>
      * </ul>
      * <li>StateB
      * <ul>
@@ -383,6 +396,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
      * <li>freeListWritePos=0</li>
      * <li>freeListReadPos=0</li>
      * <li>clean=false</li>
+     * <li>detached=false</li>
      * </ul>
      * </ul>
      *
@@ -393,15 +407,12 @@ public class GBPTree<KEY,VALUE> implements Closeable
      * @param tentativePageSize page size, i.e. tree node size. Must be less than or equal to that of the page cache.
      * A pageSize of {@code 0} means to use whatever the page cache has (at creation)
      * @param monitor {@link Monitor} for monitoring {@link GBPTree}.
-     * @param headerReader reads header data, previously written using {@link #checkpoint(IOLimiter, Consumer)}
-     * or {@link #close()}
      * @param headerWriter writes header data if indexFile is created as a result of this call.
      * @param recoveryCleanupWorkCollector collects recovery cleanup jobs for execution after recovery.
      * @throws IOException on page cache error
      * @throws MetadataMismatchException if meta information does not match constructor parameters or meta page is missing
      */
-    public GBPTree( PageCache pageCache, File indexFile, Layout<KEY,VALUE> layout, int tentativePageSize,
-            Monitor monitor, Header.Reader headerReader, Consumer<PageCursor> headerWriter,
+    public GBPTree( PageCache pageCache, File indexFile, Layout<KEY,VALUE> layout, int tentativePageSize, Monitor monitor, Consumer<PageCursor> headerWriter,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector ) throws IOException, MetadataMismatchException
     {
         this.indexFile = indexFile;
@@ -440,11 +451,18 @@ public class GBPTree<KEY,VALUE> implements Closeable
             }
             else
             {
-                loadState( pagedFile, headerReader );
+                loadState( pagedFile );
             }
-            this.monitor.startupState( clean );
+            this.monitor.startupState( clean, detached );
 
             // Prepare tree for action
+            if ( detached )
+            {
+                // TODO optimization: if transaction id of last checkpoint would be known this could be avoided if
+                //      recovery happened to have transaction logs back to that point.
+                throw new TreeInconsistencyException( this + " is in a detached state, which means it needs to be rebuilt" );
+            }
+
             dirtyOnStartup = !clean;
             clean = false;
             bumpUnstableGeneration();
@@ -551,15 +569,10 @@ public class GBPTree<KEY,VALUE> implements Closeable
         return pagedFile;
     }
 
-    private void loadState( PagedFile pagedFile, Header.Reader headerReader ) throws IOException
+    private void loadState( PagedFile pagedFile ) throws IOException
     {
         Pair<TreeState,TreeState> states = loadStatePages( pagedFile );
         TreeState state = TreeStatePair.selectNewestValidState( states );
-        try ( PageCursor cursor = pagedFile.io( state.pageId(), PagedFile.PF_SHARED_READ_LOCK ) )
-        {
-            PageCursorUtil.goTo( cursor, "header data", state.pageId() );
-            doReadHeader( headerReader, cursor );
-        }
         generation = Generation.generation( state.stableGeneration(), state.unstableGeneration() );
         setRoot( state.rootId(), state.rootGeneration() );
 
@@ -570,6 +583,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
         int freeListReadPos = state.freeListReadPos();
         freeList.initialize( lastId, freeListWritePageId, freeListReadPageId, freeListWritePos, freeListReadPos );
         clean = state.isClean();
+        detached = state.isDetached();
     }
 
     /**
@@ -609,9 +623,10 @@ public class GBPTree<KEY,VALUE> implements Closeable
     private static void doReadHeader( Header.Reader headerReader, PageCursor cursor ) throws IOException
     {
         int headerDataLength;
+        TreeState treeState;
         do
         {
-            TreeState.read( cursor );
+            treeState = TreeState.read( cursor );
             headerDataLength = cursor.getInt();
         }
         while ( cursor.shouldRetry() );
@@ -625,7 +640,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
         }
         while ( cursor.shouldRetry() );
 
-        headerReader.read( ByteBuffer.wrap( headerDataBytes ) );
+        headerReader.read( treeState.isDetached(), ByteBuffer.wrap( headerDataBytes ) );
     }
 
     private void writeState( PagedFile pagedFile, Header.Writer headerWriter ) throws IOException
@@ -640,7 +655,7 @@ public class GBPTree<KEY,VALUE> implements Closeable
             TreeState.write( cursor, stableGeneration( generation ), unstableGeneration( generation ),
                     root.id(), root.generation(),
                     freeList.lastId(), freeList.writePageId(), freeList.readPageId(),
-                    freeList.writePos(), freeList.readPos(), clean );
+                    freeList.writePos(), freeList.readPos(), clean, detached );
 
             writerHeader( pagedFile, headerWriter, other( states, oldestState ), cursor );
 
@@ -862,25 +877,40 @@ public class GBPTree<KEY,VALUE> implements Closeable
         try
         {
             assertRecoveryCleanSuccessful();
-            // Flush dirty pages since that last flush above. This should be a very small set of pages
-            // and should be rather fast. In here writers are blocked and we want to minimize this
-            // windows of time as much as possible, that's why there's an initial flush outside this lock.
-            pagedFile.flushAndForce();
 
-            // Increment generation, i.e. stable becomes current unstable and unstable increments by one
-            // and write the tree state (rootId, lastId, generation a.s.o.) to state page.
-            long unstableGeneration = unstableGeneration( generation );
-            generation = Generation.generation( unstableGeneration, unstableGeneration + 1 );
-            writeState( pagedFile, headerWriter );
+            if ( detached )
+            {
+                // Mark state as detached.
+                writeState( pagedFile, headerWriter );
 
-            // Flush the state page.
-            pagedFile.flushAndForce();
+                // Flush the state page.
+                pagedFile.flushAndForce();
 
-            // Expose this fact.
-            monitor.checkpointCompleted();
+                // Expose this fact.
+                monitor.detachedCheckpoint();
+            }
+            else
+            {
+                // Flush dirty pages since that last flush above. This should be a very small set of pages
+                // and should be rather fast. In here writers are blocked and we want to minimize this
+                // windows of time as much as possible, that's why there's an initial flush outside this lock.
+                pagedFile.flushAndForce();
 
-            // Clear flag so that until next change there's no need to do another checkpoint.
-            changesSinceLastCheckpoint = false;
+                // Increment generation, i.e. stable becomes current unstable and unstable increments by one
+                // and write the tree state (rootId, lastId, generation a.s.o.) to state page.
+                long unstableGeneration = unstableGeneration( generation );
+                generation = Generation.generation( unstableGeneration, unstableGeneration + 1 );
+                writeState( pagedFile, headerWriter );
+
+                // Flush the state page.
+                pagedFile.flushAndForce();
+
+                // Expose this fact.
+                monitor.checkpointCompleted();
+
+                // Clear flag so that until next change there's no need to do another checkpoint.
+                changesSinceLastCheckpoint = false;
+            }
         }
         finally
         {
@@ -895,6 +925,31 @@ public class GBPTree<KEY,VALUE> implements Closeable
         if ( cleaning != null && cleaning.hasFailed() )
         {
             throw new IOException( "Pointer cleaning during recovery failed", cleaning.getCause() );
+        }
+    }
+
+    // TODO javadoc
+    public void detach()
+    {
+        setDetachedState( true );
+    }
+
+    // TODO javadoc
+    public void attach()
+    {
+        setDetachedState( false );
+    }
+
+    private void setDetachedState( boolean detached )
+    {
+        lock.writerLock();
+        try
+        {
+            this.detached = detached;
+        }
+        finally
+        {
+            lock.writerUnlock();
         }
     }
 

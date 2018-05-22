@@ -167,7 +167,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 1, 2, 3, 4, 5, 6, 7, 8, 9, true );
+                TreeState.write( cursor, 1, 2, 3, 4, 5, 6, 7, 8, 9, true, false );
                 cursor.rewind();
                 // flip some of the bits as to break the checksum
                 long someOfTheBits = cursor.getLong( cursor.getOffset() );
@@ -179,7 +179,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 5, 6, 7, 8, 9, 10, 11, 12, 13, true );
+                TreeState.write( cursor, 5, 6, 7, 8, 9, 10, 11, 12, 13, true, false );
             }
         },
         CRASH_VALID // stableGeneration:5 and unstableGeneration:7, i.e. crashed from VALID state
@@ -187,7 +187,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 5, 7, 7, 8, 9, 10, 11, 12, 13, true );
+                TreeState.write( cursor, 5, 7, 7, 8, 9, 10, 11, 12, 13, true, false );
             }
         },
         WIDE_VALID // stableGeneration:4 and unstableGeneration:8, i.e. crashed but wider gap between generations
@@ -195,7 +195,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 4, 8, 9, 10, 11, 12, 13, 14, 15, true );
+                TreeState.write( cursor, 4, 8, 9, 10, 11, 12, 13, 14, 15, true, false );
             }
         },
         OLD_VALID // stableGeneration:2 and unstableGeneration:3
@@ -203,7 +203,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 2, 3, 4, 5, 6, 7, 8, 9, 10, true );
+                TreeState.write( cursor, 2, 3, 4, 5, 6, 7, 8, 9, 10, true, false );
             }
         },
         VALID_DIRTY // stableGeneration:5 and unstableGeneration:6
@@ -211,7 +211,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 5, 6, 7, 8, 9, 10, 11, 12, 13, false );
+                TreeState.write( cursor, 5, 6, 7, 8, 9, 10, 11, 12, 13, false, false );
             }
         },
         CRASH_VALID_DIRTY // stableGeneration:5 and unstableGeneration:7, i.e. crashed from VALID state
@@ -219,7 +219,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 5, 7, 7, 8, 9, 10, 11, 12, 13, false );
+                TreeState.write( cursor, 5, 7, 7, 8, 9, 10, 11, 12, 13, false, false );
             }
         },
         WIDE_VALID_DIRTY // stableGeneration:4 and unstableGeneration:8, i.e. crashed but wider gap between generations
@@ -227,7 +227,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 4, 8, 9, 10, 11, 12, 13, 14, 15, false );
+                TreeState.write( cursor, 4, 8, 9, 10, 11, 12, 13, 14, 15, false, false );
             }
         },
         OLD_VALID_DIRTY // stableGeneration:2 and unstableGeneration:3
@@ -235,7 +235,7 @@ public class TreeStatePairTest
             @Override
             void write( PageCursor cursor )
             {
-                TreeState.write( cursor, 2, 3, 4, 5, 6, 7, 8, 9, 10, false );
+                TreeState.write( cursor, 2, 3, 4, 5, 6, 7, 8, 9, 10, false, false );
             }
         };
 

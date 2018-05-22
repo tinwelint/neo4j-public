@@ -36,7 +36,6 @@ import org.neo4j.kernel.impl.index.GBPTreeFileUtil;
 
 import static org.neo4j.helpers.Format.duration;
 import static org.neo4j.helpers.collection.MapUtil.map;
-import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 
 abstract class NativeSchemaIndex<KEY extends NativeSchemaKey<KEY>, VALUE extends NativeSchemaValue>
 {
@@ -67,7 +66,7 @@ abstract class NativeSchemaIndex<KEY extends NativeSchemaKey<KEY>, VALUE extends
     {
         ensureDirectoryExist();
         GBPTree.Monitor monitor = treeMonitor();
-        tree = new GBPTree<>( pageCache, storeFile, layout, 0, monitor, NO_HEADER_READER, headerWriter, recoveryCleanupWorkCollector );
+        tree = new GBPTree<>( pageCache, storeFile, layout, 0, monitor, headerWriter, recoveryCleanupWorkCollector );
     }
 
     private GBPTree.Monitor treeMonitor( )

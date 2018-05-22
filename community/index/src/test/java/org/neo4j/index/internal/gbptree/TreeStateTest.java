@@ -58,7 +58,7 @@ public class TreeStateTest
     {
         // GIVEN valid state
         long pageId = cursor.getCurrentPageId();
-        TreeState expected = new TreeState( pageId, 1, 2, 3, 4, 5, 6, 7, 8, 9, true, true );
+        TreeState expected = new TreeState( pageId, 1, 2, 3, 4, 5, 6, 7, 8, 9, true, false, true );
         write( cursor, expected );
         cursor.rewind();
 
@@ -74,7 +74,7 @@ public class TreeStateTest
     {
         // GIVEN broken state
         long pageId = cursor.getCurrentPageId();
-        TreeState expected = new TreeState( pageId, 1, 2, 3, 4, 5, 6, 7, 8, 9, true, true );
+        TreeState expected = new TreeState( pageId, 1, 2, 3, 4, 5, 6, 7, 8, 9, true, false, true );
         write( cursor, expected );
         cursor.rewind();
         assertTrue( TreeState.read( cursor ).isValid() );
@@ -98,7 +98,7 @@ public class TreeStateTest
         try
         {
             long pageId = cursor.getCurrentPageId();
-            write( cursor, new TreeState( pageId, generation, 2, 3, 4, 5, 6, 7, 8, 9, true, true ) );
+            write( cursor, new TreeState( pageId, generation, 2, 3, 4, 5, 6, 7, 8, 9, true, false, true ) );
             fail( "Should have failed" );
         }
         catch ( IllegalArgumentException e )
@@ -117,7 +117,7 @@ public class TreeStateTest
         try
         {
             long pageId = cursor.getCurrentPageId();
-            write( cursor, new TreeState( pageId, 1, generation, 3, 4, 5, 6, 7, 8, 9, true, true ) );
+            write( cursor, new TreeState( pageId, 1, generation, 3, 4, 5, 6, 7, 8, 9, true, false, true ) );
             fail( "Should have failed" );
         }
         catch ( IllegalArgumentException e )
@@ -146,6 +146,7 @@ public class TreeStateTest
                 origin.freeListReadPageId(),
                 origin.freeListWritePos(),
                 origin.freeListReadPos(),
-                origin.isClean() );
+                origin.isClean(),
+                origin.isDetached() );
     }
 }

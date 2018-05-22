@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.index.internal.gbptree.Layout;
@@ -40,6 +41,7 @@ import org.neo4j.storageengine.api.schema.IndexReader;
 
 import static org.neo4j.helpers.collection.Iterators.asResourceIterator;
 import static org.neo4j.helpers.collection.Iterators.iterator;
+import static org.neo4j.helpers.collection.Iterators.resourceIterator;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 
 public abstract class NativeSchemaIndexAccessor<KEY extends NativeSchemaKey<KEY>, VALUE extends NativeSchemaValue>
@@ -47,6 +49,7 @@ public abstract class NativeSchemaIndexAccessor<KEY extends NativeSchemaKey<KEY>
 {
     private final NativeSchemaIndexUpdater<KEY,VALUE> singleUpdater;
     final IndexSamplingConfig samplingConfig;
+    private int snapshotCount;
 
     NativeSchemaIndexAccessor(
             PageCache pageCache,
@@ -120,9 +123,22 @@ public abstract class NativeSchemaIndexAccessor<KEY extends NativeSchemaKey<KEY>
     }
 
     @Override
-    public ResourceIterator<File> snapshotFiles()
+    public synchronized ResourceIterator<File> snapshotFiles()
     {
-        return asResourceIterator( iterator( storeFile ) );
+        if ( snapshotCount++ == 0 )
+        {
+            tree.detach();
+        }
+
+        return resourceIterator( iterator( storeFile ), this::snapshotFilesCompleted );
+    }
+
+    private synchronized void snapshotFilesCompleted()
+    {
+        if ( --snapshotCount == 0 )
+        {
+            tree.attach();
+        }
     }
 
     @Override

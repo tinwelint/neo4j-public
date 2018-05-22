@@ -113,4 +113,9 @@ class GBPTreeData<KEY,VALUE>
     {
         return data.size();
     }
+
+    GBPTreeData<KEY,VALUE> copy()
+    {
+        return new GBPTreeData<>( layout, new TreeMap<>( data ) );
+    }
 }

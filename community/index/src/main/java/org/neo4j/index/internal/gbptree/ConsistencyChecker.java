@@ -67,7 +67,6 @@ class ConsistencyChecker<KEY>
 
     public boolean check( PageCursor cursor, long expectedGeneration ) throws IOException
     {
-        assertOnTreeNode( cursor );
         KeyRange<KEY> openRange = new KeyRange<>( comparator, null, null, layout, null );
         boolean result = checkSubtree( cursor, openRange, expectedGeneration, 0 );
 
@@ -228,6 +227,8 @@ class ConsistencyChecker<KEY>
     private boolean checkSubtree( PageCursor cursor, KeyRange<KEY> range, long expectedGeneration, int level )
             throws IOException
     {
+        assertOnTreeNode( cursor );
+
         boolean isInternal = false;
         boolean isLeaf = false;
         int keyCount;

@@ -110,7 +110,7 @@ class GBPTreeBuilder<KEY,VALUE>
 
     GBPTree<KEY,VALUE> build() throws IOException
     {
-        return new GBPTree<>( pageCache, file, layout, tentativeIndexPageSize, monitor, headerReader, headerWriter,
+        return new GBPTree<>( pageCache, file, layout, tentativeIndexPageSize, monitor, headerWriter,
                 recoveryCleanupWorkCollector );
     }
 }
