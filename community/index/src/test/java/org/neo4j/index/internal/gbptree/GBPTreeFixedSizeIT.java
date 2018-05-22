@@ -32,10 +32,4 @@ public class GBPTreeFixedSizeIT extends GBPTreeITBase<MutableLong,MutableLong>
     {
         return longLayout().withKeyPadding( random.intBetween( 0, 10 ) ).build();
     }
-
-    @Override
-    Class<MutableLong> getKeyClass()
-    {
-        return MutableLong.class;
-    }
 }

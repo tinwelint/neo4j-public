@@ -28,10 +28,4 @@ public class GBPTreeDynamixSizeIT extends GBPTreeITBase<RawBytes,RawBytes>
     {
         return new SimpleByteArrayLayout();
     }
-
-    @Override
-    Class<RawBytes> getKeyClass()
-    {
-        return RawBytes.class;
-    }
 }
