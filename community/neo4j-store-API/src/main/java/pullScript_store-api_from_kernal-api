@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+COMMAND=mv
+ROOT=/Users/sraghuram/myws/3x/MatGSA/neo4j 
+SOURCE=$ROOT/community/kernel-api/src/main/java
+DEST=$ROOT/community/neo4j-store-API/src/main/java
+rsync -a --include '*/' --exclude '*' "$SOURCE/" "$DEST"
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/SecurityContext.java $DEST/org/neo4j/internal/kernel/api/security/SecurityContext.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/SecurityContext.java $DEST/org/neo4j/internal/kernel/api/security/SecurityContext.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/AuthSubject.java $DEST/org/neo4j/internal/kernel/api/security/AuthSubject.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/AuthSubject.java $DEST/org/neo4j/internal/kernel/api/security/AuthSubject.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/AuthenticationResult.java $DEST/org/neo4j/internal/kernel/api/security/AuthenticationResult.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/AuthenticationResult.java $DEST/org/neo4j/internal/kernel/api/security/AuthenticationResult.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/AccessMode.java $DEST/org/neo4j/internal/kernel/api/security/AccessMode.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/AccessMode.java $DEST/org/neo4j/internal/kernel/api/security/AccessMode.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/LoginContext.java $DEST/org/neo4j/internal/kernel/api/security/LoginContext.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/security/LoginContext.java $DEST/org/neo4j/internal/kernel/api/security/LoginContext.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaDescriptor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaDescriptor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaComputer.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaComputer.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaComputer.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaComputer.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/LabelSchemaDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/LabelSchemaDescriptor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/LabelSchemaDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/LabelSchemaDescriptor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/LabelSchemaSupplier.java $DEST/org/neo4j/internal/kernel/api/schema/LabelSchemaSupplier.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/LabelSchemaSupplier.java $DEST/org/neo4j/internal/kernel/api/schema/LabelSchemaSupplier.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaDescriptorSupplier.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaDescriptorSupplier.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaDescriptorSupplier.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaDescriptorSupplier.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaProcessor.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaProcessor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaProcessor.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaProcessor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/RelationTypeSchemaDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/RelationTypeSchemaDescriptor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/RelationTypeSchemaDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/RelationTypeSchemaDescriptor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/TokenNameLookup.java $DEST/org/neo4j/internal/kernel/api/TokenNameLookup.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/TokenNameLookup.java $DEST/org/neo4j/internal/kernel/api/TokenNameLookup.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/lock/ResourceType.java $DEST/org/neo4j/storageengine/api/lock/ResourceType.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/lock/ResourceType.java $DEST/org/neo4j/storageengine/api/lock/ResourceType.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/lock/WaitStrategy.java $DEST/org/neo4j/storageengine/api/lock/WaitStrategy.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/lock/WaitStrategy.java $DEST/org/neo4j/storageengine/api/lock/WaitStrategy.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaUtil.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaUtil.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/SchemaUtil.java $DEST/org/neo4j/internal/kernel/api/schema/SchemaUtil.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/constraints/ConstraintDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/constraints/ConstraintDescriptor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/schema/constraints/ConstraintDescriptor.java $DEST/org/neo4j/internal/kernel/api/schema/constraints/ConstraintDescriptor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexQuery.java $DEST/org/neo4j/internal/kernel/api/IndexQuery.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexQuery.java $DEST/org/neo4j/internal/kernel/api/IndexQuery.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/PropertyCursor.java $DEST/org/neo4j/internal/kernel/api/PropertyCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/PropertyCursor.java $DEST/org/neo4j/internal/kernel/api/PropertyCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/Cursor.java $DEST/org/neo4j/internal/kernel/api/Cursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/Cursor.java $DEST/org/neo4j/internal/kernel/api/Cursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/AutoCloseablePlus.java $DEST/org/neo4j/internal/kernel/api/AutoCloseablePlus.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/AutoCloseablePlus.java $DEST/org/neo4j/internal/kernel/api/AutoCloseablePlus.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/KernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/KernelException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/KernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/KernelException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/SchemaKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/SchemaKernelException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/SchemaKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/SchemaKernelException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/ConstraintValidationException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/ConstraintValidationException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/ConstraintValidationException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/ConstraintValidationException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/explicitindex/ExplicitIndexNotFoundKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/explicitindex/ExplicitIndexNotFoundKernelException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/explicitindex/ExplicitIndexNotFoundKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/explicitindex/ExplicitIndexNotFoundKernelException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.java $DEST/org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.java $DEST/org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeCursor.java $DEST/org/neo4j/internal/kernel/api/NodeCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeCursor.java $DEST/org/neo4j/internal/kernel/api/NodeCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/LabelSet.java $DEST/org/neo4j/internal/kernel/api/LabelSet.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/LabelSet.java $DEST/org/neo4j/internal/kernel/api/LabelSet.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipGroupCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipGroupCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipGroupCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipGroupCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipTraversalCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipTraversalCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipTraversalCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipTraversalCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipDataAccessor.java $DEST/org/neo4j/internal/kernel/api/RelationshipDataAccessor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipDataAccessor.java $DEST/org/neo4j/internal/kernel/api/RelationshipDataAccessor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/SuspendableCursor.java $DEST/org/neo4j/internal/kernel/api/SuspendableCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/SuspendableCursor.java $DEST/org/neo4j/internal/kernel/api/SuspendableCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/CursorPosition.java $DEST/org/neo4j/internal/kernel/api/CursorPosition.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/CursorPosition.java $DEST/org/neo4j/internal/kernel/api/CursorPosition.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipScanCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipScanCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipScanCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipScanCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/Read.java $DEST/org/neo4j/internal/kernel/api/Read.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/Read.java $DEST/org/neo4j/internal/kernel/api/Read.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexReference.java $DEST/org/neo4j/internal/kernel/api/IndexReference.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexReference.java $DEST/org/neo4j/internal/kernel/api/IndexReference.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeValueIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeValueIndexCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeValueIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeValueIndexCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeIndexCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeIndexCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexOrder.java $DEST/org/neo4j/internal/kernel/api/IndexOrder.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexOrder.java $DEST/org/neo4j/internal/kernel/api/IndexOrder.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeLabelIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeLabelIndexCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeLabelIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeLabelIndexCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/Scan.java $DEST/org/neo4j/internal/kernel/api/Scan.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/Scan.java $DEST/org/neo4j/internal/kernel/api/Scan.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/ExplicitIndexRead.java $DEST/org/neo4j/internal/kernel/api/ExplicitIndexRead.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/ExplicitIndexRead.java $DEST/org/neo4j/internal/kernel/api/ExplicitIndexRead.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeExplicitIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeExplicitIndexCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/NodeExplicitIndexCursor.java $DEST/org/neo4j/internal/kernel/api/NodeExplicitIndexCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/ExplicitIndexSearchResult.java $DEST/org/neo4j/internal/kernel/api/ExplicitIndexSearchResult.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/ExplicitIndexSearchResult.java $DEST/org/neo4j/internal/kernel/api/ExplicitIndexSearchResult.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipExplicitIndexCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipExplicitIndexCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipExplicitIndexCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipExplicitIndexCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipIndexCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipIndexCursor.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/RelationshipIndexCursor.java $DEST/org/neo4j/internal/kernel/api/RelationshipIndexCursor.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/SchemaRead.java $DEST/org/neo4j/internal/kernel/api/SchemaRead.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/SchemaRead.java $DEST/org/neo4j/internal/kernel/api/SchemaRead.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/CapableIndexReference.java $DEST/org/neo4j/internal/kernel/api/CapableIndexReference.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/CapableIndexReference.java $DEST/org/neo4j/internal/kernel/api/CapableIndexReference.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexCapability.java $DEST/org/neo4j/internal/kernel/api/IndexCapability.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexCapability.java $DEST/org/neo4j/internal/kernel/api/IndexCapability.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexValueCapability.java $DEST/org/neo4j/internal/kernel/api/IndexValueCapability.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/IndexValueCapability.java $DEST/org/neo4j/internal/kernel/api/IndexValueCapability.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/InternalIndexState.java $DEST/org/neo4j/internal/kernel/api/InternalIndexState.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/InternalIndexState.java $DEST/org/neo4j/internal/kernel/api/InternalIndexState.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/PopulationProgress.java $DEST/org/neo4j/storageengine/api/schema/PopulationProgress.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/schema/PopulationProgress.java $DEST/org/neo4j/storageengine/api/schema/PopulationProgress.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/CursorFactory.java $DEST/org/neo4j/internal/kernel/api/CursorFactory.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/CursorFactory.java $DEST/org/neo4j/internal/kernel/api/CursorFactory.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/NamedToken.java $DEST/org/neo4j/internal/kernel/api/NamedToken.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/NamedToken.java $DEST/org/neo4j/internal/kernel/api/NamedToken.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/EntityNotFoundException.java $DEST/org/neo4j/internal/kernel/api/exceptions/EntityNotFoundException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/EntityNotFoundException.java $DEST/org/neo4j/internal/kernel/api/exceptions/EntityNotFoundException.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/EntityType.java $DEST/org/neo4j/storageengine/api/EntityType.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/EntityType.java $DEST/org/neo4j/storageengine/api/EntityType.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/TokenRead.java $DEST/org/neo4j/internal/kernel/api/TokenRead.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/TokenRead.java $DEST/org/neo4j/internal/kernel/api/TokenRead.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/LabelNotFoundKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/LabelNotFoundKernelException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/LabelNotFoundKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/LabelNotFoundKernelException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/PropertyKeyIdNotFoundKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/PropertyKeyIdNotFoundKernelException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/PropertyKeyIdNotFoundKernelException.java $DEST/org/neo4j/internal/kernel/api/exceptions/PropertyKeyIdNotFoundKernelException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/Token.java $DEST/org/neo4j/internal/kernel/api/Token.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/Token.java $DEST/org/neo4j/internal/kernel/api/Token.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/TokenWrite.java $DEST/org/neo4j/internal/kernel/api/TokenWrite.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/TokenWrite.java $DEST/org/neo4j/internal/kernel/api/TokenWrite.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/IllegalTokenNameException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/IllegalTokenNameException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/IllegalTokenNameException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/IllegalTokenNameException.java
+echo $COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/TooManyLabelsException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/TooManyLabelsException.java
+$COMMAND $SOURCE/org/neo4j/internal/kernel/api/exceptions/schema/TooManyLabelsException.java $DEST/org/neo4j/internal/kernel/api/exceptions/schema/TooManyLabelsException.java

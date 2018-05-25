@@ -1,0 +1,207 @@
+neo4j-cypher-ir-3.3-3.3.5.jar
+neo4j-cypher-frontend-2.3-2.3.12.jar
+neo4j-cypher-logical-plans-3.3-3.3.5.jar
+neo4j-cypher-compiler-3.3-3.3.5.jar
+neo4j-cypher-frontend-3.3-3.3.5.jar
+neo4j-cypher-ir-3.4-3.4.0-rc01.jar
+neo4j-cypher-logical-plans-3.4-3.4.0-rc01.jar
+neo4j-cypher-compiler-2.3-2.3.12.jar
+neo4j-cypher-slotted-runtime-3.4.0-rc01.jar
+	[6][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe; ] /org/neo4j/internal/kernel/api/CursorFactory.class [org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39] 
+	[3][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe; ] /org/neo4j/internal/kernel/api/IndexReference.class [org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39] 
+neo4j-cypher-3.4.0-rc01.jar
+	[5][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.CompilerEngineDelegator; ] /org/neo4j/internal/kernel/api/CursorFactory.class [org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2] 
+	[3][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.ExecutionEngine$$anonfun$allLabels$1$1; ] /org/neo4j/internal/kernel/api/NamedToken.class [org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2] 
+neo4j-cypher-planner-spi-3.4-3.4.0-rc01.jar
+neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar
+	[6][org.neo4j.cypher.internal.runtime.interpreted.MapSupport$; org.neo4j.cypher.internal.runtime.interpreted.MapSupport; org.neo4j.cypher.internal.runtime.interpreted.MapSupport$$anonfun$castToMap$1; ] /org/neo4j/internal/kernel/api/CursorFactory.class [org.neo4j.cypher.internal.runtime.interpreted.MapSupport$] 
+neo4j-cypher-frontend-3.1-3.1.8.jar
+neo4j-cypher-compiler-3.1-3.1.8.jar
+neo4j-cypher-planner-3.4-3.4.0-rc01.jar
+neo4j-cypher-util-3.4-3.4.0-rc01.jar
+neo4j-cypher-runtime-util-3.4.0-rc01.jar
+neo4j-cypher-physical-planning-3.4.0-rc01.jar
+neo4j-cypher-expression-3.4-3.4.0-rc01.jar
+neo4j-cypher-morsel-runtime-3.4.0-rc01.jar
+	[4][org.neo4j.cypher.internal.runtime.vectorized.operators.UnwindOperator$CurrentState; org.neo4j.cypher.internal.runtime.vectorized.operators.UnwindOperator; org.neo4j.cypher.internal.runtime.QueryContext; ] /org/neo4j/internal/kernel/api/CursorFactory.class [org.neo4j.cypher.internal.runtime.vectorized.operators.UnwindOperator$CurrentState] 
+	[3][org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$1; org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder; org.neo4j.cypher.internal.runtime.vectorized.operators.NodeIndexSeekOperator; ] /org/neo4j/internal/kernel/api/IndexReference.class [org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$1] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/server-api/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/configuration/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/ssl/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/udc/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/spatial-index/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/import-tool/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/bolt/target/classes
+	[1][org.neo4j.bolt.v1.runtime.TransactionStateMachine$State; null; null; ] /org/neo4j/internal/kernel/api/exceptions/KernelException.class [org.neo4j.bolt.v1.runtime.TransactionStateMachine$State] 
+	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachine$State; org.neo4j.internal.kernel.api.exceptions.KernelException; null; ] /org/neo4j/internal/kernel/api/TokenNameLookup.class [org.neo4j.bolt.v1.runtime.TransactionStateMachine$State] 
+	[1][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; null; null; ] /org/neo4j/internal/kernel/api/security/LoginContext.class [org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState] 
+	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; org.neo4j.internal.kernel.api.security.LoginContext; null; ] /org/neo4j/internal/kernel/api/security/AuthSubject.class [org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState] 
+	[3][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; org.neo4j.internal.kernel.api.security.LoginContext; org.neo4j.internal.kernel.api.security.AuthSubject; ] /org/neo4j/internal/kernel/api/security/AuthenticationResult.class [org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState] 
+	[3][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; org.neo4j.internal.kernel.api.security.LoginContext; org.neo4j.internal.kernel.api.security.SecurityContext; ] /org/neo4j/internal/kernel/api/security/AccessMode.class [org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/security/target/classes
+	[1][org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy; null; null; ] /org/neo4j/internal/kernel/api/security/AuthenticationResult.class [org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy] 
+	[1][org.neo4j.server.security.auth.BasicLoginContext; null; null; ] /org/neo4j/internal/kernel/api/security/AuthSubject.class [org.neo4j.server.security.auth.BasicLoginContext] 
+	[3][org.neo4j.server.security.auth.BasicLoginContext; org.neo4j.internal.kernel.api.security.AuthSubject; org.neo4j.internal.kernel.api.security.AuthSubject$1; ] /org/neo4j/internal/kernel/api/security/AuthenticationResult.class [org.neo4j.server.security.auth.BasicLoginContext] 
+	[3][org.neo4j.server.security.auth.BasicLoginContext; org.neo4j.internal.kernel.api.security.SecurityContext; org.neo4j.internal.kernel.api.security.AccessMode; ] /org/neo4j/internal/kernel/api/security/AccessMode$Static.class [org.neo4j.server.security.auth.BasicLoginContext] 
+	[3][org.neo4j.server.security.auth.BasicLoginContext; org.neo4j.internal.kernel.api.security.SecurityContext; org.neo4j.internal.kernel.api.security.SecurityContext$AuthDisabled; ] /org/neo4j/internal/kernel/api/security/AccessMode.class [org.neo4j.server.security.auth.BasicLoginContext] 
+	[1][org.neo4j.server.security.auth.CommunitySecurityModule; null; null; ] /org/neo4j/internal/kernel/api/exceptions/KernelException.class [org.neo4j.server.security.auth.CommunitySecurityModule] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/shell/target/classes
+	[1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; null; null; ] /org/neo4j/internal/kernel/api/security/LoginContext.class [org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy] 
+	[1][org.neo4j.shell.kernel.GraphDatabaseShellServer; null; null; ] /org/neo4j/internal/kernel/api/TokenRead.class [org.neo4j.shell.kernel.GraphDatabaseShellServer] 
+	[2][org.neo4j.shell.kernel.GraphDatabaseShellServer; org.neo4j.internal.kernel.api.TokenRead; null; ] /org/neo4j/internal/kernel/api/exceptions/LabelNotFoundKernelException.class [org.neo4j.shell.kernel.GraphDatabaseShellServer] 
+	[3][org.neo4j.shell.kernel.GraphDatabaseShellServer; org.neo4j.internal.kernel.api.TokenRead; org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException; ] /org/neo4j/internal/kernel/api/exceptions/KernelException.class [org.neo4j.shell.kernel.GraphDatabaseShellServer] 
+	[1][org.neo4j.shell.kernel.apps.Schema; null; null; ] /org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.class [org.neo4j.shell.kernel.apps.Schema] 
+	[1][org.neo4j.shell.kernel.apps.Rollback; null; null; ] /org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.class [org.neo4j.shell.kernel.apps.Rollback] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/jmx/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/graph-algo/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/graphdb-api/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/io/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/dbms/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/values/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/server/target/classes
+	[6][org.neo4j.server.database.CypherExecutor; org.neo4j.cypher.internal.javacompat.ExecutionEngine; org.neo4j.cypher.internal.CompatibilityFactory; ] /org/neo4j/internal/kernel/api/CursorFactory.class [org.neo4j.server.database.CypherExecutor] 
+	[1][org.neo4j.server.rest.dbms.DelegatingPrincipal; null; null; ] /org/neo4j/internal/kernel/api/security/LoginContext.class [org.neo4j.server.rest.dbms.DelegatingPrincipal] 
+	[1][org.neo4j.server.rest.transactional.TransitionalTxManagementKernelTransaction; null; null; ] /org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.class [org.neo4j.server.rest.transactional.TransitionalTxManagementKernelTransaction] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-slf4j/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/licensecheck-config/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/codegen/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/random-values/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/command-line/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/common/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/unsafe/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/csv/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/concurrent/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-store/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/procedure-api/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/index/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/lucene-index/target/classes
+	[1][org.neo4j.index.impl.lucene.explicit.CommitContext; null; null; ] /org/neo4j/internal/kernel/api/exceptions/explicitindex/ExplicitIndexNotFoundKernelException.class [org.neo4j.index.impl.lucene.explicit.CommitContext] 
+	[2][org.neo4j.index.impl.lucene.explicit.CommitContext; org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException; null; ] /org/neo4j/internal/kernel/api/exceptions/KernelException.class [org.neo4j.index.impl.lucene.explicit.CommitContext] 
+	[1][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; null; null; ] /org/neo4j/internal/kernel/api/IndexOrder.class [org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader] 
+	[1][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexOrder; null; ] /org/neo4j/internal/kernel/api/IndexQuery.class [org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader] 
+	[2][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexQuery; null; ] /org/neo4j/internal/kernel/api/PropertyCursor.class [org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader] 
+	[3][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexQuery; org.neo4j.internal.kernel.api.PropertyCursor; ] /org/neo4j/internal/kernel/api/Cursor.class [org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader] 
+	[3][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexQuery; org.neo4j.internal.kernel.api.IndexQuery$ExistsPredicate; ] /org/neo4j/internal/kernel/api/IndexQuery.class [org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader] 
+	[1][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader; null; null; ] /org/neo4j/internal/kernel/api/schema/SchemaDescriptor.class [org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader] 
+	[2][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader; org.neo4j.internal.kernel.api.schema.SchemaDescriptor; null; ] /org/neo4j/internal/kernel/api/schema/SchemaComputer.class [org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader] 
+	[3][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader; org.neo4j.internal.kernel.api.schema.SchemaDescriptor; org.neo4j.internal.kernel.api.schema.SchemaComputer; ] /org/neo4j/internal/kernel/api/schema/LabelSchemaDescriptor.class [org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader] 
+	[1][org.neo4j.kernel.api.impl.schema.LuceneIndexAccessor$LuceneIndexUpdater; null; null; ] /org/neo4j/internal/kernel/api/schema/SchemaDescriptorSupplier.class [org.neo4j.kernel.api.impl.schema.LuceneIndexAccessor$LuceneIndexUpdater] 
+	[1][org.neo4j.kernel.api.impl.schema.sampler.UniqueLuceneIndexSampler; null; null; ] /org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.class [org.neo4j.kernel.api.impl.schema.sampler.UniqueLuceneIndexSampler] 
+	[1][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; null; null; ] /org/neo4j/internal/kernel/api/InternalIndexState.class [org.neo4j.kernel.api.impl.schema.LuceneIndexProvider] 
+	[1][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; org.neo4j.internal.kernel.api.InternalIndexState; null; ] /org/neo4j/internal/kernel/api/IndexCapability.class [org.neo4j.kernel.api.impl.schema.LuceneIndexProvider] 
+	[2][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; org.neo4j.internal.kernel.api.IndexCapability; null; ] /org/neo4j/internal/kernel/api/IndexValueCapability.class [org.neo4j.kernel.api.impl.schema.LuceneIndexProvider] 
+	[2][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; org.neo4j.internal.kernel.api.IndexCapability; org.neo4j.internal.kernel.api.IndexValueCapability; ] /org/neo4j/internal/kernel/api/IndexCapability$1.class [org.neo4j.kernel.api.impl.schema.LuceneIndexProvider] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-store-API/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/kernel-api/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/resource/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-harness/target/classes
+	[1][org.neo4j.harness.internal.HarnessRegisteredProcs; null; null; ] /org/neo4j/internal/kernel/api/exceptions/KernelException.class [org.neo4j.harness.internal.HarnessRegisteredProcs] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/collections/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/logging/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/lucene-index-upgrade/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/kernel/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/server-plugin-test/target/classes
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/consistency-check/target/classes
+----------------------===============++++++++++++++++++===================------------------------
+
+Total count: 27
+----------------------
+[0] /org/neo4j/internal/kernel/api/security/AccessMode$Static.class: 
+	[community/security] 	[3][org.neo4j.server.security.auth.BasicLoginContext; org.neo4j.internal.kernel.api.security.SecurityContext; org.neo4j.internal.kernel.api.security.AccessMode; ]
+----------------------
+[1] /org/neo4j/internal/kernel/api/IndexOrder.class: 
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; null; null; ]
+----------------------
+[2] /org/neo4j/internal/kernel/api/schema/LabelSchemaDescriptor.class: 
+	[community/lucene-index] 	[3][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader; org.neo4j.internal.kernel.api.schema.SchemaDescriptor; org.neo4j.internal.kernel.api.schema.SchemaComputer; ]
+----------------------
+[3] /org/neo4j/internal/kernel/api/schema/SchemaDescriptorSupplier.class: 
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.LuceneIndexAccessor$LuceneIndexUpdater; null; null; ]
+----------------------
+[4] /org/neo4j/internal/kernel/api/IndexCapability.class: 
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; org.neo4j.internal.kernel.api.InternalIndexState; null; ]
+----------------------
+[5] /org/neo4j/internal/kernel/api/security/AuthSubject.class: 
+	[community/bolt] 	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; org.neo4j.internal.kernel.api.security.LoginContext; null; ]
+	[community/security] 	[1][org.neo4j.server.security.auth.BasicLoginContext; null; null; ]
+----------------------
+[6] /org/neo4j/internal/kernel/api/IndexCapability$1.class: 
+	[community/lucene-index] 	[2][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; org.neo4j.internal.kernel.api.IndexCapability; org.neo4j.internal.kernel.api.IndexValueCapability; ]
+----------------------
+[7] /org/neo4j/internal/kernel/api/security/AuthenticationResult.class: 
+	[community/bolt] 	[3][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; org.neo4j.internal.kernel.api.security.LoginContext; org.neo4j.internal.kernel.api.security.AuthSubject; ]
+	[community/security] 	[1][org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy; null; null; ]
+	[community/security] 	[3][org.neo4j.server.security.auth.BasicLoginContext; org.neo4j.internal.kernel.api.security.AuthSubject; org.neo4j.internal.kernel.api.security.AuthSubject$1; ]
+----------------------
+[8] /org/neo4j/internal/kernel/api/TokenRead.class: 
+	[community/shell] 	[1][org.neo4j.shell.kernel.GraphDatabaseShellServer; null; null; ]
+----------------------
+[9] /org/neo4j/internal/kernel/api/exceptions/explicitindex/ExplicitIndexNotFoundKernelException.class: 
+	[community/lucene-index] 	[1][org.neo4j.index.impl.lucene.explicit.CommitContext; null; null; ]
+----------------------
+[10] /org/neo4j/kernel/api/exceptions/index/IndexNotFoundKernelException.class: 
+	[community/shell] 	[1][org.neo4j.shell.kernel.apps.Schema; null; null; ]
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.sampler.UniqueLuceneIndexSampler; null; null; ]
+----------------------
+[11] /org/neo4j/internal/kernel/api/IndexReference.class: 
+	[neo4j-cypher-slotted-runtime-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe; ]
+	[neo4j-cypher-morsel-runtime-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$1; org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder; org.neo4j.cypher.internal.runtime.vectorized.operators.NodeIndexSeekOperator; ]
+----------------------
+[12] /org/neo4j/internal/kernel/api/security/LoginContext.class: 
+	[community/bolt] 	[1][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; null; null; ]
+	[community/shell] 	[1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; null; null; ]
+	[community/server] 	[1][org.neo4j.server.rest.dbms.DelegatingPrincipal; null; null; ]
+----------------------
+[13] /org/neo4j/internal/kernel/api/exceptions/KernelException.class: 
+	[community/bolt] 	[1][org.neo4j.bolt.v1.runtime.TransactionStateMachine$State; null; null; ]
+	[community/security] 	[1][org.neo4j.server.security.auth.CommunitySecurityModule; null; null; ]
+	[community/shell] 	[3][org.neo4j.shell.kernel.GraphDatabaseShellServer; org.neo4j.internal.kernel.api.TokenRead; org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException; ]
+	[community/lucene-index] 	[2][org.neo4j.index.impl.lucene.explicit.CommitContext; org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException; null; ]
+	[community/neo4j-harness] 	[1][org.neo4j.harness.internal.HarnessRegisteredProcs; null; null; ]
+----------------------
+[14] /org/neo4j/internal/kernel/api/schema/SchemaComputer.class: 
+	[community/lucene-index] 	[2][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader; org.neo4j.internal.kernel.api.schema.SchemaDescriptor; null; ]
+----------------------
+[15] /org/neo4j/internal/kernel/api/IndexValueCapability.class: 
+	[community/lucene-index] 	[2][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; org.neo4j.internal.kernel.api.IndexCapability; null; ]
+----------------------
+[16] /org/neo4j/internal/kernel/api/IndexQuery.class: 
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexOrder; null; ]
+	[community/lucene-index] 	[3][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexQuery; org.neo4j.internal.kernel.api.IndexQuery$ExistsPredicate; ]
+----------------------
+[17] /org/neo4j/internal/kernel/api/NamedToken.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.ExecutionEngine$$anonfun$allLabels$1$1; ]
+----------------------
+[18] /org/neo4j/internal/kernel/api/exceptions/TransactionFailureException.class: 
+	[community/shell] 	[1][org.neo4j.shell.kernel.apps.Rollback; null; null; ]
+	[community/server] 	[1][org.neo4j.server.rest.transactional.TransitionalTxManagementKernelTransaction; null; null; ]
+----------------------
+[19] /org/neo4j/internal/kernel/api/PropertyCursor.class: 
+	[community/lucene-index] 	[2][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexQuery; null; ]
+----------------------
+[20] /org/neo4j/internal/kernel/api/Cursor.class: 
+	[community/lucene-index] 	[3][org.neo4j.kernel.api.impl.schema.reader.SimpleIndexReader; org.neo4j.internal.kernel.api.IndexQuery; org.neo4j.internal.kernel.api.PropertyCursor; ]
+----------------------
+[21] /org/neo4j/internal/kernel/api/CursorFactory.class: 
+	[neo4j-cypher-slotted-runtime-3.4.0-rc01.jar] 	[6][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe; ]
+	[neo4j-cypher-3.4.0-rc01.jar] 	[5][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.CompilerEngineDelegator; ]
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] 	[6][org.neo4j.cypher.internal.runtime.interpreted.MapSupport$; org.neo4j.cypher.internal.runtime.interpreted.MapSupport; org.neo4j.cypher.internal.runtime.interpreted.MapSupport$$anonfun$castToMap$1; ]
+	[neo4j-cypher-morsel-runtime-3.4.0-rc01.jar] 	[4][org.neo4j.cypher.internal.runtime.vectorized.operators.UnwindOperator$CurrentState; org.neo4j.cypher.internal.runtime.vectorized.operators.UnwindOperator; org.neo4j.cypher.internal.runtime.QueryContext; ]
+	[community/server] 	[6][org.neo4j.server.database.CypherExecutor; org.neo4j.cypher.internal.javacompat.ExecutionEngine; org.neo4j.cypher.internal.CompatibilityFactory; ]
+----------------------
+[22] /org/neo4j/internal/kernel/api/schema/SchemaDescriptor.class: 
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader; null; null; ]
+----------------------
+[23] /org/neo4j/internal/kernel/api/TokenNameLookup.class: 
+	[community/bolt] 	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachine$State; org.neo4j.internal.kernel.api.exceptions.KernelException; null; ]
+----------------------
+[24] /org/neo4j/internal/kernel/api/security/AccessMode.class: 
+	[community/bolt] 	[3][org.neo4j.bolt.v1.runtime.TransactionStateMachine$MutableTransactionState; org.neo4j.internal.kernel.api.security.LoginContext; org.neo4j.internal.kernel.api.security.SecurityContext; ]
+	[community/security] 	[3][org.neo4j.server.security.auth.BasicLoginContext; org.neo4j.internal.kernel.api.security.SecurityContext; org.neo4j.internal.kernel.api.security.SecurityContext$AuthDisabled; ]
+----------------------
+[25] /org/neo4j/internal/kernel/api/exceptions/LabelNotFoundKernelException.class: 
+	[community/shell] 	[2][org.neo4j.shell.kernel.GraphDatabaseShellServer; org.neo4j.internal.kernel.api.TokenRead; null; ]
+----------------------
+[26] /org/neo4j/internal/kernel/api/InternalIndexState.class: 
+	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.LuceneIndexProvider; null; null; ]
