@@ -39,6 +39,8 @@
     <module>codegen</module>
     <module>index</module>
     <module>kernel</module>
+    <module>neo4j-store-API</module>
+    <module>neo4j-store</module>
     <module>jmx</module>
     <module>udc</module>
     <module>lucene-index</module>
