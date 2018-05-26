@@ -1,654 +1,552 @@
-neo4j-cypher-ir-3.3-3.3.5.jar
-neo4j-cypher-frontend-2.3-2.3.12.jar
-neo4j-cypher-logical-plans-3.3-3.3.5.jar
-neo4j-cypher-compiler-3.3-3.3.5.jar
-neo4j-cypher-frontend-3.3-3.3.5.jar
-neo4j-cypher-ir-3.4-3.4.0-rc01.jar
-neo4j-cypher-logical-plans-3.4-3.4.0-rc01.jar
-neo4j-cypher-compiler-2.3-2.3.12.jar
-neo4j-cypher-slotted-runtime-3.4.0-rc01.jar
-	[4][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe; ] /org/neo4j/kernel/impl/api/RelationshipVisitor.class [org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39] 
-	[6][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$Factory; ] /org/neo4j/kernel/impl/util/ValueUtils.class [org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39] 
-neo4j-cypher-3.4.0-rc01.jar
-	[3][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.runtime.interpreted.LastCommittedTxIdProvider; ] /org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class [org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2] 
-	[3][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.kernel.monitoring.Monitors; ] /org/neo4j/kernel/monitoring/Monitors$MonitorInvocationHandler.class [org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2] 
-	[5][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.CompilerEngineDelegator; ] /org/neo4j/kernel/api/txstate/TxStateHolder.class [org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2] 
-	[3][org.neo4j.cypher.internal.codegen.CompiledExpandUtils$2; org.neo4j.cypher.internal.codegen.CompiledExpandUtils; org.neo4j.cypher.internal.codegen.CompiledCursorUtils; ] /org/neo4j/kernel/api/StatementConstants.class [org.neo4j.cypher.internal.codegen.CompiledExpandUtils$2] 
-	[1][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; null; null; ] /org/neo4j/kernel/impl/util/Dependencies.class [org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider] 
-	[2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; null; ] /org/neo4j/kernel/impl/util/DependencySatisfier.class [org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider] 
-	[2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; org.neo4j.kernel.impl.util.DependencySatisfier; ] /org/neo4j/kernel/impl/util/UnsatisfiedDependencyException.class [org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider] 
-neo4j-cypher-planner-spi-3.4-3.4.0-rc01.jar
-neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar
-	[3][org.neo4j.cypher.internal.runtime.interpreted.ValueConversion; org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$; org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$$anonfun$1; ] /org/neo4j/kernel/impl/util/ValueUtils.class [org.neo4j.cypher.internal.runtime.interpreted.ValueConversion] 
-neo4j-cypher-frontend-3.1-3.1.8.jar
-neo4j-cypher-compiler-3.1-3.1.8.jar
-neo4j-cypher-planner-3.4-3.4.0-rc01.jar
-	[2][org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability$1; org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability; org.neo4j.cypher.internal.util.v3_4.IncomparableValuesException; ] /org/neo4j/kernel/impl/util/ValueUtils.class [org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability$1] 
-	[3][org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability$1; org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability; org.neo4j.kernel.impl.util.ValueUtils; ] /org/neo4j/kernel/impl/util/NodeProxyWrappingNodeValue.class [org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability$1] 
-neo4j-cypher-util-3.4-3.4.0-rc01.jar
-neo4j-cypher-runtime-util-3.4.0-rc01.jar
-neo4j-cypher-physical-planning-3.4.0-rc01.jar
-neo4j-cypher-expression-3.4-3.4.0-rc01.jar
-neo4j-cypher-morsel-runtime-3.4.0-rc01.jar
-	[9][org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$1; org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder; org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$4; ] /org/neo4j/kernel/impl/api/RelationshipVisitor.class [org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$1] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/server-api/target/classes
-	[1][org.neo4j.server.plugins.ServerPlugin; null; null; ] /org/neo4j/helpers/Service.class [org.neo4j.server.plugins.ServerPlugin] 
-	[2][org.neo4j.server.plugins.ServerPlugin; org.neo4j.helpers.Service; null; ] /org/neo4j/helpers/Service$1.class [org.neo4j.server.plugins.ServerPlugin] 
-	[2][org.neo4j.server.plugins.ServerPlugin; org.neo4j.helpers.Service; org.neo4j.helpers.Service$1; ] /org/neo4j/helpers/Service$Implementation.class [org.neo4j.server.plugins.ServerPlugin] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/configuration/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/ssl/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/udc/target/classes
-	[1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; null; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; null; ] /org/neo4j/kernel/info/DiagnosticsPhase.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.info.DiagnosticsPhase; ] /org/neo4j/kernel/info/DiagnosticsProvider.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.ConfigurationValidator; ] /org/neo4j/kernel/configuration/BoltConnector.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.BoltConnector; ] /org/neo4j/kernel/configuration/Connector.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; null; ] /org/neo4j/kernel/impl/store/id/IdType.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdType; ] /org/neo4j/kernel/impl/store/id/IdGenerator.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdGenerator; ] /org/neo4j/kernel/impl/store/id/IdRange.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.factory.OperationalMode; null; ] /org/neo4j/storageengine/api/StoreFileMetadata.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
-	[1][org.neo4j.ext.udc.impl.UdcKernelExtensionFactory; null; null; ] /org/neo4j/kernel/impl/store/id/IdGeneratorFactory.class [org.neo4j.ext.udc.impl.UdcKernelExtensionFactory] 
-	[1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector$1; null; null; ] /org/neo4j/kernel/impl/store/StoreId.class [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector$1] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/spatial-index/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/import-tool/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/bolt/target/classes
-	[1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; null; null; ] /org/neo4j/kernel/impl/logging/LogService.class [org.neo4j.bolt.v1.runtime.BoltFactoryImpl] 
-	[1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; org.neo4j.kernel.impl.logging.LogService; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.bolt.v1.runtime.BoltFactoryImpl] 
-	[1][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; null; null; ] /org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class [org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI] 
-	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; null; ] /org/neo4j/kernel/impl/store/TransactionId.class [org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI] 
-	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; org.neo4j.kernel.impl.store.TransactionId; ] /org/neo4j/kernel/impl/store/TransactionId.class [org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI] 
-	[1][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; null; null; ] /org/neo4j/kernel/impl/util/ValueUtils.class [org.neo4j.bolt.v1.runtime.ExecutionPlanConverter] 
-	[2][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.NodeProxyWrappingNodeValue; ] /org/neo4j/kernel/impl/util/RelationshipProxyWrappingValue.class [org.neo4j.bolt.v1.runtime.ExecutionPlanConverter] 
-	[2][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.RelationshipProxyWrappingValue; ] /org/neo4j/kernel/impl/util/PathWrappingPathValue.class [org.neo4j.bolt.v1.runtime.ExecutionPlanConverter] 
-	[1][org.neo4j.bolt.transport.NettyServer; null; null; ] /org/neo4j/helpers/ListenSocketAddress.class [org.neo4j.bolt.transport.NettyServer] 
-	[1][org.neo4j.bolt.BoltKernelExtension; null; null; ] /org/neo4j/kernel/impl/logging/LogService.class [org.neo4j.bolt.BoltKernelExtension] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/security/target/classes
-	[1][org.neo4j.server.security.auth.CommunitySecurityModule; null; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.server.security.auth.CommunitySecurityModule] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/shell/target/classes
-	[1][org.neo4j.shell.impl.AbstractAppServer; null; null; ] /org/neo4j/helpers/Service.class [org.neo4j.shell.impl.AbstractAppServer] 
-	[1][org.neo4j.shell.impl.ShellServerKernelExtension; null; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.shell.impl.ShellServerKernelExtension] 
-	[1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; null; null; ] /org/neo4j/kernel/impl/store/StoreId.class [org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy] 
-	[1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; org.neo4j.kernel.impl.store.StoreId; null; ] /org/neo4j/kernel/impl/store/StoreId.class [org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy] 
-	[1][org.neo4j.shell.kernel.apps.cypher.Start; null; null; ] /org/neo4j/kernel/impl/util/ValueUtils.class [org.neo4j.shell.kernel.apps.cypher.Start] 
-	[1][org.neo4j.shell.kernel.apps.Schema; null; null; ] /org/neo4j/kernel/impl/api/index/IndexingService.class [org.neo4j.shell.kernel.apps.Schema] 
-	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; null; ] /org/neo4j/kernel/impl/api/index/IndexProxyCreator.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexProxyCreator; ] /org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConfig.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexMapReference; ] /org/neo4j/kernel/impl/api/index/IndexMap.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.sampling.IndexSamplingController; ] /org/neo4j/kernel/impl/api/index/sampling/IndexSamplingJobFactory.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.MultiPopulatorFactory; ] /org/neo4j/kernel/impl/api/index/MultiPopulatorFactory$MultiThreadedPopulatorFactory.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.transaction.state.IndexUpdates; ] /org/neo4j/kernel/impl/transaction/command/Command$NodeCommand.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$IndexPopulationStarter; ] /org/neo4j/kernel/impl/api/index/IndexingService$State.class [org.neo4j.shell.kernel.apps.Schema] 
-	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$IndexLogRecord; ] /org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.class [org.neo4j.shell.kernel.apps.Schema] 
-	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.RebuildingIndexDescriptor; ] /org/neo4j/kernel/impl/api/index/IndexingUpdateService.class [org.neo4j.shell.kernel.apps.Schema] 
-	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingUpdateService; ] /org/neo4j/kernel/impl/api/index/IndexingService$MonitorAdapter.class [org.neo4j.shell.kernel.apps.Schema] 
-	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$MonitorAdapter; ] /org/neo4j/kernel/impl/api/index/IndexPopulationJobController.class [org.neo4j.shell.kernel.apps.Schema] 
-	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexPopulationJobController; ] /org/neo4j/kernel/impl/api/index/IndexPopulationJobController$IndexPopulationJobWrapper.class [org.neo4j.shell.kernel.apps.Schema] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/jmx/target/classes
-	[1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; null; null; ] /org/neo4j/kernel/impl/api/ExplicitIndexProviderLookup.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup; null; ] /org/neo4j/kernel/impl/api/index/IndexProviderMap.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; null; ] /org/neo4j/kernel/api/index/IndexProvider.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; org.neo4j.kernel.api.index.IndexProvider; ] /org/neo4j/kernel/api/index/IndexDirectoryStructure.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; null; ] /org/neo4j/storageengine/api/schema/LabelScanReader.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.storageengine.api.schema.LabelScanReader; ] /org/neo4j/kernel/api/labelscan/LabelScanWriter.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.LabelScanWriter; ] /org/neo4j/kernel/api/labelscan/NodeLabelUpdate.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.AllEntriesLabelScanReader; ] /org/neo4j/storageengine/api/schema/LabelScanReader.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.impl.store.UnderlyingStorageException; ] /org/neo4j/kernel/impl/store/StoreFailureException.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.LabelScanStore$Monitor; ] /org/neo4j/kernel/api/labelscan/LabelScanStore$Monitor$Adaptor.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
-	[1][org.neo4j.jmx.impl.ManagementSupport; null; null; ] /org/neo4j/helpers/Service.class [org.neo4j.jmx.impl.ManagementSupport] 
-	[1][org.neo4j.jmx.impl.PrimitivesBean$PrimitivesImpl; null; null; ] /org/neo4j/kernel/impl/store/id/IdGeneratorFactory.class [org.neo4j.jmx.impl.PrimitivesBean$PrimitivesImpl] 
-	[1][org.neo4j.jmx.impl.JmxExtensionFactory$Dependencies; null; null; ] /org/neo4j/kernel/impl/logging/LogService.class [org.neo4j.jmx.impl.JmxExtensionFactory$Dependencies] 
-	[1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; null; null; ] /org/neo4j/kernel/spi/explicitindex/IndexImplementation.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; null; ] /org/neo4j/kernel/spi/explicitindex/IndexCommandFactory.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.IndexCommandFactory; ] /org/neo4j/kernel/spi/explicitindex/ExplicitIndexProviderTransaction.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.ExplicitIndexProviderTransaction; ] /org/neo4j/kernel/api/ExplicitIndex.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; ] /org/neo4j/kernel/impl/api/CommandVisitor.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; null; ] /org/neo4j/kernel/impl/storemigration/StoreFileType.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.StoreFileType; ] /org/neo4j/kernel/impl/storemigration/StoreFileType$1.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.FileOperation; ] /org/neo4j/kernel/impl/storemigration/ExistingTargetStrategy.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.store.StoreFile$1; ] /org/neo4j/kernel/impl/store/StoreFile$2.class [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
-	[1][org.neo4j.jmx.impl.KernelBean$DataSourceInfo; null; null; ] /org/neo4j/kernel/impl/store/StoreId.class [org.neo4j.jmx.impl.KernelBean$DataSourceInfo] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/graph-algo/target/classes
-	[1][org.neo4j.graphalgo.impl.path.ShortestPath; null; null; ] /org/neo4j/kernel/monitoring/Monitors.class [org.neo4j.graphalgo.impl.path.ShortestPath] 
-	[3][org.neo4j.graphalgo.impl.path.ShortestPath; org.neo4j.kernel.monitoring.Monitors; org.neo4j.kernel.monitoring.Monitors$MonitorInvocationHandler; ] /org/neo4j/kernel/monitoring/Monitors$MonitorListenerInvocationHandler.class [org.neo4j.graphalgo.impl.path.ShortestPath] 
-	[2][org.neo4j.graphalgo.impl.path.ShortestPath; org.neo4j.kernel.monitoring.Monitors; org.neo4j.kernel.monitoring.Monitors$UntaggedMonitorListenerInvocationHandler; ] /org/neo4j/kernel/monitoring/Monitors$TaggedMonitorListenerInvocationHandler.class [org.neo4j.graphalgo.impl.path.ShortestPath] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/graphdb-api/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/io/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/dbms/target/classes
-	[1][org.neo4j.dbms.DatabaseManagementSystemSettings; null; null; ] /org/neo4j/graphdb/factory/GraphDatabaseSettings.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; null; ] /org/neo4j/kernel/configuration/GraphDatabaseConfigurationMigrator.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.GraphDatabaseConfigurationMigrator; ] /org/neo4j/kernel/configuration/BaseConfigurationMigrator.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$LabelIndex; ] /org/neo4j/kernel/configuration/BoltConnectorValidator.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.BoltConnectorValidator; ] /org/neo4j/kernel/configuration/ConnectorValidator.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.ssl.SslPolicyConfigValidator; ] /org/neo4j/kernel/configuration/ssl/SslPolicyConfig.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$TransactionStateMemoryAllocation; ] /org/neo4j/kernel/configuration/HttpConnectorValidator.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.HttpConnectorValidator; ] /org/neo4j/kernel/configuration/HttpConnector.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$BoltConnector; ] /org/neo4j/graphdb/factory/GraphDatabaseSettings$Connector.class [org.neo4j.dbms.DatabaseManagementSystemSettings] 
-	[1][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; null; null; ] /org/neo4j/unsafe/impl/batchimport/Configuration.class [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
-	[2][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; null; ] /org/neo4j/unsafe/impl/batchimport/Configuration$1.class [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
-	[2][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.unsafe.impl.batchimport.Configuration$1; ] /org/neo4j/kernel/impl/pagecache/ConfiguringPageCacheFactory.class [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
-	[3][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
-	[3][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.unsafe.impl.batchimport.Configuration$2; ] /org/neo4j/unsafe/impl/batchimport/Configuration$Overridden.class [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
-	[1][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; null; null; ] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.class [org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin] 
-	[2][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration; null; ] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration$1.class [org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin] 
-	[3][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration$1; ] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration$Default.class [org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin] 
-	[2][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration$2; ] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration$Overridden.class [org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin] 
-	[1][org.neo4j.commandline.dbms.CsvImporter; null; null; ] /org/neo4j/unsafe/impl/batchimport/input/Collector.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.Collector; null; ] /org/neo4j/unsafe/impl/batchimport/input/Collector$1.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; null; ] /org/neo4j/unsafe/impl/batchimport/cache/NumberArrayFactory.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory; ] /org/neo4j/unsafe/impl/batchimport/cache/PageCachedNumberArrayFactory.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.Groups; ] /org/neo4j/unsafe/impl/batchimport/input/Group.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper; ] /org/neo4j/helpers/progress/ProgressListener.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.csv.IdType$1; ] /org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.csv.IdType$2; ] /org/neo4j/unsafe/impl/batchimport/input/csv/IdType$3.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; null; ] /org/neo4j/unsafe/impl/batchimport/input/csv/Header.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; org.neo4j.unsafe.impl.batchimport.input.csv.Header; ] /org/neo4j/unsafe/impl/batchimport/input/csv/Type.class [org.neo4j.commandline.dbms.CsvImporter] 
-	[1][org.neo4j.commandline.dbms.StoreInfoCommand; null; null; ] /org/neo4j/kernel/impl/store/format/RecordFormats.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; null; ] /org/neo4j/kernel/impl/store/format/RecordFormat.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormat; ] /org/neo4j/kernel/impl/store/record/AbstractBaseRecord.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.Capability; ] /org/neo4j/kernel/impl/store/format/CapabilityType.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.FormatFamily; ] /org/neo4j/kernel/impl/store/format/FormatFamily.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormats$Factory; ] /org/neo4j/kernel/impl/store/format/RecordFormats.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; null; ] /org/neo4j/kernel/impl/store/format/standard/Standard.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.Standard; ] /org/neo4j/kernel/impl/store/format/standard/StandardV3_4.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV2_3; ] /org/neo4j/kernel/impl/store/format/standard/StandardV3_0.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV3_0; ] /org/neo4j/kernel/impl/store/format/standard/StandardV3_2.class [org.neo4j.commandline.dbms.StoreInfoCommand] 
-	[1][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; null; null; ] /org/neo4j/kernel/impl/store/StoreType.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; null; ] /org/neo4j/kernel/impl/store/StoreFile.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[3][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.NeoStores; ] /org/neo4j/kernel/impl/store/counts/CountsTracker.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$1; ] /org/neo4j/kernel/impl/store/StoreType$2.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$2; ] /org/neo4j/kernel/impl/store/StoreType$3.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$3; ] /org/neo4j/kernel/impl/store/StoreType$4.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$4; ] /org/neo4j/kernel/impl/store/StoreType$5.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$5; ] /org/neo4j/kernel/impl/store/StoreType$6.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$6; ] /org/neo4j/kernel/impl/store/StoreType$7.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$7; ] /org/neo4j/kernel/impl/store/StoreType$8.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$8; ] /org/neo4j/kernel/impl/store/StoreType$9.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$9; ] /org/neo4j/kernel/impl/store/StoreType$10.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$10; ] /org/neo4j/kernel/impl/store/StoreType$11.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$11; ] /org/neo4j/kernel/impl/store/StoreType$12.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$12; ] /org/neo4j/kernel/impl/store/StoreType$13.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$13; ] /org/neo4j/kernel/impl/store/StoreType$14.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$14; ] /org/neo4j/kernel/impl/store/StoreType$15.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$15; ] /org/neo4j/kernel/impl/store/StoreType$16.class [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/values/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/server/target/classes
-	[1][org.neo4j.server.NeoServer; null; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.server.NeoServer] 
-	[4][org.neo4j.server.database.CypherExecutor; org.neo4j.cypher.internal.javacompat.ExecutionEngine; org.neo4j.cypher.internal.CompatibilityFactory; ] /org/neo4j/kernel/monitoring/Monitors.class [org.neo4j.server.database.CypherExecutor] 
-	[1][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; null; null; ] /org/neo4j/kernel/info/DiagnosticsManager.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; null; ] /org/neo4j/kernel/info/DiagnosticsManager$State.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$State; ] /org/neo4j/kernel/info/DiagnosticsManager$State$1.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsExtractor; ] /org/neo4j/kernel/info/DiagnosticsExtractor$VisitableDiagnostics.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$1; ] /org/neo4j/kernel/info/SystemDiagnostics.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.SystemDiagnostics; ] /org/neo4j/kernel/info/SystemDiagnostics$1.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$ExtractedVisitableDiagnosticsProvider; ] /org/neo4j/kernel/info/DiagnosticsManager$ExtractedDiagnosticsProvider.class [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
-	[1][org.neo4j.server.web.AsyncRequestLog; null; null; ] /org/neo4j/helpers/NamedThreadFactory.class [org.neo4j.server.web.AsyncRequestLog] 
-	[2][org.neo4j.server.web.AsyncRequestLog; org.neo4j.helpers.NamedThreadFactory; null; ] /org/neo4j/helpers/NamedThreadFactory$Monitor.class [org.neo4j.server.web.AsyncRequestLog] 
-	[2][org.neo4j.server.web.AsyncRequestLog; org.neo4j.helpers.NamedThreadFactory; org.neo4j.helpers.NamedThreadFactory$Monitor; ] /org/neo4j/helpers/NamedThreadFactory$1.class [org.neo4j.server.web.AsyncRequestLog] 
-	[2][org.neo4j.server.web.AsyncRequestLog; org.neo4j.helpers.NamedThreadFactory; org.neo4j.helpers.NamedThreadFactory$1; ] /org/neo4j/helpers/NamedThreadFactory$2.class [org.neo4j.server.web.AsyncRequestLog] 
-	[1][org.neo4j.server.AbstractNeoServer; null; null; ] /org/neo4j/helpers/ListenSocketAddress.class [org.neo4j.server.AbstractNeoServer] 
-	[1][org.neo4j.server.modules.ExtensionInitializer; null; null; ] /org/neo4j/helpers/Service.class [org.neo4j.server.modules.ExtensionInitializer] 
-	[1][org.neo4j.server.rest.management.console.ShellSession; null; null; ] /org/neo4j/kernel/impl/logging/LogService.class [org.neo4j.server.rest.management.console.ShellSession] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-slf4j/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/licensecheck-config/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/codegen/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/random-values/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/command-line/target/classes
-	[1][org.neo4j.commandline.admin.BlockerLocator; null; null; ] /org/neo4j/helpers/Service.class [org.neo4j.commandline.admin.BlockerLocator] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/common/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/unsafe/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/csv/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/concurrent/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-store/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/procedure-api/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/index/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/lucene-index/target/classes
-	[1][org.neo4j.index.impl.lucene.explicit.CombinedIndexHits; null; null; ] /org/neo4j/kernel/api/ExplicitIndexHits.class [org.neo4j.index.impl.lucene.explicit.CombinedIndexHits] 
-	[1][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; null; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation] 
-	[3][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; org.neo4j.kernel.impl.api.CommandVisitor; ] /org/neo4j/kernel/impl/transaction/command/Command.class [org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation] 
-	[1][org.neo4j.index.impl.lucene.explicit.LuceneBatchInserterIndexProviderNewImpl; null; null; ] /org/neo4j/kernel/impl/index/IndexConfigStore.class [org.neo4j.index.impl.lucene.explicit.LuceneBatchInserterIndexProviderNewImpl] 
-	[1][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader$InnerException; null; null; ] /org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.class [org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader$InnerException] 
-	[1][org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10; null; null; ] /org/neo4j/kernel/monitoring/Monitors.class [org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10] 
-	[1][org.apache.lucene.index.PooledConcurrentMergeScheduler$PooledConcurrentMergePool; null; null; ] /org/neo4j/helpers/NamedThreadFactory.class [org.apache.lucene.index.PooledConcurrentMergeScheduler$PooledConcurrentMergePool] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-store-API/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/kernel-api/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/resource/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-harness/target/classes
-	[1][org.neo4j.harness.internal.InProcessServerBuilder; null; null; ] /org/neo4j/kernel/configuration/Config.class [org.neo4j.harness.internal.InProcessServerBuilder] 
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/collections/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/logging/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/lucene-index-upgrade/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/kernel/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/server-plugin-test/target/classes
-/Users/sraghuram/myws/3x/matGSA/neo4j/community/consistency-check/target/classes
+neo4j-cypher-ir-3.3-3.3.5.jar:
+neo4j-cypher-frontend-2.3-2.3.12.jar:
+neo4j-cypher-logical-plans-3.3-3.3.5.jar:
+neo4j-cypher-compiler-3.3-3.3.5.jar:
+neo4j-cypher-frontend-3.3-3.3.5.jar:
+neo4j-cypher-ir-3.4-3.4.0-rc01.jar:
+neo4j-cypher-logical-plans-3.4-3.4.0-rc01.jar:
+neo4j-cypher-compiler-2.3-2.3.12.jar:
+neo4j-cypher-slotted-runtime-3.4.0-rc01.jar:
+	/org/neo4j/kernel/impl/api/RelationshipVisitor.class -- [1][org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe$$anon$1$$anon$2; null; null; ] [org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe$$anon$1$$anon$2] 
+neo4j-cypher-3.4.0-rc01.jar:
+	/org/neo4j/kernel/api/schema/index/SchemaIndexDescriptor.class -- [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; null; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/schema/constaints/IndexBackedConstraintDescriptor.class -- [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/schema/constaints/ConstraintDescriptor.class -- [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor; org.neo4j.kernel.api.schema.constaints.IndexBackedConstraintDescriptor; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/schema/constaints/RelExistenceConstraintDescriptor.class -- [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.NodeExistenceConstraintDescriptor; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/txstate/TxStateHolder.class -- [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.RelExistenceConstraintDescriptor; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/txstate/TransactionState.class -- [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.txstate.TxStateHolder; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/storageengine/api/txstate/ReadableTransactionState.class -- [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.txstate.TxStateHolder; org.neo4j.kernel.api.txstate.TransactionState; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/ExplicitIndex.class -- [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.txstate.TxStateHolder; org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/schema/constaints/ConstraintDescriptorFactory.class -- [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.impl.api.store.DefaultIndexReference; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/api/schema/constaints/NodeKeyConstraintDescriptor.class -- [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext] 
+	/org/neo4j/kernel/monitoring/Monitors.class -- [1][org.neo4j.cypher.internal.compatibility.v2_3.WrappedMonitors; null; null; ] [org.neo4j.cypher.internal.compatibility.v2_3.WrappedMonitors] 
+	/org/neo4j/kernel/impl/util/ValueUtils.class -- [1][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; null; null; ] [org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2] 
+	/org/neo4j/kernel/impl/util/NodeProxyWrappingNodeValue.class -- [2][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; org.neo4j.kernel.impl.util.ValueUtils; null; ] [org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2] 
+	/org/neo4j/kernel/impl/util/RelationshipProxyWrappingValue.class -- [2][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.NodeProxyWrappingNodeValue; ] [org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2] 
+	/org/neo4j/kernel/impl/util/PathWrappingPathValue.class -- [2][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.RelationshipProxyWrappingValue; ] [org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2] 
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; null; null; ] [org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10] 
+	/org/neo4j/kernel/info/DiagnosticsPhase.class -- [2][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; null; ] [org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10] 
+	/org/neo4j/kernel/info/DiagnosticsProvider.class -- [3][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.info.DiagnosticsPhase; ] [org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10] 
+	/org/neo4j/kernel/configuration/BoltConnector.class -- [2][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.ConfigurationValidator; ] [org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10] 
+	/org/neo4j/kernel/configuration/Connector.class -- [3][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.BoltConnector; ] [org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10] 
+	/org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class -- [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1; null; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1] 
+	/org/neo4j/kernel/impl/store/TransactionId.class -- [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; null; ] [org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1] 
+	/org/neo4j/kernel/api/StatementConstants.class -- [1][org.neo4j.cypher.internal.codegen.CompiledCursorUtils; null; null; ] [org.neo4j.cypher.internal.codegen.CompiledCursorUtils] 
+	/org/neo4j/kernel/impl/util/Dependencies.class -- [1][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; null; null; ] [org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider] 
+	/org/neo4j/kernel/impl/util/DependencySatisfier.class -- [2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; null; ] [org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider] 
+	/org/neo4j/kernel/impl/util/UnsatisfiedDependencyException.class -- [2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; org.neo4j.kernel.impl.util.DependencySatisfier; ] [org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider] 
+neo4j-cypher-planner-spi-3.4-3.4.0-rc01.jar:
+neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar:
+	/org/neo4j/kernel/impl/util/ValueUtils.class -- [1][org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$$anonfun$8; null; null; ] [org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$$anonfun$8] 
+	/org/neo4j/kernel/api/schema/index/SchemaIndexDescriptor.class -- [1][org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundGraphStatistics$BaseTransactionBoundGraphStatistics; null; null; ] [org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundGraphStatistics$BaseTransactionBoundGraphStatistics] 
+	/org/neo4j/kernel/api/schema/SchemaDescriptorFactory.class -- [3][org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundGraphStatistics$BaseTransactionBoundGraphStatistics; org.neo4j.kernel.impl.api.store.DefaultIndexReference; org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory; ] [org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundGraphStatistics$BaseTransactionBoundGraphStatistics] 
+	/org/neo4j/kernel/api/txstate/TxStateHolder.class -- [1][org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper; null; null; ] [org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper] 
+	/org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class -- [1][org.neo4j.cypher.internal.runtime.interpreted.LastCommittedTxIdProvider; null; null; ] [org.neo4j.cypher.internal.runtime.interpreted.LastCommittedTxIdProvider] 
+	/org/neo4j/kernel/api/schema/constaints/ConstraintDescriptorFactory.class -- [1][org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext; null; null; ] [org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext] 
+neo4j-cypher-frontend-3.1-3.1.8.jar:
+neo4j-cypher-compiler-3.1-3.1.8.jar:
+neo4j-cypher-planner-3.4-3.4.0-rc01.jar:
+	/org/neo4j/kernel/impl/util/ValueUtils.class -- [1][org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability; null; null; ] [org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability] 
+neo4j-cypher-util-3.4-3.4.0-rc01.jar:
+neo4j-cypher-runtime-util-3.4.0-rc01.jar:
+neo4j-cypher-physical-planning-3.4.0-rc01.jar:
+neo4j-cypher-expression-3.4-3.4.0-rc01.jar:
+neo4j-cypher-morsel-runtime-3.4.0-rc01.jar:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/server-api/target/classes:
+	/org/neo4j/helpers/Service.class -- [1][org.neo4j.server.plugins.ServerPlugin; null; null; ] [org.neo4j.server.plugins.ServerPlugin] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/configuration/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/ssl/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/udc/target/classes:
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; null; null; ] [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
+	/org/neo4j/kernel/impl/store/id/IdType.class -- [2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; null; ] [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
+	/org/neo4j/kernel/impl/store/id/IdGenerator.class -- [2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdType; ] [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
+	/org/neo4j/kernel/impl/store/id/IdRange.class -- [3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdGenerator; ] [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
+	/org/neo4j/storageengine/api/StoreFileMetadata.class -- [1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.factory.OperationalMode; null; ] [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector] 
+	/org/neo4j/kernel/impl/store/id/IdGeneratorFactory.class -- [1][org.neo4j.ext.udc.impl.UdcKernelExtensionFactory; null; null; ] [org.neo4j.ext.udc.impl.UdcKernelExtensionFactory] 
+	/org/neo4j/kernel/impl/store/StoreId.class -- [1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector$1; null; null; ] [org.neo4j.ext.udc.impl.DefaultUdcInformationCollector$1] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/spatial-index/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/import-tool/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/bolt/target/classes:
+	/org/neo4j/kernel/impl/logging/LogService.class -- [1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; null; null; ] [org.neo4j.bolt.v1.runtime.BoltFactoryImpl] 
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; org.neo4j.kernel.impl.logging.LogService; null; ] [org.neo4j.bolt.v1.runtime.BoltFactoryImpl] 
+	/org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class -- [1][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; null; null; ] [org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI] 
+	/org/neo4j/kernel/impl/util/ValueUtils.class -- [1][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; null; null; ] [org.neo4j.bolt.v1.runtime.ExecutionPlanConverter] 
+	/org/neo4j/helpers/ListenSocketAddress.class -- [1][org.neo4j.bolt.transport.NettyServer; null; null; ] [org.neo4j.bolt.transport.NettyServer] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/security/target/classes:
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.server.security.auth.CommunitySecurityModule; null; null; ] [org.neo4j.server.security.auth.CommunitySecurityModule] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/shell/target/classes:
+	/org/neo4j/helpers/Service.class -- [1][org.neo4j.shell.impl.AbstractAppServer; null; null; ] [org.neo4j.shell.impl.AbstractAppServer] 
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.shell.impl.ShellServerKernelExtension; null; null; ] [org.neo4j.shell.impl.ShellServerKernelExtension] 
+	/org/neo4j/kernel/impl/store/StoreId.class -- [1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; null; null; ] [org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy] 
+	/org/neo4j/kernel/impl/util/ValueUtils.class -- [1][org.neo4j.shell.kernel.apps.cypher.Start; null; null; ] [org.neo4j.shell.kernel.apps.cypher.Start] 
+	/org/neo4j/kernel/impl/api/index/IndexingService.class -- [1][org.neo4j.shell.kernel.apps.Schema; null; null; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/IndexProxyCreator.class -- [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; null; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConfig.class -- [3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexProxyCreator; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/IndexMap.class -- [3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexMapReference; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/sampling/IndexSamplingJobFactory.class -- [3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.sampling.IndexSamplingController; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/transaction/state/IndexUpdates.class -- [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.MultiPopulatorFactory; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/store/record/NodeRecord.class -- [4][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.transaction.state.IndexUpdates; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.class -- [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$IndexLogRecord; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/IndexingUpdateService.class -- [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.RebuildingIndexDescriptor; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/IndexPopulationJobController.class -- [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$MonitorAdapter; ] [org.neo4j.shell.kernel.apps.Schema] 
+	/org/neo4j/kernel/impl/api/index/IndexPopulationJob.class -- [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexPopulationJobController; ] [org.neo4j.shell.kernel.apps.Schema] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/jmx/target/classes:
+	/org/neo4j/kernel/impl/api/ExplicitIndexProviderLookup.class -- [1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; null; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/kernel/impl/api/index/IndexProviderMap.class -- [1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/kernel/api/index/IndexProvider.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/kernel/api/index/IndexDirectoryStructure.class -- [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; org.neo4j.kernel.api.index.IndexProvider; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/storageengine/api/schema/LabelScanReader.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/kernel/api/labelscan/LabelScanWriter.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.storageengine.api.schema.LabelScanReader; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/kernel/api/labelscan/NodeLabelUpdate.class -- [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.LabelScanWriter; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/kernel/impl/store/StoreFailureException.class -- [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.impl.store.UnderlyingStorageException; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1] 
+	/org/neo4j/helpers/Service.class -- [1][org.neo4j.jmx.impl.ManagementSupport; null; null; ] [org.neo4j.jmx.impl.ManagementSupport] 
+	/org/neo4j/kernel/impl/store/id/IdGeneratorFactory.class -- [1][org.neo4j.jmx.impl.PrimitivesBean$PrimitivesImpl; null; null; ] [org.neo4j.jmx.impl.PrimitivesBean$PrimitivesImpl] 
+	/org/neo4j/kernel/impl/logging/LogService.class -- [1][org.neo4j.jmx.impl.JmxExtensionFactory$Dependencies; null; null; ] [org.neo4j.jmx.impl.JmxExtensionFactory$Dependencies] 
+	/org/neo4j/kernel/spi/explicitindex/IndexImplementation.class -- [1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; null; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/spi/explicitindex/IndexCommandFactory.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/spi/explicitindex/ExplicitIndexProviderTransaction.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.IndexCommandFactory; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/api/ExplicitIndex.class -- [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.ExplicitIndexProviderTransaction; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/impl/api/CommandVisitor.class -- [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/impl/storemigration/StoreFileType.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; null; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/impl/storemigration/FileOperation.class -- [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.StoreFileType; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/impl/storemigration/ExistingTargetStrategy.class -- [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.FileOperation; ] [org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl] 
+	/org/neo4j/kernel/impl/store/StoreId.class -- [1][org.neo4j.jmx.impl.KernelBean$DataSourceInfo; null; null; ] [org.neo4j.jmx.impl.KernelBean$DataSourceInfo] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/graph-algo/target/classes:
+	/org/neo4j/kernel/monitoring/Monitors.class -- [1][org.neo4j.graphalgo.impl.path.ShortestPath; null; null; ] [org.neo4j.graphalgo.impl.path.ShortestPath] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/graphdb-api/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/io/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/dbms/target/classes:
+	/org/neo4j/graphdb/factory/GraphDatabaseSettings.class -- [1][org.neo4j.dbms.DatabaseManagementSystemSettings; null; null; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/GraphDatabaseConfigurationMigrator.class -- [2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; null; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/BaseConfigurationMigrator.class -- [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.GraphDatabaseConfigurationMigrator; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/BoltConnectorValidator.class -- [2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$LabelIndex; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/ConnectorValidator.class -- [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.BoltConnectorValidator; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/ssl/SslPolicyConfig.class -- [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.ssl.SslPolicyConfigValidator; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/HttpConnectorValidator.class -- [2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$TransactionStateMemoryAllocation; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/kernel/configuration/HttpConnector.class -- [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.HttpConnectorValidator; ] [org.neo4j.dbms.DatabaseManagementSystemSettings] 
+	/org/neo4j/unsafe/impl/batchimport/Configuration.class -- [1][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; null; null; ] [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
+	/org/neo4j/kernel/impl/pagecache/ConfiguringPageCacheFactory.class -- [2][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.unsafe.impl.batchimport.Configuration$1; ] [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
+	/org/neo4j/kernel/configuration/Config.class -- [3][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory; ] [org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin] 
+	/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.class -- [1][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; null; null; ] [org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin] 
+	/org/neo4j/unsafe/impl/batchimport/input/Collector.class -- [1][org.neo4j.commandline.dbms.CsvImporter; null; null; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.class -- [1][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.Collector; null; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/cache/NumberArrayFactory.class -- [2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; null; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/cache/PageCachedNumberArrayFactory.class -- [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/input/Group.class -- [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.Groups; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/helpers/progress/ProgressListener.class -- [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.class -- [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.csv.IdType$1; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/input/csv/Header.class -- [2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; null; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/unsafe/impl/batchimport/input/csv/Type.class -- [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; org.neo4j.unsafe.impl.batchimport.input.csv.Header; ] [org.neo4j.commandline.dbms.CsvImporter] 
+	/org/neo4j/kernel/impl/store/format/RecordFormats.class -- [1][org.neo4j.commandline.dbms.StoreInfoCommand; null; null; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/RecordFormat.class -- [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; null; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/record/AbstractBaseRecord.class -- [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormat; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/CapabilityType.class -- [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.Capability; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/FormatFamily.class -- [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.FormatFamily; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/standard/Standard.class -- [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; null; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.class -- [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.Standard; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.class -- [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV2_3; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.class -- [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV3_0; ] [org.neo4j.commandline.dbms.StoreInfoCommand] 
+	/org/neo4j/kernel/impl/store/StoreType.class -- [1][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; null; null; ] [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
+	/org/neo4j/kernel/impl/store/StoreFile.class -- [2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; null; ] [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
+	/org/neo4j/kernel/impl/store/counts/CountsTracker.class -- [3][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.NeoStores; ] [org.neo4j.commandline.dbms.MemoryRecommendationsCommand] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/values/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/server/target/classes:
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.server.NeoServer; null; null; ] [org.neo4j.server.NeoServer] 
+	/org/neo4j/kernel/info/DiagnosticsManager.class -- [1][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; null; null; ] [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
+	/org/neo4j/kernel/info/DiagnosticsExtractor.class -- [2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$State; ] [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
+	/org/neo4j/kernel/info/SystemDiagnostics.class -- [2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$1; ] [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
+	/org/neo4j/helpers/Format.class -- [4][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.SystemDiagnostics; ] [org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter] 
+	/org/neo4j/helpers/NamedThreadFactory.class -- [1][org.neo4j.server.web.AsyncRequestLog; null; null; ] [org.neo4j.server.web.AsyncRequestLog] 
+	/org/neo4j/helpers/ListenSocketAddress.class -- [1][org.neo4j.server.AbstractNeoServer; null; null; ] [org.neo4j.server.AbstractNeoServer] 
+	/org/neo4j/helpers/Service.class -- [1][org.neo4j.server.modules.ExtensionInitializer; null; null; ] [org.neo4j.server.modules.ExtensionInitializer] 
+	/org/neo4j/kernel/impl/logging/LogService.class -- [1][org.neo4j.server.rest.management.console.ShellSession; null; null; ] [org.neo4j.server.rest.management.console.ShellSession] 
+	/org/neo4j/kernel/api/txstate/TransactionState.class -- [1][org.neo4j.server.rest.transactional.TransactionStateChecker; null; null; ] [org.neo4j.server.rest.transactional.TransactionStateChecker] 
+	/org/neo4j/kernel/impl/util/ValueUtils.class -- [1][org.neo4j.server.rest.transactional.TransactionHandle; null; null; ] [org.neo4j.server.rest.transactional.TransactionHandle] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-slf4j/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/licensecheck-config/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/codegen/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/random-values/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/command-line/target/classes:
+	/org/neo4j/helpers/Service.class -- [1][org.neo4j.commandline.admin.BlockerLocator; null; null; ] [org.neo4j.commandline.admin.BlockerLocator] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/common/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/unsafe/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/csv/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/concurrent/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-store/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/procedure-api/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/index/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/lucene-index/target/classes:
+	/org/neo4j/kernel/api/ExplicitIndexHits.class -- [1][org.neo4j.index.impl.lucene.explicit.CombinedIndexHits; null; null; ] [org.neo4j.index.impl.lucene.explicit.CombinedIndexHits] 
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; null; null; ] [org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation] 
+	/org/neo4j/kernel/impl/transaction/command/Command.class -- [3][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; org.neo4j.kernel.impl.api.CommandVisitor; ] [org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation] 
+	/org/neo4j/kernel/impl/index/IndexConfigStore.class -- [1][org.neo4j.index.impl.lucene.explicit.LuceneBatchInserterIndexProviderNewImpl; null; null; ] [org.neo4j.index.impl.lucene.explicit.LuceneBatchInserterIndexProviderNewImpl] 
+	/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.class -- [1][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader$InnerException; null; null; ] [org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader$InnerException] 
+	/org/neo4j/kernel/monitoring/Monitors.class -- [1][org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10; null; null; ] [org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10] 
+	/org/neo4j/helpers/NamedThreadFactory.class -- [1][org.apache.lucene.index.PooledConcurrentMergeScheduler$PooledConcurrentMergePool; null; null; ] [org.apache.lucene.index.PooledConcurrentMergeScheduler$PooledConcurrentMergePool] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-store-API/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/kernel-api/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/resource/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/neo4j-harness/target/classes:
+	/org/neo4j/kernel/configuration/Config.class -- [1][org.neo4j.harness.internal.InProcessServerBuilder; null; null; ] [org.neo4j.harness.internal.InProcessServerBuilder] 
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/collections/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/logging/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/lucene-index-upgrade/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/kernel/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/server-plugin-test/target/classes:
+/Users/sraghuram/myws/3x/matGSA/neo4j/community/consistency-check/target/classes:
 ----------------------===============++++++++++++++++++===================------------------------
 
-Total count: 132
+Total count: 104
 ----------------------
 [0] /org/neo4j/kernel/impl/store/format/RecordFormat.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; null; ]
+	[community/dbms] [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; null; ]
 ----------------------
 [1] /org/neo4j/kernel/api/labelscan/NodeLabelUpdate.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.LabelScanWriter; ]
+	[community/jmx] [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.LabelScanWriter; ]
 ----------------------
 [2] /org/neo4j/kernel/impl/util/NodeProxyWrappingNodeValue.class: 
-	[neo4j-cypher-planner-3.4-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability$1; org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability; org.neo4j.kernel.impl.util.ValueUtils; ]
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; org.neo4j.kernel.impl.util.ValueUtils; null; ]
 ----------------------
 [3] /org/neo4j/kernel/impl/store/id/IdType.class: 
-	[community/udc] 	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; null; ]
+	[community/udc] [2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; null; ]
 ----------------------
 [4] /org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.class: 
-	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader$InnerException; null; null; ]
+	[community/lucene-index] [1][org.neo4j.kernel.api.impl.schema.reader.PartitionedIndexReader$InnerException; null; null; ]
 ----------------------
 [5] /org/neo4j/kernel/impl/api/RelationshipVisitor.class: 
-	[neo4j-cypher-slotted-runtime-3.4.0-rc01.jar] 	[4][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe; ]
-	[neo4j-cypher-morsel-runtime-3.4.0-rc01.jar] 	[9][org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$1; org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder; org.neo4j.cypher.internal.runtime.vectorized.PipelineBuilder$$anonfun$4; ]
+	[neo4j-cypher-slotted-runtime-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe$$anon$1$$anon$2; null; null; ]
 ----------------------
 [6] /org/neo4j/kernel/impl/store/format/standard/StandardV3_4.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.Standard; ]
+	[community/dbms] [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.Standard; ]
 ----------------------
-[7] /org/neo4j/kernel/impl/transaction/command/Command$NodeCommand.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.transaction.state.IndexUpdates; ]
+[7] /org/neo4j/kernel/spi/explicitindex/IndexImplementation.class: 
+	[community/jmx] [1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; null; null; ]
 ----------------------
-[8] /org/neo4j/kernel/spi/explicitindex/IndexImplementation.class: 
-	[community/jmx] 	[1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; null; null; ]
+[8] /org/neo4j/kernel/impl/store/record/AbstractBaseRecord.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormat; ]
 ----------------------
-[9] /org/neo4j/kernel/impl/store/record/AbstractBaseRecord.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormat; ]
+[9] /org/neo4j/kernel/impl/store/format/FormatFamily.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.FormatFamily; ]
 ----------------------
-[10] /org/neo4j/kernel/info/DiagnosticsManager$State$1.class: 
-	[community/server] 	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$State; ]
+[10] /org/neo4j/kernel/api/index/IndexProvider.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; null; ]
 ----------------------
-[11] /org/neo4j/kernel/info/DiagnosticsManager$ExtractedDiagnosticsProvider.class: 
-	[community/server] 	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$ExtractedVisitableDiagnosticsProvider; ]
+[11] /org/neo4j/kernel/impl/api/index/IndexProviderMap.class: 
+	[community/jmx] [1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup; null; ]
 ----------------------
-[12] /org/neo4j/kernel/impl/store/format/FormatFamily.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.FormatFamily; ]
+[12] /org/neo4j/unsafe/impl/batchimport/input/csv/Header.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; null; ]
 ----------------------
-[13] /org/neo4j/kernel/api/index/IndexProvider.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; null; ]
+[13] /org/neo4j/kernel/impl/util/DependencySatisfier.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; null; ]
 ----------------------
-[14] /org/neo4j/kernel/impl/api/index/IndexProviderMap.class: 
-	[community/jmx] 	[1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup; null; ]
+[14] /org/neo4j/kernel/api/schema/index/SchemaIndexDescriptor.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; null; null; ]
+	[neo4j-cypher-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor; org.neo4j.kernel.api.schema.index.SchemaIndexDescriptor$Supplier; ]
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundGraphStatistics$BaseTransactionBoundGraphStatistics; null; null; ]
 ----------------------
-[15] /org/neo4j/unsafe/impl/batchimport/input/csv/Header.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; null; ]
+[15] /org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1; null; null; ]
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.runtime.interpreted.LastCommittedTxIdProvider; null; null; ]
+	[community/bolt] [1][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; null; null; ]
 ----------------------
-[16] /org/neo4j/helpers/NamedThreadFactory$Monitor.class: 
-	[community/server] 	[2][org.neo4j.server.web.AsyncRequestLog; org.neo4j.helpers.NamedThreadFactory; null; ]
+[16] /org/neo4j/kernel/impl/store/format/CapabilityType.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.Capability; ]
 ----------------------
-[17] /org/neo4j/kernel/impl/store/StoreType$10.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$9; ]
+[17] /org/neo4j/kernel/configuration/BoltConnectorValidator.class: 
+	[community/dbms] [2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$LabelIndex; ]
 ----------------------
-[18] /org/neo4j/kernel/monitoring/Monitors$MonitorListenerInvocationHandler.class: 
-	[community/graph-algo] 	[3][org.neo4j.graphalgo.impl.path.ShortestPath; org.neo4j.kernel.monitoring.Monitors; org.neo4j.kernel.monitoring.Monitors$MonitorInvocationHandler; ]
+[18] /org/neo4j/helpers/ListenSocketAddress.class: 
+	[community/bolt] [1][org.neo4j.bolt.transport.NettyServer; null; null; ]
+	[community/server] [1][org.neo4j.server.AbstractNeoServer; null; null; ]
 ----------------------
-[19] /org/neo4j/kernel/info/DiagnosticsExtractor$VisitableDiagnostics.class: 
-	[community/server] 	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsExtractor; ]
+[19] /org/neo4j/kernel/configuration/BoltConnector.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.ConfigurationValidator; ]
 ----------------------
-[20] /org/neo4j/kernel/impl/util/DependencySatisfier.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; null; ]
+[20] /org/neo4j/storageengine/api/txstate/ReadableTransactionState.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.txstate.TxStateHolder; org.neo4j.kernel.api.txstate.TransactionState; ]
 ----------------------
-[21] /org/neo4j/kernel/impl/transaction/log/TransactionIdStore.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.runtime.interpreted.LastCommittedTxIdProvider; ]
-	[community/bolt] 	[1][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; null; null; ]
+[21] /org/neo4j/kernel/info/DiagnosticsExtractor.class: 
+	[community/server] [2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$State; ]
 ----------------------
-[22] /org/neo4j/unsafe/impl/batchimport/input/csv/IdType$3.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.csv.IdType$2; ]
+[22] /org/neo4j/kernel/impl/store/StoreFile.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; null; ]
 ----------------------
-[23] /org/neo4j/kernel/impl/store/format/CapabilityType.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.Capability; ]
+[23] /org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConfig.class: 
+	[community/shell] [3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexProxyCreator; ]
 ----------------------
-[24] /org/neo4j/unsafe/impl/batchimport/input/Collector$1.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.Collector; null; ]
+[24] /org/neo4j/kernel/impl/index/IndexConfigStore.class: 
+	[community/lucene-index] [1][org.neo4j.index.impl.lucene.explicit.LuceneBatchInserterIndexProviderNewImpl; null; null; ]
 ----------------------
-[25] /org/neo4j/kernel/configuration/BoltConnectorValidator.class: 
-	[community/dbms] 	[2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$LabelIndex; ]
+[25] /org/neo4j/kernel/impl/store/id/IdGeneratorFactory.class: 
+	[community/udc] [1][org.neo4j.ext.udc.impl.UdcKernelExtensionFactory; null; null; ]
+	[community/jmx] [1][org.neo4j.jmx.impl.PrimitivesBean$PrimitivesImpl; null; null; ]
 ----------------------
-[26] /org/neo4j/kernel/impl/store/StoreType$3.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$2; ]
+[26] /org/neo4j/kernel/api/schema/constaints/ConstraintDescriptorFactory.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.impl.api.store.DefaultIndexReference; null; ]
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext; null; null; ]
 ----------------------
-[27] /org/neo4j/helpers/ListenSocketAddress.class: 
-	[community/bolt] 	[1][org.neo4j.bolt.transport.NettyServer; null; null; ]
-	[community/server] 	[1][org.neo4j.server.AbstractNeoServer; null; null; ]
+[27] /org/neo4j/kernel/api/schema/constaints/RelExistenceConstraintDescriptor.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.NodeExistenceConstraintDescriptor; null; ]
 ----------------------
-[28] /org/neo4j/kernel/configuration/BoltConnector.class: 
-	[community/udc] 	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.ConfigurationValidator; ]
+[28] /org/neo4j/kernel/impl/transaction/command/Command.class: 
+	[community/lucene-index] [3][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; org.neo4j.kernel.impl.api.CommandVisitor; ]
 ----------------------
-[29] /org/neo4j/kernel/impl/storemigration/StoreFileType$1.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.StoreFileType; ]
+[29] /org/neo4j/kernel/impl/util/PathWrappingPathValue.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.RelationshipProxyWrappingValue; ]
 ----------------------
-[30] /org/neo4j/unsafe/impl/batchimport/Configuration$1.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; null; ]
+[30] /org/neo4j/kernel/api/txstate/TxStateHolder.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.RelExistenceConstraintDescriptor; null; ]
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper; null; null; ]
 ----------------------
-[31] /org/neo4j/kernel/impl/store/StoreFile.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; null; ]
+[31] /org/neo4j/kernel/impl/api/CommandVisitor.class: 
+	[community/jmx] [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; ]
 ----------------------
-[32] /org/neo4j/kernel/info/SystemDiagnostics$1.class: 
-	[community/server] 	[3][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.SystemDiagnostics; ]
+[32] /org/neo4j/kernel/impl/api/ExplicitIndexProviderLookup.class: 
+	[community/jmx] [1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; null; null; ]
 ----------------------
-[33] /org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConfig.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexProxyCreator; ]
+[33] /org/neo4j/kernel/impl/store/format/standard/StandardV3_2.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV3_0; ]
 ----------------------
-[34] /org/neo4j/kernel/impl/index/IndexConfigStore.class: 
-	[community/lucene-index] 	[1][org.neo4j.index.impl.lucene.explicit.LuceneBatchInserterIndexProviderNewImpl; null; null; ]
+[34] /org/neo4j/kernel/configuration/Config.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; null; null; ]
+	[community/udc] [1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; null; null; ]
+	[community/bolt] [1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; org.neo4j.kernel.impl.logging.LogService; null; ]
+	[community/security] [1][org.neo4j.server.security.auth.CommunitySecurityModule; null; null; ]
+	[community/shell] [1][org.neo4j.shell.impl.ShellServerKernelExtension; null; null; ]
+	[community/dbms] [3][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory; ]
+	[community/server] [1][org.neo4j.server.NeoServer; null; null; ]
+	[community/lucene-index] [1][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; null; null; ]
+	[community/neo4j-harness] [1][org.neo4j.harness.internal.InProcessServerBuilder; null; null; ]
 ----------------------
-[35] /org/neo4j/kernel/impl/store/id/IdGeneratorFactory.class: 
-	[community/udc] 	[1][org.neo4j.ext.udc.impl.UdcKernelExtensionFactory; null; null; ]
-	[community/jmx] 	[1][org.neo4j.jmx.impl.PrimitivesBean$PrimitivesImpl; null; null; ]
+[35] /org/neo4j/kernel/impl/util/UnsatisfiedDependencyException.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; org.neo4j.kernel.impl.util.DependencySatisfier; ]
 ----------------------
-[36] /org/neo4j/helpers/NamedThreadFactory$2.class: 
-	[community/server] 	[2][org.neo4j.server.web.AsyncRequestLog; org.neo4j.helpers.NamedThreadFactory; org.neo4j.helpers.NamedThreadFactory$1; ]
+[36] /org/neo4j/kernel/api/schema/constaints/ConstraintDescriptor.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor; org.neo4j.kernel.api.schema.constaints.IndexBackedConstraintDescriptor; ]
 ----------------------
-[37] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration$Overridden.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration$2; ]
+[37] /org/neo4j/kernel/spi/explicitindex/IndexCommandFactory.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; null; ]
 ----------------------
-[38] /org/neo4j/kernel/impl/transaction/command/Command.class: 
-	[community/lucene-index] 	[3][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; org.neo4j.kernel.impl.api.CommandVisitor; ]
+[38] /org/neo4j/kernel/api/ExplicitIndex.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.txstate.TxStateHolder; org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState; ]
+	[community/jmx] [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.ExplicitIndexProviderTransaction; ]
 ----------------------
-[39] /org/neo4j/kernel/impl/util/PathWrappingPathValue.class: 
-	[community/bolt] 	[2][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.RelationshipProxyWrappingValue; ]
+[39] /org/neo4j/kernel/api/schema/constaints/NodeKeyConstraintDescriptor.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory; null; ]
 ----------------------
-[40] /org/neo4j/kernel/api/txstate/TxStateHolder.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[5][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.cypher.internal.CompilerEngineDelegator; ]
+[40] /org/neo4j/kernel/configuration/BaseConfigurationMigrator.class: 
+	[community/dbms] [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.GraphDatabaseConfigurationMigrator; ]
 ----------------------
-[41] /org/neo4j/kernel/impl/api/CommandVisitor.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.impl.api.TransactionApplier; ]
+[41] /org/neo4j/storageengine/api/schema/LabelScanReader.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; null; ]
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.AllEntriesLabelScanReader; ]
 ----------------------
-[42] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration$1.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration; null; ]
+[42] /org/neo4j/kernel/info/DiagnosticsProvider.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.info.DiagnosticsPhase; ]
 ----------------------
-[43] /org/neo4j/kernel/impl/api/ExplicitIndexProviderLookup.class: 
-	[community/jmx] 	[1][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; null; null; ]
+[43] /org/neo4j/kernel/impl/api/index/IndexingUpdateService.class: 
+	[community/shell] [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.RebuildingIndexDescriptor; ]
 ----------------------
-[44] /org/neo4j/kernel/impl/store/format/standard/StandardV3_2.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV3_0; ]
+[44] /org/neo4j/storageengine/api/StoreFileMetadata.class: 
+	[community/udc] [1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.factory.OperationalMode; null; ]
 ----------------------
-[45] /org/neo4j/kernel/impl/store/StoreType$12.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$11; ]
+[45] /org/neo4j/kernel/impl/store/StoreId.class: 
+	[community/udc] [1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector$1; null; null; ]
+	[community/shell] [1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; null; null; ]
+	[community/shell] [1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; org.neo4j.kernel.impl.store.StoreId; null; ]
+	[community/jmx] [1][org.neo4j.jmx.impl.KernelBean$DataSourceInfo; null; null; ]
 ----------------------
-[46] /org/neo4j/kernel/configuration/Config.class: 
-	[community/udc] 	[1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; null; null; ]
-	[community/bolt] 	[1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; org.neo4j.kernel.impl.logging.LogService; null; ]
-	[community/security] 	[1][org.neo4j.server.security.auth.CommunitySecurityModule; null; null; ]
-	[community/shell] 	[1][org.neo4j.shell.impl.ShellServerKernelExtension; null; null; ]
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory; ]
-	[community/server] 	[1][org.neo4j.server.NeoServer; null; null; ]
-	[community/lucene-index] 	[1][org.neo4j.index.impl.lucene.explicit.LuceneIndexImplementation; null; null; ]
-	[community/neo4j-harness] 	[1][org.neo4j.harness.internal.InProcessServerBuilder; null; null; ]
+[46] /org/neo4j/kernel/impl/store/format/RecordFormats.class: 
+	[community/dbms] [1][org.neo4j.commandline.dbms.StoreInfoCommand; null; null; ]
+	[community/dbms] [3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormats$Factory; ]
 ----------------------
-[47] /org/neo4j/kernel/impl/util/UnsatisfiedDependencyException.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[2][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; org.neo4j.kernel.impl.util.Dependencies; org.neo4j.kernel.impl.util.DependencySatisfier; ]
+[47] /org/neo4j/kernel/impl/store/format/standard/Standard.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; null; ]
 ----------------------
-[48] /org/neo4j/kernel/api/labelscan/LabelScanStore$Monitor$Adaptor.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.LabelScanStore$Monitor; ]
+[48] /org/neo4j/kernel/impl/api/index/IndexMap.class: 
+	[community/shell] [3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexMapReference; ]
 ----------------------
-[49] /org/neo4j/kernel/spi/explicitindex/IndexCommandFactory.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; null; ]
+[49] /org/neo4j/kernel/impl/api/index/IndexingService.class: 
+	[community/shell] [1][org.neo4j.shell.kernel.apps.Schema; null; null; ]
 ----------------------
-[50] /org/neo4j/kernel/api/ExplicitIndex.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.ExplicitIndexProviderTransaction; ]
+[50] /org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.csv.IdType$1; ]
 ----------------------
-[51] /org/neo4j/kernel/configuration/BaseConfigurationMigrator.class: 
-	[community/dbms] 	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.GraphDatabaseConfigurationMigrator; ]
+[51] /org/neo4j/helpers/Service.class: 
+	[community/server-api] [1][org.neo4j.server.plugins.ServerPlugin; null; null; ]
+	[community/shell] [1][org.neo4j.shell.impl.AbstractAppServer; null; null; ]
+	[community/jmx] [1][org.neo4j.jmx.impl.ManagementSupport; null; null; ]
+	[community/server] [1][org.neo4j.server.modules.ExtensionInitializer; null; null; ]
+	[community/command-line] [1][org.neo4j.commandline.admin.BlockerLocator; null; null; ]
 ----------------------
-[52] /org/neo4j/storageengine/api/schema/LabelScanReader.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; null; ]
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.api.labelscan.AllEntriesLabelScanReader; ]
+[52] /org/neo4j/kernel/api/schema/SchemaDescriptorFactory.class: 
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundGraphStatistics$BaseTransactionBoundGraphStatistics; org.neo4j.kernel.impl.api.store.DefaultIndexReference; org.neo4j.kernel.api.schema.index.SchemaIndexDescriptorFactory; ]
 ----------------------
-[53] /org/neo4j/kernel/info/DiagnosticsProvider.class: 
-	[community/udc] 	[3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.info.DiagnosticsPhase; ]
+[53] /org/neo4j/kernel/info/DiagnosticsManager.class: 
+	[community/server] [1][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; null; null; ]
 ----------------------
-[54] /org/neo4j/kernel/impl/store/StoreFile$2.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.store.StoreFile$1; ]
+[54] /org/neo4j/kernel/impl/storemigration/FileOperation.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.StoreFileType; ]
 ----------------------
-[55] /org/neo4j/kernel/impl/api/index/IndexingUpdateService.class: 
-	[community/shell] 	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.RebuildingIndexDescriptor; ]
+[55] /org/neo4j/unsafe/impl/batchimport/input/Group.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.Groups; ]
 ----------------------
-[56] /org/neo4j/storageengine/api/StoreFileMetadata.class: 
-	[community/udc] 	[1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.factory.OperationalMode; null; ]
+[56] /org/neo4j/kernel/impl/api/index/IndexPopulationJobController.class: 
+	[community/shell] [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$MonitorAdapter; ]
 ----------------------
-[57] /org/neo4j/kernel/impl/store/StoreId.class: 
-	[community/udc] 	[1][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector$1; null; null; ]
-	[community/shell] 	[1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; null; null; ]
-	[community/shell] 	[1][org.neo4j.shell.kernel.ReadOnlyGraphDatabaseProxy; org.neo4j.kernel.impl.store.StoreId; null; ]
-	[community/jmx] 	[1][org.neo4j.jmx.impl.KernelBean$DataSourceInfo; null; null; ]
+[57] /org/neo4j/helpers/progress/ProgressListener.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper; ]
 ----------------------
-[58] /org/neo4j/kernel/impl/store/format/RecordFormats.class: 
-	[community/dbms] 	[1][org.neo4j.commandline.dbms.StoreInfoCommand; null; null; ]
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormats; org.neo4j.kernel.impl.store.format.RecordFormats$Factory; ]
+[58] /org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.class: 
+	[community/shell] [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$IndexLogRecord; ]
 ----------------------
-[59] /org/neo4j/kernel/impl/store/StoreType$9.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$8; ]
+[59] /org/neo4j/kernel/configuration/HttpConnectorValidator.class: 
+	[community/dbms] [2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$TransactionStateMemoryAllocation; ]
 ----------------------
-[60] /org/neo4j/graphdb/factory/GraphDatabaseSettings$Connector.class: 
-	[community/dbms] 	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$BoltConnector; ]
+[60] /org/neo4j/kernel/impl/storemigration/StoreFileType.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; null; ]
 ----------------------
-[61] /org/neo4j/kernel/impl/store/StoreType$13.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$12; ]
+[61] /org/neo4j/kernel/impl/storemigration/ExistingTargetStrategy.class: 
+	[community/jmx] [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.FileOperation; ]
 ----------------------
-[62] /org/neo4j/kernel/impl/store/format/standard/Standard.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; null; ]
+[62] /org/neo4j/kernel/impl/store/format/standard/StandardV3_0.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV2_3; ]
 ----------------------
-[63] /org/neo4j/kernel/impl/api/index/IndexMap.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexMapReference; ]
+[63] /org/neo4j/kernel/monitoring/Monitors.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.compatibility.v2_3.WrappedMonitors; null; null; ]
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.compatibility.v2_3.WrappedMonitors; org.neo4j.kernel.monitoring.Monitors; null; ]
+	[community/graph-algo] [1][org.neo4j.graphalgo.impl.path.ShortestPath; null; null; ]
+	[community/lucene-index] [1][org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10; null; null; ]
 ----------------------
-[64] /org/neo4j/kernel/impl/api/index/IndexingService.class: 
-	[community/shell] 	[1][org.neo4j.shell.kernel.apps.Schema; null; null; ]
+[64] /org/neo4j/kernel/impl/util/Dependencies.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; null; null; ]
 ----------------------
-[65] /org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.csv.IdType$1; ]
+[65] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.class: 
+	[community/dbms] [1][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; null; null; ]
 ----------------------
-[66] /org/neo4j/helpers/Service.class: 
-	[community/server-api] 	[1][org.neo4j.server.plugins.ServerPlugin; null; null; ]
-	[community/shell] 	[1][org.neo4j.shell.impl.AbstractAppServer; null; null; ]
-	[community/jmx] 	[1][org.neo4j.jmx.impl.ManagementSupport; null; null; ]
-	[community/server] 	[1][org.neo4j.server.modules.ExtensionInitializer; null; null; ]
-	[community/command-line] 	[1][org.neo4j.commandline.admin.BlockerLocator; null; null; ]
+[66] /org/neo4j/kernel/impl/util/ValueUtils.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; null; null; ]
+	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$$anonfun$8; null; null; ]
+	[neo4j-cypher-planner-3.4-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability; null; null; ]
+	[community/bolt] [1][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; null; null; ]
+	[community/shell] [1][org.neo4j.shell.kernel.apps.cypher.Start; null; null; ]
+	[community/server] [1][org.neo4j.server.rest.transactional.TransactionHandle; null; null; ]
 ----------------------
-[67] /org/neo4j/kernel/monitoring/Monitors$TaggedMonitorListenerInvocationHandler.class: 
-	[community/graph-algo] 	[2][org.neo4j.graphalgo.impl.path.ShortestPath; org.neo4j.kernel.monitoring.Monitors; org.neo4j.kernel.monitoring.Monitors$UntaggedMonitorListenerInvocationHandler; ]
+[67] /org/neo4j/kernel/impl/api/index/IndexPopulationJob.class: 
+	[community/shell] [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexPopulationJobController; ]
 ----------------------
-[68] /org/neo4j/kernel/impl/store/StoreType$2.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$1; ]
+[68] /org/neo4j/kernel/configuration/HttpConnector.class: 
+	[community/dbms] [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.HttpConnectorValidator; ]
 ----------------------
-[69] /org/neo4j/kernel/info/DiagnosticsManager.class: 
-	[community/server] 	[1][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; null; null; ]
+[69] /org/neo4j/unsafe/impl/batchimport/Configuration.class: 
+	[community/dbms] [1][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; null; null; ]
 ----------------------
-[70] /org/neo4j/kernel/impl/store/StoreType$8.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$7; ]
+[70] /org/neo4j/kernel/info/SystemDiagnostics.class: 
+	[community/server] [2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$1; ]
 ----------------------
-[71] /org/neo4j/unsafe/impl/batchimport/input/Group.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.input.Groups; ]
+[71] /org/neo4j/kernel/configuration/Connector.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [3][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.BoltConnector; ]
 ----------------------
-[72] /org/neo4j/kernel/impl/api/index/IndexPopulationJobController.class: 
-	[community/shell] 	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$MonitorAdapter; ]
+[72] /org/neo4j/kernel/impl/logging/LogService.class: 
+	[community/bolt] [1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; null; null; ]
+	[community/bolt] [1][org.neo4j.bolt.BoltKernelExtension; null; null; ]
+	[community/jmx] [1][org.neo4j.jmx.impl.JmxExtensionFactory$Dependencies; null; null; ]
+	[community/server] [1][org.neo4j.server.rest.management.console.ShellSession; null; null; ]
 ----------------------
-[73] /org/neo4j/helpers/progress/ProgressListener.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper; ]
+[73] /org/neo4j/kernel/impl/transaction/state/IndexUpdates.class: 
+	[community/shell] [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.MultiPopulatorFactory; ]
 ----------------------
-[74] /org/neo4j/kernel/info/DiagnosticsManager$State.class: 
-	[community/server] 	[2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; null; ]
+[74] /org/neo4j/kernel/impl/util/RelationshipProxyWrappingValue.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.procs.ProcedureExecutionResult$$anonfun$accept$1$$anonfun$apply$1$$anonfun$apply$mcVI$sp$2; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.NodeProxyWrappingNodeValue; ]
 ----------------------
-[75] /org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.class: 
-	[community/shell] 	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$IndexLogRecord; ]
+[75] /org/neo4j/helpers/Format.class: 
+	[community/server] [4][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.SystemDiagnostics; ]
 ----------------------
-[76] /org/neo4j/kernel/configuration/HttpConnectorValidator.class: 
-	[community/dbms] 	[2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings$TransactionStateMemoryAllocation; ]
+[76] /org/neo4j/kernel/spi/explicitindex/ExplicitIndexProviderTransaction.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.IndexCommandFactory; ]
 ----------------------
-[77] /org/neo4j/kernel/impl/store/StoreType$14.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$13; ]
+[77] /org/neo4j/kernel/configuration/GraphDatabaseConfigurationMigrator.class: 
+	[community/dbms] [2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; null; ]
 ----------------------
-[78] /org/neo4j/kernel/impl/store/StoreType$4.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$3; ]
+[78] /org/neo4j/kernel/impl/store/counts/CountsTracker.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.NeoStores; ]
 ----------------------
-[79] /org/neo4j/kernel/impl/storemigration/StoreFileType.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; null; ]
+[79] /org/neo4j/kernel/impl/store/TransactionId.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; null; ]
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext$$anonfun$1; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; org.neo4j.kernel.impl.store.TransactionId; ]
 ----------------------
-[80] /org/neo4j/unsafe/impl/batchimport/Configuration$Overridden.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.unsafe.impl.batchimport.Configuration$2; ]
+[80] /org/neo4j/kernel/configuration/ssl/SslPolicyConfig.class: 
+	[community/dbms] [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.ssl.SslPolicyConfigValidator; ]
 ----------------------
-[81] /org/neo4j/kernel/impl/storemigration/ExistingTargetStrategy.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.impl.store.StoreFile; org.neo4j.kernel.impl.storemigration.FileOperation; ]
+[81] /org/neo4j/kernel/impl/store/StoreType.class: 
+	[community/dbms] [1][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; null; null; ]
 ----------------------
-[82] /org/neo4j/kernel/impl/store/format/standard/StandardV3_0.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.StoreInfoCommand; org.neo4j.kernel.impl.store.format.RecordFormatSelector; org.neo4j.kernel.impl.store.format.standard.StandardV2_3; ]
+[82] /org/neo4j/kernel/api/ExplicitIndexHits.class: 
+	[community/lucene-index] [1][org.neo4j.index.impl.lucene.explicit.CombinedIndexHits; null; null; ]
 ----------------------
-[83] /org/neo4j/kernel/monitoring/Monitors.class: 
-	[community/graph-algo] 	[1][org.neo4j.graphalgo.impl.path.ShortestPath; null; null; ]
-	[community/server] 	[4][org.neo4j.server.database.CypherExecutor; org.neo4j.cypher.internal.javacompat.ExecutionEngine; org.neo4j.cypher.internal.CompatibilityFactory; ]
-	[community/lucene-index] 	[1][org.neo4j.kernel.api.impl.schema.NativeLuceneFusionIndexProviderFactory10; null; null; ]
+[83] /org/neo4j/unsafe/impl/batchimport/cache/NumberArrayFactory.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; null; ]
 ----------------------
-[84] /org/neo4j/kernel/impl/api/index/IndexPopulationJobController$IndexPopulationJobWrapper.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexPopulationJobController; ]
+[84] /org/neo4j/kernel/info/DiagnosticsPhase.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.CompilerEngineDelegator$$anonfun$10; org.neo4j.kernel.configuration.Config; null; ]
 ----------------------
-[85] /org/neo4j/helpers/NamedThreadFactory$1.class: 
-	[community/server] 	[2][org.neo4j.server.web.AsyncRequestLog; org.neo4j.helpers.NamedThreadFactory; org.neo4j.helpers.NamedThreadFactory$Monitor; ]
+[85] /org/neo4j/kernel/impl/store/id/IdGenerator.class: 
+	[community/udc] [2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdType; ]
 ----------------------
-[86] /org/neo4j/kernel/impl/util/Dependencies.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[1][org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider; null; null; ]
+[86] /org/neo4j/kernel/impl/store/record/NodeRecord.class: 
+	[community/shell] [4][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.transaction.state.IndexUpdates; ]
 ----------------------
-[87] /org/neo4j/helpers/Service$Implementation.class: 
-	[community/server-api] 	[2][org.neo4j.server.plugins.ServerPlugin; org.neo4j.helpers.Service; org.neo4j.helpers.Service$1; ]
+[87] /org/neo4j/unsafe/impl/batchimport/cache/PageCachedNumberArrayFactory.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory; ]
 ----------------------
-[88] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.class: 
-	[community/dbms] 	[1][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; null; null; ]
+[88] /org/neo4j/unsafe/impl/batchimport/input/Collector.class: 
+	[community/dbms] [1][org.neo4j.commandline.dbms.CsvImporter; null; null; ]
 ----------------------
-[89] /org/neo4j/kernel/impl/util/ValueUtils.class: 
-	[neo4j-cypher-slotted-runtime-3.4.0-rc01.jar] 	[6][org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$$anonfun$39; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder; org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder$Factory; ]
-	[neo4j-cypher-interpreted-runtime-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.runtime.interpreted.ValueConversion; org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$; org.neo4j.cypher.internal.runtime.interpreted.ValueConversion$$anonfun$1; ]
-	[neo4j-cypher-planner-3.4-3.4.0-rc01.jar] 	[2][org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability$1; org.neo4j.cypher.internal.compiler.v3_4.common.CypherOrderability; org.neo4j.cypher.internal.util.v3_4.IncomparableValuesException; ]
-	[community/bolt] 	[1][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; null; null; ]
-	[community/shell] 	[1][org.neo4j.shell.kernel.apps.cypher.Start; null; null; ]
+[89] /org/neo4j/kernel/impl/pagecache/ConfiguringPageCacheFactory.class: 
+	[community/dbms] [2][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.unsafe.impl.batchimport.Configuration$1; ]
 ----------------------
-[90] /org/neo4j/kernel/configuration/HttpConnector.class: 
-	[community/dbms] 	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.HttpConnectorValidator; ]
+[90] /org/neo4j/unsafe/impl/batchimport/input/csv/Type.class: 
+	[community/dbms] [3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; org.neo4j.unsafe.impl.batchimport.input.csv.Header; ]
 ----------------------
-[91] /org/neo4j/unsafe/impl/batchimport/Configuration.class: 
-	[community/dbms] 	[1][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; null; null; ]
+[91] /org/neo4j/unsafe/impl/batchimport/input/csv/IdType.class: 
+	[community/dbms] [1][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.Collector; null; ]
 ----------------------
-[92] /org/neo4j/kernel/info/SystemDiagnostics.class: 
-	[community/server] 	[2][org.neo4j.server.AbstractNeoServer$ServerComponentsLifecycleAdapter; org.neo4j.kernel.info.DiagnosticsManager; org.neo4j.kernel.info.DiagnosticsManager$1; ]
+[92] /org/neo4j/kernel/impl/api/index/sampling/IndexSamplingJobFactory.class: 
+	[community/shell] [3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.sampling.IndexSamplingController; ]
 ----------------------
-[93] /org/neo4j/kernel/configuration/Connector.class: 
-	[community/udc] 	[3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; org.neo4j.kernel.configuration.BoltConnector; ]
+[93] /org/neo4j/kernel/api/index/IndexDirectoryStructure.class: 
+	[community/jmx] [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; org.neo4j.kernel.api.index.IndexProvider; ]
 ----------------------
-[94] /org/neo4j/kernel/impl/logging/LogService.class: 
-	[community/bolt] 	[1][org.neo4j.bolt.v1.runtime.BoltFactoryImpl; null; null; ]
-	[community/bolt] 	[1][org.neo4j.bolt.BoltKernelExtension; null; null; ]
-	[community/jmx] 	[1][org.neo4j.jmx.impl.JmxExtensionFactory$Dependencies; null; null; ]
-	[community/server] 	[1][org.neo4j.server.rest.management.console.ShellSession; null; null; ]
+[94] /org/neo4j/kernel/api/labelscan/LabelScanWriter.class: 
+	[community/jmx] [2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.storageengine.api.schema.LabelScanReader; ]
 ----------------------
-[95] /org/neo4j/kernel/impl/store/StoreType$7.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$6; ]
+[95] /org/neo4j/kernel/api/schema/constaints/IndexBackedConstraintDescriptor.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor; null; ]
 ----------------------
-[96] /org/neo4j/kernel/impl/api/index/MultiPopulatorFactory$MultiThreadedPopulatorFactory.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.MultiPopulatorFactory; ]
+[96] /org/neo4j/graphdb/factory/GraphDatabaseSettings.class: 
+	[community/dbms] [1][org.neo4j.dbms.DatabaseManagementSystemSettings; null; null; ]
 ----------------------
-[97] /org/neo4j/kernel/impl/util/RelationshipProxyWrappingValue.class: 
-	[community/bolt] 	[2][org.neo4j.bolt.v1.runtime.ExecutionPlanConverter; org.neo4j.kernel.impl.util.ValueUtils; org.neo4j.kernel.impl.util.NodeProxyWrappingNodeValue; ]
+[97] /org/neo4j/kernel/impl/store/StoreFailureException.class: 
+	[community/jmx] [3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.impl.store.UnderlyingStorageException; ]
 ----------------------
-[98] /org/neo4j/kernel/impl/store/StoreType$11.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$10; ]
+[98] /org/neo4j/helpers/NamedThreadFactory.class: 
+	[community/server] [1][org.neo4j.server.web.AsyncRequestLog; null; null; ]
+	[community/lucene-index] [1][org.apache.lucene.index.PooledConcurrentMergeScheduler$PooledConcurrentMergePool; null; null; ]
 ----------------------
-[99] /org/neo4j/kernel/spi/explicitindex/ExplicitIndexProviderTransaction.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl; org.neo4j.kernel.spi.explicitindex.IndexImplementation; org.neo4j.kernel.spi.explicitindex.IndexCommandFactory; ]
+[99] /org/neo4j/kernel/api/StatementConstants.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [1][org.neo4j.cypher.internal.codegen.CompiledCursorUtils; null; null; ]
 ----------------------
-[100] /org/neo4j/kernel/configuration/GraphDatabaseConfigurationMigrator.class: 
-	[community/dbms] 	[2][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; null; ]
+[100] /org/neo4j/kernel/impl/store/id/IdRange.class: 
+	[community/udc] [3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdGenerator; ]
 ----------------------
-[101] /org/neo4j/kernel/impl/store/counts/CountsTracker.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.NeoStores; ]
+[101] /org/neo4j/kernel/impl/api/index/IndexProxyCreator.class: 
+	[community/shell] [2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; null; ]
 ----------------------
-[102] /org/neo4j/kernel/impl/store/TransactionId.class: 
-	[community/bolt] 	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; null; ]
-	[community/bolt] 	[2][org.neo4j.bolt.v1.runtime.TransactionStateMachineSPI; org.neo4j.kernel.impl.transaction.log.TransactionIdStore; org.neo4j.kernel.impl.store.TransactionId; ]
+[102] /org/neo4j/kernel/api/txstate/TransactionState.class: 
+	[neo4j-cypher-3.4.0-rc01.jar] [2][org.neo4j.cypher.internal.spi.v2_3.TransactionBoundQueryContext; org.neo4j.kernel.api.txstate.TxStateHolder; null; ]
+	[community/server] [1][org.neo4j.server.rest.transactional.TransactionStateChecker; null; null; ]
 ----------------------
-[103] /org/neo4j/kernel/configuration/ssl/SslPolicyConfig.class: 
-	[community/dbms] 	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.ssl.SslPolicyConfigValidator; ]
-----------------------
-[104] /org/neo4j/kernel/impl/store/StoreType.class: 
-	[community/dbms] 	[1][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; null; null; ]
-----------------------
-[105] /org/neo4j/kernel/api/ExplicitIndexHits.class: 
-	[community/lucene-index] 	[1][org.neo4j.index.impl.lucene.explicit.CombinedIndexHits; null; null; ]
-----------------------
-[106] /org/neo4j/unsafe/impl/batchimport/cache/NumberArrayFactory.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; null; ]
-----------------------
-[107] /org/neo4j/kernel/info/DiagnosticsPhase.class: 
-	[community/udc] 	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.configuration.Config; null; ]
-----------------------
-[108] /org/neo4j/kernel/impl/store/id/IdGenerator.class: 
-	[community/udc] 	[2][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdType; ]
-----------------------
-[109] /org/neo4j/kernel/impl/store/StoreType$6.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$5; ]
-----------------------
-[110] /org/neo4j/unsafe/impl/batchimport/cache/PageCachedNumberArrayFactory.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.IdType; org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory; ]
-----------------------
-[111] /org/neo4j/unsafe/impl/batchimport/input/Collector.class: 
-	[community/dbms] 	[1][org.neo4j.commandline.dbms.CsvImporter; null; null; ]
-----------------------
-[112] /org/neo4j/kernel/impl/pagecache/ConfiguringPageCacheFactory.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.config.WrappedBatchImporterConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.Configuration; org.neo4j.unsafe.impl.batchimport.Configuration$1; ]
-----------------------
-[113] /org/neo4j/unsafe/impl/batchimport/input/csv/Type.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.CsvImporter; org.neo4j.unsafe.impl.batchimport.input.csv.Header$Factory; org.neo4j.unsafe.impl.batchimport.input.csv.Header; ]
-----------------------
-[114] /org/neo4j/kernel/impl/api/index/sampling/IndexSamplingJobFactory.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.sampling.IndexSamplingController; ]
-----------------------
-[115] /org/neo4j/kernel/api/index/IndexDirectoryStructure.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.impl.api.index.IndexProviderMap; org.neo4j.kernel.api.index.IndexProvider; ]
-----------------------
-[116] /org/neo4j/unsafe/impl/batchimport/input/csv/Configuration$Default.class: 
-	[community/dbms] 	[3][org.neo4j.commandline.dbms.config.WrappedCsvInputConfigurationForNeo4jAdmin; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration; org.neo4j.unsafe.impl.batchimport.input.csv.Configuration$1; ]
-----------------------
-[117] /org/neo4j/kernel/api/labelscan/LabelScanWriter.class: 
-	[community/jmx] 	[2][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.storageengine.api.schema.LabelScanReader; ]
-----------------------
-[118] /org/neo4j/kernel/impl/store/StoreType$15.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$14; ]
-----------------------
-[119] /org/neo4j/kernel/impl/api/index/IndexingService$MonitorAdapter.class: 
-	[community/shell] 	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingUpdateService; ]
-----------------------
-[120] /org/neo4j/kernel/impl/api/index/IndexingService$State.class: 
-	[community/shell] 	[3][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; org.neo4j.kernel.impl.api.index.IndexingService$IndexPopulationStarter; ]
-----------------------
-[121] /org/neo4j/kernel/monitoring/Monitors$MonitorInvocationHandler.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.ExecutionEngine$$anonfun$2; org.neo4j.cypher.internal.ExecutionEngine; org.neo4j.kernel.monitoring.Monitors; ]
-----------------------
-[122] /org/neo4j/kernel/impl/store/StoreType$5.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$4; ]
-----------------------
-[123] /org/neo4j/graphdb/factory/GraphDatabaseSettings.class: 
-	[community/dbms] 	[1][org.neo4j.dbms.DatabaseManagementSystemSettings; null; null; ]
-----------------------
-[124] /org/neo4j/kernel/impl/store/StoreFailureException.class: 
-	[community/jmx] 	[3][org.neo4j.jmx.impl.StoreSizeBean$StoreSizeImpl$1; org.neo4j.kernel.api.labelscan.LabelScanStore; org.neo4j.kernel.impl.store.UnderlyingStorageException; ]
-----------------------
-[125] /org/neo4j/helpers/NamedThreadFactory.class: 
-	[community/server] 	[1][org.neo4j.server.web.AsyncRequestLog; null; null; ]
-	[community/lucene-index] 	[1][org.apache.lucene.index.PooledConcurrentMergeScheduler$PooledConcurrentMergePool; null; null; ]
-----------------------
-[126] /org/neo4j/helpers/Service$1.class: 
-	[community/server-api] 	[2][org.neo4j.server.plugins.ServerPlugin; org.neo4j.helpers.Service; null; ]
-----------------------
-[127] /org/neo4j/kernel/api/StatementConstants.class: 
-	[neo4j-cypher-3.4.0-rc01.jar] 	[3][org.neo4j.cypher.internal.codegen.CompiledExpandUtils$2; org.neo4j.cypher.internal.codegen.CompiledExpandUtils; org.neo4j.cypher.internal.codegen.CompiledCursorUtils; ]
-----------------------
-[128] /org/neo4j/kernel/impl/store/id/IdRange.class: 
-	[community/udc] 	[3][org.neo4j.ext.udc.impl.DefaultUdcInformationCollector; org.neo4j.kernel.impl.store.id.IdGeneratorFactory; org.neo4j.kernel.impl.store.id.IdGenerator; ]
-----------------------
-[129] /org/neo4j/kernel/impl/store/StoreType$16.class: 
-	[community/dbms] 	[2][org.neo4j.commandline.dbms.MemoryRecommendationsCommand; org.neo4j.kernel.impl.store.StoreType; org.neo4j.kernel.impl.store.StoreType$15; ]
-----------------------
-[130] /org/neo4j/kernel/impl/api/index/IndexProxyCreator.class: 
-	[community/shell] 	[2][org.neo4j.shell.kernel.apps.Schema; org.neo4j.kernel.impl.api.index.IndexingService; null; ]
-----------------------
-[131] /org/neo4j/kernel/configuration/ConnectorValidator.class: 
-	[community/dbms] 	[3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.BoltConnectorValidator; ]
-276204 [main] WARN root  - Dynamic loading, unknown classname:
+[103] /org/neo4j/kernel/configuration/ConnectorValidator.class: 
+	[community/dbms] [3][org.neo4j.dbms.DatabaseManagementSystemSettings; org.neo4j.graphdb.factory.GraphDatabaseSettings; org.neo4j.kernel.configuration.BoltConnectorValidator; ]
