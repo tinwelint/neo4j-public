@@ -107,6 +107,11 @@ the relevant Commercial Agreement.
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-library</artifactId>
     </dependency>
+    <dependency>
+    	<groupId>org.neo4j</groupId>
+    	<artifactId>neo4j-store-API</artifactId>
+    	<version>3.5.0-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
 </project>
