@@ -17,28 +17,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.kernel.impl.transaction.log;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.helpers.collection.LruCache;
 
-/**
- * Default implementation of {@link IdController}.
- * Do not add any additional possibilities or functionality. Wraps provided {@link IdGeneratorFactory}.
- */
-public class DefaultIdController extends LifecycleAdapter implements IdController
+public class LogHeaderCache
 {
-    public DefaultIdController()
+    private final LruCache<Long /*log version*/, Long /*last committed tx*/> logHeaderCache;
+
+    public LogHeaderCache( int headerCacheSize )
     {
+        this.logHeaderCache = new LruCache<>( "Log header cache", headerCacheSize );
     }
 
-    @Override
     public void clear()
     {
+        logHeaderCache.clear();
     }
 
-    @Override
-    public void maintenance()
+    public void putHeader( long logVersion, long previousLogLastCommittedTx )
     {
+        logHeaderCache.put( logVersion, previousLogLastCommittedTx );
+    }
+
+    public Long getLogHeader( long logVersion )
+    {
+        return logHeaderCache.get( logVersion );
     }
 }

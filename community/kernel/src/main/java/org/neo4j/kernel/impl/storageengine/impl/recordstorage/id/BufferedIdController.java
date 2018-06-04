@@ -32,7 +32,7 @@ import org.neo4j.scheduler.JobScheduler;
  * Allows perform clear and maintenance operations over currently buffered set of ids.
  * @see BufferingIdGeneratorFactory
  */
-public class BufferedIdController extends LifecycleAdapter implements IdController
+public class BufferedIdController extends LifecycleAdapter implements IdControllerForBufferedId
 {
     private final BufferingIdGeneratorFactory bufferingIdGeneratorFactory;
     private final JobScheduler scheduler;

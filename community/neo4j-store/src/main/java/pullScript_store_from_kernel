@@ -8,14 +8,10 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storageengine/impl/recordstorage/Rec
 $COMMAND $SOURCE/org/neo4j/kernel/impl/storageengine/impl/recordstorage/RecordStorageEngine.java $DEST/org/neo4j/kernel/impl/storageengine/impl/recordstorage/RecordStorageEngine.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/Config.java $DEST/org/neo4j/kernel/configuration/Config.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/Config.java $DEST/org/neo4j/kernel/configuration/Config.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsPhase.java $DEST/org/neo4j/kernel/info/DiagnosticsPhase.java
-$COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsPhase.java $DEST/org/neo4j/kernel/info/DiagnosticsPhase.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsProvider.java $DEST/org/neo4j/kernel/info/DiagnosticsProvider.java
-$COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsProvider.java $DEST/org/neo4j/kernel/info/DiagnosticsProvider.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/ConfigurationValidator.java $DEST/org/neo4j/kernel/configuration/ConfigurationValidator.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/ConfigurationValidator.java $DEST/org/neo4j/kernel/configuration/ConfigurationValidator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/BoltConnector.java $DEST/org/neo4j/kernel/configuration/BoltConnector.java
-$COMMAND $SOURCE/org/neo4j/kernel/configuration/BoltConnector.java $DEST/org/neo4j/kernel/configuration/BoltConnector.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/HttpConnector.java $DEST/org/neo4j/kernel/configuration/HttpConnector.java
+$COMMAND $SOURCE/org/neo4j/kernel/configuration/HttpConnector.java $DEST/org/neo4j/kernel/configuration/HttpConnector.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/Connector.java $DEST/org/neo4j/kernel/configuration/Connector.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/Connector.java $DEST/org/neo4j/kernel/configuration/Connector.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/GroupSettingSupport.java $DEST/org/neo4j/kernel/configuration/GroupSettingSupport.java
@@ -48,16 +44,20 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/BoltConnectorValidator.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/BoltConnectorValidator.java $DEST/org/neo4j/kernel/configuration/BoltConnectorValidator.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/ConnectorValidator.java $DEST/org/neo4j/kernel/configuration/ConnectorValidator.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/ConnectorValidator.java $DEST/org/neo4j/kernel/configuration/ConnectorValidator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/BoltConnector.java $DEST/org/neo4j/kernel/configuration/BoltConnector.java
+$COMMAND $SOURCE/org/neo4j/kernel/configuration/BoltConnector.java $DEST/org/neo4j/kernel/configuration/BoltConnector.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/ssl/SslPolicyConfigValidator.java $DEST/org/neo4j/kernel/configuration/ssl/SslPolicyConfigValidator.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/ssl/SslPolicyConfigValidator.java $DEST/org/neo4j/kernel/configuration/ssl/SslPolicyConfigValidator.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/ssl/SslPolicyConfig.java $DEST/org/neo4j/kernel/configuration/ssl/SslPolicyConfig.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/ssl/SslPolicyConfig.java $DEST/org/neo4j/kernel/configuration/ssl/SslPolicyConfig.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/HttpConnectorValidator.java $DEST/org/neo4j/kernel/configuration/HttpConnectorValidator.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/HttpConnectorValidator.java $DEST/org/neo4j/kernel/configuration/HttpConnectorValidator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/HttpConnector.java $DEST/org/neo4j/kernel/configuration/HttpConnector.java
-$COMMAND $SOURCE/org/neo4j/kernel/configuration/HttpConnector.java $DEST/org/neo4j/kernel/configuration/HttpConnector.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/ServerConfigurationValidator.java $DEST/org/neo4j/kernel/configuration/ServerConfigurationValidator.java
 $COMMAND $SOURCE/org/neo4j/kernel/configuration/ServerConfigurationValidator.java $DEST/org/neo4j/kernel/configuration/ServerConfigurationValidator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsPhase.java $DEST/org/neo4j/kernel/info/DiagnosticsPhase.java
+$COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsPhase.java $DEST/org/neo4j/kernel/info/DiagnosticsPhase.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsProvider.java $DEST/org/neo4j/kernel/info/DiagnosticsProvider.java
+$COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsProvider.java $DEST/org/neo4j/kernel/info/DiagnosticsProvider.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/util/CopyOnWriteHashMap.java $DEST/org/neo4j/kernel/impl/util/CopyOnWriteHashMap.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/util/CopyOnWriteHashMap.java $DEST/org/neo4j/kernel/impl/util/CopyOnWriteHashMap.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/configuration/AnnotationBasedConfigurationMigrator.java $DEST/org/neo4j/kernel/configuration/AnnotationBasedConfigurationMigrator.java
@@ -78,6 +78,8 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/SchemaState.java $DEST/org/neo4j
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/SchemaState.java $DEST/org/neo4j/kernel/impl/api/SchemaState.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/constraints/ConstraintSemantics.java $DEST/org/neo4j/kernel/impl/constraints/ConstraintSemantics.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/constraints/ConstraintSemantics.java $DEST/org/neo4j/kernel/impl/constraints/ConstraintSemantics.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java $DEST/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java $DEST/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/ConstraintRule.java $DEST/org/neo4j/kernel/impl/store/record/ConstraintRule.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/ConstraintRule.java $DEST/org/neo4j/kernel/impl/store/record/ConstraintRule.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/schema/constaints/IndexBackedConstraintDescriptor.java $DEST/org/neo4j/kernel/api/schema/constaints/IndexBackedConstraintDescriptor.java
@@ -104,6 +106,8 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/api/schema/RelationTypeSchemaDescriptor.j
 $COMMAND $SOURCE/org/neo4j/kernel/api/schema/RelationTypeSchemaDescriptor.java $DEST/org/neo4j/kernel/api/schema/RelationTypeSchemaDescriptor.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/SchemaRule.java $DEST/org/neo4j/storageengine/api/schema/SchemaRule.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/SchemaRule.java $DEST/org/neo4j/storageengine/api/schema/SchemaRule.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/IndexRule.java $DEST/org/neo4j/kernel/impl/store/record/IndexRule.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/IndexRule.java $DEST/org/neo4j/kernel/impl/store/record/IndexRule.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/index/IndexProvider.java $DEST/org/neo4j/kernel/api/index/IndexProvider.java
@@ -114,6 +118,8 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConf
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConfig.java $DEST/org/neo4j/kernel/impl/api/index/sampling/IndexSamplingConfig.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/index/IndexPopulator.java $DEST/org/neo4j/kernel/api/index/IndexPopulator.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/index/IndexPopulator.java $DEST/org/neo4j/kernel/api/index/IndexPopulator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/index/PropertyAccessor.java $DEST/org/neo4j/kernel/api/index/PropertyAccessor.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/index/PropertyAccessor.java $DEST/org/neo4j/kernel/api/index/PropertyAccessor.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/index/IndexUpdater.java $DEST/org/neo4j/kernel/api/index/IndexUpdater.java
@@ -122,8 +128,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/api/index/IndexEntryUpdate.java $DEST/org
 $COMMAND $SOURCE/org/neo4j/kernel/api/index/IndexEntryUpdate.java $DEST/org/neo4j/kernel/api/index/IndexEntryUpdate.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/UpdateMode.java $DEST/org/neo4j/kernel/impl/api/index/UpdateMode.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/UpdateMode.java $DEST/org/neo4j/kernel/impl/api/index/UpdateMode.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java
-$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexEntryConflictException.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexSample.java $DEST/org/neo4j/storageengine/api/schema/IndexSample.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexSample.java $DEST/org/neo4j/storageengine/api/schema/IndexSample.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/updater/SwallowingIndexUpdater.java $DEST/org/neo4j/kernel/impl/api/index/updater/SwallowingIndexUpdater.java
@@ -136,6 +140,8 @@ echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexReader.java $DEST/
 $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexReader.java $DEST/org/neo4j/storageengine/api/schema/IndexReader.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexSampler.java $DEST/org/neo4j/storageengine/api/schema/IndexSampler.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexSampler.java $DEST/org/neo4j/storageengine/api/schema/IndexSampler.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexProgressor.java $DEST/org/neo4j/storageengine/api/schema/IndexProgressor.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/IndexProgressor.java $DEST/org/neo4j/storageengine/api/schema/IndexProgressor.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storageengine/impl/recordstorage/ExplicitIndexProgressor.java $DEST/org/neo4j/kernel/impl/storageengine/impl/recordstorage/ExplicitIndexProgressor.java
@@ -150,8 +156,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/index/labelscan/LabelScanKey.java $D
 $COMMAND $SOURCE/org/neo4j/kernel/impl/index/labelscan/LabelScanKey.java $DEST/org/neo4j/kernel/impl/index/labelscan/LabelScanKey.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/index/labelscan/LabelScanValue.java $DEST/org/neo4j/kernel/impl/index/labelscan/LabelScanValue.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/index/labelscan/LabelScanValue.java $DEST/org/neo4j/kernel/impl/index/labelscan/LabelScanValue.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java
-$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexNotApplicableKernelException.java
 echo $COMMAND $SOURCE/org/neo4j/helpers/collection/BoundedIterable.java $DEST/org/neo4j/helpers/collection/BoundedIterable.java
 $COMMAND $SOURCE/org/neo4j/helpers/collection/BoundedIterable.java $DEST/org/neo4j/helpers/collection/BoundedIterable.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/StoreMigrationParticipant.java $DEST/org/neo4j/kernel/impl/storemigration/StoreMigrationParticipant.java
@@ -166,8 +170,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/api/schema/constaints/UniquenessConstrain
 $COMMAND $SOURCE/org/neo4j/kernel/api/schema/constaints/UniquenessConstraintDescriptor.java $DEST/org/neo4j/kernel/api/schema/constaints/UniquenessConstraintDescriptor.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/schema/constaints/NodeKeyConstraintDescriptor.java $DEST/org/neo4j/kernel/api/schema/constaints/NodeKeyConstraintDescriptor.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/schema/constaints/NodeKeyConstraintDescriptor.java $DEST/org/neo4j/kernel/api/schema/constaints/NodeKeyConstraintDescriptor.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java
-$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/MalformedSchemaRuleException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/SchemaRuleDeserializer2_0to3_1.java $DEST/org/neo4j/kernel/impl/store/record/SchemaRuleDeserializer2_0to3_1.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/SchemaRuleDeserializer2_0to3_1.java $DEST/org/neo4j/kernel/impl/store/record/SchemaRuleDeserializer2_0to3_1.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/schema/constaints/ConstraintDescriptorFactory.java $DEST/org/neo4j/kernel/api/schema/constaints/ConstraintDescriptorFactory.java
@@ -180,16 +182,14 @@ echo $COMMAND $SOURCE/org/neo4j/storageengine/api/StorageReader.java $DEST/org/n
 $COMMAND $SOURCE/org/neo4j/storageengine/api/StorageReader.java $DEST/org/neo4j/storageengine/api/StorageReader.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/TransactionalDependencies.java $DEST/org/neo4j/storageengine/api/TransactionalDependencies.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/TransactionalDependencies.java $DEST/org/neo4j/storageengine/api/TransactionalDependencies.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/api/txstate/TxStateHolder.java $DEST/org/neo4j/kernel/api/txstate/TxStateHolder.java
-$COMMAND $SOURCE/org/neo4j/kernel/api/txstate/TxStateHolder.java $DEST/org/neo4j/kernel/api/txstate/TxStateHolder.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/txstate/TransactionState.java $DEST/org/neo4j/kernel/api/txstate/TransactionState.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/txstate/TransactionState.java $DEST/org/neo4j/kernel/api/txstate/TransactionState.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/ReadableTransactionState.java $DEST/org/neo4j/storageengine/api/txstate/ReadableTransactionState.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/ReadableTransactionState.java $DEST/org/neo4j/storageengine/api/txstate/ReadableTransactionState.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/TxStateVisitor.java $DEST/org/neo4j/storageengine/api/txstate/TxStateVisitor.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/TxStateVisitor.java $DEST/org/neo4j/storageengine/api/txstate/TxStateVisitor.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java $DEST/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java
-$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java $DEST/org/neo4j/kernel/api/exceptions/schema/CreateConstraintFailureException.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/StorageProperty.java $DEST/org/neo4j/storageengine/api/StorageProperty.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/StorageProperty.java $DEST/org/neo4j/storageengine/api/StorageProperty.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/LongDiffSets.java $DEST/org/neo4j/storageengine/api/txstate/LongDiffSets.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/LongDiffSets.java $DEST/org/neo4j/storageengine/api/txstate/LongDiffSets.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/RelationshipVisitor.java $DEST/org/neo4j/kernel/impl/api/RelationshipVisitor.java
@@ -206,8 +206,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/newapi/RelationshipDirection.java $D
 $COMMAND $SOURCE/org/neo4j/kernel/impl/newapi/RelationshipDirection.java $DEST/org/neo4j/kernel/impl/newapi/RelationshipDirection.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/PropertyContainerState.java $DEST/org/neo4j/storageengine/api/txstate/PropertyContainerState.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/PropertyContainerState.java $DEST/org/neo4j/storageengine/api/txstate/PropertyContainerState.java
-echo $COMMAND $SOURCE/org/neo4j/storageengine/api/StorageProperty.java $DEST/org/neo4j/storageengine/api/StorageProperty.java
-$COMMAND $SOURCE/org/neo4j/storageengine/api/StorageProperty.java $DEST/org/neo4j/storageengine/api/StorageProperty.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/RelationshipState.java $DEST/org/neo4j/storageengine/api/txstate/RelationshipState.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/txstate/RelationshipState.java $DEST/org/neo4j/storageengine/api/txstate/RelationshipState.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/state/GraphState.java $DEST/org/neo4j/kernel/impl/api/state/GraphState.java
@@ -224,6 +222,12 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/index/IndexEntityType.java $DEST/org
 $COMMAND $SOURCE/org/neo4j/kernel/impl/index/IndexEntityType.java $DEST/org/neo4j/kernel/impl/index/IndexEntityType.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/RecordState.java $DEST/org/neo4j/kernel/impl/transaction/state/RecordState.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/RecordState.java $DEST/org/neo4j/kernel/impl/transaction/state/RecordState.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/StorageCommand.java $DEST/org/neo4j/storageengine/api/StorageCommand.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/StorageCommand.java $DEST/org/neo4j/storageengine/api/StorageCommand.java
+echo $COMMAND $SOURCE/org/neo4j/storageengine/api/WritableChannel.java $DEST/org/neo4j/storageengine/api/WritableChannel.java
+$COMMAND $SOURCE/org/neo4j/storageengine/api/WritableChannel.java $DEST/org/neo4j/storageengine/api/WritableChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/txstate/TxStateHolder.java $DEST/org/neo4j/kernel/api/txstate/TxStateHolder.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/txstate/TxStateHolder.java $DEST/org/neo4j/kernel/api/txstate/TxStateHolder.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/AssertOpen.java $DEST/org/neo4j/kernel/api/AssertOpen.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/AssertOpen.java $DEST/org/neo4j/kernel/api/AssertOpen.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/locking/LockService.java $DEST/org/neo4j/kernel/impl/locking/LockService.java
@@ -262,20 +266,24 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexProxyFactory.java $DE
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexProxyFactory.java $DEST/org/neo4j/kernel/impl/api/index/IndexProxyFactory.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/FailedIndexProxyFactory.java $DEST/org/neo4j/kernel/impl/api/index/FailedIndexProxyFactory.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/FailedIndexProxyFactory.java $DEST/org/neo4j/kernel/impl/api/index/FailedIndexProxyFactory.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java $DEST/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java $DEST/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/FlipFailedKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/FlipFailedKernelException.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/FlipFailedKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/FlipFailedKernelException.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java
-$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexProxyAlreadyClosedKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexProxyAlreadyClosedKernelException.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/IndexProxyAlreadyClosedKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/IndexProxyAlreadyClosedKernelException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java $DEST/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java $DEST/org/neo4j/kernel/impl/api/index/updater/DelegatingIndexUpdater.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java
+$COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java $DEST/org/neo4j/kernel/api/exceptions/index/ExceptionDuringFlipKernelException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexCountsRemover.java $DEST/org/neo4j/kernel/impl/api/index/IndexCountsRemover.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexCountsRemover.java $DEST/org/neo4j/kernel/impl/api/index/IndexCountsRemover.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/FailedIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/FailedIndexProxy.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/FailedIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/FailedIndexProxy.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/AbstractSwallowingIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/AbstractSwallowingIndexProxy.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/AbstractSwallowingIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/AbstractSwallowingIndexProxy.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/NodeUpdates.java $DEST/org/neo4j/kernel/impl/api/index/NodeUpdates.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/NodeUpdates.java $DEST/org/neo4j/kernel/impl/api/index/NodeUpdates.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/PropertyLoader.java $DEST/org/neo4j/kernel/impl/api/index/PropertyLoader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/PropertyLoader.java $DEST/org/neo4j/kernel/impl/api/index/PropertyLoader.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/BatchingMultipleIndexPopulator.java $DEST/org/neo4j/kernel/impl/api/index/BatchingMultipleIndexPopulator.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/BatchingMultipleIndexPopulator.java $DEST/org/neo4j/kernel/impl/api/index/BatchingMultipleIndexPopulator.java
 echo $COMMAND $SOURCE/org/neo4j/helpers/NamedThreadFactory.java $DEST/org/neo4j/helpers/NamedThreadFactory.java
@@ -284,10 +292,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexPopulationJob.java $D
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexPopulationJob.java $DEST/org/neo4j/kernel/impl/api/index/IndexPopulationJob.java
 echo $COMMAND $SOURCE/org/neo4j/helpers/FutureAdapter.java $DEST/org/neo4j/helpers/FutureAdapter.java
 $COMMAND $SOURCE/org/neo4j/helpers/FutureAdapter.java $DEST/org/neo4j/helpers/FutureAdapter.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/NodeUpdates.java $DEST/org/neo4j/kernel/impl/api/index/NodeUpdates.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/NodeUpdates.java $DEST/org/neo4j/kernel/impl/api/index/NodeUpdates.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/PropertyLoader.java $DEST/org/neo4j/kernel/impl/api/index/PropertyLoader.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/PropertyLoader.java $DEST/org/neo4j/kernel/impl/api/index/PropertyLoader.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/PopulatingIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/PopulatingIndexProxy.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/PopulatingIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/PopulatingIndexProxy.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/OnlineIndexProxy.java $DEST/org/neo4j/kernel/impl/api/index/OnlineIndexProxy.java
@@ -338,8 +342,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/MultiPopulatorFactory.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/MultiPopulatorFactory.java $DEST/org/neo4j/kernel/impl/api/index/MultiPopulatorFactory.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/IndexUpdates.java $DEST/org/neo4j/kernel/impl/transaction/state/IndexUpdates.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/IndexUpdates.java $DEST/org/neo4j/kernel/impl/transaction/state/IndexUpdates.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/NodeRecord.java $DEST/org/neo4j/kernel/impl/store/record/NodeRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/NodeRecord.java $DEST/org/neo4j/kernel/impl/store/record/NodeRecord.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PropertyRecord.java $DEST/org/neo4j/kernel/impl/store/record/PropertyRecord.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PropertyRecord.java $DEST/org/neo4j/kernel/impl/store/record/PropertyRecord.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PrimitiveRecord.java $DEST/org/neo4j/kernel/impl/store/record/PrimitiveRecord.java
@@ -392,40 +394,16 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/RecordStore.java $DEST/org/neo
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/RecordStore.java $DEST/org/neo4j/kernel/impl/store/RecordStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/RecordCursor.java $DEST/org/neo4j/kernel/impl/store/RecordCursor.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/RecordCursor.java $DEST/org/neo4j/kernel/impl/store/RecordCursor.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipRecord.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/TokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/TokenRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/TokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/TokenRecord.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java
-echo $COMMAND $SOURCE/org/neo4j/helpers/progress/ProgressListener.java $DEST/org/neo4j/helpers/progress/ProgressListener.java
-$COMMAND $SOURCE/org/neo4j/helpers/progress/ProgressListener.java $DEST/org/neo4j/helpers/progress/ProgressListener.java
-echo $COMMAND $SOURCE/org/neo4j/helpers/progress/Aggregator.java $DEST/org/neo4j/helpers/progress/Aggregator.java
-$COMMAND $SOURCE/org/neo4j/helpers/progress/Aggregator.java $DEST/org/neo4j/helpers/progress/Aggregator.java
-echo $COMMAND $SOURCE/org/neo4j/helpers/progress/Indicator.java $DEST/org/neo4j/helpers/progress/Indicator.java
-$COMMAND $SOURCE/org/neo4j/helpers/progress/Indicator.java $DEST/org/neo4j/helpers/progress/Indicator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/Scanner.java $DEST/org/neo4j/kernel/impl/store/Scanner.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/Scanner.java $DEST/org/neo4j/kernel/impl/store/Scanner.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreIdIterator.java $DEST/org/neo4j/kernel/impl/store/StoreIdIterator.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreIdIterator.java $DEST/org/neo4j/kernel/impl/store/StoreIdIterator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/AbstractDynamicStore.java $DEST/org/neo4j/kernel/impl/store/AbstractDynamicStore.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/AbstractDynamicStore.java $DEST/org/neo4j/kernel/impl/store/AbstractDynamicStore.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java $DEST/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java $DEST/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/LongerShortString.java $DEST/org/neo4j/kernel/impl/store/LongerShortString.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/LongerShortString.java $DEST/org/neo4j/kernel/impl/store/LongerShortString.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/NodeRecord.java $DEST/org/neo4j/kernel/impl/store/record/NodeRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/NodeRecord.java $DEST/org/neo4j/kernel/impl/store/record/NodeRecord.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabelsField.java $DEST/org/neo4j/kernel/impl/store/NodeLabelsField.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabelsField.java $DEST/org/neo4j/kernel/impl/store/NodeLabelsField.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabels.java $DEST/org/neo4j/kernel/impl/store/NodeLabels.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabels.java $DEST/org/neo4j/kernel/impl/store/NodeLabels.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeStore.java $DEST/org/neo4j/kernel/impl/store/NodeStore.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeStore.java $DEST/org/neo4j/kernel/impl/store/NodeStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/util/Bits.java $DEST/org/neo4j/kernel/impl/util/Bits.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/util/Bits.java $DEST/org/neo4j/kernel/impl/util/Bits.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/ShortArray.java $DEST/org/neo4j/kernel/impl/store/ShortArray.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/ShortArray.java $DEST/org/neo4j/kernel/impl/store/ShortArray.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/GeometryType.java $DEST/org/neo4j/kernel/impl/store/GeometryType.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/GeometryType.java $DEST/org/neo4j/kernel/impl/store/GeometryType.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicArrayStore.java $DEST/org/neo4j/kernel/impl/store/DynamicArrayStore.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicArrayStore.java $DEST/org/neo4j/kernel/impl/store/DynamicArrayStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormats.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormats.java
@@ -440,14 +418,24 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/FormatFamily.java $DEST
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/FormatFamily.java $DEST/org/neo4j/kernel/impl/store/format/FormatFamily.java
 echo $COMMAND $SOURCE/org/neo4j/helpers/Service.java $DEST/org/neo4j/helpers/Service.java
 $COMMAND $SOURCE/org/neo4j/helpers/Service.java $DEST/org/neo4j/helpers/Service.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/ShortArray.java $DEST/org/neo4j/kernel/impl/store/ShortArray.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/ShortArray.java $DEST/org/neo4j/kernel/impl/store/ShortArray.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java $DEST/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java $DEST/org/neo4j/kernel/impl/store/DynamicRecordAllocator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/GeometryType.java $DEST/org/neo4j/kernel/impl/store/GeometryType.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/GeometryType.java $DEST/org/neo4j/kernel/impl/store/GeometryType.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/TemporalType.java $DEST/org/neo4j/kernel/impl/store/TemporalType.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/TemporalType.java $DEST/org/neo4j/kernel/impl/store/TemporalType.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java $DEST/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java $DEST/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/CommonAbstractStore.java $DEST/org/neo4j/kernel/impl/store/CommonAbstractStore.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/CommonAbstractStore.java $DEST/org/neo4j/kernel/impl/store/CommonAbstractStore.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/AbstractDynamicStore.java $DEST/org/neo4j/kernel/impl/store/AbstractDynamicStore.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/AbstractDynamicStore.java $DEST/org/neo4j/kernel/impl/store/AbstractDynamicStore.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeader.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeader.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeader.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/StoreHeaderFormat.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/StoreHeaderFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/CommonAbstractStore.java $DEST/org/neo4j/kernel/impl/store/CommonAbstractStore.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/CommonAbstractStore.java $DEST/org/neo4j/kernel/impl/store/CommonAbstractStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/InvalidIdGeneratorException.java $DEST/org/neo4j/kernel/impl/store/InvalidIdGeneratorException.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/InvalidIdGeneratorException.java $DEST/org/neo4j/kernel/impl/store/InvalidIdGeneratorException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreNotFoundException.java $DEST/org/neo4j/kernel/impl/store/StoreNotFoundException.java
@@ -456,32 +444,14 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/RecordPageLocationCalculator.j
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/RecordPageLocationCalculator.java $DEST/org/neo4j/kernel/impl/store/RecordPageLocationCalculator.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreRecordCursor.java $DEST/org/neo4j/kernel/impl/store/StoreRecordCursor.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreRecordCursor.java $DEST/org/neo4j/kernel/impl/store/StoreRecordCursor.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeader.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeader.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeader.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeader.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/IntStoreHeaderFormat.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StandardDynamicRecordAllocator.java $DEST/org/neo4j/kernel/impl/store/StandardDynamicRecordAllocator.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StandardDynamicRecordAllocator.java $DEST/org/neo4j/kernel/impl/store/StandardDynamicRecordAllocator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java $DEST/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java $DEST/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/TokenStore.java $DEST/org/neo4j/kernel/impl/store/TokenStore.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/TokenStore.java $DEST/org/neo4j/kernel/impl/store/TokenStore.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java $DEST/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java $DEST/org/neo4j/kernel/impl/store/format/UnsupportedFormatCapabilityException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NoStoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/NoStoreHeaderFormat.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NoStoreHeaderFormat.java $DEST/org/neo4j/kernel/impl/store/NoStoreHeaderFormat.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NoStoreHeader.java $DEST/org/neo4j/kernel/impl/store/NoStoreHeader.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NoStoreHeader.java $DEST/org/neo4j/kernel/impl/store/NoStoreHeader.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java $DEST/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java $DEST/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java $DEST/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java $DEST/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java $DEST/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java $DEST/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabelsField.java $DEST/org/neo4j/kernel/impl/store/NodeLabelsField.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabelsField.java $DEST/org/neo4j/kernel/impl/store/NodeLabelsField.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabels.java $DEST/org/neo4j/kernel/impl/store/NodeLabels.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeLabels.java $DEST/org/neo4j/kernel/impl/store/NodeLabels.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeStore.java $DEST/org/neo4j/kernel/impl/store/NodeStore.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/NodeStore.java $DEST/org/neo4j/kernel/impl/store/NodeStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicNodeLabels.java $DEST/org/neo4j/kernel/impl/store/DynamicNodeLabels.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/DynamicNodeLabels.java $DEST/org/neo4j/kernel/impl/store/DynamicNodeLabels.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/LabelIdArray.java $DEST/org/neo4j/kernel/impl/store/LabelIdArray.java
@@ -492,20 +462,48 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/allocator/ReusableRecordsCompo
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/allocator/ReusableRecordsCompositeAllocator.java $DEST/org/neo4j/kernel/impl/store/allocator/ReusableRecordsCompositeAllocator.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/allocator/ReusableRecordsAllocator.java $DEST/org/neo4j/kernel/impl/store/allocator/ReusableRecordsAllocator.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/allocator/ReusableRecordsAllocator.java $DEST/org/neo4j/kernel/impl/store/allocator/ReusableRecordsAllocator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipRecord.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipTypeTokenRecord.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/TokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/TokenRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/TokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/TokenRecord.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/PropertyKeyTokenRecord.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java $DEST/org/neo4j/kernel/impl/store/record/LabelTokenRecord.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java $DEST/org/neo4j/kernel/impl/store/record/RelationshipGroupRecord.java
+echo $COMMAND $SOURCE/org/neo4j/helpers/progress/ProgressListener.java $DEST/org/neo4j/helpers/progress/ProgressListener.java
+$COMMAND $SOURCE/org/neo4j/helpers/progress/ProgressListener.java $DEST/org/neo4j/helpers/progress/ProgressListener.java
+echo $COMMAND $SOURCE/org/neo4j/helpers/progress/Indicator.java $DEST/org/neo4j/helpers/progress/Indicator.java
+$COMMAND $SOURCE/org/neo4j/helpers/progress/Indicator.java $DEST/org/neo4j/helpers/progress/Indicator.java
+echo $COMMAND $SOURCE/org/neo4j/helpers/progress/Aggregator.java $DEST/org/neo4j/helpers/progress/Aggregator.java
+$COMMAND $SOURCE/org/neo4j/helpers/progress/Aggregator.java $DEST/org/neo4j/helpers/progress/Aggregator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/Scanner.java $DEST/org/neo4j/kernel/impl/store/Scanner.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/Scanner.java $DEST/org/neo4j/kernel/impl/store/Scanner.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreIdIterator.java $DEST/org/neo4j/kernel/impl/store/StoreIdIterator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/StoreIdIterator.java $DEST/org/neo4j/kernel/impl/store/StoreIdIterator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java $DEST/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java $DEST/org/neo4j/kernel/impl/store/PropertyKeyTokenStore.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/TokenStore.java $DEST/org/neo4j/kernel/impl/store/TokenStore.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/TokenStore.java $DEST/org/neo4j/kernel/impl/store/TokenStore.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java $DEST/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java $DEST/org/neo4j/kernel/impl/store/TemporalValueWriterAdapter.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/LongerShortString.java $DEST/org/neo4j/kernel/impl/store/LongerShortString.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/LongerShortString.java $DEST/org/neo4j/kernel/impl/store/LongerShortString.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java $DEST/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java $DEST/org/neo4j/kernel/impl/store/PropertyValueRecordSizeCalculator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java $DEST/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java $DEST/org/neo4j/kernel/impl/store/id/BatchingIdSequence.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/CommandVisitor.java $DEST/org/neo4j/kernel/impl/api/CommandVisitor.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/CommandVisitor.java $DEST/org/neo4j/kernel/impl/api/CommandVisitor.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/command/Command.java $DEST/org/neo4j/kernel/impl/transaction/command/Command.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/command/Command.java $DEST/org/neo4j/kernel/impl/transaction/command/Command.java
-echo $COMMAND $SOURCE/org/neo4j/storageengine/api/WritableChannel.java $DEST/org/neo4j/storageengine/api/WritableChannel.java
-$COMMAND $SOURCE/org/neo4j/storageengine/api/WritableChannel.java $DEST/org/neo4j/storageengine/api/WritableChannel.java
-echo $COMMAND $SOURCE/org/neo4j/storageengine/api/StorageCommand.java $DEST/org/neo4j/storageengine/api/StorageCommand.java
-$COMMAND $SOURCE/org/neo4j/storageengine/api/StorageCommand.java $DEST/org/neo4j/storageengine/api/StorageCommand.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/NeoStoreRecord.java $DEST/org/neo4j/kernel/impl/store/record/NeoStoreRecord.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/NeoStoreRecord.java $DEST/org/neo4j/kernel/impl/store/record/NeoStoreRecord.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/util/IdPrettyPrinter.java $DEST/org/neo4j/kernel/impl/util/IdPrettyPrinter.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/util/IdPrettyPrinter.java $DEST/org/neo4j/kernel/impl/util/IdPrettyPrinter.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java $DEST/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java $DEST/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/SchemaRecord.java $DEST/org/neo4j/kernel/impl/store/record/SchemaRecord.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/record/SchemaRecord.java $DEST/org/neo4j/kernel/impl/store/record/SchemaRecord.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/index/IndexCommand.java $DEST/org/neo4j/kernel/impl/index/IndexCommand.java
@@ -516,6 +514,8 @@ echo $COMMAND $SOURCE/org/neo4j/storageengine/api/ReadableChannel.java $DEST/org
 $COMMAND $SOURCE/org/neo4j/storageengine/api/ReadableChannel.java $DEST/org/neo4j/storageengine/api/ReadableChannel.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/index/IndexDefineCommand.java $DEST/org/neo4j/kernel/impl/index/IndexDefineCommand.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/index/IndexDefineCommand.java $DEST/org/neo4j/kernel/impl/index/IndexDefineCommand.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java $DEST/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java $DEST/org/neo4j/kernel/impl/transaction/state/PropertyRecordChange.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.java $DEST/org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.java $DEST/org/neo4j/kernel/impl/api/index/RebuildingIndexDescriptor.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/api/index/IndexingUpdateService.java $DEST/org/neo4j/kernel/impl/api/index/IndexingUpdateService.java
@@ -578,6 +578,8 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/BigEndianByteArrayBuff
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/BigEndianByteArrayBuffer.java $DEST/org/neo4j/kernel/impl/store/kvstore/BigEndianByteArrayBuffer.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/counts/FileVersion.java $DEST/org/neo4j/kernel/impl/store/counts/FileVersion.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/counts/FileVersion.java $DEST/org/neo4j/kernel/impl/store/counts/FileVersion.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java $DEST/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java $DEST/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/AbstractKeyValueStore.java $DEST/org/neo4j/kernel/impl/store/kvstore/AbstractKeyValueStore.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/AbstractKeyValueStore.java $DEST/org/neo4j/kernel/impl/store/kvstore/AbstractKeyValueStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationMonitor.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationMonitor.java
@@ -620,32 +622,30 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/ReadableState.java $DE
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/ReadableState.java $DEST/org/neo4j/kernel/impl/store/kvstore/ReadableState.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/KeyFormat.java $DEST/org/neo4j/kernel/impl/store/kvstore/KeyFormat.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/KeyFormat.java $DEST/org/neo4j/kernel/impl/store/kvstore/KeyFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationState.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationState.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationState.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationState.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java $DEST/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java $DEST/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/EntryUpdater.java $DEST/org/neo4j/kernel/impl/store/kvstore/EntryUpdater.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/EntryUpdater.java $DEST/org/neo4j/kernel/impl/store/kvstore/EntryUpdater.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/ValueUpdate.java $DEST/org/neo4j/kernel/impl/store/kvstore/ValueUpdate.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/ValueUpdate.java $DEST/org/neo4j/kernel/impl/store/kvstore/ValueUpdate.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/WritableState.java $DEST/org/neo4j/kernel/impl/store/kvstore/WritableState.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/WritableState.java $DEST/org/neo4j/kernel/impl/store/kvstore/WritableState.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java $DEST/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java $DEST/org/neo4j/kernel/impl/store/kvstore/PrototypeState.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationState.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationState.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationState.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationState.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationTimeoutException.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationTimeoutException.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/RotationTimeoutException.java $DEST/org/neo4j/kernel/impl/store/kvstore/RotationTimeoutException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/DeadState.java $DEST/org/neo4j/kernel/impl/store/kvstore/DeadState.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/DeadState.java $DEST/org/neo4j/kernel/impl/store/kvstore/DeadState.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java $DEST/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java $DEST/org/neo4j/kernel/impl/store/kvstore/UnknownKey.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/locking/LockWrapper.java $DEST/org/neo4j/kernel/impl/locking/LockWrapper.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/locking/LockWrapper.java $DEST/org/neo4j/kernel/impl/locking/LockWrapper.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/PreparedRotation.java $DEST/org/neo4j/kernel/impl/store/kvstore/PreparedRotation.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/PreparedRotation.java $DEST/org/neo4j/kernel/impl/store/kvstore/PreparedRotation.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/State.java $DEST/org/neo4j/kernel/impl/store/kvstore/State.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/State.java $DEST/org/neo4j/kernel/impl/store/kvstore/State.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/ConcurrentMapState.java $DEST/org/neo4j/kernel/impl/store/kvstore/ConcurrentMapState.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/ConcurrentMapState.java $DEST/org/neo4j/kernel/impl/store/kvstore/ConcurrentMapState.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/KeyValueMerger.java $DEST/org/neo4j/kernel/impl/store/kvstore/KeyValueMerger.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/KeyValueMerger.java $DEST/org/neo4j/kernel/impl/store/kvstore/KeyValueMerger.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/State.java $DEST/org/neo4j/kernel/impl/store/kvstore/State.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/State.java $DEST/org/neo4j/kernel/impl/store/kvstore/State.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/MetadataVisitor.java $DEST/org/neo4j/kernel/impl/store/kvstore/MetadataVisitor.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/kvstore/MetadataVisitor.java $DEST/org/neo4j/kernel/impl/store/kvstore/MetadataVisitor.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/counts/CountsUpdater.java $DEST/org/neo4j/kernel/impl/store/counts/CountsUpdater.java
@@ -706,14 +706,14 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaStore.java $DEST/org/neo
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaStore.java $DEST/org/neo4j/kernel/impl/store/SchemaStore.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaStorage.java $DEST/org/neo4j/kernel/impl/store/SchemaStorage.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaStorage.java $DEST/org/neo4j/kernel/impl/store/SchemaStorage.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaRuleAccess.java $DEST/org/neo4j/kernel/impl/store/SchemaRuleAccess.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaRuleAccess.java $DEST/org/neo4j/kernel/impl/store/SchemaRuleAccess.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/SchemaRuleNotFoundException.java $DEST/org/neo4j/kernel/api/exceptions/schema/SchemaRuleNotFoundException.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/SchemaRuleNotFoundException.java $DEST/org/neo4j/kernel/api/exceptions/schema/SchemaRuleNotFoundException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/SchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/SchemaRuleException.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/SchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/SchemaRuleException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/DuplicateSchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/DuplicateSchemaRuleException.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/exceptions/schema/DuplicateSchemaRuleException.java $DEST/org/neo4j/kernel/api/exceptions/schema/DuplicateSchemaRuleException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaRuleAccess.java $DEST/org/neo4j/kernel/impl/store/SchemaRuleAccess.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/SchemaRuleAccess.java $DEST/org/neo4j/kernel/impl/store/SchemaRuleAccess.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/counts/ReadOnlyCountsTracker.java $DEST/org/neo4j/kernel/impl/store/counts/ReadOnlyCountsTracker.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/counts/ReadOnlyCountsTracker.java $DEST/org/neo4j/kernel/impl/store/counts/ReadOnlyCountsTracker.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/info/DiagnosticsManager.java $DEST/org/neo4j/kernel/info/DiagnosticsManager.java
@@ -724,44 +724,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/info/SystemDiagnostics.java $DEST/org/neo
 $COMMAND $SOURCE/org/neo4j/kernel/info/SystemDiagnostics.java $DEST/org/neo4j/kernel/info/SystemDiagnostics.java
 echo $COMMAND $SOURCE/org/neo4j/helpers/Format.java $DEST/org/neo4j/helpers/Format.java
 $COMMAND $SOURCE/org/neo4j/helpers/Format.java $DEST/org/neo4j/helpers/Format.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/Standard.java $DEST/org/neo4j/kernel/impl/store/format/standard/Standard.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/Standard.java $DEST/org/neo4j/kernel/impl/store/format/standard/Standard.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java $DEST/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java $DEST/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/StoreVersion.java $DEST/org/neo4j/kernel/impl/store/format/StoreVersion.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/StoreVersion.java $DEST/org/neo4j/kernel/impl/store/format/StoreVersion.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java $DEST/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java $DEST/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/CountsComputer.java $DEST/org/neo4j/kernel/impl/store/CountsComputer.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/CountsComputer.java $DEST/org/neo4j/kernel/impl/store/CountsComputer.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/NumberArrayFactory.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/NumberArrayFactory.java
@@ -912,6 +874,14 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/ExecutionMonitor
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/ExecutionMonitors.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/ExecutionMonitors.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/ProgressRestoringMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/ProgressRestoringMonitor.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/ProgressRestoringMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/ProgressRestoringMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/monitoring/VmPauseMonitor.java $DEST/org/neo4j/kernel/monitoring/VmPauseMonitor.java
+$COMMAND $SOURCE/org/neo4j/kernel/monitoring/VmPauseMonitor.java $DEST/org/neo4j/kernel/monitoring/VmPauseMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/HumanUnderstandableExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/HumanUnderstandableExecutionMonitor.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/HumanUnderstandableExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/HumanUnderstandableExecutionMonitor.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Input.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Input.java
@@ -944,12 +914,12 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/RecordAccess.java 
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/RecordAccess.java $DEST/org/neo4j/kernel/impl/transaction/state/RecordAccess.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/TokenCreator.java $DEST/org/neo4j/kernel/impl/transaction/state/TokenCreator.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/TokenCreator.java $DEST/org/neo4j/kernel/impl/transaction/state/TokenCreator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/Loaders.java $DEST/org/neo4j/kernel/impl/transaction/state/Loaders.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/Loaders.java $DEST/org/neo4j/kernel/impl/transaction/state/Loaders.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/batchinsert/internal/DirectRecordAccess.java $DEST/org/neo4j/unsafe/batchinsert/internal/DirectRecordAccess.java
 $COMMAND $SOURCE/org/neo4j/unsafe/batchinsert/internal/DirectRecordAccess.java $DEST/org/neo4j/unsafe/batchinsert/internal/DirectRecordAccess.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/util/statistics/IntCounter.java $DEST/org/neo4j/kernel/impl/util/statistics/IntCounter.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/util/statistics/IntCounter.java $DEST/org/neo4j/kernel/impl/util/statistics/IntCounter.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/Loaders.java $DEST/org/neo4j/kernel/impl/transaction/state/Loaders.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/Loaders.java $DEST/org/neo4j/kernel/impl/transaction/state/Loaders.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/api/labelscan/LabelScanStore.java $DEST/org/neo4j/kernel/api/labelscan/LabelScanStore.java
 $COMMAND $SOURCE/org/neo4j/kernel/api/labelscan/LabelScanStore.java $DEST/org/neo4j/kernel/api/labelscan/LabelScanStore.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/schema/LabelScanReader.java $DEST/org/neo4j/storageengine/api/schema/LabelScanReader.java
@@ -994,8 +964,6 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/api/labelscan/NodeLabelRange.java $DEST/o
 $COMMAND $SOURCE/org/neo4j/kernel/api/labelscan/NodeLabelRange.java $DEST/org/neo4j/kernel/api/labelscan/NodeLabelRange.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/index/labelscan/LabelScanLayout.java $DEST/org/neo4j/kernel/impl/index/labelscan/LabelScanLayout.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/index/labelscan/LabelScanLayout.java $DEST/org/neo4j/kernel/impl/index/labelscan/LabelScanLayout.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/NeoStoresDiagnostics.java $DEST/org/neo4j/kernel/NeoStoresDiagnostics.java
-$COMMAND $SOURCE/org/neo4j/kernel/NeoStoresDiagnostics.java $DEST/org/neo4j/kernel/NeoStoresDiagnostics.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/store/PageCacheFlusher.java $DEST/org/neo4j/unsafe/impl/batchimport/store/PageCacheFlusher.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/store/PageCacheFlusher.java $DEST/org/neo4j/unsafe/impl/batchimport/store/PageCacheFlusher.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/NodeRelationshipCache.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/NodeRelationshipCache.java
@@ -1008,14 +976,6 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/ImportMemoryCalculator.j
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/ImportMemoryCalculator.java $DEST/org/neo4j/unsafe/impl/batchimport/ImportMemoryCalculator.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/GatheringMemoryStatsVisitor.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/GatheringMemoryStatsVisitor.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/GatheringMemoryStatsVisitor.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/GatheringMemoryStatsVisitor.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/OnDemandDetailsExecutionMonitor.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/monitoring/VmPauseMonitor.java $DEST/org/neo4j/kernel/monitoring/VmPauseMonitor.java
-$COMMAND $SOURCE/org/neo4j/kernel/monitoring/VmPauseMonitor.java $DEST/org/neo4j/kernel/monitoring/VmPauseMonitor.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/SpectrumExecutionMonitor.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/QuantizedProjection.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/MultiExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/MultiExecutionMonitor.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/MultiExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/MultiExecutionMonitor.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/RelationshipCountsStage.java $DEST/org/neo4j/unsafe/impl/batchimport/RelationshipCountsStage.java
@@ -1024,6 +984,46 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/ProcessRelationshipCount
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/ProcessRelationshipCountsDataStep.java $DEST/org/neo4j/unsafe/impl/batchimport/ProcessRelationshipCountsDataStep.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/RelationshipCountsProcessor.java $DEST/org/neo4j/unsafe/impl/batchimport/RelationshipCountsProcessor.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/RelationshipCountsProcessor.java $DEST/org/neo4j/unsafe/impl/batchimport/RelationshipCountsProcessor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormatSelector.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/Standard.java $DEST/org/neo4j/kernel/impl/store/format/standard/Standard.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/Standard.java $DEST/org/neo4j/kernel/impl/store/format/standard/Standard.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_4.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java $DEST/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java $DEST/org/neo4j/kernel/impl/store/format/BaseRecordFormats.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/StoreVersion.java $DEST/org/neo4j/kernel/impl/store/format/StoreVersion.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/StoreVersion.java $DEST/org/neo4j/kernel/impl/store/format/StoreVersion.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/NodeRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipGroupRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/LabelTokenRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/TokenRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/PropertyKeyTokenRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/RelationshipTypeTokenRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java $DEST/org/neo4j/kernel/impl/store/format/standard/DynamicRecordFormat.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardFormatFamily.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV2_3.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_0.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardV3_2.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java $DEST/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java $DEST/org/neo4j/kernel/impl/store/UnexpectedStoreVersionException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/NeoStoresDiagnostics.java $DEST/org/neo4j/kernel/NeoStoresDiagnostics.java
+$COMMAND $SOURCE/org/neo4j/kernel/NeoStoresDiagnostics.java $DEST/org/neo4j/kernel/NeoStoresDiagnostics.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormatPropertyConfigurator.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormatPropertyConfigurator.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/RecordFormatPropertyConfigurator.java $DEST/org/neo4j/kernel/impl/store/format/RecordFormatPropertyConfigurator.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/state/storeview/NeoStoreIndexStoreView.java $DEST/org/neo4j/kernel/impl/transaction/state/storeview/NeoStoreIndexStoreView.java
@@ -1166,16 +1166,16 @@ echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntry.java 
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntry.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntry.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryParsersV2_3.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryParsersV2_3.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryParsersV2_3.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryParsersV2_3.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/AbstractLogEntry.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/AbstractLogEntry.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/AbstractLogEntry.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/AbstractLogEntry.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryStart.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommand.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommand.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommand.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommand.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommit.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommit.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommit.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryCommit.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/CheckPoint.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/UnsupportedLogVersionException.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/UnsupportedLogVersionException.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/UnsupportedLogVersionException.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/UnsupportedLogVersionException.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/command/PhysicalLogCommandReaderV2_2_4.java $DEST/org/neo4j/kernel/impl/transaction/command/PhysicalLogCommandReaderV2_2_4.java
@@ -1362,14 +1362,14 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/InputNodeCacheRead
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/InputNodeCacheReader.java $DEST/org/neo4j/unsafe/impl/batchimport/input/InputNodeCacheReader.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/InputEntityCacheReader.java $DEST/org/neo4j/unsafe/impl/batchimport/input/InputEntityCacheReader.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/InputEntityCacheReader.java $DEST/org/neo4j/unsafe/impl/batchimport/input/InputEntityCacheReader.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java $DEST/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java $DEST/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadAheadChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadAheadChannel.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadAheadChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadAheadChannel.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/PositionableChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/PositionableChannel.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/PositionableChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/PositionableChannel.java
 echo $COMMAND $SOURCE/org/neo4j/storageengine/api/ReadPastEndException.java $DEST/org/neo4j/storageengine/api/ReadPastEndException.java
 $COMMAND $SOURCE/org/neo4j/storageengine/api/ReadPastEndException.java $DEST/org/neo4j/storageengine/api/ReadPastEndException.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java $DEST/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java $DEST/org/neo4j/unsafe/impl/batchimport/input/ByteBufferReadableChannel.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/InputRelationshipCacheReader.java $DEST/org/neo4j/unsafe/impl/batchimport/input/InputRelationshipCacheReader.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/InputRelationshipCacheReader.java $DEST/org/neo4j/unsafe/impl/batchimport/input/InputRelationshipCacheReader.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/CachedInput.java $DEST/org/neo4j/unsafe/impl/batchimport/input/CachedInput.java
@@ -1440,24 +1440,116 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/LabelIndexWriterStep.jav
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/LabelIndexWriterStep.java $DEST/org/neo4j/unsafe/impl/batchimport/LabelIndexWriterStep.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/BatchImporter.java $DEST/org/neo4j/unsafe/impl/batchimport/BatchImporter.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/BatchImporter.java $DEST/org/neo4j/unsafe/impl/batchimport/BatchImporter.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/DatabaseMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/DatabaseMigrator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/DatabaseMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/DatabaseMigrator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/recovery/LogTailScanner.java $DEST/org/neo4j/kernel/recovery/LogTailScanner.java
+$COMMAND $SOURCE/org/neo4j/kernel/recovery/LogTailScanner.java $DEST/org/neo4j/kernel/recovery/LogTailScanner.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFiles.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFiles.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFiles.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFiles.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/PhysicalLogVersionedStoreChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/PhysicalLogVersionedStoreChannel.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/PhysicalLogVersionedStoreChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/PhysicalLogVersionedStoreChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogVersionVisitor.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogVersionVisitor.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogVersionVisitor.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogVersionVisitor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogHeaderVisitor.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogHeaderVisitor.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogHeaderVisitor.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogHeaderVisitor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFile.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFile.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFile.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFile.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/FlushablePositionAwareChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/FlushablePositionAwareChannel.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/FlushablePositionAwareChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/FlushablePositionAwareChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadableLogChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadableLogChannel.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadableLogChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadableLogChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadableClosablePositionAwareChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadableClosablePositionAwareChannel.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadableClosablePositionAwareChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadableClosablePositionAwareChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogVersionBridge.java $DEST/org/neo4j/kernel/impl/transaction/log/LogVersionBridge.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogVersionBridge.java $DEST/org/neo4j/kernel/impl/transaction/log/LogVersionBridge.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFileInformation.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFileInformation.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFileInformation.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFileInformation.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogHeaderCache.java $DEST/org/neo4j/kernel/impl/transaction/log/LogHeaderCache.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogHeaderCache.java $DEST/org/neo4j/kernel/impl/transaction/log/LogHeaderCache.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesContext.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesContext.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesContext.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesContext.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryReader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryReader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryReader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryReader.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFileCreationMonitor.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFileCreationMonitor.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFileCreationMonitor.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFileCreationMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogFileInformation.java $DEST/org/neo4j/kernel/impl/transaction/log/LogFileInformation.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogFileInformation.java $DEST/org/neo4j/kernel/impl/transaction/log/LogFileInformation.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadAheadLogChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadAheadLogChannel.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadAheadLogChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadAheadLogChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogEntryCursor.java $DEST/org/neo4j/kernel/impl/transaction/log/LogEntryCursor.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/LogEntryCursor.java $DEST/org/neo4j/kernel/impl/transaction/log/LogEntryCursor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/recovery/LogTailScannerMonitor.java $DEST/org/neo4j/kernel/recovery/LogTailScannerMonitor.java
+$COMMAND $SOURCE/org/neo4j/kernel/recovery/LogTailScannerMonitor.java $DEST/org/neo4j/kernel/recovery/LogTailScannerMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/UpgradableDatabase.java $DEST/org/neo4j/kernel/impl/storemigration/UpgradableDatabase.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/UpgradableDatabase.java $DEST/org/neo4j/kernel/impl/storemigration/UpgradableDatabase.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/StoreVersionCheck.java $DEST/org/neo4j/kernel/impl/storemigration/StoreVersionCheck.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/StoreVersionCheck.java $DEST/org/neo4j/kernel/impl/storemigration/StoreVersionCheck.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/StoreUpgrader.java $DEST/org/neo4j/kernel/impl/storemigration/StoreUpgrader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/StoreUpgrader.java $DEST/org/neo4j/kernel/impl/storemigration/StoreUpgrader.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/MigrationStatus.java $DEST/org/neo4j/kernel/impl/storemigration/MigrationStatus.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/MigrationStatus.java $DEST/org/neo4j/kernel/impl/storemigration/MigrationStatus.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedByConfigurationException.java $DEST/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedByConfigurationException.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedByConfigurationException.java $DEST/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedByConfigurationException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedException.java $DEST/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedException.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedException.java $DEST/org/neo4j/kernel/impl/storemigration/UpgradeNotAllowedException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/internal/Version.java $DEST/org/neo4j/kernel/internal/Version.java
+$COMMAND $SOURCE/org/neo4j/kernel/internal/Version.java $DEST/org/neo4j/kernel/internal/Version.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/ExplicitIndexMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/ExplicitIndexMigrator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/ExplicitIndexMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/ExplicitIndexMigrator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/StoreMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/StoreMigrator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/StoreMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/StoreMigrator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/DirectRecordStoreMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/DirectRecordStoreMigrator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/DirectRecordStoreMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/DirectRecordStoreMigrator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFilesBuilder.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFilesBuilder.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/LogFilesBuilder.java $DEST/org/neo4j/kernel/impl/transaction/log/files/LogFilesBuilder.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadOnlyLogVersionRepository.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadOnlyLogVersionRepository.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadOnlyLogVersionRepository.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadOnlyLogVersionRepository.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadOnlyTransactionIdStore.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadOnlyTransactionIdStore.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReadOnlyTransactionIdStore.java $DEST/org/neo4j/kernel/impl/transaction/log/ReadOnlyTransactionIdStore.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFiles.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFiles.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFiles.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFiles.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesHelper.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesHelper.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesHelper.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFilesHelper.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFile.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFile.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFile.java $DEST/org/neo4j/kernel/impl/transaction/log/files/TransactionLogFile.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReaderLogVersionBridge.java $DEST/org/neo4j/kernel/impl/transaction/log/ReaderLogVersionBridge.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/ReaderLogVersionBridge.java $DEST/org/neo4j/kernel/impl/transaction/log/ReaderLogVersionBridge.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/IncompleteLogHeaderException.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/IncompleteLogHeaderException.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/IncompleteLogHeaderException.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/IncompleteLogHeaderException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/PositionAwarePhysicalFlushableChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/PositionAwarePhysicalFlushableChannel.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/PositionAwarePhysicalFlushableChannel.java $DEST/org/neo4j/kernel/impl/transaction/log/PositionAwarePhysicalFlushableChannel.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderReader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderReader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderReader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderReader.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderWriter.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderWriter.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderWriter.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeaderWriter.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/VersionAwareLogEntryReader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/VersionAwareLogEntryReader.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/VersionAwareLogEntryReader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/VersionAwareLogEntryReader.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/InvalidLogEntryHandler.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/InvalidLogEntryHandler.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/InvalidLogEntryHandler.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/InvalidLogEntryHandler.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntrySanity.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntrySanity.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntrySanity.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntrySanity.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/BatchImporterFactory.java $DEST/org/neo4j/unsafe/impl/batchimport/BatchImporterFactory.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/BatchImporterFactory.java $DEST/org/neo4j/unsafe/impl/batchimport/BatchImporterFactory.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Inputs.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Inputs.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Inputs.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Inputs.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Groups.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Groups.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Groups.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Groups.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java $DEST/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java $DEST/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/EncodingIdMapper.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/EncodingIdMapper.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/EncodingIdMapper.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/EncodingIdMapper.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Encoder.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Encoder.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Encoder.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Encoder.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactory.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactory.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactory.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactory.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Groups.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Groups.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Groups.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Groups.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java $DEST/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java $DEST/org/neo4j/unsafe/impl/batchimport/input/HeaderException.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Tracker.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/ParallelSort.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/ParallelSort.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/ParallelSort.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/ParallelSort.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Radix.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/Radix.java
@@ -1470,28 +1562,20 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/Utils.java $DEST/org/neo
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/Utils.java $DEST/org/neo4j/unsafe/impl/batchimport/Utils.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/SameGroupDetector.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/SameGroupDetector.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/SameGroupDetector.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/SameGroupDetector.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/LongBitsManipulator.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/HighestId.java $DEST/org/neo4j/unsafe/impl/batchimport/HighestId.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/HighestId.java $DEST/org/neo4j/unsafe/impl/batchimport/HighestId.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/GroupCache.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/GroupCache.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/GroupCache.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/GroupCache.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/CollisionValues.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogHeader.java
-echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java
-$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java
-echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java
-$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/IdMappers.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/StringEncoder.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/StringEncoder.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/StringEncoder.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/StringEncoder.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactories.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactories.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactories.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/TrackerFactories.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/BigIdTracker.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/AbstractTracker.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/IntTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/IntTracker.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/IntTracker.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/IntTracker.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/LongEncoder.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/LongEncoder.java
@@ -1500,6 +1584,34 @@ echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/S
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/StringCollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/StringCollisionValues.java
 echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/LongCollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/LongCollisionValues.java
 $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/LongCollisionValues.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/LongCollisionValues.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Collectors.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Collectors.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/Collectors.java $DEST/org/neo4j/unsafe/impl/batchimport/input/Collectors.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/BadCollector.java $DEST/org/neo4j/unsafe/impl/batchimport/input/BadCollector.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/BadCollector.java $DEST/org/neo4j/unsafe/impl/batchimport/input/BadCollector.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/DuplicateInputIdException.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/DuplicateInputIdException.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/DuplicateInputIdException.java $DEST/org/neo4j/unsafe/impl/batchimport/cache/idmapping/string/DuplicateInputIdException.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/id/ReadOnlyIdGeneratorFactory.java $DEST/org/neo4j/kernel/impl/store/id/ReadOnlyIdGeneratorFactory.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/store/id/ReadOnlyIdGeneratorFactory.java $DEST/org/neo4j/kernel/impl/store/id/ReadOnlyIdGeneratorFactory.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/CoarseBoundedProgressExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/CoarseBoundedProgressExecutionMonitor.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/staging/CoarseBoundedProgressExecutionMonitor.java $DEST/org/neo4j/unsafe/impl/batchimport/staging/CoarseBoundedProgressExecutionMonitor.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/StoreScanChunk.java $DEST/org/neo4j/kernel/impl/storemigration/participant/StoreScanChunk.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/StoreScanChunk.java $DEST/org/neo4j/kernel/impl/storemigration/participant/StoreScanChunk.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/StoreScanAsInputIterator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/StoreScanAsInputIterator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/StoreScanAsInputIterator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/StoreScanAsInputIterator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/NativeLabelScanStoreMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/NativeLabelScanStoreMigrator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/NativeLabelScanStoreMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/NativeLabelScanStoreMigrator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/CountsMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/CountsMigrator.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/storemigration/participant/CountsMigrator.java $DEST/org/neo4j/kernel/impl/storemigration/participant/CountsMigrator.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogVersions.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogVersions.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogVersions.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogVersions.java
+echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java
+$COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java $DEST/org/neo4j/kernel/impl/transaction/log/entry/LogEntryByteCodes.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Header.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/Configuration.java
+echo $COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java
+$COMMAND $SOURCE/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java $DEST/org/neo4j/unsafe/impl/batchimport/input/csv/IdType.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardFormatSettings.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardFormatSettings.java
 $COMMAND $SOURCE/org/neo4j/kernel/impl/store/format/standard/StandardFormatSettings.java $DEST/org/neo4j/kernel/impl/store/format/standard/StandardFormatSettings.java
 echo $COMMAND $SOURCE/org/neo4j/kernel/impl/transaction/command/NeoCommandType.java $DEST/org/neo4j/kernel/impl/transaction/command/NeoCommandType.java

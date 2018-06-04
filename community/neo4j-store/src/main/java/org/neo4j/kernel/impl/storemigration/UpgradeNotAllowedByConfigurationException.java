@@ -17,28 +17,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.kernel.impl.storemigration;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
-/**
- * Default implementation of {@link IdController}.
- * Do not add any additional possibilities or functionality. Wraps provided {@link IdGeneratorFactory}.
- */
-public class DefaultIdController extends LifecycleAdapter implements IdController
+public class UpgradeNotAllowedByConfigurationException extends UpgradeNotAllowedException
 {
-    public DefaultIdController()
+    public UpgradeNotAllowedByConfigurationException( String msg )
     {
+        super( String.format( "%s Detailed description: %s", baseMessage() , msg)  );
     }
 
-    @Override
-    public void clear()
+    public UpgradeNotAllowedByConfigurationException()
     {
+        super( baseMessage() );
     }
 
-    @Override
-    public void maintenance()
+    private static String baseMessage()
     {
+        return String.format(
+                "Neo4j cannot be started because the database files require upgrading and upgrades are disabled " +
+                "in the configuration. Please set '%s' to 'true' in your configuration file and try again.",
+                GraphDatabaseSettings.allow_upgrade.name() );
     }
 }

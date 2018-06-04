@@ -17,28 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.kernel.impl.transaction.log.files;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 
-/**
- * Default implementation of {@link IdController}.
- * Do not add any additional possibilities or functionality. Wraps provided {@link IdGeneratorFactory}.
- */
-public class DefaultIdController extends LifecycleAdapter implements IdController
+public interface LogHeaderVisitor
 {
-    public DefaultIdController()
-    {
-    }
-
-    @Override
-    public void clear()
-    {
-    }
-
-    @Override
-    public void maintenance()
-    {
-    }
+    /***
+     * Used for visiting log headers in reverse order of age, meaning latest first.
+     * Stops visiting when false is returned.
+     */
+    boolean visit( LogPosition position, long firstTransactionIdInLog, long lastTransactionIdInLog );
 }

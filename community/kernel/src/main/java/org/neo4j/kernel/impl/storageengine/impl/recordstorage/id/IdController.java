@@ -20,16 +20,16 @@
 package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
 
 
-import java.util.function.Supplier;
+//import java.util.function.Supplier;
 
-import org.neo4j.kernel.impl.api.KernelTransactionsSnapshot;
+//import org.neo4j.kernel.impl.api.KernelTransactionsSnapshot;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
  * Represent abstraction that responsible for any id related operations on a storage engine level: buffering,
  * maintenance, clearing, resetting, generation.
  */
-public interface IdController extends Lifecycle
+public abstract interface IdController extends Lifecycle
 {
 
     /**
@@ -42,5 +42,5 @@ public interface IdController extends Lifecycle
      */
     void maintenance();
 
-    void initialize( Supplier<KernelTransactionsSnapshot> transactionsSnapshotSupplier );
+    //void initialize( Supplier<KernelTransactionsSnapshot> transactionsSnapshotSupplier );
 }

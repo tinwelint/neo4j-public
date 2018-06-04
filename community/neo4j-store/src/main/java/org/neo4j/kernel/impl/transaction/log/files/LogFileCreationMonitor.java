@@ -17,28 +17,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.kernel.impl.transaction.log.files;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import java.io.File;
 
 /**
- * Default implementation of {@link IdController}.
- * Do not add any additional possibilities or functionality. Wraps provided {@link IdGeneratorFactory}.
+ * Monitor for new transaction log file creation.
  */
-public class DefaultIdController extends LifecycleAdapter implements IdController
+public interface LogFileCreationMonitor
 {
-    public DefaultIdController()
-    {
-    }
+    LogFileCreationMonitor NO_MONITOR = new Adapter();
 
-    @Override
-    public void clear()
-    {
-    }
+    void created( File logFile, long logVersion, long lastTransactionId );
 
-    @Override
-    public void maintenance()
+    class Adapter implements LogFileCreationMonitor
     {
+        @Override
+        public void created( File logFile, long logVersion, long lastTransactionId )
+        {
+        }
     }
 }

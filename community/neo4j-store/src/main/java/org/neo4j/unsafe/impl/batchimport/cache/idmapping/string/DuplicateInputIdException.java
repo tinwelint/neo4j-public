@@ -17,28 +17,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.unsafe.impl.batchimport.input.DataException;
 
-/**
- * Default implementation of {@link IdController}.
- * Do not add any additional possibilities or functionality. Wraps provided {@link IdGeneratorFactory}.
- */
-public class DefaultIdController extends LifecycleAdapter implements IdController
+import static java.lang.String.format;
+
+public class DuplicateInputIdException extends DataException
 {
-    public DefaultIdController()
+    public DuplicateInputIdException( Object id, String groupName )
     {
+        super( message( id, groupName ) );
     }
 
-    @Override
-    public void clear()
+    public static String message( Object id, String groupName )
     {
-    }
-
-    @Override
-    public void maintenance()
-    {
+        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
     }
 }

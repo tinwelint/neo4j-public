@@ -17,28 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.kernel.recovery;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-
-/**
- * Default implementation of {@link IdController}.
- * Do not add any additional possibilities or functionality. Wraps provided {@link IdGeneratorFactory}.
- */
-public class DefaultIdController extends LifecycleAdapter implements IdController
+public interface LogTailScannerMonitor
 {
-    public DefaultIdController()
-    {
-    }
-
-    @Override
-    public void clear()
-    {
-    }
-
-    @Override
-    public void maintenance()
-    {
-    }
+    void corruptedLogFile( long version, Throwable t );
 }
